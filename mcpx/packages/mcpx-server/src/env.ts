@@ -113,6 +113,9 @@ const envSchema = z
     UPSTREAM_PING_TIMEOUT_MS: z.coerce.number().default(3_000),
     UPSTREAM_RECONNECT_BASE_DELAY_MS: z.coerce.number().default(30_000),
     STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
+    // Policy gate: when false, stdio MCP servers are not allowed (UI add is
+    // rejected and spawning is blocked). Default true.
+    ENABLE_STDIO_MCP_SERVERS: z.stringbool().default(true),
     TOKENIZER_ENCODING: z
       .enum(TokenizerEncoding)
       .default(DEFAULT_TOKENIZER_ENCODING),
@@ -186,6 +189,7 @@ const NON_SECRET_KEYS = [
   "UPSTREAM_PING_TIMEOUT_MS",
   "UPSTREAM_RECONNECT_BASE_DELAY_MS",
   "STDIO_INHERIT_PROCESS_ENV",
+  "ENABLE_STDIO_MCP_SERVERS",
   "TOKENIZER_ENCODING",
   "IS_ENTERPRISE",
   "STRICTNESS_REQUIRED",

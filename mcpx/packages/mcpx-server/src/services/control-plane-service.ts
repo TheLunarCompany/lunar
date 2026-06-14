@@ -11,8 +11,11 @@ import { ConfigService, ConfigSnapshot } from "../config.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
+  NotAllowedError,
   NotFoundError,
+  STDIO_SERVERS_DISABLED_MESSAGE,
 } from "../errors.js";
+import { env } from "../env.js";
 import { TargetServer } from "../model/target-servers.js";
 import { AuditLogService } from "./audit-log/audit-log-service.js";
 import { ControlPlaneConfigService } from "./control-plane-config-service.js";
@@ -125,6 +128,9 @@ export class ControlPlaneService {
   async addTargetServer(
     payload: TargetServer,
   ): Promise<TargetServer | undefined> {
+    if (payload.type === "stdio" && !env.ENABLE_STDIO_MCP_SERVERS) {
+      throw new NotAllowedError(STDIO_SERVERS_DISABLED_MESSAGE);
+    }
     // Do not include env vars in logs when adding server (any type)
     const data = redactEnv(payload);
     this.logger.info("Received AddTargetServer event from Control Plane", {
@@ -165,6 +171,9 @@ export class ControlPlaneService {
   async updateTargetServer(
     payload: TargetServer,
   ): Promise<TargetServer | undefined> {
+    if (payload.type === "stdio" && !env.ENABLE_STDIO_MCP_SERVERS) {
+      throw new NotAllowedError(STDIO_SERVERS_DISABLED_MESSAGE);
+    }
     this.logger.info("Received UpdateTargetServer event from Control Plane");
     const existingTargetServer = this.upstreamHandler.getTargetServer(
       payload.name,

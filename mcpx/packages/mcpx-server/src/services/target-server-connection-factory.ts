@@ -6,7 +6,11 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { Logger } from "winston";
-import { FailedToConnectToTargetServer, PendingInputError } from "../errors.js";
+import {
+  FailedToConnectToTargetServer,
+  PendingInputError,
+  STDIO_SERVERS_DISABLED_MESSAGE,
+} from "../errors.js";
 import { prepareCommand } from "../interception.js";
 import {
   RemoteTargetServer,
@@ -60,6 +64,14 @@ export class TargetServerConnectionFactory {
     targetServer: StdioTargetServer,
     envRequirements: EnvRequirements | undefined,
   ): Promise<ExtendedClientI> {
+    // Backstop for the config-validation gate: blocks any stdio spawn (incl.
+    // servers applied from the Hub setup) when the policy flag is off.
+    if (!env.ENABLE_STDIO_MCP_SERVERS) {
+      return Promise.reject(
+        new FailedToConnectToTargetServer(STDIO_SERVERS_DISABLED_MESSAGE),
+      );
+    }
+
     const { resolved: resolvedEnv, missingVars } = resolveEnv({
       envConfig: targetServer.env,
       envVarsResolver: this.envVars,

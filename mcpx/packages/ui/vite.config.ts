@@ -95,6 +95,10 @@ export default defineConfig(({ command, mode }) => {
       extensions: [".mjs", ".js", ".jsx", ".ts", ".tsx", ".json"],
     },
     build: {
+      // esbuild 0.28 (pinned via overrides for the security fix in #3080) will
+      // not lower some destructuring in the monaco workers for the default
+      // browserslist target. Pin a modern target that supports it natively.
+      target: "es2022",
       commonjsOptions: {
         include: [/shared-model/, /node_modules/],
       },

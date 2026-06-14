@@ -23,6 +23,7 @@ import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   InvalidConfigError,
+  NotAllowedError,
   NotFoundError,
 } from "../errors.js";
 import { TargetServer, targetServerSchema } from "../model/target-servers.js";
@@ -159,6 +160,10 @@ export function buildControlPlaneRouter(
       res.status(201).json(result);
     } catch (e: unknown) {
       const error = loggableError(e);
+      if (e instanceof NotAllowedError) {
+        res.status(403).json({ message: e.message, error });
+        return;
+      }
       if (e instanceof FailedToConnectToTargetServer) {
         res.status(400).json({
           message: e.message,
@@ -230,6 +235,10 @@ export function buildControlPlaneRouter(
           return;
         }
         const error = loggableError(e);
+        if (e instanceof NotAllowedError) {
+          res.status(403).json({ message: e.message, error });
+          return;
+        }
         if (e instanceof FailedToConnectToTargetServer) {
           res.status(400).json({ message: e.message, error });
           return;
@@ -301,6 +310,10 @@ export function buildControlPlaneRouter(
         res.status(200).json(result);
       } catch (e) {
         const error = loggableError(e);
+        if (e instanceof NotAllowedError) {
+          res.status(403).json({ message: e.message, error });
+          return;
+        }
         if (e instanceof NotFoundError) {
           res.status(404).json({ message: "Target server not found", error });
           return;
@@ -342,6 +355,10 @@ export function buildControlPlaneRouter(
       });
       res.status(200).json(result);
     } catch (e) {
+      if (e instanceof NotAllowedError) {
+        res.status(403).json({ message: e.message, error: loggableError(e) });
+        return;
+      }
       if (e instanceof NotFoundError) {
         logger.error(`Target server ${name} not found`, {
           payload: redactEnv(payload),
