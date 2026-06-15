@@ -1,5 +1,8 @@
 import { http, HttpResponse } from "msw";
-import type { CatalogMCPServerList } from "@mcpx/shared-model";
+import type {
+  CatalogMCPServerItem,
+  CatalogMCPServerList,
+} from "@mcpx/shared-model";
 
 type ApprovedCapabilityType = "tool" | "prompt";
 
@@ -51,6 +54,17 @@ type EnrichedCatalogItem = {
   originSpaceId: string | null;
   approvedTools: Array<{ toolName: string }>;
   approvedPrompts: Array<{ promptName: string }>;
+};
+
+const PLAYWRIGHT_CATALOG_ITEM_ID = "018f6f21-668f-7357-b1e5-7b3ba814d195";
+const STDIO_MCP_SERVERS_NOT_ALLOWED_RESPONSE = {
+  message:
+    "This organization does not allow STDIO MCP servers. Contact your administrator for access.",
+  error: {
+    errorName: "NotAllowedError",
+    errorMessage:
+      "This organization does not allow STDIO MCP servers. Contact your administrator for access.",
+  },
 };
 
 export const catalogMcpServers: CatalogMCPServerList = [
@@ -258,6 +272,43 @@ const catalogServersById = new Map(
   catalogMcpServers.map((server) => [server.id, server]),
 );
 
+function createMockTargetServer(server: CatalogMCPServerItem) {
+  const usage = { callCount: 0 };
+
+  if (server.config.type === "stdio") {
+    return {
+      _type: "stdio",
+      state: { type: "connecting" },
+      name: server.name,
+      catalogItemId: server.id,
+      command: server.config.command,
+      args: server.config.args,
+      env: {},
+      icon: server.config.icon,
+      tools: [],
+      originalTools: [],
+      prompts: [],
+      originalPrompts: [],
+      usage,
+    };
+  }
+
+  return {
+    _type: server.config.type,
+    state: { type: "connecting" },
+    name: server.name,
+    catalogItemId: server.id,
+    url: server.config.url,
+    headers: server.config.headers,
+    icon: server.config.icon,
+    tools: [],
+    originalTools: [],
+    prompts: [],
+    originalPrompts: [],
+    usage,
+  };
+}
+
 function getApprovedCapabilities(
   catalogItemId: string,
   source: Record<string, Record<ApprovedCapabilityType, string[]>>,
@@ -414,6 +465,26 @@ export function resetMockApiState(): void {
 export const handlers = [
   http.get("*/catalog/mcp-servers", () => {
     return HttpResponse.json(catalogMcpServers);
+  }),
+
+  http.post("*/catalog-item/:id/target-server", ({ params }) => {
+    const catalogItemId = String(params.id);
+
+    if (catalogItemId === PLAYWRIGHT_CATALOG_ITEM_ID) {
+      return HttpResponse.json(STDIO_MCP_SERVERS_NOT_ALLOWED_RESPONSE, {
+        status: 403,
+      });
+    }
+
+    const server = catalogServersById.get(catalogItemId);
+    if (!server) {
+      return HttpResponse.json(
+        { message: `Catalog item not found: ${catalogItemId}` },
+        { status: 404 },
+      );
+    }
+
+    return HttpResponse.json(createMockTargetServer(server));
   }),
 
   http.get("*/catalog-items/:id/approved-capabilities", ({ params }) => {

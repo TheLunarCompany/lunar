@@ -46,6 +46,39 @@ import {
   CatalogMCPServerConfigByNameList,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 
+export class ApiError extends Error {
+  status: number;
+  responseData: unknown;
+
+  constructor(message: string, status: number, responseData: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.responseData = responseData;
+  }
+}
+
+const apiErrorResponseSchema = z.object({
+  message: z.string(),
+});
+
+async function getApiError(response: Response): Promise<ApiError> {
+  let responseData: unknown;
+  let message = `API request failed: ${response.status} ${response.statusText}`;
+
+  try {
+    responseData = await response.json();
+    const parsedResponseData = apiErrorResponseSchema.safeParse(responseData);
+    if (parsedResponseData.success) {
+      message = parsedResponseData.data.message;
+    }
+  } catch {
+    responseData = undefined;
+  }
+
+  return new ApiError(message, response.status, responseData);
+}
+
 class ApiClient {
   private getBaseUrl: () => string;
 
@@ -63,9 +96,7 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText}`,
-      );
+      throw await getApiError(response);
     }
 
     const data = await response.json();
@@ -96,9 +127,7 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText}`,
-      );
+      throw await getApiError(response);
     }
 
     const responseData = await response.json();

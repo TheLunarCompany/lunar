@@ -12,6 +12,7 @@ import { handlers, resetMockApiState } from "./handlers";
 
 const server = setupServer(...handlers);
 const slackCatalogItemId = "018f6f21-5f3e-7b40-a84d-c276df5b9d91";
+const playwrightCatalogItemId = "018f6f21-668f-7357-b1e5-7b3ba814d195";
 const slackAnalysisId = "10000000-0000-4000-a000-000000000001";
 
 describe("MSW handlers", () => {
@@ -74,6 +75,28 @@ describe("MSW handlers", () => {
     expect(deleteResponse.status).toBe(200);
     await expect(deleteResponse.json()).resolves.toMatchObject({
       approvedPrompts: ["summarize-thread"],
+    });
+  });
+
+  it("mocks stdio-disabled target server creation for visual error testing", async () => {
+    const response = await fetch(
+      `http://localhost:9000/catalog-item/${playwrightCatalogItemId}/target-server`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ envValues: {} }),
+      },
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      message:
+        "This organization does not allow STDIO MCP servers. Contact your administrator for access.",
+      error: {
+        errorName: "NotAllowedError",
+        errorMessage:
+          "This organization does not allow STDIO MCP servers. Contact your administrator for access.",
+      },
     });
   });
 

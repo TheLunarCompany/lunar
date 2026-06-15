@@ -24,7 +24,6 @@ import {
   mcpJsonSchema,
   serverNameSchema,
 } from "@mcpx/toolkit-ui/src/utils/mcpJson";
-import { AxiosError } from "axios";
 import {
   useCallback,
   useEffect,
@@ -51,6 +50,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CustomAddCheckboxText } from "@/config/runtime-config";
 import type { McpServerStatus } from "@/types";
 import { getMcpServerStatusFromTargetServer } from "./helpers";
+import { getAddServerErrorMessage } from "@/lib/api-errors";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -275,12 +275,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   useEffect(() => {
     if (!error) return;
 
-    const message =
-      error instanceof AxiosError && error.response?.data?.msg
-        ? error.response.data.msg
-        : "Failed to add server. Please try again.";
-
-    showError(message);
+    showError(getAddServerErrorMessage(error));
   }, [error, showError]);
 
   function getServerStatus(name: string): McpServerStatus | undefined {
@@ -409,11 +404,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         onError: (error) => {
           setIsSubmitting(false);
           console.warn("Error adding server:", error);
-          showError(
-            error instanceof Error
-              ? error.message
-              : "Failed to add server. Please try again.",
-          );
+          showError(getAddServerErrorMessage(error));
         },
       },
     );

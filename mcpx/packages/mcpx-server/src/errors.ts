@@ -19,7 +19,7 @@ export class NotAllowedError extends Error {
 // Shared by the config-validation gate and the spawn-time backstop so the UI
 // and logs report the same reason.
 export const STDIO_SERVERS_DISABLED_MESSAGE =
-  "stdio MCP servers are not allowed on this instance (ENABLE_STDIO_MCP_SERVERS is false)";
+  "This organization does not allow STDIO MCP servers. Contact your administrator for access.";
 export class FailedToConnectToTargetServer extends Error {
   constructor(message = "Failed to connect to target server") {
     super(message);
