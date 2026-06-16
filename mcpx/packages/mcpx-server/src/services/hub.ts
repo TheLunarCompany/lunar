@@ -647,7 +647,7 @@ export class HubService {
           const message = parseResult.data.payload;
           this.logger.info("Received set-profile-secrets message from Hub", {
             profileSecretCount: Object.keys(message.profileSecrets).length,
-            timestamp: message.timestamp,
+            messageTimestamp: message.timestamp,
           });
           const isLiveUpdate = this.bootPhaseHistory.some(
             (e) => e.phase === "profile-secrets-received",
@@ -692,7 +692,7 @@ export class HubService {
           const message = parseResult.data.payload;
           this.logger.info("Received set-oauth-credentials message from Hub", {
             oauthCredentialCount: Object.keys(message.oauthCredentials).length,
-            timestamp: message.timestamp,
+            messageTimestamp: message.timestamp,
           });
           const isLiveUpdate = this.bootPhaseHistory.some(
             (e) => e.phase === "oauth-credentials-received",

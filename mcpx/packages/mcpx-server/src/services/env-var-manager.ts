@@ -66,7 +66,7 @@ export class EnvVarManager
     this.lastProfileSecretsAt = timestamp;
     this.logger.info("Applied set-profile-secrets snapshot", {
       profileSecretCount: this.profileSecrets.size,
-      timestamp,
+      incomingTimestamp: timestamp,
     });
     return true;
   }
@@ -92,7 +92,7 @@ export class EnvVarManager
     this.lastOauthCredentialsAt = timestamp;
     this.logger.info("Applied set-oauth-credentials snapshot", {
       oauthCredentialCount: this.oauthCredentials.size,
-      timestamp,
+      incomingTimestamp: timestamp,
     });
     return true;
   }
