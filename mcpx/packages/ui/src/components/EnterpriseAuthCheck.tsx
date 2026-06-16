@@ -26,6 +26,8 @@ export function useEnterpriseAuth(
     isPendingAllocation: false,
   });
   const wasPendingRef = useRef(false);
+  // Ensures we only trigger a Hub (re)connect once per page load.
+  const reconnectTriggeredRef = useRef(false);
 
   useEffect(() => {
     wasPendingRef.current = state.isPendingAllocation;
@@ -78,6 +80,20 @@ export function useEnterpriseAuth(
           isAuthenticated: false,
           error: null,
         }));
+
+        // Trigger a Hub (re)connect once per page load. A refresh nudges an
+        // immediate attempt instead of only polling for status. Fire-and-forget:
+        // status is read by the GET poll below. No-op server-side if already
+        // connected.
+        if (!reconnectTriggeredRef.current) {
+          reconnectTriggeredRef.current = true;
+          void fetch(`${getMcpxServerURL("http")}/auth/mcpx`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({}),
+          }).catch(() => {});
+        }
 
         const response = await fetch(`${getMcpxServerURL("http")}/auth/mcpx`, {
           method: "GET",

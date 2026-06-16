@@ -194,7 +194,11 @@ export class Services {
       this._identityService,
       upstreamHandler,
       extractUsageStats,
-      { hubUrl: options.hubUrl },
+      {
+        hubUrl: options.hubUrl,
+        connectionTimeout: env.HUB_CONNECTION_TIMEOUT_MS,
+        reconnectionDelayMax: env.HUB_RECONNECT_DELAY_MAX_MS,
+      },
     );
 
     const downstreamSessionStore = new HubDownstreamSessionClient(

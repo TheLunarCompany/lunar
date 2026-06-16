@@ -109,6 +109,10 @@ const envSchema = z
     USAGE_STATS_INTERVAL_MS: z.coerce.number().default(60000),
     TOOL_CALL_BATCH_INTERVAL_MS: z.coerce.number().default(10000),
     CONNECTION_TIMEOUT_MS: z.coerce.number().default(180000),
+    // Per-attempt connection timeout for the Hub socket.
+    HUB_CONNECTION_TIMEOUT_MS: z.coerce.number().default(20000),
+    // Max delay between reconnect attempts; caps the jittered backoff.
+    HUB_RECONNECT_DELAY_MAX_MS: z.coerce.number().default(10000),
     UPSTREAM_PING_INTERVAL_MS: z.coerce.number().default(30_000),
     UPSTREAM_PING_TIMEOUT_MS: z.coerce.number().default(3_000),
     UPSTREAM_RECONNECT_BASE_DELAY_MS: z.coerce.number().default(30_000),
@@ -185,6 +189,8 @@ const NON_SECRET_KEYS = [
   "USAGE_STATS_INTERVAL_MS",
   "TOOL_CALL_BATCH_INTERVAL_MS",
   "CONNECTION_TIMEOUT_MS",
+  "HUB_CONNECTION_TIMEOUT_MS",
+  "HUB_RECONNECT_DELAY_MAX_MS",
   "UPSTREAM_PING_INTERVAL_MS",
   "UPSTREAM_PING_TIMEOUT_MS",
   "UPSTREAM_RECONNECT_BASE_DELAY_MS",

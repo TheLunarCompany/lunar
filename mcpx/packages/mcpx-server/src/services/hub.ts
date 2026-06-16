@@ -61,16 +61,6 @@ export class HubUnavailableError extends HubConnectionError {
   name = "HubUnavailableError";
 }
 
-export class HubConnectionTimeoutError extends HubConnectionError {
-  name = "HubConnectionTimeoutError";
-  toJSON(): { name: string; message: string } {
-    return {
-      name: this.name,
-      message: this.message,
-    };
-  }
-}
-
 export interface AuthStatus {
   status: "unauthenticated" | "authenticated";
   connectionError?: HubConnectionError;
@@ -81,8 +71,11 @@ const authStatusEqualFn = (a: AuthStatus, b: AuthStatus): boolean => {
   return a.connectionError?.name === b.connectionError?.name;
 };
 
-const CONNECTION_TIMEOUT_MS = 20_000;
 const ACK_TIMEOUT_MS = 10_000;
+// Reconnect backoff base + jitter (the cap is env-tunable via
+// HUB_RECONNECT_DELAY_MAX_MS). Jitter, not a big cap, spreads the fleet out.
+const HUB_RECONNECT_DELAY_MS = 1_000;
+const HUB_RECONNECT_RANDOMIZATION_FACTOR = 0.5;
 
 // Step number per phase. Phases with the same step can arrive in either order
 // without violating the sequence — used for the two env-var buckets
@@ -142,6 +135,7 @@ export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
   connectionTimeout?: number;
+  reconnectionDelayMax?: number;
   toolCallBatchIntervalMs?: number;
 }
 
@@ -169,13 +163,19 @@ export class HubService {
   ];
   private logger: Logger;
   private socket: Socket | null = null;
-  private connectionPromise: {
-    resolve: (value: void) => void;
-    reject: (reason: Error) => void;
-  } | null = null;
-  private connectionTimeoutId: NodeJS.Timeout | null = null;
+  // Re-arm: socket.io retries transport errors, but gives up on a handshake
+  // rejection (socket.active === false). This retries that case, which is
+  // usually transient (not yet provisioned, token rotation, Hub restarting).
+  private reArmTimeoutId: NodeJS.Timeout | null = null;
+  private reArmAttempts = 0;
+  private isShuttingDown = false;
+  // True only while disconnect() is mid-teardown; connect() no-ops during it.
+  private disconnecting = false;
+  private lastConnectProps: { setupOwnerId?: string; label?: string } | null =
+    null;
   private readonly hubUrl: string;
   private readonly connectionTimeout: number;
+  private readonly reconnectionDelayMax: number;
   private readonly setupChangeSender: ThrottledSender;
   private readonly usageStatsSender: UsageStatsSender;
   private readonly toolCallBatcher: ToolCallBatcher;
@@ -207,7 +207,10 @@ export class HubService {
     this.identityService = identityService;
     this.upstreamHandler = upstreamHandler;
     this.hubUrl = options.hubUrl ?? env.HUB_WS_URL;
-    this.connectionTimeout = options.connectionTimeout ?? CONNECTION_TIMEOUT_MS;
+    this.connectionTimeout =
+      options.connectionTimeout ?? env.HUB_CONNECTION_TIMEOUT_MS;
+    this.reconnectionDelayMax =
+      options.reconnectionDelayMax ?? env.HUB_RECONNECT_DELAY_MAX_MS;
 
     const createSender =
       (eventName: WebappBoundEventName) =>
@@ -330,21 +333,24 @@ export class HubService {
         ),
       };
     }
-    if (
-      this.socket?.connected &&
-      this._status.get().status === "authenticated"
-    ) {
-      this.logger.info("Already connected to Hub, returning existing status");
+    // Idempotent fire-and-forget: ensure a socket exists, return current status.
+    // Callers observe status; reconnection runs in the background (socket.io for
+    // transport, re-arm for handshake rejection).
+    // A teardown is in flight; don't race it. The next connect() reconnects.
+    if (this.disconnecting) {
       return this._status.get();
     }
+    this.lastConnectProps = props;
+    this.isShuttingDown = false;
+
+    // A socket already exists: no-op, and crucially leave any pending re-arm
+    // running — cancelling it here would strand a handshake-rejected instance.
     if (this.socket) {
-      this.logger.info(
-        "Connection to Hub already established, disconnecting first",
-      );
-      this.socket.disconnect();
-      this.socket = null;
+      return this._status.get();
     }
 
+    // Building a fresh socket, so drop any pending re-arm (this attempt replaces it).
+    this.clearReArmTimer();
     this.logger.info("Connecting to Hub with authentication");
     this.socket = io(this.hubUrl, {
       path: "/v1/ws",
@@ -352,6 +358,9 @@ export class HubService {
       upgrade: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
+      reconnectionDelay: HUB_RECONNECT_DELAY_MS,
+      reconnectionDelayMax: this.reconnectionDelayMax,
+      randomizationFactor: HUB_RECONNECT_RANDOMIZATION_FACTOR,
       auth: {
         setupOwnerId,
         label,
@@ -361,15 +370,7 @@ export class HubService {
     });
 
     this.setupEventHandlers();
-
-    try {
-      await this.waitForConnection();
-      this.logger.info("Returning status", { status: this.status.status });
-      return this._status.get();
-    } catch (error) {
-      this.logger.error("Connection failed", { error });
-      return this._status.get();
-    }
+    return this._status.get();
   }
 
   async shutdown(): Promise<void> {
@@ -377,17 +378,29 @@ export class HubService {
   }
 
   async disconnect(): Promise<void> {
+    // Explicit teardown: stop the re-arm so it doesn't reconnect us.
+    this.isShuttingDown = true;
+    // Guard the async teardown: a connect() racing the awaits below would
+    // otherwise no-op on the still-present socket and then we'd null it,
+    // stranding the instance. While disconnecting, connect() is a no-op.
+    this.disconnecting = true;
+    this.clearReArmTimer();
+    this.reArmAttempts = 0;
     this.usageStatsSender.stop();
-    await this.toolCallBatcher.shutdown();
-    this.setupChangeSender.shutdown();
-    if (this.socket) {
-      this.logger.info("Disconnecting from Hub");
-      // Allow the event loop to drain any pending socket.io writes before closing
-      await new Promise<void>((resolve) => setImmediate(resolve));
-      this.socket.disconnect();
-      this.socket = null;
+    try {
+      await this.toolCallBatcher.shutdown();
+      this.setupChangeSender.shutdown();
+      if (this.socket) {
+        this.logger.info("Disconnecting from Hub");
+        // Allow the event loop to drain any pending socket.io writes before closing
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        this.socket.disconnect();
+        this.socket = null;
+      }
+      this._status.set({ status: "unauthenticated" });
+    } finally {
+      this.disconnecting = false;
     }
-    this._status.set({ status: "unauthenticated" });
   }
 
   sendThrottledSetupChange(
@@ -468,34 +481,13 @@ export class HubService {
     }
   }
 
-  private async waitForConnection(): Promise<void> {
-    return Promise.race([
-      new Promise<void>((resolve, reject) => {
-        this.connectionPromise = { resolve, reject };
-      }),
-      new Promise<void>((_, reject) => {
-        this.connectionTimeoutId = setTimeout(() => {
-          this.logger.error("Hub connection timed out, giving up");
-          if (this.socket) {
-            this.socket.close();
-            this.socket = null;
-          }
-          this._status.set({
-            status: "unauthenticated",
-            connectionError: new HubConnectionTimeoutError(
-              "Connection timed out",
-            ),
-          });
-          reject(new Error("Connection timeout"));
-        }, this.connectionTimeout);
-      }),
-    ]);
-  }
-
   private setupEventHandlers(): void {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
+      // Connected: stop any pending re-arm and reset its backoff.
+      this.clearReArmTimer();
+      this.reArmAttempts = 0;
       this.logger.info("Connected to Hub");
       this._status.set({ status: "authenticated" });
       this.bootPhaseHistory = [];
@@ -504,7 +496,6 @@ export class HubService {
         this.usageStatsSender.start(this.socket);
         this.toolCallBatcher.start();
       }
-      this.resolveConnection();
     });
 
     this.socket.on("connect_error", (e) => {
@@ -516,33 +507,23 @@ export class HubService {
           cause: error,
         }),
       });
-
-      // socket.active indicates if automatic reconnection will occur
-      if (this.socket && !this.socket.active) {
-        // No automatic reconnection will happen - clean up
-        this.logger.info("No automatic reconnection after connect_error");
-        this.rejectConnection(error);
-      }
-      // Otherwise socket.io will handle reconnection automatically
+      this.handleConnectionDrop();
     });
 
     this.socket.on("disconnect", (reason, details) => {
       this.logger.info("Disconnected from Hub", { reason, details });
       this.usageStatsSender.stop();
+      // Stop the batcher symmetrically; the connect handler restarts it on
+      // reconnect. Left running, its flush interval keeps draining the buffer
+      // and, once the socket is gone, silently drops tool-call events.
+      this.toolCallBatcher.stop();
       this._status.set({
         status: "unauthenticated",
         connectionError: new HubConnectionError(
           `Disconnected from Hub: ${reason}`,
         ),
       });
-
-      // socket.active indicates if automatic reconnection will occur
-      if (this.socket && !this.socket.active) {
-        // No automatic reconnection will happen - clean up
-        this.logger.info("No automatic reconnection, cleaning up", { reason });
-        this.rejectConnection(new Error(`Disconnected: ${reason}`));
-      }
-      // Otherwise socket.io will handle reconnection automatically
+      this.handleConnectionDrop();
     });
 
     this.socket.on("apply-setup", async (envelope) => {
@@ -834,30 +815,48 @@ export class HubService {
     });
   }
 
-  private clearConnectionTimeout(): void {
-    if (this.connectionTimeoutId) {
-      clearTimeout(this.connectionTimeoutId);
-      this.connectionTimeoutId = null;
+  // socket.io retries while socket.active; we only step in once it gives up.
+  private handleConnectionDrop(): void {
+    if (this.socket?.active) return;
+    this.scheduleReArm();
+  }
+
+  private clearReArmTimer(): void {
+    if (this.reArmTimeoutId) {
+      clearTimeout(this.reArmTimeoutId);
+      this.reArmTimeoutId = null;
     }
   }
 
-  private resolveConnection(): void {
-    this.clearConnectionTimeout();
-    if (this.connectionPromise) {
-      this.connectionPromise.resolve();
-      this.connectionPromise = null;
+  private scheduleReArm(): void {
+    if (this.isShuttingDown || this.reArmTimeoutId || !this.lastConnectProps) {
+      return;
     }
-  }
-
-  private rejectConnection(error: Error): void {
-    this.clearConnectionTimeout();
-    if (this.socket) {
-      this.socket.close();
+    // Exponential backoff, capped, with jitter. Clamp after jitter so the
+    // delay never exceeds the cap (matches socket.io's own backoff).
+    const base = Math.min(
+      HUB_RECONNECT_DELAY_MS * 2 ** this.reArmAttempts,
+      this.reconnectionDelayMax,
+    );
+    const jitter =
+      base * HUB_RECONNECT_RANDOMIZATION_FACTOR * (Math.random() * 2 - 1);
+    const delay = Math.min(
+      this.reconnectionDelayMax,
+      Math.max(0, Math.round(base + jitter)),
+    );
+    this.reArmAttempts++;
+    this.logger.info("Scheduling Hub re-arm reconnect", {
+      delayMs: delay,
+      attempt: this.reArmAttempts,
+    });
+    this.reArmTimeoutId = setTimeout(() => {
+      this.reArmTimeoutId = null;
+      if (this.isShuttingDown || !this.lastConnectProps) return;
+      if (this.status.status === "authenticated") return;
+      // Drop the dead socket so connect() builds a fresh one.
+      this.socket?.close();
       this.socket = null;
-    }
-    if (this.connectionPromise) {
-      this.connectionPromise.reject(error);
-      this.connectionPromise = null;
-    }
+      void this.connect(this.lastConnectProps);
+    }, delay);
   }
 }

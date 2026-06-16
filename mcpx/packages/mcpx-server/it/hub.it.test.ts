@@ -123,6 +123,50 @@ class StubTargetClients
   async completeOAuthByState() {}
 }
 
+// Resolves once the service reaches `target` status (or rejects on timeout).
+function waitForStatus(
+  hub: HubService,
+  target: AuthStatus["status"],
+  timeoutMs: number,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (hub.status.status === target) return resolve();
+    let settled = false;
+    const timer = setTimeout(() => {
+      settled = true;
+      reject(new Error(`Timed out waiting for status: ${target}`));
+    }, timeoutMs);
+    hub.addStatusListener((status) => {
+      if (settled || status.status !== target) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+// Resolves once the service's status carries a connectionError of `name`.
+function waitForConnectionError(
+  hub: HubService,
+  name: string,
+  timeoutMs: number,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (hub.status.connectionError?.name === name) return resolve();
+    let settled = false;
+    const timer = setTimeout(() => {
+      settled = true;
+      reject(new Error(`Timed out waiting for connectionError: ${name}`));
+    }, timeoutMs);
+    hub.addStatusListener((status) => {
+      if (settled || status.connectionError?.name !== name) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
 describe("HubService", () => {
   const HUB_PORT = 9002;
   const HUB_URL = `http://localhost:${HUB_PORT}`;
@@ -139,6 +183,26 @@ describe("HubService", () => {
   const stubTargetClients = new StubTargetClients();
   const stubEnvVarManager = new EnvVarManager(logger);
   const stubGetUsageStats = () => ({ agents: [], targetServers: [] });
+
+  const makeHub = (options: { connectionTimeout?: number } = {}): HubService =>
+    new HubService(
+      logger,
+      stubSetupManager,
+      stubCatalogManager,
+      stubEnvVarManager,
+      stubConfigService,
+      stubIdentityService,
+      stubTargetClients,
+      stubGetUsageStats,
+      { hubUrl: HUB_URL, ...options },
+    );
+
+  // Start a fresh Hub on the same port that accepts VALID_USER_ID.
+  const bringHubUp = async (): Promise<void> => {
+    mockHubServer = new MockHubServer({ port: HUB_PORT, logger });
+    await mockHubServer.waitForListening();
+    mockHubServer.setValidTokens([VALID_USER_ID]);
+  };
 
   beforeEach(async () => {
     // Start mock hub server
@@ -177,22 +241,11 @@ describe("HubService", () => {
         },
       );
 
-      const statusPromise = new Promise<AuthStatus>((resolve) => {
-        hubService!.addStatusListener((status) => {
-          resolve(status);
-        });
-      });
+      await hubService!.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService!, "authenticated", 5000);
 
-      const connectResult = await hubService!.connect({
-        setupOwnerId: VALID_USER_ID,
-      });
-
-      expect(connectResult.status).toBe("authenticated");
-      expect(connectResult.connectionError).toBeUndefined();
-
-      // Verify listener was called
-      const listenerStatus = await statusPromise;
-      expect(listenerStatus.status).toBe("authenticated");
+      expect(hubService!.status.status).toBe("authenticated");
+      expect(hubService!.status.connectionError).toBeUndefined();
 
       // Verify server sees the connection
       expect(mockHubServer.getConnectedClients()).toHaveLength(1);
@@ -216,12 +269,10 @@ describe("HubService", () => {
         },
       );
 
-      const connectResult = await hubService.connect({
-        setupOwnerId: INVALID_USER_ID,
-      });
+      await hubService.connect({ setupOwnerId: INVALID_USER_ID });
+      await waitForConnectionError(hubService, "HubUnavailableError", 5000);
 
-      expect(connectResult.status).toBe("unauthenticated");
-      expect(connectResult.connectionError?.name).toBe("HubUnavailableError");
+      expect(hubService.status.status).toBe("unauthenticated");
 
       // Verify no clients connected
       expect(mockHubServer.getConnectedClients()).toHaveLength(0);
@@ -246,14 +297,10 @@ describe("HubService", () => {
         },
       );
 
-      const connectResult = await hubService.connect({
-        setupOwnerId: VALID_USER_ID,
-      });
-
-      expect(connectResult.status).toBe("unauthenticated");
-      expect(connectResult.connectionError?.name).toBe(
-        "HubConnectionTimeoutError",
-      );
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      // A refused connection surfaces as unavailable.
+      await waitForConnectionError(hubService, "HubUnavailableError", 5000);
+      expect(hubService.status.status).toBe("unauthenticated");
     });
   });
 
@@ -278,7 +325,7 @@ describe("HubService", () => {
 
       // Connect first
       await hubService.connect({ setupOwnerId: VALID_USER_ID });
-      expect(hubService.status.status).toBe("authenticated");
+      await waitForStatus(hubService, "authenticated", 5000);
 
       // Disconnect
       await hubService.disconnect();
@@ -308,16 +355,14 @@ describe("HubService", () => {
       );
 
       // First connection
-      const firstResult = await hubService!.connect({
-        setupOwnerId: VALID_USER_ID,
-      });
-      expect(firstResult.status).toBe("authenticated");
+      await hubService!.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService!, "authenticated", 5000);
 
       const firstClients = mockHubServer.getConnectedClients();
       expect(firstClients).toHaveLength(1);
       const firstClientId = firstClients[0];
 
-      // Second connect() call should return existing status without reconnecting
+      // Second connect() call is idempotent and doesn't reconnect.
       const secondResult = await hubService!.connect({
         setupOwnerId: VALID_USER_ID,
       });
@@ -350,7 +395,7 @@ describe("HubService", () => {
       );
 
       await hubService.connect({ setupOwnerId: VALID_USER_ID });
-      expect(hubService.status.status).toBe("authenticated");
+      await waitForStatus(hubService, "authenticated", 5000);
 
       const clients = mockHubServer.getConnectedClients();
       expect(clients).toHaveLength(1);
@@ -392,6 +437,7 @@ describe("HubService", () => {
       );
 
       await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
       const clients = mockHubServer.getConnectedClients();
       const socketId = clients[0]!;
 
@@ -435,8 +481,9 @@ describe("HubService", () => {
       });
 
       await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
 
-      // Both listeners should have been notified synchronously
+      // Both listeners notified with the authenticated status.
       expect(listener1Statuses).toHaveLength(1);
       expect(listener1Statuses[0]?.status).toBe("authenticated");
 
@@ -469,14 +516,160 @@ describe("HubService", () => {
 
       // First failed connection
       await hubService.connect({ setupOwnerId: INVALID_USER_ID });
+      await waitForConnectionError(hubService, "HubUnavailableError", 5000);
       expect(notificationCount).toBe(1);
 
-      // Second failed connection with same error type
+      // Second connect() is idempotent; same status, no extra notification.
       await hubService.connect({ setupOwnerId: INVALID_USER_ID });
-
-      // Should not notify again since status is the same
+      await new Promise((r) => setTimeout(r, 100));
       expect(notificationCount).toBe(1);
     });
+  });
+
+  describe("Recovery after Hub outage", () => {
+    it("recovers on its own once the Hub returns, without a manual reconnect", async () => {
+      // Hub is down while the instance boots.
+      await mockHubServer.close();
+      hubService = makeHub();
+
+      // Wait until the first attempt has actually failed, so recovery must go
+      // through a background retry rather than a lucky immediate connect.
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForConnectionError(hubService, "HubUnavailableError", 5000);
+
+      await bringHubUp();
+
+      // The instance authenticates without a second connect() call.
+      await waitForStatus(hubService, "authenticated", 10000);
+      expect(hubService.status.status).toBe("authenticated");
+      expect(mockHubServer.getConnectedClients()).toHaveLength(1);
+    }, 15000);
+
+    // Hub is up but rejects the handshake (e.g. its PostgreSQL is down, so
+    // getSetupOwner throws -> next(err)). Same code path the real Hub takes.
+    it("recovers once the Hub accepts the handshake again, without a manual reconnect", async () => {
+      // Hub is reachable but rejects this owner's handshake.
+      mockHubServer.setValidTokens([]);
+      hubService = makeHub();
+
+      // Wait for the rejection so recovery must go through the re-arm path.
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForConnectionError(hubService, "HubUnavailableError", 5000);
+
+      // The Hub's dependency recovers -> the handshake now succeeds.
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+
+      // The instance authenticates on its own, no second connect() call.
+      await waitForStatus(hubService, "authenticated", 10000);
+      expect(hubService.status.status).toBe("authenticated");
+    }, 15000);
+
+    // A second connect() (e.g. the UI POSTing on page load) must not disturb a
+    // healthy connection. connect() is idempotent and only observes status.
+    it("stays authenticated when connect() is called again", async () => {
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubCatalogManager,
+        stubEnvVarManager,
+        stubConfigService,
+        stubIdentityService,
+        stubTargetClients,
+        stubGetUsageStats,
+        { hubUrl: HUB_URL, connectionTimeout: 5000 },
+      );
+
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
+      const clientId = mockHubServer.getConnectedClients()[0];
+
+      // Repeated connect() calls return the live status and don't reconnect.
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+
+      await new Promise((r) => setTimeout(r, 300));
+      expect(hubService.status.status).toBe("authenticated");
+      const clients = mockHubServer.getConnectedClients();
+      expect(clients).toHaveLength(1);
+      expect(clients[0]).toBe(clientId);
+    }, 15000);
+
+    // Connected, then the Hub goes away mid-session and returns. Exercises the
+    // disconnect handler + socket.io's own reconnect (transport error).
+    it("recovers from a mid-session transport drop", async () => {
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+      hubService = makeHub({ connectionTimeout: 5000 });
+
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
+
+      await mockHubServer.close();
+      await waitForStatus(hubService, "unauthenticated", 5000);
+
+      await bringHubUp();
+
+      await waitForStatus(hubService, "authenticated", 10000);
+      expect(hubService.status.status).toBe("authenticated");
+      expect(mockHubServer.getConnectedClients()).toHaveLength(1);
+    }, 20000);
+
+    // Hub force-disconnects the client. socket.io treats this as terminal
+    // (socket.active === false), so the re-arm timer must bring it back.
+    it("recovers when the Hub force-disconnects the client", async () => {
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+      hubService = makeHub({ connectionTimeout: 5000 });
+
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
+      const firstId = mockHubServer.getConnectedClients()[0]!;
+
+      mockHubServer.disconnectClient(firstId);
+      await waitForStatus(hubService, "unauthenticated", 5000);
+
+      // Server is still up and the token valid, so re-arm reconnects.
+      await waitForStatus(hubService, "authenticated", 10000);
+      expect(hubService.status.status).toBe("authenticated");
+      expect(mockHubServer.getConnectedClients()).toHaveLength(1);
+    }, 20000);
+
+    // A second connect() during an outage (the UI POSTs on page load) is a
+    // safe no-op and the instance still recovers to a single connection.
+    it("recovers when connect() is called again during an outage", async () => {
+      await mockHubServer.close();
+      hubService = makeHub();
+
+      // Both calls happen while the Hub is down; wait for the failure so the
+      // second connect() is genuinely a mid-outage no-op, not a lucky connect.
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForConnectionError(hubService, "HubUnavailableError", 5000);
+
+      await bringHubUp();
+
+      await waitForStatus(hubService, "authenticated", 10000);
+      expect(hubService.status.status).toBe("authenticated");
+      expect(mockHubServer.getConnectedClients()).toHaveLength(1);
+    }, 20000);
+
+    // A second connect() landing during a handshake re-arm backoff (the UI POST
+    // path) must not cancel the pending re-arm and stall recovery.
+    it("recovers when connect() is called during a handshake re-arm backoff", async () => {
+      // Hub rejects the handshake -> a re-arm is scheduled.
+      mockHubServer.setValidTokens([]);
+      hubService = makeHub();
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForConnectionError(hubService, "HubUnavailableError", 5000);
+
+      // Second connect() during the backoff (idempotent no-op).
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+
+      // Hub starts accepting; the re-arm must still fire and recover.
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+      await waitForStatus(hubService, "authenticated", 10000);
+      expect(hubService.status.status).toBe("authenticated");
+    }, 15000);
   });
 
   describe("Tool call batching", () => {
@@ -507,6 +700,7 @@ describe("HubService", () => {
     it("delivers recorded tool calls to hub on interval flush", async () => {
       hubService = makeHubService();
       await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
 
       hubService.recordToolCall({
         serverName: "my-server",
@@ -535,6 +729,7 @@ describe("HubService", () => {
     it("maps isError:true to errorType tool_error", async () => {
       hubService = makeHubService();
       await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
 
       hubService.recordToolCall({
         serverName: "s",
@@ -557,6 +752,7 @@ describe("HubService", () => {
     it("maps isCallFailure:true to errorType call_failed", async () => {
       hubService = makeHubService();
       await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
 
       hubService.recordToolCall({
         serverName: "s",
@@ -575,6 +771,33 @@ describe("HubService", () => {
 
       expect(payload.events[0]?.errorType).toBe("call_failed");
     });
+
+    // The batcher is stopped on disconnect and restarted on reconnect; a call
+    // recorded after a mid-session outage must still flush.
+    it("resumes flushing tool calls after a reconnect", async () => {
+      hubService = makeHubService();
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      await waitForStatus(hubService, "authenticated", 5000);
+
+      // Hub drops and returns.
+      await mockHubServer.close();
+      await waitForStatus(hubService, "unauthenticated", 5000);
+      await bringHubUp();
+      await waitForStatus(hubService, "authenticated", 10000);
+
+      hubService.recordToolCall({
+        serverName: "s",
+        toolName: "t",
+        clientName: undefined,
+        consumerTag: "c",
+        durationMs: 10,
+        isError: false,
+        isCallFailure: false,
+      });
+
+      const envelope = await mockHubServer.waitForToolCallBatch(2000);
+      expect(envelope).toBeDefined();
+    }, 20000);
 
     // Shutdown-flush is intentionally not tested here.
     //
