@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"lunar/async-service/config"
 	"lunar/async-service/utils"
@@ -125,8 +126,7 @@ func handleSuccessNoResponse(writer http.ResponseWriter, message, seqID string) 
 	writer.Header().Set(HeaderAsyncLocation, currentLocation)
 	writer.Header().Set(AsyncServiceEnqueuedHeaderName, "true")
 	writer.WriteHeader(http.StatusAccepted)
-	_, err := fmt.Fprintf(writer, `{"msg": "%s"}`, message)
-	if err != nil {
+	if err := json.NewEncoder(writer).Encode(map[string]string{"msg": message}); err != nil {
 		handleError(writer, "Error writing response", http.StatusInternalServerError, err)
 	}
 }
@@ -134,5 +134,11 @@ func handleSuccessNoResponse(writer http.ResponseWriter, message, seqID string) 
 func handleError(writer http.ResponseWriter, message string, status int,
 	err error,
 ) {
-	http.Error(writer, fmt.Sprintf(`{"msg": "%s", "error": "%v"}`, message, err), status)
+	errMsg := ""
+	if err != nil {
+		errMsg = err.Error()
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(status)
+	_ = json.NewEncoder(writer).Encode(map[string]string{"msg": message, "error": errMsg})
 }

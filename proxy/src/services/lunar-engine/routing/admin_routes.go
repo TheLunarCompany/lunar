@@ -59,13 +59,25 @@ func handleJSONResponse(writer http.ResponseWriter, data []byte) {
 func handleError(writer http.ResponseWriter, message string, status int,
 	err error,
 ) {
-	http.Error(writer, fmt.Sprintf(`{"msg": "%s", "error": "%v"}`, message, err), status)
+	errMsg := ""
+	if err != nil {
+		errMsg = err.Error()
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(status)
+	if encErr := json.NewEncoder(writer).Encode(
+		map[string]string{"msg": message, "error": errMsg}); encErr != nil {
+		log.Error().Err(encErr).Stack().Msg("Failed encoding error response")
+	}
 	log.Error().Err(err).Stack().Msg(message)
 }
 
 func SuccessResponse(writer http.ResponseWriter, message string) {
 	log.Trace().Msg(message)
-	fmt.Fprintf(writer, `{"msg": "%s"}`, message)
+	if err := json.NewEncoder(writer).Encode(
+		map[string]string{"msg": message}); err != nil {
+		log.Error().Err(err).Stack().Msg("Failed encoding response")
+	}
 }
 
 func HandleApplyPolicies(
