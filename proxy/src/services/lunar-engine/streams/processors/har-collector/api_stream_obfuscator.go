@@ -28,7 +28,7 @@ func newAPIStreamObfuscator(
 	return &apiStreamObfuscator{
 		obfuscateEnabled:    obfuscateEnabled,
 		obfuscateExclusions: obfuscateExclusions,
-		obfuscator:          obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}},
+		obfuscator:          obfuscation.Obfuscator{Hasher: obfuscation.SHA256Hasher{}},
 		apiObject:           stream.AsObject(apiStream),
 	}
 }

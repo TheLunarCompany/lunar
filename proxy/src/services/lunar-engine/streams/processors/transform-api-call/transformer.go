@@ -28,7 +28,7 @@ type transformer struct {
 func newTransformer() *transformer {
 	return &transformer{
 		setDefinitions: make(map[string]any),
-		obfuscator:     obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}},
+		obfuscator:     obfuscation.Obfuscator{Hasher: obfuscation.SHA256Hasher{}},
 	}
 }
 

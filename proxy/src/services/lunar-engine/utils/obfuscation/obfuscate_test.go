@@ -12,12 +12,13 @@ const obfuscatedValue = "<obfuscated>"
 
 var emptyExcludedPaths = []string{}
 
-func TestObfuscateStringWithMD5Hasher(t *testing.T) {
+func TestObfuscateStringWithSHA256Hasher(t *testing.T) {
 	t.Parallel()
-	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
+	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.SHA256Hasher{}}
 
 	res := obfuscator.ObfuscateString("foo")
-	want := "acbd18db4cc2f85cedef654fccc4a4d8" // https://md5calc.com/hash/md5/foo
+	// echo -n foo | sha256sum
+	want := "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae"
 	assert.Equal(t, want, res)
 }
 

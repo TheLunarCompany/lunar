@@ -24,7 +24,7 @@ func initializeServices(
 	delayedPriorityQueueFactory remedies.InitializeQueueFunc,
 	exportersConfig config.Exporters,
 ) (*PoliciesServices, error) {
-	md5Obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
+	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.SHA256Hasher{}}
 	identityObfuscator := obfuscation.Obfuscator{
 		Hasher: obfuscation.IdentityHasher{},
 	}
@@ -73,7 +73,7 @@ func initializeServices(
 		Diagnosis: DiagnosisPlugins{
 			HARGeneratorPlugin: diagnoses.NewHARGeneratorPlugin(
 				clock,
-				md5Obfuscator,
+				obfuscator,
 			),
 			MetricsCollector: &diagnoses.MetricsCollectorPlugin{},
 			Void:             &diagnoses.VoidPlugin{},

@@ -13,7 +13,7 @@ import (
 )
 
 func TestAPIStreamObfuscator(t *testing.T) {
-	md5Obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
+	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.SHA256Hasher{}}
 
 	testCases := []struct {
 		name                 string
@@ -62,7 +62,7 @@ func TestAPIStreamObfuscator(t *testing.T) {
 			testHeader:          true,
 			expectedHeaders: map[string]string{
 				"authorization":   "Bearer token",
-				"X-Custom-Header": md5Obfuscator.ObfuscateString("CustomValue"),
+				"X-Custom-Header": obfuscator.ObfuscateString("CustomValue"),
 			},
 		},
 		{
@@ -72,7 +72,7 @@ func TestAPIStreamObfuscator(t *testing.T) {
 			apiStream:           newMockAPIStream(),
 			testHeader:          true,
 			expectedHeaders: map[string]string{
-				"authorization":   md5Obfuscator.ObfuscateString("Bearer token"),
+				"authorization":   obfuscator.ObfuscateString("Bearer token"),
 				"X-Custom-Header": "CustomValue",
 			},
 		},
@@ -92,7 +92,7 @@ func TestAPIStreamObfuscator(t *testing.T) {
 			testRequestBody:     true,
 			expectedRequestBody: fmt.Sprintf(
 				`{"user":{"name":"%v","id":"12345"}}`,
-				md5Obfuscator.ObfuscateString("Alice"),
+				obfuscator.ObfuscateString("Alice"),
 			),
 		},
 		{
@@ -103,7 +103,7 @@ func TestAPIStreamObfuscator(t *testing.T) {
 			testResponseBody:    true,
 			expectedResponseBody: fmt.Sprintf(
 				`{"user":{"name":"Bob","id":"%v"}}`,
-				md5Obfuscator.ObfuscateString("98765"),
+				obfuscator.ObfuscateString("98765"),
 			),
 		},
 		{
@@ -125,8 +125,8 @@ func TestAPIStreamObfuscator(t *testing.T) {
 			testPath:  true,
 			expectedPath: fmt.Sprintf(
 				"/users/%v/orders/%v",
-				md5Obfuscator.ObfuscateString("12345"),
-				md5Obfuscator.ObfuscateString("5678"),
+				obfuscator.ObfuscateString("12345"),
+				obfuscator.ObfuscateString("5678"),
 			),
 		},
 		{
@@ -140,8 +140,8 @@ func TestAPIStreamObfuscator(t *testing.T) {
 			testPath:  true,
 			expectedPath: fmt.Sprintf(
 				"/users/%v/orders/%v",
-				md5Obfuscator.ObfuscateString("12345"),
-				md5Obfuscator.ObfuscateString("5678"),
+				obfuscator.ObfuscateString("12345"),
+				obfuscator.ObfuscateString("5678"),
 			),
 		},
 	}
