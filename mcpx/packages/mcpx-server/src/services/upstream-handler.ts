@@ -978,6 +978,8 @@ export class UpstreamHandler
       const extendedClient = await this.connectionFactory.createConnection(
         targetServer,
         envRequirements,
+        // Watermark headers from the catalog (see privateHeadersSchema).
+        catalogServer?.adminConfig?.privateHeaders,
       );
       return await this.finalizeConnection(targetServer, extendedClient);
     } catch (initialError) {

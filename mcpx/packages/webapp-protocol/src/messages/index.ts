@@ -32,7 +32,9 @@ export type {
 export type {
   CatalogItemWire,
   CatalogItemAdminConfig,
+  PrivateHeaders,
 } from "./mcpx-bound/set-catalog.js";
+export { privateHeadersSchema } from "./mcpx-bound/set-catalog.js";
 export type { SetProfileSecretsPayload } from "./mcpx-bound/set-profile-secrets.js";
 export type { SetOauthCredentialsPayload } from "./mcpx-bound/set-oauth-credentials.js";
 export type {

@@ -13,13 +13,18 @@ import {
 } from "../errors.js";
 import { prepareCommand } from "../interception.js";
 import {
+  EnvValue,
   RemoteTargetServer,
   StdioTargetServer,
   TargetServer,
 } from "../model/target-servers.js";
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
+import { PrivateHeaders } from "@mcpx/webapp-protocol/messages";
 import { env } from "../env.js";
-import { TargetServerEnvSource } from "./env-var-manager.js";
+import {
+  TargetServerEnvResolver,
+  TargetServerEnvSource,
+} from "./env-var-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { EnvRequirements } from "@mcpx/shared-model";
 import { resolveEnv } from "./target-server-env-resolution.js";
@@ -46,14 +51,15 @@ export class TargetServerConnectionFactory {
   async createConnection(
     targetServer: TargetServer,
     envRequirements: EnvRequirements | undefined,
+    privateHeaders?: PrivateHeaders,
   ): Promise<ExtendedClientI> {
     switch (targetServer.type) {
       case "stdio":
         return await this.createStdioConnection(targetServer, envRequirements);
       case "sse":
-        return await this.createRemoteConnection(targetServer);
+        return await this.createRemoteConnection(targetServer, privateHeaders);
       case "streamable-http":
-        return await this.createRemoteConnection(targetServer);
+        return await this.createRemoteConnection(targetServer, privateHeaders);
     }
   }
 
@@ -155,23 +161,20 @@ export class TargetServerConnectionFactory {
 
   private async createRemoteConnection(
     targetServer: RemoteTargetServer,
+    privateHeaders?: PrivateHeaders,
   ): Promise<ExtendedClientI> {
     const client = buildClient(targetServer.name);
 
-    let resolvedHeaders: Record<string, string> | undefined;
-    if (targetServer.headers) {
-      const { resolved, missingVars } = resolveEnv({
-        envConfig: targetServer.headers,
+    // Watermark headers come from the catalog at connect time (see privateHeadersSchema).
+    const requestInit: RequestInit = {
+      headers: resolveRemoteHeaders({
+        userHeaders: targetServer.headers,
+        privateHeaders,
         envVarsResolver: this.envVars,
         logger: this.logger,
-      });
-      if (missingVars.length > 0 && !this.identityService.isSpace()) {
-        throw new PendingInputError(missingVars);
-      }
-      resolvedHeaders = resolved;
-    }
-
-    const requestInit: RequestInit = { headers: resolvedHeaders };
+        isSpace: this.identityService.isSpace(),
+      }),
+    };
     try {
       const transport =
         targetServer.type === "sse"
@@ -218,4 +221,55 @@ export function buildClient(targetServiceName: string): Client {
     name: `mcpx::${targetServiceName}`,
     version: "1.0.0",
   });
+}
+
+/**
+ * Resolves user header values to concrete strings and merges the admin (watermark)
+ * header on top. The watermark is a single literal key/value pair and is merged last,
+ * so it wins over a user header of the same name. Returns undefined when there are no
+ * headers at all.
+ */
+export function resolveRemoteHeaders(params: {
+  userHeaders?: Record<string, EnvValue>;
+  privateHeaders?: PrivateHeaders;
+  envVarsResolver: TargetServerEnvResolver;
+  logger: Logger;
+  isSpace: boolean;
+}): Record<string, string> | undefined {
+  const { userHeaders, privateHeaders, envVarsResolver, logger, isSpace } =
+    params;
+  const resolvedUser = resolveHeaderValues(
+    userHeaders,
+    envVarsResolver,
+    logger,
+    isSpace,
+  );
+  const watermark = privateHeaders
+    ? { [privateHeaders.key]: privateHeaders.value }
+    : undefined;
+  if (!resolvedUser && !watermark) {
+    return undefined;
+  }
+  return { ...resolvedUser, ...watermark };
+}
+
+/** Resolves env-backed header values to concrete strings, throwing on missing (unless space). */
+function resolveHeaderValues(
+  headers: Record<string, EnvValue> | undefined,
+  envVarsResolver: TargetServerEnvResolver,
+  logger: Logger,
+  isSpace: boolean,
+): Record<string, string> | undefined {
+  if (!headers) {
+    return undefined;
+  }
+  const { resolved, missingVars } = resolveEnv({
+    envConfig: headers,
+    envVarsResolver,
+    logger,
+  });
+  if (missingVars.length > 0 && !isSpace) {
+    throw new PendingInputError(missingVars);
+  }
+  return resolved;
 }
