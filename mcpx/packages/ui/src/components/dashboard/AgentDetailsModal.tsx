@@ -511,12 +511,12 @@ export const AgentDetailsModal = ({
   const saveConfiguration = useCallback(async () => {
     if (!agent) return;
 
-    // Anonymous clusters have neither a tag nor a clientName — nothing to write to.
+    // Anonymous clusters have neither a tag nor a clientName - nothing to write to.
     if (agent.identityType === "anonymous") {
       toast({
         title: "Cannot save",
         description:
-          "This connection has no consumer tag and no client name — no identity to attach permissions to.",
+          "This connection has no consumer tag and no client name - no identity to attach permissions to.",
         variant: "destructive",
       });
       return;
@@ -527,7 +527,7 @@ export const AgentDetailsModal = ({
         ? agent.consumerTag
         : agent.clientName;
 
-    // Permission CRUD adapter — picks consumers-API vs clientNames-API based on the cluster's identity.
+    // Permission CRUD adapter - picks consumers-API vs clientNames-API based on the cluster's identity.
     const consumersApi = {
       getAll: () => apiClient.getPermissionConsumers(),
       create: (req: { name: string; config: ConsumerConfig }) =>
