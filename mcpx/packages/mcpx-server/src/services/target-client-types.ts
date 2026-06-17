@@ -1,4 +1,3 @@
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import {
   RemoteTargetServer,
   StdioTargetServer,
@@ -7,16 +6,11 @@ import {
 import { ExtendedClientI } from "./client-extension.js";
 import { MissingEnvVar } from "../errors.js";
 
-export interface UpstreamCapabilities {
-  tools: Tool[];
-  toolParentNames?: Record<string, string>;
-}
-
+// Upstream tools live in CapabilityRegistry; not duplicated here.
 export interface ConnectedTargetClient {
   _state: "connected";
   targetServer: TargetServer;
   extendedClient: ExtendedClientI;
-  capabilities: UpstreamCapabilities;
 }
 
 export interface PendingAuthTargetClient {

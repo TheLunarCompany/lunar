@@ -6,6 +6,7 @@ import type {
   ServiceToolGroup,
 } from "../model/config/permissions.js";
 import { ConsumerConfig } from "@mcpx/shared-model";
+import { CapabilityKind } from "./capability-registry.js";
 
 type ServiceLevelPermission =
   | { tag: "allow_all" }
@@ -166,8 +167,9 @@ export class PermissionManager implements ConfigConsumer<Config> {
   }
 
   hasPermission(props: {
+    capabilityKind: CapabilityKind;
     serviceName: string;
-    toolName: string;
+    capabilityName: string;
     clientName?: string;
     consumerTag?: string;
   }): boolean {
@@ -175,9 +177,9 @@ export class PermissionManager implements ConfigConsumer<Config> {
       throw new Error("PermissionManager is not initialized");
     }
 
-    const { clientName, consumerTag, serviceName, toolName } = props;
+    const { clientName, consumerTag, serviceName, capabilityName } = props;
     const consumer = this.resolveConsumer({ clientName, consumerTag });
-    return evaluatePermission(consumer, serviceName, toolName);
+    return evaluatePermission(consumer, serviceName, capabilityName);
   }
 
   // Resolution precedence: consumerTag > clientName > default.

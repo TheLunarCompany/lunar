@@ -13,7 +13,7 @@ import {
 import {
   InternalCapabilityProvider,
   InternalToolHandler,
-} from "../services/internal-tools-service.js";
+} from "../services/internal-capabilities-service.js";
 import { INTERNAL_SERVICE_NAME } from "../model/internal-service.js";
 
 /**
@@ -174,7 +174,8 @@ export class DynamicCapabilitiesService implements InternalCapabilityProvider {
     };
     return [
       {
-        toolName: InternalToolName.GET_NEW_CAPABILITIES,
+        kind: "tools",
+        name: InternalToolName.GET_NEW_CAPABILITIES,
         isVisible,
         enrich: (definition) => this.enrichGetCapabilitiesTool(definition),
         handle: ({ args, consumer }) =>
@@ -185,7 +186,8 @@ export class DynamicCapabilitiesService implements InternalCapabilityProvider {
           }),
       },
       {
-        toolName: InternalToolName.CLEAR_TOOLS,
+        kind: "tools",
+        name: InternalToolName.CLEAR_TOOLS,
         isVisible,
         handle: ({ args, consumer }) =>
           this.handleToolCall({

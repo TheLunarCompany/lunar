@@ -5,7 +5,7 @@ import { InitiateOAuthResult } from "./oauth-connection-handler.js";
 import {
   InternalCapabilityProvider,
   InternalToolHandler,
-} from "./internal-tools-service.js";
+} from "./internal-capabilities-service.js";
 import { PermissionCheck } from "./capability-resolver.js";
 
 export const SERVICE_DELIMITER = "__";
@@ -55,19 +55,19 @@ export class OAuthToolsService implements InternalCapabilityProvider {
     private readonly callbackUrl?: string,
   ) {}
 
-  // Auth tool respects the consumer's permissions for the owning server, even
-  // though origin="internal" otherwise bypasses catalog/permission gating.
-  // Without this, restrictive toolgroups would still see the auth tool — it'd
-  // be the only origin="internal" entry that escapes their allow-list.
+  // Auth tool honors per-server permissions even though origin="internal"
+  // usually bypasses permission gating.
   getInternalCapabilityRegistrations(): ReturnType<
     InternalCapabilityProvider["getInternalCapabilityRegistrations"]
   > {
     const handler: InternalToolHandler = {
-      toolName: AUTH_TOOL_NAME,
+      kind: "tools",
+      name: AUTH_TOOL_NAME,
       isVisible: (consumer, cap) =>
         this.permissions.hasPermission({
+          capabilityKind: "tools",
           serviceName: cap.serverName,
-          toolName: AUTH_TOOL_NAME,
+          capabilityName: AUTH_TOOL_NAME,
           clientName: consumer.clientName,
           consumerTag: consumer.consumerTag,
         }),

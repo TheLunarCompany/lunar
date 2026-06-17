@@ -53,7 +53,6 @@ export type OriginalClientI = Pick<
   | "close"
   | "listTools"
   | "callTool"
-  | "getServerCapabilities"
   | "setNotificationHandler"
   | "ping"
 >;
@@ -87,7 +86,6 @@ export interface ExtendedClientI {
   callTool(
     params: Parameters<Client["callTool"]>[0],
   ): ReturnType<Client["callTool"]>;
-  getServerCapabilities(): ReturnType<Client["getServerCapabilities"]>;
   isAlive(timeoutMs: number): Promise<Error | null>;
   onToolsListChanged(callback: () => void): () => void;
 }
@@ -132,8 +130,6 @@ export class ExtendedClientBuilder {
       },
       listTools: extendedClient.listTools.bind(extendedClient),
       callTool: extendedClient.callTool.bind(extendedClient),
-      getServerCapabilities:
-        extendedClient.getServerCapabilities.bind(extendedClient),
       isAlive: extendedClient.isAlive.bind(extendedClient),
       onToolsListChanged(callback: () => void): () => void {
         toolsListChangedListeners.add(callback);
@@ -179,10 +175,6 @@ export class ExtendedClient {
 
   async close(): Promise<void> {
     return await this.originalClient.close();
-  }
-
-  getServerCapabilities(): ReturnType<Client["getServerCapabilities"]> {
-    return this.originalClient.getServerCapabilities();
   }
 
   async listTools(): Promise<ExtendedListToolsResponse> {

@@ -39,9 +39,9 @@ import {
 } from "../internal-tools/index.js";
 import { OAuthToolsService } from "./oauth-tools.js";
 import {
-  InternalToolsService,
+  InternalCapabilitiesService,
   wireInternalCapabilityProvider,
-} from "./internal-tools-service.js";
+} from "./internal-capabilities-service.js";
 import { OAuthTokenStoreI } from "./oauth-token-store.js";
 import { DiskTokenStore } from "./disk-token-store.js";
 import { HubTokenClient } from "./hub-token-client.js";
@@ -73,7 +73,7 @@ export class Services {
   private _oauthSessionManager: OAuthSessionManager;
   private _capabilityRegistry: CapabilityRegistry;
   private _capabilityResolver: CapabilityResolver;
-  private _internalTools: InternalToolsService;
+  private _internalCapabilities: InternalCapabilitiesService;
 
   private logger: LunarLogger;
   private initialized = false;
@@ -266,15 +266,15 @@ export class Services {
       `${env.MCPX_SERVER_URL}/auth/callback`,
     );
 
-    this._internalTools = new InternalToolsService(logger);
+    this._internalCapabilities = new InternalCapabilitiesService(logger);
     wireInternalCapabilityProvider(
       this._oauthTools,
-      this._internalTools,
+      this._internalCapabilities,
       capabilityRegistry,
     );
     wireInternalCapabilityProvider(
       this._dynamicCapabilities,
-      this._internalTools,
+      this._internalCapabilities,
       capabilityRegistry,
     );
 
@@ -476,9 +476,9 @@ export class Services {
     return this._oauthTools;
   }
 
-  get internalTools(): InternalToolsService {
+  get internalCapabilities(): InternalCapabilitiesService {
     this.ensureInitialized();
-    return this._internalTools;
+    return this._internalCapabilities;
   }
 
   get capabilityRegistry(): CapabilityRegistry {

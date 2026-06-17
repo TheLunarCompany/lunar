@@ -73,8 +73,9 @@ function makeCatalog(state: CatalogState): CatalogManagerI {
 // Default permission stub: allow everything. Individual tests can override.
 function makePermissions(
   decide: (props: {
+    capabilityKind: "tools";
     serviceName: string;
-    toolName: string;
+    capabilityName: string;
     consumerTag?: string;
     clientName?: string;
   }) => boolean = () => true,
@@ -381,8 +382,8 @@ describe("CapabilityResolver", () => {
     it("getVisibleTools applies permission filter on top of active set", () => {
       const denied = new Set(["github__delete_issue"]);
       const permissions = makePermissions(
-        ({ serviceName, toolName }) =>
-          !denied.has(`${serviceName}__${toolName}`),
+        ({ serviceName, capabilityName }) =>
+          !denied.has(`${serviceName}__${capabilityName}`),
       );
       ({ registry, catalog, resolver } = setup(
         { isStrict: false, approvals: new Map() },
@@ -469,8 +470,9 @@ describe("CapabilityResolver", () => {
 
     it("passes consumerTag and clientName through to the permission check", () => {
       const seen: Array<{
+        capabilityKind: "tools";
         serviceName: string;
-        toolName: string;
+        capabilityName: string;
         consumerTag?: string;
         clientName?: string;
       }> = [];
@@ -490,8 +492,9 @@ describe("CapabilityResolver", () => {
         clientName: "claude",
       });
       expect(seen[0]).toEqual({
+        capabilityKind: "tools",
         serviceName: "github",
-        toolName: "create_issue",
+        capabilityName: "create_issue",
         consumerTag: "alice",
         clientName: "claude",
       });

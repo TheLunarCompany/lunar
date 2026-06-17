@@ -227,7 +227,7 @@ describe("DynamicCapabilitiesService", () => {
 
       const { handlers, eagerRegistrations } =
         service.getInternalCapabilityRegistrations();
-      const names = handlers.map((h) => h.toolName);
+      const names = handlers.map((h) => h.name);
       expect(names).toContain("get_new_capabilities");
       expect(names).toContain("clear_tools");
       expect(handlers).toHaveLength(2);
@@ -248,7 +248,7 @@ describe("DynamicCapabilitiesService", () => {
 
       const handler = service
         .getInternalCapabilityRegistrations()
-        .handlers.find((h) => h.toolName === "get_new_capabilities");
+        .handlers.find((h) => h.name === "get_new_capabilities");
       expect(
         handler?.isVisible(
           { consumerTag: "no-mode" },

@@ -340,7 +340,6 @@ describe("ExtendedClient", () => {
             },
           ],
         }),
-        getServerCapabilities: () => undefined,
         setNotificationHandler: () => {},
         ping: async () => ({}),
         callTool: async () => ({
@@ -382,7 +381,6 @@ describe("ExtendedClient", () => {
             },
           ],
         }),
-        getServerCapabilities: () => undefined,
         setNotificationHandler: () => {},
         ping: async () => ({}),
         callTool: async () => ({
@@ -528,7 +526,6 @@ function mockOriginalClientWithPing(
     connect: async () => {},
     close: async () => {},
     listTools: async () => ({ tools: [] }),
-    getServerCapabilities: () => undefined,
     setNotificationHandler: () => {},
     ping,
     callTool: async () => ({
@@ -578,7 +575,6 @@ function mockOriginalClient(): OriginalClientI & {
         },
       ],
     }),
-    getServerCapabilities: () => undefined,
     setNotificationHandler: () => {},
     ping: async () => ({}),
     callTool: async (params) => {

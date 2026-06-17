@@ -22,9 +22,9 @@ import {
 } from "../model/sessions.js";
 import { UnavailableReason } from "../services/capability-resolver.js";
 import {
-  HiddenInternalToolError,
-  UnknownInternalToolError,
-} from "../services/internal-tools-service.js";
+  HiddenInternalCapabilityError,
+  UnknownInternalCapabilityError,
+} from "../services/internal-capabilities-service.js";
 const MIN_PROTOCOL_VERSION_FOR_KEEPALIVE = "2025-11-25";
 const MAX_KEEPALIVE_TIMEOUT_RATIO = 0.8;
 type RequestHandler = Parameters<Server["setRequestHandler"]>[1];
@@ -58,12 +58,12 @@ export async function getServer(
       const consumer = services.sessions.getConsumerContext(sessionId);
 
       // Per-handler visibility + enrichment for origin="internal" tools (auth,
-      // dynamic-capabilities, etc.) lives in InternalToolsService; upstream
-      // tools surface as-is.
+      // dynamic-capabilities, etc.) lives in InternalCapabilitiesService;
+      // upstream tools surface as-is.
       const tools: Tool[] = [];
       for (const cap of services.capabilityResolver.getVisibleTools(consumer)) {
         if (cap.origin === "internal") {
-          const visible = services.internalTools.visibleForListing(
+          const visible = services.internalCapabilities.visibleToolForListing(
             cap,
             consumer,
           );
@@ -288,15 +288,15 @@ async function executeToolCall(options: {
   const { entry } = resolved;
 
   if (entry.origin === "internal") {
-    return services.internalTools
-      .dispatch(entry, request.params.arguments ?? {}, {
+    return services.internalCapabilities
+      .dispatchTool(entry, request.params.arguments ?? {}, {
         consumerTag,
         clientName,
       })
       .catch((e: unknown) => {
         if (
-          e instanceof HiddenInternalToolError ||
-          e instanceof UnknownInternalToolError
+          e instanceof HiddenInternalCapabilityError ||
+          e instanceof UnknownInternalCapabilityError
         ) {
           throw makeUnavailableError("Tool", request.params.name, "unknown");
         }

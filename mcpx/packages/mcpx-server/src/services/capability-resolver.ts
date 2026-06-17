@@ -15,7 +15,7 @@ export interface ActiveCapability<Definition> {
   readonly capabilityName: string;
   readonly definition: Definition;
   // Inherited from the registering server, so the gateway can dispatch
-  // per-capability (internal → InternalToolsService, upstream → proxy).
+  // per-capability (internal → InternalCapabilitiesService, upstream → proxy).
   readonly origin: CapabilityOrigin;
 }
 
@@ -29,8 +29,9 @@ export interface ConsumerContext {
 // Minimal slice of PermissionManager so tests can stub trivially.
 export interface PermissionCheck {
   hasPermission(props: {
+    capabilityKind: CapabilityKind;
     serviceName: string;
-    toolName: string;
+    capabilityName: string;
     clientName?: string;
     consumerTag?: string;
   }): boolean;
@@ -107,7 +108,7 @@ export class CapabilityResolver {
   }
 
   getVisibleTools(consumer: ConsumerContext): ActiveTool[] {
-    return this.visibleCapabilities(this.activeTools, consumer);
+    return this.visibleCapabilities(this.activeTools, "tools", consumer);
   }
 
   // Resolves a prefixed tool name to its ActiveTool entry or the reason it's
@@ -127,7 +128,7 @@ export class CapabilityResolver {
       }
       return { ok: false, reason: "unknown" };
     }
-    if (entry.origin !== "internal" && !this.allows(entry, consumer)) {
+    if (entry.origin !== "internal" && !this.allows(entry, "tools", consumer)) {
       return { ok: false, reason: "permission-denied" };
     }
     return { ok: true, entry };
@@ -188,11 +189,12 @@ export class CapabilityResolver {
 
   private visibleCapabilities<T>(
     source: ReadonlyMap<string, ActiveCapability<T>>,
+    kind: CapabilityKind,
     consumer: ConsumerContext,
   ): ActiveCapability<T>[] {
     const result: ActiveCapability<T>[] = [];
     for (const cap of source.values()) {
-      if (cap.origin === "internal" || this.allows(cap, consumer)) {
+      if (cap.origin === "internal" || this.allows(cap, kind, consumer)) {
         result.push(cap);
       }
     }
@@ -206,11 +208,13 @@ export class CapabilityResolver {
 
   private allows<T>(
     cap: ActiveCapability<T>,
+    kind: CapabilityKind,
     consumer: ConsumerContext,
   ): boolean {
     return this.permissions.hasPermission({
+      capabilityKind: kind,
       serviceName: cap.serverName,
-      toolName: cap.capabilityName,
+      capabilityName: cap.capabilityName,
       clientName: consumer.clientName,
       consumerTag: consumer.consumerTag,
     });

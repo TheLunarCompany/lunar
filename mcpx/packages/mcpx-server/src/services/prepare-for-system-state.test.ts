@@ -84,7 +84,6 @@ describe("prepareForSystemState", () => {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
-          capabilities: { tools: [] },
         },
         () => 100,
         tools,
@@ -107,7 +106,6 @@ describe("prepareForSystemState", () => {
           _state: "connected",
           targetServer: sseServer,
           extendedClient: {} as never,
-          capabilities: { tools: [] },
         },
         (tool) => {
           toolNames.push(tool.name);
@@ -133,7 +131,6 @@ describe("prepareForSystemState", () => {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
-          capabilities: { tools: [] },
         },
         stubEstimateTokens,
         approved,
@@ -155,7 +152,6 @@ describe("prepareForSystemState", () => {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
-          capabilities: { tools: [] },
         },
         stubEstimateTokens,
         approved,
@@ -170,7 +166,6 @@ describe("prepareForSystemState", () => {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
-          capabilities: { tools: [] },
         },
         stubEstimateTokens,
       );

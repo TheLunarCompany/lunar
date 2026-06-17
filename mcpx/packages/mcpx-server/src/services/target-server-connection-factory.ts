@@ -144,12 +144,10 @@ export class TargetServerConnectionFactory {
       client,
       transport,
     );
-    const { tools } = await extendedClient.listTools();
     this.logger.info("STDIO client connected", {
       name: targetServer.name,
       command,
       args,
-      tools: tools.map(({ name }) => name),
     });
 
     return extendedClient;

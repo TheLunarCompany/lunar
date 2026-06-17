@@ -23,8 +23,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.prepareConfig(config);
       expect(() =>
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "what",
-          toolName: "ever",
+          capabilityName: "ever",
           consumerTag: "duh",
         }),
       ).toThrow();
@@ -51,8 +52,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "what",
-          toolName: "ever",
+          capabilityName: "ever",
           consumerTag: "duh",
         }),
       ).toBe(false);
@@ -80,8 +82,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "what",
-          toolName: "ever",
+          capabilityName: "ever",
           consumerTag: "duh",
         }),
       ).toBe(true);
@@ -114,8 +117,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "what",
-          toolName: "ever",
+          capabilityName: "ever",
           consumerTag: "developers",
         }),
       ).toBe(true);
@@ -148,8 +152,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "what",
-          toolName: "ever",
+          capabilityName: "ever",
           consumerTag: "developers",
         }),
       ).toBe(false);
@@ -184,8 +189,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "read-message",
+          capabilityName: "read-message",
           consumerTag: "developers",
         }),
       ).toBe(true);
@@ -197,8 +203,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "send-message",
+          capabilityName: "send-message",
           consumerTag: "developers",
         }),
       ).toBe(false);
@@ -210,8 +217,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "another-tool",
+          capabilityName: "another-tool",
           consumerTag: "developers",
         }),
       ).toBe(false);
@@ -223,8 +231,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "another-service",
-          toolName: "another-tool",
+          capabilityName: "another-tool",
           consumerTag: "developers",
         }),
       ).toBe(false);
@@ -236,8 +245,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "read-message",
+          capabilityName: "read-message",
           consumerTag: "another-consumer",
         }),
       ).toBe(false);
@@ -272,8 +282,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "read-message",
+          capabilityName: "read-message",
           consumerTag: "developers",
         }),
       ).toBe(true);
@@ -285,8 +296,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "send-message",
+          capabilityName: "send-message",
           consumerTag: "developers",
         }),
       ).toBe(false);
@@ -298,8 +310,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "another-tool",
+          capabilityName: "another-tool",
           consumerTag: "developers",
         }),
       ).toBe(true);
@@ -311,8 +324,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "another-service",
-          toolName: "another-tool",
+          capabilityName: "another-tool",
           consumerTag: "developers",
         }),
       ).toBe(true);
@@ -324,8 +338,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "read-message",
+          capabilityName: "read-message",
           consumerTag: "another-consumer",
         }),
       ).toBe(true);
@@ -357,8 +372,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "whatever-tool",
+          capabilityName: "whatever-tool",
           consumerTag: "developers",
         }),
       ).toBe(true);
@@ -370,8 +386,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "another-service",
-          toolName: "whatever-tool",
+          capabilityName: "whatever-tool",
           consumerTag: "developers",
         }),
       ).toBe(false);
@@ -383,8 +400,9 @@ describe("PermissionManager#hasPermission", () => {
       await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "whatever-tool",
+          capabilityName: "whatever-tool",
           consumerTag: "another-consumer",
         }),
       ).toBe(false);
@@ -417,8 +435,9 @@ describe("PermissionManager#hasPermission", () => {
 
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "whatever-tool",
+          capabilityName: "whatever-tool",
           consumerTag: "developers",
         }),
       ).toBe(false);
@@ -431,8 +450,9 @@ describe("PermissionManager#hasPermission", () => {
 
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "another-service",
-          toolName: "whatever-tool",
+          capabilityName: "whatever-tool",
           consumerTag: "developers",
         }),
       ).toBe(true);
@@ -445,8 +465,9 @@ describe("PermissionManager#hasPermission", () => {
 
       expect(
         permissionManager.hasPermission({
+          capabilityKind: "tools",
           serviceName: "slack",
-          toolName: "whatever-tool",
+          capabilityName: "whatever-tool",
           consumerTag: "another-consumer",
         }),
       ).toBe(true);
@@ -485,15 +506,17 @@ describe("PermissionManager#hasPermission", () => {
 
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "read-message",
+            capabilityName: "read-message",
             consumerTag: "developers",
           }),
         ).toBe(true);
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "send-message",
+            capabilityName: "send-message",
             consumerTag: "developers",
           }),
         ).toBe(true);
@@ -528,15 +551,17 @@ describe("PermissionManager#hasPermission", () => {
 
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "read-message",
+            capabilityName: "read-message",
             consumerTag: "developers",
           }),
         ).toBe(false);
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "send-message",
+            capabilityName: "send-message",
             consumerTag: "developers",
           }),
         ).toBe(false);
@@ -574,16 +599,18 @@ describe("PermissionManager#hasPermission", () => {
         expect(
           // Assert on the specified tool from the service that was also allow_all
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "read-message",
+            capabilityName: "read-message",
             consumerTag: "developers",
           }),
         ).toBe(true);
         expect(
           // Assert on whatever tool from that service
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "whatever-tool",
+            capabilityName: "whatever-tool",
             consumerTag: "developers",
           }),
         ).toBe(true);
@@ -594,8 +621,9 @@ describe("PermissionManager#hasPermission", () => {
         await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "linear",
-            toolName: "read-ticket",
+            capabilityName: "read-ticket",
             consumerTag: "developers",
           }),
         ).toBe(true);
@@ -606,8 +634,9 @@ describe("PermissionManager#hasPermission", () => {
         await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "another-service",
-            toolName: "another-tool",
+            capabilityName: "another-tool",
             consumerTag: "developers",
           }),
         ).toBe(false);
@@ -645,16 +674,18 @@ describe("PermissionManager#hasPermission", () => {
         expect(
           // Assert on the specified tool from the service that was also block_all
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "read-message",
+            capabilityName: "read-message",
             consumerTag: "developers",
           }),
         ).toBe(false);
         expect(
           // Assert on whatever tool from that service
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "whatever-tool",
+            capabilityName: "whatever-tool",
             consumerTag: "developers",
           }),
         ).toBe(false);
@@ -665,8 +696,9 @@ describe("PermissionManager#hasPermission", () => {
         await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "linear",
-            toolName: "read-ticket",
+            capabilityName: "read-ticket",
             consumerTag: "developers",
           }),
         ).toBe(false);
@@ -677,8 +709,9 @@ describe("PermissionManager#hasPermission", () => {
         await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "another-service",
-            toolName: "another-tool",
+            capabilityName: "another-tool",
             consumerTag: "developers",
           }),
         ).toBe(true);
@@ -712,8 +745,9 @@ describe("PermissionManager#hasPermission", () => {
         await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "read-message",
+            capabilityName: "read-message",
             clientName: "cursor",
           }),
         ).toBe(false);
@@ -750,8 +784,9 @@ describe("PermissionManager#hasPermission", () => {
         await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "read-message",
+            capabilityName: "read-message",
             clientName: "cursor",
             consumerTag: "cursor-dev",
           }),
@@ -784,8 +819,9 @@ describe("PermissionManager#hasPermission", () => {
         await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
+            capabilityKind: "tools",
             serviceName: "slack",
-            toolName: "read-message",
+            capabilityName: "read-message",
             clientName: "cursor",
             consumerTag: "unknown-tag",
           }),
