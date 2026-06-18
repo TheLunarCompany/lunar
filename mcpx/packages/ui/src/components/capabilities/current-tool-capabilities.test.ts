@@ -294,6 +294,65 @@ describe("current tool capabilities adapter", () => {
     ]);
   });
 
+  it("does not duplicate custom tools already materialized in original tools", () => {
+    const providers = buildCapabilityProvidersFromCurrentTools({
+      targetServers: [
+        targetServer({
+          name: "filesystem",
+          originalTools: [
+            {
+              name: "masked_read",
+              description: "Materialized masked read",
+              inputSchema: {
+                type: "object",
+                properties: { safePath: { type: "string" } },
+              },
+              annotations: { readOnlyHint: true, destructiveHint: false },
+            },
+            {
+              name: "read_file",
+              description: "Read files",
+              inputSchema: {
+                type: "object",
+                properties: { path: { type: "string" } },
+              },
+              annotations: { readOnlyHint: true },
+            },
+          ],
+          tools: [
+            targetServerTool({
+              name: "read_file",
+              description: "Read files",
+              inputSchema: {
+                type: "object",
+                properties: { path: { type: "string" } },
+              },
+              annotations: { readOnlyHint: true },
+            }),
+          ],
+        }),
+      ],
+      toolExtensionsServices: {
+        filesystem: {
+          read_file: {
+            childTools: [
+              {
+                name: "masked_read",
+                description: { action: "rewrite", text: "Config masked read" },
+                overrideParams: {},
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(providers[0]?.items.map((item) => item.name)).toEqual([
+      "masked_read",
+      "read_file",
+    ]);
+  });
+
   it("maps tool groups to provider summaries with preserved services and selection keys", () => {
     const groups = buildCapabilityGroupsFromCurrentToolGroups({
       toolGroups: [

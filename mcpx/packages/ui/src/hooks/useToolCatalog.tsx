@@ -491,20 +491,25 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     // Type assertion needed because we're mixing CatalogToolItem with Tool types
     // NOTE: `filteredProviders` is typed as `TargetServer[]`, but we are adding custom properties to tools
     // which causes pains. Ideally should be reflected in the type system properly.
-    filteredProviders = filteredProviders.map((provider) => ({
-      ...provider,
-      originalTools: [
-        ...(customToolsByProvider[provider.name] || []).filter(
-          (tool) => tool?.name,
-        ),
-        ...provider.originalTools
-          .filter((tool) => tool?.name)
-          .map((tool) => ({
-            ...tool,
-            serviceName: provider.name,
-          })),
-      ].filter((tool) => tool?.name),
-    })) as unknown as TargetServer[];
+    filteredProviders = filteredProviders.map((provider) => {
+      const customTools = (customToolsByProvider[provider.name] || []).filter(
+        (tool) => tool?.name,
+      );
+      const customToolNames = new Set(customTools.map((tool) => tool.name));
+
+      return {
+        ...provider,
+        originalTools: [
+          ...customTools,
+          ...provider.originalTools
+            .filter((tool) => tool?.name && !customToolNames.has(tool.name))
+            .map((tool) => ({
+              ...tool,
+              serviceName: provider.name,
+            })),
+        ].filter((tool) => tool?.name),
+      };
+    }) as unknown as TargetServer[];
 
     return filteredProviders;
   }, [

@@ -130,9 +130,10 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
             };
           });
       });
+      const customItemNames = new Set(customItems.map((item) => item.name));
 
       const originalItems = originalTools
-        .filter((tool) => tool?.name)
+        .filter((tool) => tool?.name && !customItemNames.has(tool.name))
         .map(
           (tool): CapabilityItem => ({
             id: buildCapabilitySelectionKey(server.name, tool.name),
