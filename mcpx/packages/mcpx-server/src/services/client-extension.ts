@@ -3,10 +3,11 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
   ErrorCode,
   McpError,
+  PromptListChangedNotificationSchema,
   Tool,
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { ConfigService } from "../config.js";
+import { ConfigService, ConfigSnapshot } from "../config.js";
 import {
   ServiceToolExtensions,
   ToolExtension,
@@ -40,9 +41,6 @@ export function extractToolParameters(
 
 type ListToolsResponse = Awaited<ReturnType<Client["listTools"]>>;
 
-// Extension data is materialized inside listTools, so the parent-name map is
-// returned alongside the tools rather than via a separate getter that would
-// require callers to invoke things in the right order.
 export type ExtendedListToolsResponse = ListToolsResponse & {
   toolParentNames: Record<string, string>;
 };
@@ -53,6 +51,8 @@ export type OriginalClientI = Pick<
   | "close"
   | "listTools"
   | "callTool"
+  | "listPrompts"
+  | "getPrompt"
   | "setNotificationHandler"
   | "ping"
 >;
@@ -86,8 +86,13 @@ export interface ExtendedClientI {
   callTool(
     params: Parameters<Client["callTool"]>[0],
   ): ReturnType<Client["callTool"]>;
+  listPrompts(): ReturnType<Client["listPrompts"]>;
+  getPrompt(
+    params: Parameters<Client["getPrompt"]>[0],
+  ): ReturnType<Client["getPrompt"]>;
   isAlive(timeoutMs: number): Promise<Error | null>;
   onToolsListChanged(callback: () => void): () => void;
+  onPromptsListChanged(callback: () => void): () => void;
 }
 
 export class ExtendedClientBuilder {
@@ -111,7 +116,14 @@ export class ExtendedClientBuilder {
       this.logger.child({ component: "ExtendedClient", name }),
     );
 
+    const unsubscribeConfig = this.configService.subscribe(
+      (_configSnapshot: ConfigSnapshot) => {
+        extendedClient.invalidateCache();
+      },
+    );
+
     const toolsListChangedListeners = new Set<() => void>();
+    const promptsListChangedListeners = new Set<() => void>();
 
     originalClient.setNotificationHandler(
       ToolListChangedNotificationSchema,
@@ -123,17 +135,34 @@ export class ExtendedClientBuilder {
       },
     );
 
+    originalClient.setNotificationHandler(
+      PromptListChangedNotificationSchema,
+      () => {
+        for (const listener of promptsListChangedListeners) {
+          listener();
+        }
+      },
+    );
+
     return {
       async close(): Promise<void> {
         toolsListChangedListeners.clear();
+        promptsListChangedListeners.clear();
+        unsubscribeConfig();
         return await extendedClient.close.bind(extendedClient)();
       },
       listTools: extendedClient.listTools.bind(extendedClient),
       callTool: extendedClient.callTool.bind(extendedClient),
+      listPrompts: extendedClient.listPrompts.bind(extendedClient),
+      getPrompt: extendedClient.getPrompt.bind(extendedClient),
       isAlive: extendedClient.isAlive.bind(extendedClient),
       onToolsListChanged(callback: () => void): () => void {
         toolsListChangedListeners.add(callback);
         return () => toolsListChangedListeners.delete(callback);
+      },
+      onPromptsListChanged(callback: () => void): () => void {
+        promptsListChangedListeners.add(callback);
+        return () => promptsListChangedListeners.delete(callback);
       },
     };
   }
@@ -175,6 +204,16 @@ export class ExtendedClient {
 
   async close(): Promise<void> {
     return await this.originalClient.close();
+  }
+
+  async listPrompts(): ReturnType<Client["listPrompts"]> {
+    return this.originalClient.listPrompts();
+  }
+
+  async getPrompt(
+    params: Parameters<Client["getPrompt"]>[0],
+  ): ReturnType<Client["getPrompt"]> {
+    return this.originalClient.getPrompt(params);
   }
 
   async listTools(): Promise<ExtendedListToolsResponse> {

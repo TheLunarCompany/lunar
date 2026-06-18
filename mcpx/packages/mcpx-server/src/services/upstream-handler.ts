@@ -9,7 +9,11 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import { ToolExtensions } from "../model/config/tool-extensions.js";
-import { CapabilityRegistry, tagTools } from "./capability-registry.js";
+import {
+  CapabilityKind,
+  CapabilityRegistry,
+  ServerCapabilities,
+} from "./capability-registry.js";
 import { CapabilityResolver } from "./capability-resolver.js";
 import { buildAuthToolDefinition } from "./oauth-tools.js";
 import {
@@ -24,6 +28,11 @@ import {
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
 import { ExtendedClientI, isTransportError } from "./client-extension.js";
+import {
+  fetchPromptCapabilities,
+  fetchServerCapabilities,
+  fetchToolCapabilities,
+} from "./fetch-capabilities.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 import {
   InitiateOAuthResult,
@@ -92,10 +101,13 @@ export class UpstreamHandler
     string,
     Promise<ConnectedTargetClient | null>
   > = new Map();
-  private readonly toolsListChangedUnsubscribers = new Map<
-    string,
-    () => void
-  >();
+  private readonly listChangedUnsubscribers: Record<
+    CapabilityKind,
+    Map<string, () => void>
+  > = {
+    tools: new Map(),
+    prompts: new Map(),
+  };
   private _watchdog: UpstreamWatchdog;
   private readonly reconnectQueue = new Map<string, NodeJS.Timeout>();
   private readonly reconnectAttemptsByServer = new Map<string, number>();
@@ -134,32 +146,57 @@ export class UpstreamHandler
     name: string,
     client: ConnectedTargetClient,
   ): Promise<void> {
+    await this.refreshClientCapability("tools", name, client, (ec) =>
+      fetchToolCapabilities(ec),
+    );
+  }
+
+  private async refreshClientPrompts(
+    name: string,
+    client: ConnectedTargetClient,
+  ): Promise<void> {
+    if (!env.ENABLE_PROMPT_CAPABILITY) return;
+    await this.refreshClientCapability("prompts", name, client, (ec) =>
+      fetchPromptCapabilities(ec),
+    );
+  }
+
+  // Fetcher returns a partial registry entry for `kind`; merged with the
+  // existing entry so refreshing prompts doesn't clobber tools and vice versa.
+  // Returns false on fetch/identity failure.
+  private async refreshClientCapability(
+    kind: CapabilityKind,
+    name: string,
+    client: ConnectedTargetClient,
+    fetcher: (ec: ExtendedClientI) => Promise<Partial<ServerCapabilities>>,
+  ): Promise<boolean> {
     try {
-      const { tools, toolParentNames } = await this.executeWithAuthRetry(
+      const update = await this.executeWithAuthRetry(
         client,
-        "listTools",
-        (extendedClient) => extendedClient.listTools(),
+        `list${kind === "tools" ? "Tools" : "Prompts"}`,
+        fetcher,
       );
-      // Verify the client identity hasn't changed during the await.
-      // A reconnect or auth-recovery replaces the map entry with a new object,
-      // so identity comparison (not just null-check) catches that case.
+      // Identity check, not null-check — reconnect swaps the map entry.
       const refreshedClient = this.getConnectedClientByName(name);
-      if (!refreshedClient || refreshedClient !== client) {
-        return;
-      }
-      this.capabilityRegistry.registerServer(normalizeServerName(name), {
-        tools: tagTools(tools, "upstream"),
-        toolParentNames,
+      if (!refreshedClient || refreshedClient !== client) return false;
+      const normalizedName = normalizeServerName(name);
+      const existing = this.capabilityRegistry.servers.get(normalizedName);
+      this.capabilityRegistry.registerServer(normalizedName, {
+        ...existing,
+        ...update,
       });
       this.notifyPostChangeHooks();
-      this.logger.debug("Refreshed tools for client", { name });
+      // Explicit sync: resolver only notifies on approved-set changes,
+      // not on raw originalTools movement.
+      this.syncSystemStateWithApprovals();
+      this.logger.debug(`Refreshed ${kind} for client`, { name });
+      return true;
     } catch (e) {
-      // Transport errors already trigger reconnect via executeWithAuthRetry.
-      // TokenExpiredError means the server transitioned to pending-auth — no action needed.
-      this.logger.error("Failed to refresh tools for client", {
+      this.logger.error(`Failed to refresh ${kind} for client`, {
         name,
         error: loggableError(e),
       });
+      return false;
     }
   }
 
@@ -216,11 +253,8 @@ export class UpstreamHandler
     this.startTokenExpiryMonitor();
     this.catalogManager.subscribe((change) => this.onCatalogChange(change));
 
-    // toolExtensions feed into the per-server capability registration (extended
-    // child tools surface alongside upstream tools). The upstream MCP server
-    // never notifies on these changes — they originate in our own config — so
-    // we have to refresh on config-change too, otherwise the registry serves a
-    // stale tool list to agents until the next tools/list_changed from upstream.
+    // Refresh on toolExtensions change — upstream won't notify since
+    // extensions originate in our own config.
     this.previousToolExtensions =
       this.configService.getConfig().toolExtensions.services;
     this.unsubscribeConfig = this.configService.subscribe(({ config }) => {
@@ -286,21 +320,20 @@ export class UpstreamHandler
   private systemStateSyncScheduled = false;
 
   private performSync(): void {
-    // approvedTools is empty for admin-inactive servers (resolver skips them in
-    // recompute); originalTools stays full so the admin UI can show
-    // "suppressed but advertises N tools" — same shape as the
-    // catalog-approves-zero case.
-    for (const [normalizedName] of this.capabilityRegistry.servers) {
+    // approved* drops admin-inactive servers; original* keeps raw upstream.
+    for (const [normalizedName, entry] of this.capabilityRegistry.servers) {
       const client = this._clientsByService.get(normalizedName);
       if (!client) continue;
-      const payload = buildSystemStateToolsPayload(
-        this.capabilityResolver.getApprovedToolsForServer(normalizedName),
-        this.getUpstreamToolsForServer(normalizedName),
-        (tool) => this.toolTokenEstimator.estimateTokens(tool),
-      );
+      const approvedTools =
+        this.capabilityResolver.getApprovedToolsForServer(normalizedName);
+      const rawTools = (entry.tools ?? [])
+        .filter((t) => t.origin === "upstream")
+        .map((t) => t.definition);
       this.systemState.updateTargetServerTools({
         name: client.targetServer.name,
-        ...payload,
+        ...buildSystemStateToolsPayload(approvedTools, rawTools, (tool) =>
+          this.toolTokenEstimator.estimateTokens(tool),
+        ),
       });
     }
   }
@@ -337,8 +370,10 @@ export class UpstreamHandler
       this.tokenExpiryInterval = null;
     }
 
-    for (const unsub of this.toolsListChangedUnsubscribers.values()) unsub();
-    this.toolsListChangedUnsubscribers.clear();
+    for (const map of Object.values(this.listChangedUnsubscribers)) {
+      for (const unsub of map.values()) unsub();
+      map.clear();
+    }
 
     this.unsubscribeConfig?.();
     this.unsubscribeConfig = undefined;
@@ -394,25 +429,45 @@ export class UpstreamHandler
     serviceName: string,
     params: Parameters<ExtendedClientI["callTool"]>[0],
   ): ReturnType<ExtendedClientI["callTool"]> {
-    const client = this.getConnectedClientByName(serviceName);
-    if (!client) {
-      // If the server is in pending-auth, give the agent a clear signal
-      // (stale tool lists mean the agent may try real tools after a transition)
-      const pendingClient = this._clientsByService.get(
-        normalizeServerName(serviceName),
-      );
-      if (
-        pendingClient?._state === "pending-auth" &&
-        this.isOAuthServer(serviceName)
-      ) {
-        throw new TokenExpiredError(serviceName);
-      }
-      throw new NotFoundError(
-        `Target server not found or not connected: ${serviceName}`,
-      );
-    }
-    return await this.executeWithAuthRetry(client, "callTool", (extended) =>
+    return this.proxyToUpstream(serviceName, "callTool", (extended) =>
       extended.callTool(params),
+    );
+  }
+
+  async getPrompt(
+    serviceName: string,
+    params: Parameters<ExtendedClientI["getPrompt"]>[0],
+  ): ReturnType<ExtendedClientI["getPrompt"]> {
+    return this.proxyToUpstream(serviceName, "getPrompt", (extended) =>
+      extended.getPrompt(params),
+    );
+  }
+
+  private proxyToUpstream<T>(
+    serviceName: string,
+    method: string,
+    action: (extended: ExtendedClientI) => Promise<T>,
+  ): Promise<T> {
+    const client = this.requireConnectedClient(serviceName);
+    return this.executeWithAuthRetry(client, method, action);
+  }
+
+  // Throws TokenExpiredError for OAuth pending-auth (agent signal to re-auth),
+  // NotFoundError otherwise.
+  private requireConnectedClient(serviceName: string): ConnectedTargetClient {
+    const client = this.getConnectedClientByName(serviceName);
+    if (client) return client;
+    const pendingClient = this._clientsByService.get(
+      normalizeServerName(serviceName),
+    );
+    if (
+      pendingClient?._state === "pending-auth" &&
+      this.isOAuthServer(serviceName)
+    ) {
+      throw new TokenExpiredError(serviceName);
+    }
+    throw new NotFoundError(
+      `Target server not found or not connected: ${serviceName}`,
     );
   }
 
@@ -686,14 +741,23 @@ export class UpstreamHandler
     if (isConnected(newTargetClient)) {
       this.cancelReconnect(newTargetClient.targetServer.name);
       this.reconnectAttemptsByServer.delete(normalizedName);
-      this.toolsListChangedUnsubscribers.set(
+      const serverName = newTargetClient.targetServer.name;
+      const ec = newTargetClient.extendedClient;
+      this.listChangedUnsubscribers.tools.set(
         normalizedName,
-        newTargetClient.extendedClient.onToolsListChanged(() =>
-          this.onUpstreamToolsListChanged(newTargetClient.targetServer.name),
+        ec.onToolsListChanged(() =>
+          this.onUpstreamListChanged("tools", serverName),
         ),
       );
+      if (env.ENABLE_PROMPT_CAPABILITY) {
+        this.listChangedUnsubscribers.prompts.set(
+          normalizedName,
+          ec.onPromptsListChanged(() =>
+            this.onUpstreamListChanged("prompts", serverName),
+          ),
+        );
+      }
       this._watchdog.watch(newTargetClient.targetServer.name);
-      // Registry already holds the upstream tools by the time we reach this branch.
     } else if (newTargetClient._state === "pending-auth") {
       // Surface the auth tool so the agent can call it to complete OAuth even
       // before the upstream tools are reachable.
@@ -709,19 +773,21 @@ export class UpstreamHandler
       this.capabilityRegistry.unregisterServer(normalizedName);
     }
 
-    // prepareForSystemState discards approvedTools for the "connecting"
-    // state; skip the resolver lookup in that case.
-    const approvedTools =
-      newTargetClient._state === "connecting"
-        ? []
-        : this.capabilityResolver.getApprovedToolsForServer(normalizedName);
-    const originalTools = isConnected(newTargetClient)
-      ? this.getUpstreamToolsForServer(normalizedName)
-      : [];
+    // Approvals are discarded for "connecting" state; skip the lookup.
+    const skipApprovals = newTargetClient._state === "connecting";
+    const approvedTools = skipApprovals
+      ? []
+      : this.capabilityResolver.getApprovedToolsForServer(normalizedName);
+    const registryEntry = isConnected(newTargetClient)
+      ? this.capabilityRegistry.servers.get(normalizedName)
+      : undefined;
+    const upstreamTools = (registryEntry?.tools ?? [])
+      .filter((t) => t.origin === "upstream")
+      .map((t) => t.definition);
     const systemStateTargetServer = this.prepareForSystemState(
       newTargetClient,
       approvedTools,
-      originalTools,
+      upstreamTools,
     );
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
 
@@ -730,22 +796,23 @@ export class UpstreamHandler
     }
   }
 
-  // Registers upstream tools (making them listable via the resolver) before
-  // recordClientUpsert commits the connected client. Safe only because callers
-  // await no I/O in between, so no tool call can interleave and see a listable-
-  // but-not-connected tool. Load failure returns connection-failed.
+  // Registry write happens in the same step that produces the connected
+  // client, so capability-state and connection-state advance together. Safe
+  // only because callers await no I/O between this registry write and the
+  // recordClientUpsert that commits the connected client, so no tool call can
+  // interleave and see a listable-but-not-connected capability. Auth tool is
+  // registered separately on pending-auth — agents shouldn't see it while the
+  // upstream is working. Failure short-circuits to connection-failed; reconnect
+  // path picks it up.
   private finalizeConnection(
     targetServer: TargetServer,
     extendedClient: ExtendedClientI,
   ): Promise<TargetClient> {
-    return extendedClient
-      .listTools()
-      .then(({ tools, toolParentNames }): TargetClient => {
-        // Auth tool is registered separately on pending-auth — agents
-        // shouldn't see it while the upstream is working.
+    return fetchServerCapabilities(extendedClient, this.logger)
+      .then((capabilities): TargetClient => {
         this.capabilityRegistry.registerServer(
           normalizeServerName(targetServer.name),
-          { tools: tagTools(tools, "upstream"), toolParentNames },
+          capabilities,
         );
         return { _state: "connected", targetServer, extendedClient };
       })
@@ -762,16 +829,6 @@ export class UpstreamHandler
       });
   }
 
-  // Internal-origin tools (e.g. the OAuth auth tool) are excluded.
-  private getUpstreamToolsForServer(normalizedName: string): Tool[] {
-    const entry = this.capabilityRegistry.servers.get(normalizedName);
-    return (entry?.tools ?? [])
-      .filter((t) => t.origin === "upstream")
-      .map((t) => t.definition);
-  }
-
-  // A method to record that a client was removed.
-  // Will remove it from the internal map and update the system state tracker.
   private recordClientRemoved(name: string): void {
     const normalizedName = normalizeServerName(name);
     this.dropListChangedSubscriptions(normalizedName);
@@ -784,20 +841,29 @@ export class UpstreamHandler
     this.notifyPostChangeHooks();
   }
 
-  private onUpstreamToolsListChanged(name: string): void {
+  private onUpstreamListChanged(kind: CapabilityKind, name: string): void {
     const client = this.getConnectedClientByName(name);
     if (!client) return;
-    void this.refreshClientTools(name, client).catch((error) => {
-      this.logger.error("Failed to refresh tools after upstream notification", {
-        name,
-        error: loggableError(error),
-      });
+    const refresh =
+      kind === "tools"
+        ? this.refreshClientTools(name, client)
+        : this.refreshClientPrompts(name, client);
+    void refresh.catch((error) => {
+      this.logger.error(
+        `Failed to refresh ${kind} after upstream notification`,
+        {
+          name,
+          error: loggableError(error),
+        },
+      );
     });
   }
 
   private dropListChangedSubscriptions(normalizedName: string): void {
-    this.toolsListChangedUnsubscribers.get(normalizedName)?.();
-    this.toolsListChangedUnsubscribers.delete(normalizedName);
+    for (const map of Object.values(this.listChangedUnsubscribers)) {
+      map.get(normalizedName)?.();
+      map.delete(normalizedName);
+    }
   }
 
   private async pingServer(

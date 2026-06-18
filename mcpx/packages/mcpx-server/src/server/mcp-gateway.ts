@@ -6,7 +6,11 @@ import {
   CallToolRequest,
   CallToolRequestSchema,
   EmptyResultSchema,
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
   ListToolsRequestSchema,
+  Prompt,
+  ServerCapabilities,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
@@ -20,6 +24,7 @@ import {
   ToolCallCacheEntry,
   ToolCallResultUnion,
 } from "../model/sessions.js";
+import { enabledCapabilityKinds } from "../services/capability-registry.js";
 import { UnavailableReason } from "../services/capability-resolver.js";
 import {
   HiddenInternalCapabilityError,
@@ -42,7 +47,10 @@ export async function getServer(
   logger: Logger,
   shouldReturnEmptyServer: boolean,
 ): Promise<Server> {
-  const capabilities = { tools: { listChanged: true } };
+  const capabilities: ServerCapabilities = {};
+  for (const kind of enabledCapabilityKinds()) {
+    capabilities[kind] = { listChanged: true };
+  }
   const server = new Server(
     { name: "mcpx", version: "1.0.0" },
     { capabilities },
@@ -81,6 +89,58 @@ export async function getServer(
       return { tools };
     },
   );
+
+  if (env.ENABLE_PROMPT_CAPABILITY) {
+    server.setRequestHandler(
+      ListPromptsRequestSchema,
+      async (_request, { sessionId }) => {
+        logger.info("ListPromptsRequest received", { sessionId });
+        const consumer = services.sessions.getConsumerContext(sessionId);
+        // Prompts in this phase are upstream-only; surface definitions as-is.
+        const prompts: Prompt[] = services.capabilityResolver
+          .getVisiblePrompts(consumer)
+          .map((cap) => cap.definition);
+        logger.debug("ListPromptsRequest response", {
+          promptCount: prompts.length,
+        });
+        return { prompts };
+      },
+    );
+
+    server.setRequestHandler(
+      GetPromptRequestSchema,
+      async (request, { sessionId }) => {
+        logger.info("GetPromptRequest received", {
+          sessionId,
+          name: request.params.name,
+        });
+        const consumer = services.sessions.getConsumerContext(sessionId);
+        const resolved = services.capabilityResolver.resolvePromptGet(
+          request.params.name,
+          consumer,
+        );
+        if (!resolved.ok) {
+          throw makeUnavailableError(
+            "Prompt",
+            request.params.name,
+            resolved.reason,
+          );
+        }
+        const { entry } = resolved;
+        const session = sessionId
+          ? services.sessions.getSession(sessionId)
+          : undefined;
+        return services.upstreamHandler.getPrompt(entry.serverName, {
+          ...request.params,
+          name: entry.capabilityName,
+          _meta: withCallerAuthorization(
+            request.params._meta,
+            session?.metadata.authorization,
+          ),
+        });
+      },
+    );
+  }
 
   server.setRequestHandler(
     CallToolRequestSchema,
@@ -338,15 +398,11 @@ function executeUpstreamToolCall(options: {
   } = options;
 
   return measureNonFailable(async () => {
-    const { name: _downstreamToolName, ...forwardedParams } = request.params;
-    const meta = authorization
-      ? { ...forwardedParams._meta, authorization }
-      : forwardedParams._meta;
     const result = await services.upstreamHandler
       .callTool(serverName, {
-        ...forwardedParams,
-        _meta: meta,
+        ...request.params,
         name: capabilityName,
+        _meta: withCallerAuthorization(request.params._meta, authorization),
       })
       .catch((e: unknown) => {
         if (e instanceof TokenExpiredError) {
@@ -420,7 +476,7 @@ function executeUpstreamToolCall(options: {
 // Single mapping site for wire-level error strings. IT test asserts on
 // `/not available/i`.
 function makeUnavailableError(
-  kind: "Tool",
+  kind: "Tool" | "Prompt",
   name: string,
   reason: UnavailableReason,
 ): Error {
@@ -628,4 +684,13 @@ function isProtocolVersionAtLeast(
     return false;
   }
   return version >= minimumVersion;
+}
+
+type RequestMeta = CallToolRequest["params"]["_meta"];
+
+function withCallerAuthorization(
+  meta: RequestMeta,
+  authorization: string | undefined,
+): RequestMeta {
+  return authorization ? { ...meta, authorization } : meta;
 }

@@ -829,4 +829,45 @@ describe("PermissionManager#hasPermission", () => {
       });
     });
   });
+
+  // Prompts share the tool allow/block list until admin config grows a
+  // prompts lane.
+  describe("prompt-tool policy compat", () => {
+    const config: Config = {
+      ...DEFAULT_CONFIG,
+      permissions: {
+        default: {
+          _type: "default-block",
+          allow: ["allowed-slack"],
+        },
+        consumers: {},
+        clientNames: {},
+      },
+      toolGroups: [
+        { name: "allowed-slack", services: { slack: ["send-message"] } },
+      ],
+    };
+
+    it("allow-list applies identically to tools and prompts of the same name", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
+      for (const kind of ["tools", "prompts"] as const) {
+        expect(
+          permissionManager.hasPermission({
+            capabilityKind: kind,
+            serviceName: "slack",
+            capabilityName: "send-message",
+          }),
+        ).toBe(true);
+        expect(
+          permissionManager.hasPermission({
+            capabilityKind: kind,
+            serviceName: "slack",
+            capabilityName: "delete-channel",
+          }),
+        ).toBe(false);
+      }
+    });
+  });
 });

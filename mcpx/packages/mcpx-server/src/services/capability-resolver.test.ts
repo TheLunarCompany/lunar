@@ -11,6 +11,7 @@ import {
   CapabilityKind,
   CapabilityOrigin,
   CapabilityRegistry,
+  RegisteredPrompt,
   RegisteredTool,
 } from "./capability-registry.js";
 import { CapabilityResolver, PermissionCheck } from "./capability-resolver.js";
@@ -26,6 +27,19 @@ function makeTool(
       name,
       description: `Tool ${name}`,
       inputSchema: { type: "object", properties: {} },
+    },
+    origin,
+  };
+}
+
+function makePrompt(
+  name: string,
+  origin: CapabilityOrigin = "upstream",
+): RegisteredPrompt {
+  return {
+    definition: {
+      name,
+      description: `Prompt ${name}`,
     },
     origin,
   };
@@ -58,6 +72,13 @@ function makeCatalog(state: CatalogState): CatalogManagerI {
       if (serverApprovals === null) return true;
       return serverApprovals.includes(tool);
     },
+    isPromptApproved: (server: string, prompt: string) => {
+      if (!state.isStrict) return true;
+      const serverApprovals = state.approvals.get(server);
+      if (serverApprovals === undefined) return false;
+      if (serverApprovals === null) return true;
+      return serverApprovals.includes(prompt);
+    },
     subscribe: (cb: (change: CatalogChange) => void) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
@@ -73,7 +94,7 @@ function makeCatalog(state: CatalogState): CatalogManagerI {
 // Default permission stub: allow everything. Individual tests can override.
 function makePermissions(
   decide: (props: {
-    capabilityKind: "tools";
+    capabilityKind: CapabilityKind;
     serviceName: string;
     capabilityName: string;
     consumerTag?: string;
@@ -290,7 +311,7 @@ describe("CapabilityResolver", () => {
   });
 
   describe("reactivity", () => {
-    it("notifies with kind 'tools' when registry adds a server", () => {
+    it("notifies only the kinds whose set actually changed", () => {
       const cb = jest.fn<(kind: CapabilityKind) => void>();
       resolver.onChanged(cb);
 
@@ -470,7 +491,7 @@ describe("CapabilityResolver", () => {
 
     it("passes consumerTag and clientName through to the permission check", () => {
       const seen: Array<{
-        capabilityKind: "tools";
+        capabilityKind: CapabilityKind;
         serviceName: string;
         capabilityName: string;
         consumerTag?: string;
@@ -570,6 +591,139 @@ describe("CapabilityResolver", () => {
 
       catalog._notify({ ...NOOP_CHANGE, strictnessChanged: true });
       expect(cb).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("prompts", () => {
+    it("registers upstream prompts as active when non-strict", () => {
+      registry.registerServer("notion", { prompts: [makePrompt("summarize")] });
+      const active = Array.from(resolver.activePrompts.values());
+      expect(active).toHaveLength(1);
+      expect(active[0]?.serverName).toBe("notion");
+      expect(active[0]?.capabilityName).toBe("summarize");
+      expect(active[0]?.definition.name).toBe(
+        `notion${SERVICE_DELIMITER}summarize`,
+      );
+    });
+
+    it("filters unapproved upstream prompts in strict mode", () => {
+      ({ registry, catalog, resolver } = setup({
+        isStrict: true,
+        approvals: new Map([["notion", ["summarize"]]]),
+      }));
+      registry.registerServer("notion", {
+        prompts: [makePrompt("summarize"), makePrompt("delete-page")],
+      });
+      const names = Array.from(resolver.activePrompts.values()).map(
+        (c) => c.capabilityName,
+      );
+      expect(names).toEqual(["summarize"]);
+    });
+
+    it("getVisiblePrompts passes capabilityKind='prompts' to permission check", () => {
+      const seen: CapabilityKind[] = [];
+      ({ registry, catalog, resolver } = setup(
+        { isStrict: false, approvals: new Map() },
+        makePermissions((props) => {
+          seen.push(props.capabilityKind);
+          return true;
+        }),
+      ));
+      registry.registerServer("notion", { prompts: [makePrompt("summarize")] });
+      resolver.getVisiblePrompts({});
+      expect(seen).toContain("prompts");
+      expect(seen).not.toContain("tools");
+    });
+
+    describe("resolvePromptGet", () => {
+      it("returns the entry for a registered approved prompt", () => {
+        registry.registerServer("notion", {
+          prompts: [makePrompt("summarize")],
+        });
+        const result = resolver.resolvePromptGet(
+          `notion${SERVICE_DELIMITER}summarize`,
+          {},
+        );
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+          expect(result.entry.serverName).toBe("notion");
+          expect(result.entry.capabilityName).toBe("summarize");
+        }
+      });
+
+      it("returns reason 'unknown' for a name that doesn't resolve", () => {
+        const result = resolver.resolvePromptGet("does-not-exist", {});
+        expect(result).toEqual({ ok: false, reason: "unknown" });
+      });
+
+      it("returns reason 'server-inactive' for an inactive server", () => {
+        registry.registerServer("notion", {
+          prompts: [makePrompt("summarize")],
+        });
+        resolver.setInactiveServers(new Set(["notion"]));
+        const result = resolver.resolvePromptGet(
+          `notion${SERVICE_DELIMITER}summarize`,
+          {},
+        );
+        expect(result).toEqual({ ok: false, reason: "server-inactive" });
+      });
+
+      it("returns reason 'permission-denied' when the consumer is blocked", () => {
+        ({ registry, catalog, resolver } = setup(
+          { isStrict: false, approvals: new Map() },
+          makePermissions(() => false),
+        ));
+        registry.registerServer("notion", {
+          prompts: [makePrompt("summarize")],
+        });
+        const result = resolver.resolvePromptGet(
+          `notion${SERVICE_DELIMITER}summarize`,
+          { consumerTag: "alice" },
+        );
+        expect(result).toEqual({ ok: false, reason: "permission-denied" });
+      });
+    });
+
+    describe("notify reactivity", () => {
+      it("notifies only 'prompts' when a server registers prompts but no tools", () => {
+        const cb = jest.fn<(kind: CapabilityKind) => void>();
+        resolver.onChanged(cb);
+        registry.registerServer("notion", {
+          prompts: [makePrompt("summarize")],
+        });
+        expect(cb).toHaveBeenCalledTimes(1);
+        expect(cb).toHaveBeenCalledWith("prompts");
+      });
+
+      it("fires on same-name prompt definition change (content-aware diff)", () => {
+        registry.registerServer("notion", {
+          prompts: [makePrompt("summarize")],
+        });
+        const cb = jest.fn<(kind: CapabilityKind) => void>();
+        resolver.onChanged(cb);
+        // Re-register with same name, new description content.
+        registry.registerServer("notion", {
+          prompts: [
+            {
+              definition: { name: "summarize", description: "UPDATED" },
+              origin: "upstream",
+            },
+          ],
+        });
+        expect(cb).toHaveBeenCalledWith("prompts");
+      });
+
+      it("doesn't fire on structurally identical re-registration", () => {
+        registry.registerServer("notion", {
+          prompts: [makePrompt("summarize")],
+        });
+        const cb = jest.fn<(kind: CapabilityKind) => void>();
+        resolver.onChanged(cb);
+        registry.registerServer("notion", {
+          prompts: [makePrompt("summarize")],
+        });
+        expect(cb).not.toHaveBeenCalled();
+      });
     });
   });
 });

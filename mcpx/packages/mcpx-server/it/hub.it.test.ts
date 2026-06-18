@@ -76,6 +76,9 @@ class StubCatalogManager implements CatalogManagerI {
   isToolApproved() {
     return true;
   }
+  isPromptApproved() {
+    return true;
+  }
   subscribe() {
     return () => {};
   }

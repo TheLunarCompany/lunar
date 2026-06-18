@@ -340,6 +340,8 @@ describe("ExtendedClient", () => {
             },
           ],
         }),
+        listPrompts: async () => ({ prompts: [] }),
+        getPrompt: async () => ({ messages: [] }),
         setNotificationHandler: () => {},
         ping: async () => ({}),
         callTool: async () => ({
@@ -381,6 +383,8 @@ describe("ExtendedClient", () => {
             },
           ],
         }),
+        listPrompts: async () => ({ prompts: [] }),
+        getPrompt: async () => ({ messages: [] }),
         setNotificationHandler: () => {},
         ping: async () => ({}),
         callTool: async () => ({
@@ -526,6 +530,8 @@ function mockOriginalClientWithPing(
     connect: async () => {},
     close: async () => {},
     listTools: async () => ({ tools: [] }),
+    listPrompts: async () => ({ prompts: [] }),
+    getPrompt: async () => ({ messages: [] }),
     setNotificationHandler: () => {},
     ping,
     callTool: async () => ({
@@ -575,6 +581,8 @@ function mockOriginalClient(): OriginalClientI & {
         },
       ],
     }),
+    listPrompts: async () => ({ prompts: [] }),
+    getPrompt: async () => ({ messages: [] }),
     setNotificationHandler: () => {},
     ping: async () => ({}),
     callTool: async (params) => {

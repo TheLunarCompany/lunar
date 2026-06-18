@@ -6,7 +6,8 @@ import {
 import { ExtendedClientI } from "./client-extension.js";
 import { MissingEnvVar } from "../errors.js";
 
-// Upstream tools live in CapabilityRegistry; not duplicated here.
+// Upstream capabilities (tools, prompts, promptMessages) live in
+// CapabilityRegistry; not duplicated here.
 export interface ConnectedTargetClient {
   _state: "connected";
   targetServer: TargetServer;

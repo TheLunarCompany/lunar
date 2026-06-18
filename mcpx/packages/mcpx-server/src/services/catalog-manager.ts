@@ -56,6 +56,7 @@ export interface CatalogManagerI {
   getById(id: string): CatalogItemWire | undefined;
   isServerApproved(serviceName: string): boolean;
   isToolApproved(serviceName: string, toolName: string): boolean;
+  isPromptApproved(serviceName: string, promptName: string): boolean;
   subscribe(callback: (change: CatalogChange) => void): () => void;
 }
 
@@ -204,6 +205,13 @@ export class CatalogManager implements CatalogManagerI {
       return true;
     }
     return approvedTools.includes(toolName);
+  }
+
+  // Per-prompt allowlists ride on a wire field that doesn't exist yet
+  // (`approvedCapabilities.prompts`); always-approve until the matching
+  // webapp-side PR introduces it.
+  isPromptApproved(_serviceName: string, _promptName: string): boolean {
+    return true;
   }
 
   private computeChange(payload: SetCatalogPayload): CatalogChange {

@@ -367,7 +367,11 @@ export class Services {
           .map(([name]) => name),
       );
       this._capabilityResolver.setInactiveServers(inactiveNames);
-      this._sessions.scheduleBroadcastListChanged("tools");
+      // Permission/visibility config changes don't move the resolver's active
+      // set (permissions are applied per-consumer at read time), so they never
+      // reach the onChanged path above. Re-broadcast every exposed kind here so
+      // clients re-list.
+      this._sessions.scheduleBroadcastAllListChanged();
     });
   }
 

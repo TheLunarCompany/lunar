@@ -110,6 +110,7 @@ function createLLMService(matchedTools: MatchedTool[]): LLMService {
 function createResolver(registry: CapabilityRegistry): CapabilityResolver {
   const catalogStub = {
     isToolApproved: () => true,
+    isPromptApproved: () => true,
     isStrict: () => false,
     isServerApproved: () => true,
     subscribe: () => () => {},

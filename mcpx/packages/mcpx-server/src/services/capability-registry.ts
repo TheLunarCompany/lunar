@@ -1,5 +1,6 @@
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { Prompt, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
+import { env } from "../env.js";
 import { safeEmit } from "./capability-notifications.js";
 
 // "internal": handled in-process by mcpx (e.g. dynamic-capabilities, OAuth
@@ -9,7 +10,15 @@ import { safeEmit } from "./capability-notifications.js";
 // auth tool.
 export type CapabilityOrigin = "internal" | "upstream";
 
-export type CapabilityKind = "tools";
+export type CapabilityKind = "tools" | "prompts";
+
+// Single source of truth for which capability kinds mcpx currently exposes.
+// `tools` is always on; `prompts` rides the rollout flag. Both the gateway's
+// advertised capabilities and the list-changed broadcasts derive from this, so
+// adding a kind (e.g. resources) is one edit here.
+export function enabledCapabilityKinds(): CapabilityKind[] {
+  return env.ENABLE_PROMPT_CAPABILITY ? ["tools", "prompts"] : ["tools"];
+}
 
 export interface RegisteredCapability<TDefinition> {
   definition: TDefinition;
@@ -17,21 +26,29 @@ export interface RegisteredCapability<TDefinition> {
 }
 
 export type RegisteredTool = RegisteredCapability<Tool>;
+export type RegisteredPrompt = RegisteredCapability<Prompt>;
 
 export type ServerCapabilities = {
   tools?: RegisteredTool[];
   // Extended child tool name → original parent tool name.
   toolParentNames?: Record<string, string>;
+  prompts?: RegisteredPrompt[];
 };
 
-// Convenience: tag a flat Tool[] with a single origin. Used by callers whose
-// tools all share an origin (upstream-handler for proxied tools,
-// dynamic-capabilities for in-process tools).
+// Tag flat lists with a single origin (upstream-handler for proxied,
+// dynamic-capabilities for in-process).
 export function tagTools(
   tools: Tool[],
   origin: CapabilityOrigin,
 ): RegisteredTool[] {
   return tools.map((definition) => ({ definition, origin }));
+}
+
+export function tagPrompts(
+  prompts: Prompt[],
+  origin: CapabilityOrigin,
+): RegisteredPrompt[] {
+  return prompts.map((definition) => ({ definition, origin }));
 }
 
 type ChangeListener = () => void | Promise<void>;
@@ -58,6 +75,7 @@ export class CapabilityRegistry {
     this.logger.debug("Server registered", {
       serverName,
       toolCount: capabilities.tools?.length ?? 0,
+      promptCount: capabilities.prompts?.length ?? 0,
     });
     this.notify();
   }

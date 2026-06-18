@@ -124,6 +124,7 @@ const envSchema = z
       .enum(TokenizerEncoding)
       .default(DEFAULT_TOKENIZER_ENCODING),
     STRICTNESS_REQUIRED: z.stringbool().default(false),
+    ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
     LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
     LLM_REQUEST_TIMEOUT_MS: z.coerce.number().default(20000),
     MCPX_SERVER_URL: z.string().default("http://127.0.0.1:9000"),
@@ -199,6 +200,7 @@ const NON_SECRET_KEYS = [
   "TOKENIZER_ENCODING",
   "IS_ENTERPRISE",
   "STRICTNESS_REQUIRED",
+  "ENABLE_PROMPT_CAPABILITY",
   "LOG_REDACT_KEYS",
   "LLM_REQUEST_TIMEOUT_MS",
   "MCPX_SERVER_URL",

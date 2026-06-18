@@ -14,7 +14,10 @@ import {
   DownstreamSessionStore,
   PersistedDownstreamSessionData,
 } from "./downstream-session-store.js";
-import { CapabilityKind } from "./capability-registry.js";
+import {
+  CapabilityKind,
+  enabledCapabilityKinds,
+} from "./capability-registry.js";
 import { ConsumerContext } from "./capability-resolver.js";
 
 export { CloseSessionReason, TouchSource };
@@ -30,6 +33,7 @@ interface CapabilityBroadcastDef {
 // Keys match the resolver's CapabilityKind so callers can pass through.
 const CAPABILITY_BROADCASTS: Record<CapabilityKind, CapabilityBroadcastDef> = {
   tools: { send: (s) => s.server.sendToolListChanged() },
+  prompts: { send: (s) => s.server.sendPromptListChanged() },
 };
 
 export class SessionsManager {
@@ -225,6 +229,15 @@ export class SessionsManager {
         });
       });
     }, CAPABILITY_LIST_CHANGED_DEBOUNCE_MS);
+  }
+
+  // Re-broadcast every exposed kind. For config changes that can shift
+  // per-consumer visibility without moving the resolver's active set (e.g.
+  // permissions, which gate tools and prompts alike).
+  scheduleBroadcastAllListChanged(): void {
+    for (const kind of enabledCapabilityKinds()) {
+      this.scheduleBroadcastListChanged(kind);
+    }
   }
 
   async shutdown(): Promise<void> {
