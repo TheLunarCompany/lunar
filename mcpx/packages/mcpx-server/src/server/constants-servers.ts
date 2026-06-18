@@ -653,6 +653,60 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       url: "https://mcp.launchdarkly.com/mcp/observability",
     },
   },
+  {
+    name: "figma-community",
+    displayName: "Figma (Community)",
+    description:
+      "Gives AI coding agents access to Figma design data, simplifying and translating responses so only the most relevant layout and styling information is provided to the model.",
+    link: "https://github.com/glips/figma-context-mcp",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: [
+        "-y",
+        "figma-developer-mcp",
+        "--image-dir=/tmp/figma-images",
+        "--stdio",
+      ],
+      env: { FIGMA_API_KEY: { kind: "required", isSecret: false } },
+    },
+  },
+  {
+    name: "fathom",
+    displayName: "Fathom",
+    description:
+      "Connect your meeting data to LLMs using the Model Context Protocol. Enables AI assistants to access and analyze your Fathom meeting recordings, transcripts, and summaries.",
+    doc: "https://developers.fathom.ai/mcp-docs",
+    config: { type: "streamable-http", url: "https://api.fathom.ai/mcp" },
+  },
+  {
+    name: "n8n-workflows-builder",
+    displayName: "n8n Workflows Builder (Community)",
+    description:
+      "Provides n8n knowledge to MCP clients from anywhere by connecting AI assistants to your self-hosted n8n instance over HTTP, with optional workflow management tools.",
+    link: "https://github.com/czlonkowski/n8n-mcp/blob/main/docs/HTTP_DEPLOYMENT.md",
+    config: {
+      type: "streamable-http",
+      url: "YOUR_N8N_INSTANCE_URL",
+      headers: { Authorization: "Bearer YOUR_AUTH_TOKEN" },
+    },
+  },
+  {
+    name: "apollo-io",
+    displayName: "Apollo.io",
+    description:
+      "Access Apollo's 230M+ contact database and sales engagement tools through natural language. Search for prospects and companies, enrich records, create contacts, and manage sequences directly from your AI assistant.",
+    doc: "https://docs.apollo.io/docs/apollo-mcp",
+    config: { type: "streamable-http", url: "https://mcp.apollo.io/mcp" },
+  },
+  {
+    name: "slack-remote",
+    displayName: "Slack (Remote)",
+    description:
+      "Official Slack MCP server using the Static OAuth flow. Lets AI assistants securely access your Slack workspace to search messages, find information, and take actions on your behalf.",
+    doc: "https://slack.com/help/articles/48855576908307-Guide-to-the-Slack-MCP-server",
+    config: { type: "streamable-http", url: "https://mcp.slack.com/mcp" },
+  },
 ];
 
 export const backendDefaultServers: CatalogMCPServerItem[] =
