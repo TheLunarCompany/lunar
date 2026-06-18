@@ -44,6 +44,19 @@
     "dompurify": "3.4.0",
     "esbuild": "0.28.1",
     "postcss": "8.5.10",
-    "shell-quote": "1.8.4"
+    "shell-quote": "1.8.4",
+    "ws": "8.21.0",
+    "form-data": "4.0.6",
+    "hono": "4.12.26",
+    "protobufjs": "7.6.4",
+    "engine.io": {
+      "ws": "8.21.0"
+    },
+    "engine.io-client": {
+      "ws": "8.21.0"
+    },
+    "socket.io-adapter": {
+      "ws": "8.21.0"
+    }
   }
 }

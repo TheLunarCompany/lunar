@@ -28,7 +28,8 @@
   },
   "overrides": {
     "esbuild": "0.28.1",
-    "fast-uri": "3.1.2"
+    "fast-uri": "3.1.2",
+    "hono": "4.12.26"
   },
   "dependencies": {
     "@mcpx/shared-model": "file:../shared-model",
