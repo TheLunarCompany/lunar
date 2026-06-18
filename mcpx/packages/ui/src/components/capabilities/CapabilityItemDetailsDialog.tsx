@@ -15,7 +15,6 @@ import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
 import { Settings } from "lucide-react";
 import type { PromptMessage } from "@modelcontextprotocol/sdk/types.js";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import AssistantMessageIcon from "./icons/assistant-message.svg?react";
 import CustomCapabilityBadgeSvg from "./icons/custom-capability-badge.svg?react";
 import UserMessageIcon from "./icons/user-message.svg?react";
@@ -140,7 +139,7 @@ export function CapabilityItemDetailsDialog({
   onDeleteItem,
 }: CapabilityItemDetailsDialogProps) {
   const parameters = schemaProperties(item);
-  const providerIcon = useDomainIcon(item?.providerName ?? null);
+  const providerIcon = useDomainIcon(item?.providerName ?? "");
   const isPrompt = item?.kind === "prompt";
 
   return (
@@ -216,19 +215,11 @@ export function CapabilityItemDetailsDialog({
 
             <div className="border-b border-[var(--colors-gray-200)] px-6 py-4">
               <div className="flex min-w-0 items-center gap-3">
-                {providerIcon ? (
-                  <img
-                    src={providerIcon}
-                    alt={`${item.providerName} favicon`}
-                    className="size-10 shrink-0 object-contain"
-                  />
-                ) : (
-                  <McpIcon
-                    role="img"
-                    aria-label={`${item.providerName} fallback logo`}
-                    className="size-10 shrink-0 text-[var(--colors-gray-600)]"
-                  />
-                )}
+                <img
+                  src={providerIcon}
+                  alt={`${item.providerName} favicon`}
+                  className="size-10 shrink-0 object-contain"
+                />
                 <div className="min-w-0">
                   <SheetTitle className="truncate text-lg font-semibold">
                     {displayName(item.providerName)}

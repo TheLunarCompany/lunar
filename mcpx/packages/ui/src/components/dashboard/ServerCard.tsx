@@ -1,12 +1,10 @@
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useMemo } from "react";
 import { Plus } from "lucide-react";
 import GitHubLogo from "./icons/GitHubLogo.svg?react";
 import GitHubLogoSolid from "./icons/GitHubLogoSolid.svg?react";
-import { getMcpColorByName } from "./constants";
 import { ServerStatusBadge } from "./ServerStatusBadge";
 import { ServerCatalogBadges } from "./ServerCatalogBadges";
 import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
@@ -131,18 +129,11 @@ export const ServerCard = ({
     >
       <div className="grid grid-cols-6 grid-rows-auto gap-x-2 gap-y-2 text-foreground font-semibold">
         <div className="row-start-1 flex h-10 shrink-0 items-center justify-center justify-self-start">
-          {domainIconUrl ? (
-            <img
-              src={domainIconUrl}
-              alt="Domain Icon"
-              className="h-10 w-10 object-contain"
-            />
-          ) : (
-            <McpIcon
-              style={{ color: getMcpColorByName(server.displayName) }}
-              className="h-10 w-10"
-            />
-          )}
+          <img
+            src={domainIconUrl}
+            alt="Domain Icon"
+            className="h-10 w-10 object-contain"
+          />
         </div>
         <div className="col-start-2 row-start-1 flex min-w-0 flex-col justify-self-start">
           <span title={server.displayName}>{server.displayName}</span>

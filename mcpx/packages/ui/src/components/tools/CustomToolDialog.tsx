@@ -23,7 +23,6 @@ type ProviderLike = {
   icon?: string;
 };
 import { useCallback, useEffect, useMemo, useState } from "react";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 
@@ -275,10 +274,6 @@ export function CustomToolDialog({
     if (!providerName) return "";
     return providerName.charAt(0).toUpperCase() + providerName.slice(1);
   }, [providerName]);
-  const providerIconColor = useMemo(() => {
-    const provider = providers.find((p) => p.name === providerName);
-    return provider?.icon;
-  }, [providerName, providers]);
 
   return (
     <Dialog onOpenChange={onOpenChange} open={isOpen}>
@@ -316,18 +311,11 @@ export function CustomToolDialog({
         <div className="  border-b border-gray-200 relative bg-white">
           <div className="mx-6 py-4 bg-white border-b border-gray-200 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3 ">
-              {providerIcon ? (
-                <img
-                  src={providerIcon}
-                  alt={`${providerName} icon`}
-                  className="h-12 w-12 rounded-full object-contain bg-white"
-                />
-              ) : (
-                <McpIcon
-                  style={{ color: providerIconColor || "#4F33CC" }}
-                  className="w-12 h-12"
-                />
-              )}
+              <img
+                src={providerIcon}
+                alt={`${providerName} icon`}
+                className="h-12 w-12 rounded-full object-contain bg-white"
+              />
               <div className="flex flex-col">
                 <h3 className="text-2xl font-semibold ">
                   {capitalizedProviderName}

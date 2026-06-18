@@ -2,7 +2,6 @@ import { ChevronRight } from "lucide-react";
 import { ToolCard, ToolCardTool } from "@/components/tools/ToolCard";
 import { useMemo, useRef, useEffect } from "react";
 import { TargetServer } from "@mcpx/shared-model";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { Button } from "@/components/ui/button";
 import { useServerInactive } from "@/hooks/useServerInactive";
@@ -138,23 +137,14 @@ export function ProviderCard({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {domainIconUrl ? (
-              <img
-                src={domainIconUrl}
-                alt={`${provider.name} favicon`}
-                className="w-8 h-8 object-contain"
-                style={
-                  isInactive
-                    ? { filter: "grayscale(100%) brightness(0.8)" }
-                    : {}
-                }
-              />
-            ) : (
-              <McpIcon
-                style={{ color: isInactive ? "#C3C4CD" : provider?.icon }}
-                className="w-8 h-8"
-              />
-            )}
+            <img
+              src={domainIconUrl}
+              alt={`${provider.name} favicon`}
+              className="w-8 h-8 object-contain"
+              style={
+                isInactive ? { filter: "grayscale(100%) brightness(0.8)" } : {}
+              }
+            />
 
             <div>
               <h3

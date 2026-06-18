@@ -1,4 +1,3 @@
-import { getMcpColorByName } from "@/components/dashboard/constants";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
@@ -45,7 +44,6 @@ import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
 import { ServerCard } from "./ServerCard";
 import { SearchInput } from "@/components/ui/search-input";
-import { getIconKey } from "@/hooks/useDomainIcon";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CustomAddCheckboxText } from "@/config/runtime-config";
 import type { McpServerStatus } from "@/types";
@@ -337,9 +335,6 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
     const result = validateAndProcessServer({
       jsonContent: singleServerJson,
-      icon: getIconKey(actualServerName)
-        ? undefined
-        : getMcpColorByName(actualServerName),
       existingServers: systemState?.targetServers || [],
       reservedNames: reservedNames,
       isEdit: false,
@@ -426,8 +421,6 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         serverNames,
         existingServers: systemState?.targetServers || [],
         reservedNames: reservedNames,
-        getIcon: (serverName) =>
-          getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
         addServer: (payload, callbacks) => {
           addServerAsync(payload)
             .then(() => callbacks.onSuccess())

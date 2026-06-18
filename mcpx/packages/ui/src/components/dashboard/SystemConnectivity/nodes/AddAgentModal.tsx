@@ -14,7 +14,7 @@ import { CheckCircle, Copy } from "lucide-react";
 import { useState } from "react";
 import { CustomMonacoEditor } from "@/components/ui/custom-monaco-editor";
 import { cn } from "@/lib/utils";
-import { getAgentIconUrl } from "@/lib/agent-icons";
+import { getAgentIcon } from "@/lib/agent-icons";
 import { AgentInstructions } from "./AgentInstructions/AgentInstructions";
 import { getAgentConfigs } from "./AgentInstructions/agentConfigs";
 
@@ -106,7 +106,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                   )}
                 >
                   <img
-                    src={getAgentIconUrl(type.value)}
+                    src={getAgentIcon(type.value)}
                     alt={type.label}
                     className="w-8 h-8 shrink-0 object-contain"
                   />

@@ -23,7 +23,6 @@ import {
 
 import { AuthenticationDialog } from "../../AuthenticationDialog";
 import { McpServerNode } from "../types";
-import McpIcon from "./Mcpx_Icon.svg?react";
 
 type ServerVariant = "default" | "warning" | "info" | "error" | "disabled";
 
@@ -104,23 +103,14 @@ const McpServerNodeRenderer = ({
 
             <div className="flex items-center gap-3 min-w-0 w-full">
               <NodeCardIcon>
-                {domainIconUrl ? (
-                  <img
-                    src={domainIconUrl}
-                    alt="Domain Icon"
-                    className={cn(
-                      "size-[30px] object-contain",
-                      isInactive && "grayscale",
-                    )}
-                  />
-                ) : (
-                  <McpIcon
-                    style={{
-                      color: isInactive ? "var(--colors-gray-400)" : data.icon,
-                    }}
-                    className="size-[30px]"
-                  />
-                )}
+                <img
+                  src={domainIconUrl}
+                  alt="Domain Icon"
+                  className={cn(
+                    "size-[30px] object-contain",
+                    isInactive && "grayscale",
+                  )}
+                />
               </NodeCardIcon>
               <div className="flex flex-col gap-1 min-w-0">
                 <Tooltip>

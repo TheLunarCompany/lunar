@@ -26,7 +26,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import { McpColorInput } from "./McpColorInput";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { maskSecretEnvValue } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 
@@ -107,7 +106,7 @@ export const EditServerModal = ({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onEditSuccess?: (serverName: string, icon: string | undefined) => void;
+  onEditSuccess?: (serverName: string) => void;
 }) => {
   const { initialData } = useModalsStore((s) => ({
     initialData: s.editServerModalData,
@@ -142,7 +141,6 @@ export const EditServerModal = ({
 
   const { canAddCustomServerAndEdit: canEditCustom } = usePermissions();
   const { mutate: editServer, isPending, error } = useEditMcpServer();
-  const [icon, setIcon] = useState(initialData?.icon);
   const [jsonContent, setJsonContent] = useState(
     getInitialJson(initialData, envRequirements),
   );
@@ -151,10 +149,8 @@ export const EditServerModal = ({
   const isDirty = useMemo(
     () =>
       jsonContent.replaceAll(/\s/g, "").trim() !==
-        getInitialJson(initialData, envRequirements)
-          .replaceAll(/\s/g, "")
-          .trim() || icon !== initialData?.icon,
-    [initialData, jsonContent, icon, envRequirements],
+      getInitialJson(initialData, envRequirements).replaceAll(/\s/g, "").trim(),
+    [initialData, jsonContent, envRequirements],
   );
   const colorScheme = useColorScheme();
   const { toast } = useToast();
@@ -186,7 +182,6 @@ export const EditServerModal = ({
     // Use the shared validation and processing logic
     const result = validateAndProcessServer({
       jsonContent,
-      icon: icon,
       isEdit: true,
       originalServerName: initialData.name,
     });
@@ -220,7 +215,7 @@ export const EditServerModal = ({
       },
       {
         onSuccess: () => {
-          onEditSuccess?.(initialData.name, icon);
+          onEditSuccess?.(initialData.name);
           toast({
             description: (
               <>
@@ -247,9 +242,9 @@ export const EditServerModal = ({
 
   useEffect(() => {
     if (initialData) {
-      setJsonContent(getInitialJson({ ...initialData, icon }, envRequirements));
+      setJsonContent(getInitialJson({ ...initialData }, envRequirements));
     }
-  }, [icon, initialData, envRequirements]);
+  }, [initialData, envRequirements]);
 
   useEffect(() => {
     if (!error) return;
@@ -280,16 +275,12 @@ export const EditServerModal = ({
           <DialogHeader className="border-b border-border p-6">
             <DialogTitle className="flex items-center gap-2 text-2xl text-foreground">
               <div>
-                {domainIconUrl ? (
+                {domainIconUrl && (
                   <img
                     src={domainIconUrl}
                     alt="Domain Icon"
                     className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
                   />
-                ) : (
-                  <span>
-                    <McpColorInput icon={icon ?? ""} setIcon={setIcon} />
-                  </span>
                 )}
               </div>
               Edit Server <i>{initialData?.name}</i>

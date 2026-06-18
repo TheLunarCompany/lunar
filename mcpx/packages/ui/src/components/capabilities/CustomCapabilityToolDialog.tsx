@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { useEffect, useMemo, useState } from "react";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import type { CapabilityItem, CapabilityProvider } from "./types";
 
 export type CustomCapabilityToolSubmitPayload = {
@@ -104,7 +103,6 @@ export function CustomCapabilityToolDialog({
   );
   const isEditMode = !!preFilledData;
   const providerIcon = useDomainIcon(providerName);
-  const providerIconColor = provider?.icon;
   const displayProviderName = providerName
     ? providerName.charAt(0).toUpperCase() + providerName.slice(1)
     : "";
@@ -224,18 +222,11 @@ export function CustomCapabilityToolDialog({
         <div className="relative border-b border-gray-200 bg-white">
           <div className="mx-6 flex flex-row items-center justify-between border-b border-gray-200 bg-white py-4">
             <div className="flex items-center gap-3">
-              {providerIcon ? (
-                <img
-                  src={providerIcon}
-                  alt={`${providerName} icon`}
-                  className="size-12 rounded-full bg-white object-contain"
-                />
-              ) : (
-                <McpIcon
-                  style={{ color: providerIconColor || "#4F33CC" }}
-                  className="size-12"
-                />
-              )}
+              <img
+                src={providerIcon}
+                alt={`${providerName} icon`}
+                className="size-12 rounded-full bg-white object-contain"
+              />
               <div className="flex flex-col">
                 <h3 className="text-2xl font-semibold">
                   {displayProviderName}

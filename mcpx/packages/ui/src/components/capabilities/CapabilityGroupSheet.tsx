@@ -11,7 +11,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileEdit, Search, Trash2, Wrench } from "lucide-react";
 import { useMemo, useState } from "react";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { buildCapabilitySelectionKey } from "./capability-selection-key";
 import { CapabilityGroupCard } from "./CapabilityGroupCard";
 import { CapabilityPromptCard } from "./CapabilityPromptCard";
@@ -66,7 +65,6 @@ function findGroupItems(
 }
 
 function ProviderIcon({
-  provider,
   providerName,
 }: {
   provider?: CapabilityProvider;
@@ -74,22 +72,11 @@ function ProviderIcon({
 }) {
   const iconSrc = useDomainIcon(providerName);
 
-  if (iconSrc) {
-    return (
-      <img
-        src={iconSrc}
-        alt={`${providerName} favicon`}
-        className="size-8 object-contain"
-      />
-    );
-  }
-
   return (
-    <McpIcon
-      role="img"
-      aria-label={`${providerName} fallback logo`}
-      className="size-8"
-      style={{ color: provider?.icon ?? "black" }}
+    <img
+      src={iconSrc}
+      alt={`${providerName} favicon`}
+      className="size-8 object-contain"
     />
   );
 }
@@ -339,50 +326,45 @@ export function CapabilityGroupSheet({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {visibleProviderItems.map(
-                      ({ provider, providerName, items }) => (
-                        <section
-                          key={providerName}
-                          className="space-y-2 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-3"
-                        >
-                          <div className="flex items-center gap-2">
-                            <ProviderIcon
-                              provider={provider}
-                              providerName={providerName}
-                            />
-                            <h3 className="truncate text-xl font-medium leading-none tracking-[0] text-[var(--text-colours-color-text-primary)]">
-                              {providerName}
-                            </h3>
-                          </div>
-                          <div className="space-y-2">
-                            {items.map((item) =>
-                              item.kind === "prompt" ? (
-                                <CapabilityPromptCard
-                                  key={item.id}
-                                  item={item}
-                                  className="w-full"
-                                  onShowDetails={onShowItemDetails}
-                                  showActions={false}
-                                />
-                              ) : (
-                                <CapabilityToolCard
-                                  key={item.id}
-                                  item={item}
-                                  className="w-full"
-                                  onShowDetails={onShowItemDetails}
-                                  showActions={false}
-                                />
-                              ),
-                            )}
-                          </div>
-                          <p className="text-xs leading-none text-[var(--text-colours-color-text-secondary)]">
-                            {items.length}{" "}
-                            {activeTab === "prompt" ? "prompt" : "tool"}
-                            {items.length === 1 ? "" : "s"}
-                          </p>
-                        </section>
-                      ),
-                    )}
+                    {visibleProviderItems.map(({ providerName, items }) => (
+                      <section
+                        key={providerName}
+                        className="space-y-2 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ProviderIcon providerName={providerName} />
+                          <h3 className="truncate text-xl font-medium leading-none tracking-[0] text-[var(--text-colours-color-text-primary)]">
+                            {providerName}
+                          </h3>
+                        </div>
+                        <div className="space-y-2">
+                          {items.map((item) =>
+                            item.kind === "prompt" ? (
+                              <CapabilityPromptCard
+                                key={item.id}
+                                item={item}
+                                className="w-full"
+                                onShowDetails={onShowItemDetails}
+                                showActions={false}
+                              />
+                            ) : (
+                              <CapabilityToolCard
+                                key={item.id}
+                                item={item}
+                                className="w-full"
+                                onShowDetails={onShowItemDetails}
+                                showActions={false}
+                              />
+                            ),
+                          )}
+                        </div>
+                        <p className="text-xs leading-none text-[var(--text-colours-color-text-secondary)]">
+                          {items.length}{" "}
+                          {activeTab === "prompt" ? "prompt" : "tool"}
+                          {items.length === 1 ? "" : "s"}
+                        </p>
+                      </section>
+                    ))}
                   </div>
                 )}
               </TabsContent>
@@ -396,39 +378,34 @@ export function CapabilityGroupSheet({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {visibleProviderItems.map(
-                      ({ provider, providerName, items }) => (
-                        <section
-                          key={providerName}
-                          className="space-y-2 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-3"
-                        >
-                          <div className="flex items-center gap-2">
-                            <ProviderIcon
-                              provider={provider}
-                              providerName={providerName}
+                    {visibleProviderItems.map(({ providerName, items }) => (
+                      <section
+                        key={providerName}
+                        className="space-y-2 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ProviderIcon providerName={providerName} />
+                          <h3 className="truncate text-xl font-medium leading-none tracking-[0] text-[var(--text-colours-color-text-primary)]">
+                            {providerName}
+                          </h3>
+                        </div>
+                        <div className="space-y-2">
+                          {items.map((item) => (
+                            <CapabilityPromptCard
+                              key={item.id}
+                              item={item}
+                              className="w-full"
+                              onShowDetails={onShowItemDetails}
+                              showActions={false}
                             />
-                            <h3 className="truncate text-xl font-medium leading-none tracking-[0] text-[var(--text-colours-color-text-primary)]">
-                              {providerName}
-                            </h3>
-                          </div>
-                          <div className="space-y-2">
-                            {items.map((item) => (
-                              <CapabilityPromptCard
-                                key={item.id}
-                                item={item}
-                                className="w-full"
-                                onShowDetails={onShowItemDetails}
-                                showActions={false}
-                              />
-                            ))}
-                          </div>
-                          <p className="text-xs leading-none text-[var(--text-colours-color-text-secondary)]">
-                            {items.length} prompt
-                            {items.length === 1 ? "" : "s"}
-                          </p>
-                        </section>
-                      ),
-                    )}
+                          ))}
+                        </div>
+                        <p className="text-xs leading-none text-[var(--text-colours-color-text-secondary)]">
+                          {items.length} prompt
+                          {items.length === 1 ? "" : "s"}
+                        </p>
+                      </section>
+                    ))}
                   </div>
                 )}
               </TabsContent>

@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@/components/ui/card";
-import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { Switch } from "@/components/ui/switch";
 import { useMemo } from "react";
 import { useSocketStore } from "@/store";
@@ -83,18 +82,11 @@ export const McpxServerCard = ({
       <CardContent className="p-0">
         <div className="flex items-center gap-2">
           <div className="shrink-0">
-            {domainIconUrl ? (
-              <img
-                src={domainIconUrl}
-                alt="Server Icon"
-                className="min-w-8 w-8 min-h-8 h-8 rounded-md object-contain p-1 bg-white"
-              />
-            ) : (
-              <McpIcon
-                style={{ color: server.icon }}
-                className="min-w-8 w-8 min-h-8 h-8 rounded-md bg-white p-1"
-              />
-            )}
+            <img
+              src={domainIconUrl}
+              alt="Server Icon"
+              className="min-w-8 w-8 min-h-8 h-8 rounded-md object-contain p-1 bg-white"
+            />
           </div>
           <div className="flex-1 flex-row min-w-0">
             <h3 className="capitalize font-semibold text-foreground mb-0 text-sm truncate">

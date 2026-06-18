@@ -20,7 +20,6 @@ import {
   socketStore,
 } from "@/store";
 import { usePermissions } from "@/data/permissions";
-import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
@@ -182,7 +181,7 @@ export const ServerDetailsModal = ({
   const appConfig = useSocketStore((s) => s.appConfig);
 
   // These hooks must be called unconditionally (before any early returns)
-  const domainIconUrl = useDomainIcon(detailsServer?.name ?? null);
+  const domainIconUrl = useDomainIcon(detailsServer?.name ?? "");
 
   // Status from the live-overlaid server keeps the drawer reactive as server state transitions.
   const liveStatus: McpServerStatus = useMemo(() => {
@@ -481,18 +480,11 @@ export const ServerDetailsModal = ({
             <div className="px-6 gap-4 flex flex-col overflow-y-auto flex-1 min-h-0">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  {domainIconUrl ? (
-                    <img
-                      src={domainIconUrl}
-                      alt="Domain Icon"
-                      className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
-                    />
-                  ) : (
-                    <McpIcon
-                      style={{ color: currentServer.icon }}
-                      className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1"
-                    />
-                  )}
+                  <img
+                    src={domainIconUrl}
+                    alt="Domain Icon"
+                    className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
+                  />
                   <span className="text-2xl font-medium capitalize">
                     {" "}
                     {currentServer.name}

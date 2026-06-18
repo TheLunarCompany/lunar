@@ -1,4 +1,3 @@
-import { getMcpColorByName } from "@/components/dashboard/constants";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
@@ -39,7 +38,6 @@ import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
 import { ServerCard } from "@/components/dashboard/ServerCard";
 import { ErrorBanner } from "@/components/ErrorBanner";
-import { getIconKey } from "@/hooks/useDomainIcon";
 import { routes } from "@/routes";
 import { useNavigate } from "react-router-dom";
 import { SearchInput } from "@/components/ui/search-input";
@@ -320,9 +318,6 @@ export default function Catalog() {
 
     const result = validateAndProcessServer({
       jsonContent: singleServerJson,
-      icon: getIconKey(actualServerName)
-        ? undefined
-        : getMcpColorByName(actualServerName),
       existingServers: systemState?.targetServers || [],
       reservedNames: reservedNames,
       isEdit: false,
@@ -409,8 +404,6 @@ export default function Catalog() {
         serverNames,
         existingServers: systemState?.targetServers || [],
         reservedNames: reservedNames,
-        getIcon: (serverName) =>
-          getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
         addServer: (payload, callbacks) => {
           addServerAsync(payload)
             .then(() => callbacks.onSuccess())

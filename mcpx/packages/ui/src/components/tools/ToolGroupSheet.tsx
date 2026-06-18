@@ -11,7 +11,6 @@ import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
 const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { FileEdit, Trash2, TriangleAlert, Wrench } from "lucide-react";
 import { useState } from "react";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import type { ToolGroup } from "@/store/access-controls";
 import type { TargetServer } from "@mcpx/shared-model";
@@ -57,20 +56,13 @@ function DomainIcon({
 }) {
   const iconSrc = useDomainIcon(provider.name);
 
-  let imageColor = "black";
-  if (!iconSrc) {
-    imageColor = provider.icon || imageColor;
-  }
-
-  return iconSrc ? (
+  return (
     <img
       src={iconSrc}
       alt="favicon"
       className="object-contain"
       style={{ width: size, height: size }}
     />
-  ) : (
-    <McpIcon style={{ color: imageColor, width: size, height: size }} />
   );
 }
 

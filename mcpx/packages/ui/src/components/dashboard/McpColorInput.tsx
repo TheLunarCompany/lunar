@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes";
+import { MCP_ICON_COLORS } from "@mcpx/toolkit-ui/src/utils/icons-constants";
 import {
   Popover,
   PopoverContent,

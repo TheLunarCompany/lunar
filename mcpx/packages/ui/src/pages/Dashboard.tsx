@@ -283,14 +283,11 @@ export default function Dashboard() {
     }
   }, [configurationData]);
 
-  const handleEditSuccess = useCallback(
-    (serverName: string, icon: string | undefined) => {
-      setMcpServers((prev) =>
-        prev.map((s) => (s.name === serverName ? { ...s, icon } : s)),
-      );
-    },
-    [],
-  );
+  const handleEditSuccess = useCallback((serverName: string) => {
+    setMcpServers((prev) =>
+      prev.map((s) => (s.name === serverName ? { ...s } : s)),
+    );
+  }, []);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white p-4 text-foreground md:p-6">

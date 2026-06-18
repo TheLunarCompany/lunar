@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { useAccessControlsStore, useSocketStore } from "@/store";
-import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 
 export const DomainBadge = ({
   domain,
@@ -49,11 +48,7 @@ export const DomainBadge = ({
           : undefined
       }
     >
-      {domainIconUrl ? (
-        <img src={domainIconUrl} alt="Domain Icon" className="w-4 h-4" />
-      ) : (
-        <McpIcon style={{ color: server?.icon }} className="w-4 h-4" />
-      )}
+      <img src={domainIconUrl} alt="Domain Icon" className="w-4 h-4" />
       <span
         className={`text-xs capitalize font-normal leading-[18px] ${
           isMissingOrInactive

@@ -34,9 +34,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { SavedSetupSheet } from "@/components/saved-setups/SavedSetupSheet";
-import { getMcpColorByName } from "@/components/dashboard/constants";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import McpIcon from "@/components/dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
 import { Separator } from "@/components/ui/separator";
 import { routes } from "@/routes";
@@ -71,19 +69,11 @@ function formatCurrentSetupSummary(summary: CurrentSetupSummary): string {
 
 function ServerIconCell({ name }: { name: string }) {
   const domainIconUrl = useDomainIcon(name);
-  if (domainIconUrl) {
-    return (
-      <img
-        src={domainIconUrl}
-        alt=""
-        className="w-4 h-4 rounded-[2px] object-contain shrink-0"
-      />
-    );
-  }
   return (
-    <McpIcon
-      style={{ color: getMcpColorByName(name) }}
-      className="w-4 h-4 shrink-0"
+    <img
+      src={domainIconUrl}
+      alt=""
+      className="w-4 h-4 rounded-[2px] object-contain shrink-0"
     />
   );
 }

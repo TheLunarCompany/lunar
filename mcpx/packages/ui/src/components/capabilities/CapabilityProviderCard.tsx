@@ -1,5 +1,4 @@
 import { ServerStatusBadge } from "@/components/dashboard/ServerStatusBadge";
-import McpIcon from "@/components/dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { getMcpServerStatusFromTargetServer } from "@/components/dashboard/helpers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -168,20 +167,11 @@ export function CapabilityProviderCard({
         aria-label={`${isExpanded ? "Collapse" : "Expand"} ${provider.name} tools`}
       >
         <div className="flex min-w-0 items-center gap-4">
-          {domainIconUrl ? (
-            <img
-              src={domainIconUrl}
-              alt={`${provider.name} favicon`}
-              className="size-8 shrink-0 object-contain"
-            />
-          ) : (
-            <McpIcon
-              role="img"
-              aria-label={`${provider.name} fallback logo`}
-              className="size-8 shrink-0 text-[var(--colors-gray-600)]"
-              style={{ color: provider.icon }}
-            />
-          )}
+          <img
+            src={domainIconUrl}
+            alt={`${provider.name} favicon`}
+            className="size-8 shrink-0 object-contain"
+          />
           <h3 className="truncate text-lg font-semibold capitalize text-[var(--colors-gray-900)]">
             {provider.name}
           </h3>

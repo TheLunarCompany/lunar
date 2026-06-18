@@ -39,7 +39,6 @@ export interface ServerValidationResult {
 
 export interface ServerValidationOptions {
   jsonContent: string;
-  icon?: string;
   existingServers?: Array<{ name: string }>; // currently connected servers
   reservedNames?: Set<string>; // catalog servers names (or undefined on addition from catalog)
   isEdit?: boolean;
@@ -83,7 +82,6 @@ export const validateAndProcessServer = (
 ): ServerValidationResult => {
   const {
     jsonContent,
-    icon,
     existingServers = [],
     reservedNames,
     isEdit = false,
@@ -185,7 +183,6 @@ export const validateAndProcessServer = (
   // Create payload
   const payload = {
     ...serverConfig,
-    icon,
     name: serverName,
   };
 
@@ -272,7 +269,6 @@ export interface MultipleServersOptions {
   serverNames: string[];
   existingServers: Array<{ name: string }>;
   reservedNames?: Set<string>; // catalog servers names (or undefined on addition from catalog)
-  getIcon: (name: string) => string | undefined;
   addServer: (
     payload: { payload: TargetServerRequest },
     callbacks: {
@@ -304,7 +300,6 @@ export const handleMultipleServers = async (
     serverNames,
     existingServers,
     reservedNames,
-    getIcon,
     addServer,
   } = options;
 
@@ -319,7 +314,6 @@ export const handleMultipleServers = async (
 
     const result = validateAndProcessServer({
       jsonContent: singleServerJson,
-      icon: getIcon(serverName),
       existingServers: existingServers,
       reservedNames: reservedNames,
       isEdit: false,

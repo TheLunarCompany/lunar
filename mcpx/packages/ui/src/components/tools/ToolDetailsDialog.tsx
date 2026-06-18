@@ -7,7 +7,6 @@ import { MarkdownContent } from "@/components/MarkdownContent";
 import { Copy, Edit, Settings, Trash2, X } from "lucide-react";
 import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { AppConfig, ToolExtensionParamsRecord } from "@mcpx/shared-model";
 import type { ToolAnnotations } from "@/types";
@@ -137,7 +136,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
     onClose();
   };
 
-  const providerIcon = useDomainIcon(tool?.serviceName ?? null);
+  const providerIcon = useDomainIcon(tool?.serviceName ?? "");
 
   const providerSelectors = useMemo(() => {
     const map = new Map<string, ProviderInfo>();
@@ -284,21 +283,11 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
               <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
                 <SheetTitle className="min-w-0 w-full truncate">
                   <div className="flex items-center gap-2 min-w-0 w-full">
-                    {providerIcon ? (
-                      <img
-                        src={providerIcon}
-                        alt={`icon`}
-                        className="h-12 w-12 rounded-full object-contain bg-white shrink-0"
-                      />
-                    ) : (
-                      <McpIcon
-                        style={{
-                          color: providerSelectors.get(tool.serviceName ?? "")
-                            ?.icon,
-                        }}
-                        className="w-12 h-12 shrink-0"
-                      />
-                    )}
+                    <img
+                      src={providerIcon}
+                      alt={`icon`}
+                      className="h-12 w-12 rounded-full object-contain bg-white shrink-0"
+                    />
 
                     <div className="flex flex-col mt-[-3px] min-w-0 flex-1 overflow-hidden">
                       <p

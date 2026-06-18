@@ -1,18 +1,5 @@
-import { getAgentIconUrl } from "@/lib/agent-icons";
-import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes/constants";
+import { getAgentIcon } from "@/lib/agent-icons";
 import { AgentType } from "./types";
-
-export const DEFAULT_SERVER_ICON = MCP_ICON_COLORS[0];
-
-export function getMcpColorByName(name: string) {
-  const index =
-    name
-      .split("")
-      .reduce((acc, word, index) => acc + word.charCodeAt(0) + index, 0) %
-    MCP_ICON_COLORS.length;
-
-  return MCP_ICON_COLORS[index];
-}
 
 /** Each agent type has an array of patterns; a match is when the name includes any of them. */
 export const AGENT_TYPES = {
@@ -62,7 +49,7 @@ const AGENT_ICON_KEYS: Record<AgentType, string> = {
   "openai-mcp": "openai-mcp",
   "codex-mcp-client": "codex-mcp-client",
   WARP: "warp",
-  "gemini-cli": "gemini-cli",
+  "gemini-cli": "geminiCli",
   opencode: "opencode",
   N8N: "n8n",
   DEFAULT: "default",
@@ -70,60 +57,59 @@ const AGENT_ICON_KEYS: Record<AgentType, string> = {
 
 export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   "CLAUDE-DESKTOP": {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS["CLAUDE-DESKTOP"]),
+    icon: getAgentIcon(AGENT_ICON_KEYS["CLAUDE-DESKTOP"]),
     name: "Claude Desktop",
   },
   "CLAUDE-CODE": {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS["CLAUDE-CODE"]),
+    icon: getAgentIcon(AGENT_ICON_KEYS["CLAUDE-CODE"]),
     name: "Claude Code",
   },
-
   CURSOR: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.CURSOR),
+    icon: getAgentIcon(AGENT_ICON_KEYS.CURSOR),
     name: "Cursor",
   },
   VSCODE: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.VSCODE),
+    icon: getAgentIcon(AGENT_ICON_KEYS.VSCODE),
     name: "VScode",
   },
   COPILOT: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.COPILOT),
+    icon: getAgentIcon(AGENT_ICON_KEYS.COPILOT),
     name: "Copilot",
   },
   WIND_SURF: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.WIND_SURF),
+    icon: getAgentIcon(AGENT_ICON_KEYS.WIND_SURF),
     name: "Windsurf",
   },
   INSPECTOR: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.INSPECTOR),
+    icon: getAgentIcon(AGENT_ICON_KEYS.INSPECTOR),
     name: "Inspector",
   },
   "openai-mcp": {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS["openai-mcp"]),
+    icon: getAgentIcon(AGENT_ICON_KEYS["openai-mcp"]),
     name: "ChatGPT",
   },
   "codex-mcp-client": {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS["codex-mcp-client"]),
+    icon: getAgentIcon(AGENT_ICON_KEYS["codex-mcp-client"]),
     name: "Codex",
   },
   WARP: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.WARP),
+    icon: getAgentIcon(AGENT_ICON_KEYS.WARP),
     name: "Warp",
   },
   "gemini-cli": {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS["gemini-cli"]),
+    icon: getAgentIcon(AGENT_ICON_KEYS["gemini-cli"]),
     name: "Gemini CLI",
   },
   opencode: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.opencode),
+    icon: getAgentIcon(AGENT_ICON_KEYS.opencode),
     name: "OpenCode",
   },
   N8N: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.N8N),
+    icon: getAgentIcon(AGENT_ICON_KEYS.N8N),
     name: "N8N node",
   },
   DEFAULT: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.DEFAULT),
+    icon: getAgentIcon(AGENT_ICON_KEYS.DEFAULT),
     name: "Default",
   },
 };
