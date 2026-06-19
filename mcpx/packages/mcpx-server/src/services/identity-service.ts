@@ -1,5 +1,6 @@
 import { Logger } from "winston";
 import { SetIdentityPayload } from "@mcpx/webapp-protocol/messages";
+import { Identity as ClientIdentity } from "@mcpx/shared-model";
 
 // Identity is a discriminated union: Personal or Enterprise
 // Enterprise entity type is derived from protocol's SetIdentityPayload
@@ -18,6 +19,7 @@ export type Identity = PersonalIdentity | EnterpriseIdentity;
 export interface IdentityServiceI {
   getIdentity(): Identity;
   setIdentity(payload: SetIdentityPayload): void;
+  subscribe(callback: (identity: Identity) => void): () => void;
   isSpace(): boolean;
   isAdmin(): boolean;
   getDisplayName(): string | undefined;
@@ -32,6 +34,7 @@ const DEFAULT_ENTERPRISE_ENTITY: SetIdentityPayload = {
 export class IdentityService implements IdentityServiceI {
   private identity: Identity;
   private logger: Logger;
+  private subscribers: Set<(identity: Identity) => void> = new Set();
   constructor(logger: Logger, config: { isEnterprise: boolean }) {
     this.logger = logger.child({ component: "IdentityService" });
 
@@ -46,6 +49,13 @@ export class IdentityService implements IdentityServiceI {
 
   getIdentity(): Identity {
     return this.identity;
+  }
+
+  subscribe(callback: (identity: Identity) => void): () => void {
+    this.subscribers.add(callback);
+    return () => {
+      this.subscribers.delete(callback);
+    };
   }
 
   getDisplayName(): string | undefined {
@@ -75,6 +85,8 @@ export class IdentityService implements IdentityServiceI {
       entityType: payload.entityType,
       role: payload.entityType === "user" ? payload.role : undefined,
     });
+
+    this.subscribers.forEach((callback) => callback(this.identity));
   }
 
   isSpace(): boolean {
@@ -101,4 +113,39 @@ export function isSpace(identity: Identity): boolean {
     return false;
   }
   return identity.entity.entityType === "space";
+}
+
+// Narrows the internal identity to the client contract: the UI only knows the
+// space kinds it renders, so any other kind is dropped to undefined.
+export function toClientIdentity(identity: Identity): ClientIdentity {
+  const mode = identity.mode;
+  if (mode === "personal") {
+    return { mode };
+  }
+  const entity = identity.entity;
+  const entityType = entity.entityType;
+  if (entityType === "user") {
+    return {
+      mode,
+      entity: {
+        entityType,
+        role: entity.role,
+        editingOnBehalfOf: entity.editingOnBehalfOf,
+      },
+    };
+  }
+  const spaceKind =
+    entity.spaceKind === "HOSTED_MCP_SERVER" ||
+    entity.spaceKind === "AGENT_CONNECTOR"
+      ? entity.spaceKind
+      : undefined;
+  return {
+    mode,
+    entity: {
+      entityType,
+      spaceKind,
+      spaceName: entity.spaceName,
+      editedBy: entity.editedBy,
+    },
+  };
 }

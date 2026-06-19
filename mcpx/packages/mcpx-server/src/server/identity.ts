@@ -5,6 +5,7 @@ import {
 import express, { Router } from "express";
 import z from "zod/v4";
 import { Services } from "../services/services.js";
+import { toClientIdentity } from "../services/identity-service.js";
 
 export function buildIdentityRouter(
   authGuard: express.RequestHandler,
@@ -16,7 +17,7 @@ export function buildIdentityRouter(
   // Used by UI to determine which features to show (e.g., admin nav)
   router.get("/", authGuard, (_req, res) => {
     const response: GetIdentityResponse = {
-      identity: services.identityService.getIdentity(),
+      identity: toClientIdentity(services.identityService.getIdentity()),
     };
     res.json(response satisfies z.infer<typeof getIdentityResponseSchema>);
   });

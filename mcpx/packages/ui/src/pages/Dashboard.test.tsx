@@ -3,11 +3,11 @@ import type { ComponentProps, ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getHostedMcpEditContextFromLocation } from "@/data/hosted-mcp-edit-context";
+import { useIsEditingSpaceOnBehalf } from "@/data/identity";
 import Dashboard from "./Dashboard";
 
-vi.mock("@/data/hosted-mcp-edit-context", () => ({
-  getHostedMcpEditContextFromLocation: vi.fn(),
+vi.mock("@/data/identity", () => ({
+  useIsEditingSpaceOnBehalf: vi.fn(),
 }));
 
 vi.mock("@/components/dashboard/MetricsPanel", () => ({
@@ -22,12 +22,12 @@ vi.mock(
   "@/components/dashboard/SystemConnectivity/ConnectivityDiagram",
   () => ({
     ConnectivityDiagram: ({
-      hostedMode,
+      isEditingSpaceOnBehalf,
     }: ComponentProps<
       typeof import("@/components/dashboard/SystemConnectivity/ConnectivityDiagram").ConnectivityDiagram
     >) => (
       <div
-        data-hosted-mode={String(hostedMode)}
+        data-hosted-mode={String(isEditingSpaceOnBehalf)}
         data-testid="connectivity-diagram"
       />
     ),
@@ -91,15 +91,12 @@ function renderDashboard() {
 
 describe("Dashboard", () => {
   beforeEach(() => {
-    vi.mocked(getHostedMcpEditContextFromLocation).mockReset();
-    vi.mocked(getHostedMcpEditContextFromLocation).mockReturnValue(null);
+    vi.mocked(useIsEditingSpaceOnBehalf).mockReset();
+    vi.mocked(useIsEditingSpaceOnBehalf).mockReturnValue(false);
   });
 
-  it("passes hosted mode to the connectivity diagram when the URL has hosted edit context", () => {
-    vi.mocked(getHostedMcpEditContextFromLocation).mockReturnValue({
-      returnUrl: "https://mcpx-admin-stg.lunar.dev/hosted-mcp-server",
-      spaceId: "space-123",
-    });
+  it("passes hosted mode to the connectivity diagram when the space is under OBO edit", () => {
+    vi.mocked(useIsEditingSpaceOnBehalf).mockReturnValue(true);
 
     renderDashboard();
 
@@ -107,25 +104,14 @@ describe("Dashboard", () => {
       "data-hosted-mode",
       "true",
     );
-    expect(screen.getByText("Hosted Mode")).toBeInTheDocument();
-    expect(
-      screen.getByText("You're editing the MCP server setup."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /finish in mcpx admin/i }),
-    ).toHaveAttribute(
-      "href",
-      "https://mcpx-admin-stg.lunar.dev/hosted-mcp-server",
-    );
   });
 
-  it("passes non-hosted mode when hosted edit context is absent", () => {
+  it("passes non-hosted mode when the space is not under OBO edit", () => {
     renderDashboard();
 
     expect(screen.getByTestId("connectivity-diagram")).toHaveAttribute(
       "data-hosted-mode",
       "false",
     );
-    expect(screen.queryByText("Hosted Mode")).not.toBeInTheDocument();
   });
 });

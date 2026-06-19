@@ -19,6 +19,7 @@ function createStubIdentityService(identity: Identity): IdentityServiceI {
   return {
     getIdentity: () => identity,
     setIdentity: () => {},
+    subscribe: () => () => {},
     isSpace: () => isSpace(identity),
     isAdmin: () => isAdmin(identity),
     getDisplayName: () => undefined,

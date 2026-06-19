@@ -24,6 +24,8 @@ export enum UI_ClientBoundMessage {
   SystemState = "systemState",
   GetSystemStateFailed = "getSystemStateFailed",
 
+  IdentityChanged = "identityChanged",
+
   TargetServerAdded = "targetServerAdded",
   AddTargetServerFailed = "addTargetServerFailed",
 

@@ -7,13 +7,31 @@ const personalIdentitySchema = z.object({
   mode: z.literal("personal"),
 });
 
+// Present when an admin is editing this space on its behalf (OBO). Mirrors the
+// hub's webapp-protocol oboEditor shape.
+const oboEditorSchema = z.object({
+  adminDisplayName: z.string().optional(),
+  adminEmail: z.string().optional(),
+});
+
+// Present on a user's identity while they have an active OBO edit elsewhere.
+const oboEditingTargetSchema = z.object({
+  spaceName: z.string().optional(),
+});
+
 const enterpriseIdentitySchema = z.object({
   mode: z.literal("enterprise"),
   entity: z.discriminatedUnion("entityType", [
-    z.object({ entityType: z.literal("space") }),
+    z.object({
+      entityType: z.literal("space"),
+      spaceKind: z.enum(["HOSTED_MCP_SERVER", "AGENT_CONNECTOR"]).optional(),
+      spaceName: z.string().optional(),
+      editedBy: oboEditorSchema.optional(),
+    }),
     z.object({
       entityType: z.literal("user"),
       role: userRoleSchema,
+      editingOnBehalfOf: oboEditingTargetSchema.optional(),
     }),
   ]),
 });

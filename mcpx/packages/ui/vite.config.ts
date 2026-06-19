@@ -111,6 +111,8 @@ export default defineConfig(({ command, mode }) => {
         "monaco-editor/esm/vs/language/json/json.worker.js",
       ],
       esbuildOptions: {
+        // Match build.target (see above) for the dev-server dep pre-bundle.
+        target: "es2022",
         loader: {
           ".js": "jsx",
         },

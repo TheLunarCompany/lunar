@@ -5,15 +5,18 @@ export class UIConnection {
   private _socket: Socket;
   private _cleanupSystemState: () => void;
   private _cleanAppConfig: () => void;
+  private _cleanupIdentity: () => void;
 
   constructor(
     socket: Socket,
     systemStateCallback: () => void,
     appConfigCallback: () => void,
+    identityCallback: () => void,
   ) {
     this._socket = socket;
     this._cleanupSystemState = systemStateCallback;
     this._cleanAppConfig = appConfigCallback;
+    this._cleanupIdentity = identityCallback;
   }
 
   get socket(): Socket {
@@ -23,6 +26,7 @@ export class UIConnection {
   disconnect(): void {
     this._cleanupSystemState();
     this._cleanAppConfig();
+    this._cleanupIdentity();
     this._socket.disconnect(true);
   }
 }

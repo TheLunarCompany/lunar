@@ -302,7 +302,7 @@ describe("useReactFlowData", () => {
     function TestHarness() {
       latestResult.current = useReactFlowData({
         agents,
-        hostedMode: true,
+        isEditingSpaceOnBehalf: true,
         mcpServersData: servers,
         mcpxStatus: "running",
         version: "1.2.3",
@@ -354,7 +354,7 @@ describe("useReactFlowData", () => {
     function TestHarness() {
       latestResult.current = useReactFlowData({
         agents: [],
-        hostedMode: true,
+        isEditingSpaceOnBehalf: true,
         mcpServersData: servers,
         mcpxStatus: "running",
         version: "1.2.3",

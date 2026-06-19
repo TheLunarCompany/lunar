@@ -4,6 +4,14 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Layout } from "./Layout";
 
+vi.mock("@/data/identity", () => ({
+  useIdentity: () => ({ data: undefined }),
+  useIdentityLiveSync: () => {},
+  getSpaceEditedByLabel: () => undefined,
+  getSpaceKindLabel: () => "space",
+  getSpaceName: () => undefined,
+}));
+
 vi.mock("@/components/dashboard/AddServerModal", () => ({
   AddServerModal: () => null,
 }));

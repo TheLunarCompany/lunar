@@ -226,13 +226,11 @@ function sortServers(
 
 export const useReactFlowData = ({
   agents,
-  hostedMode = false,
   mcpxStatus,
   mcpServersData,
   version,
 }: {
   agents: Array<Agent>;
-  hostedMode?: boolean;
   mcpxStatus: string;
   mcpServersData: Array<McpServer> | null | undefined;
   version?: string;
@@ -338,10 +336,8 @@ export const useReactFlowData = ({
       type: "agent",
       style: NODE_TRANSITION_STYLE,
     }));
-    const visibleAgentNodes = hostedMode ? [] : agentNodes;
-
     const noAgentsNodes: NoAgentsNode[] =
-      agentsCount === 0 && !hostedMode
+      agentsCount === 0
         ? [
             {
               data: {},
@@ -365,8 +361,8 @@ export const useReactFlowData = ({
         ? serverNodes.map((n) => n.id)
         : noServersNodes.map((n) => n.id);
     const leftIds =
-      visibleAgentNodes.length > 0
-        ? visibleAgentNodes.map((n) => n.id)
+      agentNodes.length > 0
+        ? agentNodes.map((n) => n.id)
         : noAgentsNodes.map((n) => n.id);
 
     const rightLayout = stackColumn(rightIds, measured, rightBaseX, "right");
@@ -375,7 +371,7 @@ export const useReactFlowData = ({
     const allDataNodes = [
       ...serverNodes,
       ...noServersNodes,
-      ...visibleAgentNodes,
+      ...agentNodes,
       ...noAgentsNodes,
     ];
     for (const node of allDataNodes) {
@@ -464,46 +460,43 @@ export const useReactFlowData = ({
       };
     });
 
-    const agentsEdges: Edge[] = hostedMode
-      ? []
-      : agents.map(({ id, lastActivity }, index) => {
-          const isActiveAgent = isActive(lastActivity);
-          const layout = agentLayoutMap.get(id);
+    const agentsEdges: Edge[] = agents.map(({ id, lastActivity }, index) => {
+      const isActiveAgent = isActive(lastActivity);
+      const layout = agentLayoutMap.get(id);
 
-          if (isActiveAgent) {
-            selectedNodeIds.add(id);
-            selectedNodeIds.add("mcpx");
-          }
+      if (isActiveAgent) {
+        selectedNodeIds.add(id);
+        selectedNodeIds.add("mcpx");
+      }
 
-          return {
-            animated: isActiveAgent,
-            className: "#DDDCE4",
-            id: `e-${id}`,
-            source: id,
-            style: {
-              stroke: isActiveAgent ? "var(--colors-route-active)" : "#D8DCED",
-              strokeWidth: 1,
-              strokeDasharray: isActiveAgent ? "5,5" : undefined,
-            },
-            target: "mcpx",
-            type: "curved",
-            data: {
-              addButtonKind: index === 0 ? "agent" : undefined,
-              animated: isActiveAgent,
-              column: layout?.column ?? 0,
-              nodesInColumn: layout?.nodesInColumn ?? 1,
-              junctionX: addAgentJunctionX,
-              prevColumnLeftEdgeX:
-                columnLeftEdgeX[(layout?.column ?? 1) - 1] ?? 0,
-            },
-          };
-        });
+      return {
+        animated: isActiveAgent,
+        className: "#DDDCE4",
+        id: `e-${id}`,
+        source: id,
+        style: {
+          stroke: isActiveAgent ? "var(--colors-route-active)" : "#D8DCED",
+          strokeWidth: 1,
+          strokeDasharray: isActiveAgent ? "5,5" : undefined,
+        },
+        target: "mcpx",
+        type: "curved",
+        data: {
+          addButtonKind: index === 0 ? "agent" : undefined,
+          animated: isActiveAgent,
+          column: layout?.column ?? 0,
+          nodesInColumn: layout?.nodesInColumn ?? 1,
+          junctionX: addAgentJunctionX,
+          prevColumnLeftEdgeX: columnLeftEdgeX[(layout?.column ?? 1) - 1] ?? 0,
+        },
+      };
+    });
 
     const allNodes = [
       mcpxNode,
       ...serverNodes,
       ...noServersNodes,
-      ...visibleAgentNodes,
+      ...agentNodes,
       ...noAgentsNodes,
     ].map((node) =>
       selectedNodeIds.has(node.id) ? { ...node, selected: true } : node,
@@ -523,7 +516,6 @@ export const useReactFlowData = ({
     agentsCount,
     appConfig,
     getNodes,
-    hostedMode,
     mcpServersCount,
     mcpServersData,
     mcpxStatus,

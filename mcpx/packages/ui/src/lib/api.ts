@@ -35,7 +35,7 @@ import {
   auditLogsResponseSchema,
 } from "@mcpx/shared-model";
 import z from "zod/v4";
-import { getMcpxServerURL } from "@/config/api-config";
+import { getAdminWebserverURL, getMcpxServerURL } from "@/config/api-config";
 import {
   targetServerAttributesSchema,
   secretKeysSchema,
@@ -613,6 +613,22 @@ type PermissionScope = "consumers" | "clientNames";
 
 // Initialize with getMcpxServerURL as fallback
 export const apiClient = new ApiClient(() => getMcpxServerURL("http"));
+
+// Ends the OBO edit on this space. Targets the admin webserver (not mcpx-server)
+// and rides the admin's session cookie. Throws if the webserver URL is unset.
+export async function finishObo(): Promise<void> {
+  const baseUrl = getAdminWebserverURL();
+  if (!baseUrl) {
+    throw new Error("Admin webserver URL is not configured");
+  }
+  const response = await fetch(`${baseUrl}/obo`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw await getApiError(response);
+  }
+}
 
 // Helper transform function:
 function addNameToCatalogMcpServerConfig(

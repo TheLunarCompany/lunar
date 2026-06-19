@@ -1,5 +1,13 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { IdentityService } from "./identity-service.js";
+import { SetIdentityPayload } from "@mcpx/webapp-protocol/messages";
+import { IdentityService, toClientIdentity } from "./identity-service.js";
+
+// Drives the internal Identity through the service so we never hand-build it.
+function enterpriseIdentity(payload: SetIdentityPayload) {
+  const service = new IdentityService(noOpLogger, { isEnterprise: true });
+  service.setIdentity(payload);
+  return service.getIdentity();
+}
 
 describe("IdentityService", () => {
   describe("#getIdentity", () => {
@@ -75,6 +83,78 @@ describe("IdentityService", () => {
       });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.isSpace()).toBe(false);
+    });
+  });
+
+  describe("toClientIdentity", () => {
+    it("passes personal identity through unchanged", () => {
+      const service = new IdentityService(noOpLogger, { isEnterprise: false });
+      expect(toClientIdentity(service.getIdentity())).toEqual({
+        mode: "personal",
+      });
+    });
+
+    it("keeps a user's role and editingOnBehalfOf", () => {
+      const identity = enterpriseIdentity({
+        entityType: "user",
+        role: "admin",
+        displayName: "Alice",
+        editingOnBehalfOf: { spaceName: "Payments" },
+      });
+      expect(toClientIdentity(identity)).toEqual({
+        mode: "enterprise",
+        entity: {
+          entityType: "user",
+          role: "admin",
+          editingOnBehalfOf: { spaceName: "Payments" },
+        },
+      });
+    });
+
+    it("keeps a HOSTED_MCP_SERVER space's kind, name, and editor", () => {
+      const identity = enterpriseIdentity({
+        entityType: "space",
+        spaceKind: "HOSTED_MCP_SERVER",
+        spaceName: "My Server",
+        editedBy: { adminDisplayName: "Alice", adminEmail: "alice@test.com" },
+      });
+      expect(toClientIdentity(identity)).toEqual({
+        mode: "enterprise",
+        entity: {
+          entityType: "space",
+          spaceKind: "HOSTED_MCP_SERVER",
+          spaceName: "My Server",
+          editedBy: { adminDisplayName: "Alice", adminEmail: "alice@test.com" },
+        },
+      });
+    });
+
+    it("keeps an AGENT_CONNECTOR space's kind", () => {
+      const identity = enterpriseIdentity({
+        entityType: "space",
+        spaceKind: "AGENT_CONNECTOR",
+        spaceName: "My Env",
+      });
+      expect(toClientIdentity(identity)).toMatchObject({
+        entity: { spaceKind: "AGENT_CONNECTOR" },
+      });
+    });
+
+    it("drops a space kind the client can't render (SANDBOX_ANALYSIS) to undefined", () => {
+      const identity = enterpriseIdentity({
+        entityType: "space",
+        spaceKind: "SANDBOX_ANALYSIS",
+        spaceName: "Scan",
+      });
+      expect(toClientIdentity(identity)).toEqual({
+        mode: "enterprise",
+        entity: {
+          entityType: "space",
+          spaceKind: undefined,
+          spaceName: "Scan",
+          editedBy: undefined,
+        },
+      });
     });
   });
 

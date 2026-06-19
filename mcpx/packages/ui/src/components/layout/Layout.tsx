@@ -9,6 +9,9 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { FC, PropsWithChildren } from "react";
 import { useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
+import { OboEditBanner } from "@/components/OboEditBanner";
+import { OboActorGuard } from "@/components/OboActorGuard";
+import { useIdentityLiveSync } from "@/data/identity";
 import { useAuth } from "@/contexts/useAuth";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { useModalsStore, useSocketStore } from "@/store";
@@ -35,6 +38,8 @@ export const Layout: FC<LayoutProps> = ({
 
   // Connect to mcpx-server when authenticated
   useMcpxConnection(enableConnection);
+  // Keep cached identity in sync with hub-pushed changes (e.g. OBO start/finish)
+  useIdentityLiveSync();
 
   const {
     closeAddServerModal,
@@ -97,58 +102,62 @@ export const Layout: FC<LayoutProps> = ({
   ) : (
     <>
       <SidebarProvider>
-        <div
-          data-testid="layout-shell"
-          className="grid h-svh w-full grid-cols-[16rem_minmax(0,1fr)] gap-1.5 bg-[#fcfcfc] bg-[linear-gradient(135deg,#dad9f6_0%,rgb(255_207_236_/_0.5)_100%)] p-1.5"
-        >
-          <McpxSidebar
-            activeItemId={activeItemId}
-            collapsible="none"
-            className="min-h-0 overflow-hidden rounded-xl"
+        <div className="flex h-svh w-full flex-col">
+          <OboActorGuard />
+          <OboEditBanner />
+          <div
+            data-testid="layout-shell"
+            className="grid min-h-0 w-full flex-1 grid-cols-[16rem_minmax(0,1fr)] gap-1.5 bg-[#fcfcfc] bg-[linear-gradient(135deg,#dad9f6_0%,rgb(255_207_236_/_0.5)_100%)] p-1.5"
           >
-            {loginRequired ? (
-              user ? (
-                <UserDetails />
-              ) : (
-                <button
-                  onClick={() => login()}
-                  className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm text-white transition-colors hover:bg-primary/80"
-                >
-                  Login
-                </button>
-              )
-            ) : null}
-          </McpxSidebar>
+            <McpxSidebar
+              activeItemId={activeItemId}
+              collapsible="none"
+              className="min-h-0 overflow-hidden rounded-xl"
+            >
+              {loginRequired ? (
+                user ? (
+                  <UserDetails />
+                ) : (
+                  <button
+                    onClick={() => login()}
+                    className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm text-white transition-colors hover:bg-primary/80"
+                  >
+                    Login
+                  </button>
+                )
+              ) : null}
+            </McpxSidebar>
 
-          <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[12px] bg-white">
-            <div className="flex min-h-0 flex-1 bg-white">
-              {connectionRejectedHubRequired ? (
-                <McpxConfigError
-                  message="Hub not connected"
-                  fullScreen={false}
-                />
-              ) : isMcpxConnectError ? (
-                <McpxNotConnected fullScreen={false} />
-              ) : isPending ? (
-                <ProvisioningScreen />
-              ) : isEditConfigurationDisabled ? (
-                <McpxConfigError message={null} fullScreen={false} />
-              ) : (
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                  {/*{showMcpRemoteWarning && (*/}
-                  {/*  <div className="px-6 pt-6">*/}
-                  {/*    <McpRemoteWarningBanner*/}
-                  {/*      onClose={() => {*/}
-                  {/*        setShowMcpRemoteWarning(false);*/}
-                  {/*      }}*/}
-                  {/*    />*/}
-                  {/*  </div>*/}
-                  {/*)}*/}
-                  {children}
-                </div>
-              )}
-            </div>
-          </main>
+            <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[12px] bg-white">
+              <div className="flex min-h-0 flex-1 bg-white">
+                {connectionRejectedHubRequired ? (
+                  <McpxConfigError
+                    message="Hub not connected"
+                    fullScreen={false}
+                  />
+                ) : isMcpxConnectError ? (
+                  <McpxNotConnected fullScreen={false} />
+                ) : isPending ? (
+                  <ProvisioningScreen />
+                ) : isEditConfigurationDisabled ? (
+                  <McpxConfigError message={null} fullScreen={false} />
+                ) : (
+                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    {/*{showMcpRemoteWarning && (*/}
+                    {/*  <div className="px-6 pt-6">*/}
+                    {/*    <McpRemoteWarningBanner*/}
+                    {/*      onClose={() => {*/}
+                    {/*        setShowMcpRemoteWarning(false);*/}
+                    {/*      }}*/}
+                    {/*    />*/}
+                    {/*  </div>*/}
+                    {/*)}*/}
+                    {children}
+                  </div>
+                )}
+              </div>
+            </main>
+          </div>
         </div>
       </SidebarProvider>
       {!isAddServerModalDisabled && isAddServerModalOpen && (

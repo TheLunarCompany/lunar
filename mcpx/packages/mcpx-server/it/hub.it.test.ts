@@ -92,6 +92,9 @@ class StubIdentityService implements IdentityServiceI {
     };
   }
   setIdentity() {}
+  subscribe() {
+    return () => {};
+  }
   isSpace() {
     return false;
   }

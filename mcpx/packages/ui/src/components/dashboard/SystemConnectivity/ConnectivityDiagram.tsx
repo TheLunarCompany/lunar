@@ -101,14 +101,14 @@ const ConnectivityDiagramComponent = ({
   mcpxStatus,
   version,
   initialOpenAddServerModal = false,
-  hostedMode = false,
+  isEditingSpaceOnBehalf = false,
 }: {
   agents: Array<Agent>;
   mcpServersData: Array<McpServer> | null | undefined;
   mcpxStatus: string;
   version?: string;
   initialOpenAddServerModal?: boolean;
-  hostedMode?: boolean;
+  isEditingSpaceOnBehalf?: boolean;
 }) => {
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
@@ -150,7 +150,6 @@ const ConnectivityDiagramComponent = ({
   const { edges, onEdgesChange, onNodesChange, translateExtent, ...flowData } =
     useReactFlowData({
       agents,
-      hostedMode,
       mcpServersData,
       mcpxStatus,
       version,
@@ -421,7 +420,7 @@ const ConnectivityDiagramComponent = ({
             <div className="flex w-full items-start justify-between gap-2 pr-7">
               <div className="min-w-0" />
               <div className="flex shrink-0 items-center gap-2">
-                {!hostedMode && (
+                {!isEditingSpaceOnBehalf && (
                   <Button variant="node-card" onClick={handleAddAgent}>
                     <Plus data-icon="inline-start" />
                     Add Agent
@@ -535,7 +534,7 @@ export const ConnectivityDiagram = memo(
     const otherPropsEqual =
       prevProps.mcpxStatus === nextProps.mcpxStatus &&
       prevProps.version === nextProps.version &&
-      prevProps.hostedMode === nextProps.hostedMode &&
+      prevProps.isEditingSpaceOnBehalf === nextProps.isEditingSpaceOnBehalf &&
       prevProps.initialOpenAddServerModal ===
         nextProps.initialOpenAddServerModal;
 

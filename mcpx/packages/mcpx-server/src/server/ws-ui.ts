@@ -10,6 +10,7 @@ import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
 import { Logger } from "winston";
 import { Services } from "../services/services.js";
+import { toClientIdentity } from "../services/identity-service.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { env } from "../env.js";
 import { checkHubConnection } from "./hub-connection-guard.js";
@@ -73,8 +74,19 @@ export function bindUIWebsocket(
       },
     );
 
+    const identityCallback = services.identityService.subscribe((identity) => {
+      socket.emit(UI_ClientBoundMessage.IdentityChanged, {
+        identity: toClientIdentity(identity),
+      });
+    });
+
     services.connections.addSession(
-      new UIConnection(socket, systemStateCallback, appConfigCallback),
+      new UIConnection(
+        socket,
+        systemStateCallback,
+        appConfigCallback,
+        identityCallback,
+      ),
     );
     logger.debug("UI sessions updated", {
       totalSessions: services.connections.size(),

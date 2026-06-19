@@ -40,6 +40,9 @@ export type { SetOauthCredentialsPayload } from "./mcpx-bound/set-oauth-credenti
 export type {
   SetIdentityPayload,
   UserRole,
+  OboEditor,
+  OboEditingTarget,
+  SpaceKind,
 } from "./mcpx-bound/set-identity.js";
 export { toolCallErrorType } from "./webapp-bound/tool-call-batch.js";
 export type {

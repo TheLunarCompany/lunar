@@ -9,6 +9,7 @@ export interface RuntimeConfig {
   VITE_ENABLE_ENTERPRISE: string;
   VITE_OAUTH_CALLBACK_BASE_URL?: string;
   VITE_AUTH_BFF_URL?: string;
+  VITE_ADMIN_WEBSERVER_URL?: string;
   VITE_ENABLE_PERMISSIONS: string;
   VITE_ENABLE_CAPABILITIES_UI: string;
   VITE_ENABLE_DYNAMIC_CAPABILITIES: string;
@@ -68,6 +69,8 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         VITE_OAUTH_CALLBACK_BASE_URL:
           import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
         VITE_AUTH_BFF_URL: import.meta.env.VITE_AUTH_BFF_URL || "",
+        VITE_ADMIN_WEBSERVER_URL:
+          import.meta.env.VITE_ADMIN_WEBSERVER_URL || "",
         VITE_ENABLE_PERMISSIONS:
           import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
         VITE_ENABLE_CAPABILITIES_UI:
@@ -105,6 +108,7 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_OAUTH_CALLBACK_BASE_URL:
       import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
     VITE_AUTH_BFF_URL: import.meta.env.VITE_AUTH_BFF_URL || "",
+    VITE_ADMIN_WEBSERVER_URL: import.meta.env.VITE_ADMIN_WEBSERVER_URL || "",
     VITE_ENABLE_PERMISSIONS: import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
     VITE_ENABLE_CAPABILITIES_UI:
       import.meta.env.VITE_ENABLE_CAPABILITIES_UI || "false",

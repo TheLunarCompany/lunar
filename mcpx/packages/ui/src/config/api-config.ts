@@ -50,6 +50,13 @@ export function getMcpxServerURL(kind: "http" | "ws"): string {
   return `${protocol}//${hostname}:${envPort}`;
 }
 
+// Base URL of the admin webserver, where admin-scoped routes like /obo live.
+// Null when unconfigured, which hides the end-edit button.
+export function getAdminWebserverURL(): string | null {
+  const url = (getRuntimeConfigSync().VITE_ADMIN_WEBSERVER_URL || "").trim();
+  return url.length > 0 ? url : null;
+}
+
 export function getMcpxServerURLSync(): string {
   const runtimeConfig = getRuntimeConfigSync();
 

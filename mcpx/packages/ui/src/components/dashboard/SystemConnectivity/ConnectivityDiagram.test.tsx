@@ -110,12 +110,12 @@ vi.mock("@/store", () => ({
     selector(socketState),
 }));
 
-function renderDiagram(hostedMode: boolean) {
+function renderDiagram(isEditingSpaceOnBehalf: boolean) {
   return render(
     <MemoryRouter>
       <ConnectivityDiagram
         agents={[]}
-        hostedMode={hostedMode}
+        isEditingSpaceOnBehalf={isEditingSpaceOnBehalf}
         mcpServersData={[]}
         mcpxStatus="running"
         version="1.2.3"
@@ -139,7 +139,9 @@ describe("ConnectivityDiagram", () => {
     expect(
       screen.getByRole("button", { name: /add server/i }),
     ).toBeInTheDocument();
-    expect(useReactFlowDataCalls.at(-1)).toMatchObject({ hostedMode: true });
+    expect(useReactFlowDataCalls.at(-1)).toMatchObject({
+      isEditingSpaceOnBehalf: true,
+    });
   });
 
   it("shows both add controls outside hosted mode", () => {
@@ -152,6 +154,8 @@ describe("ConnectivityDiagram", () => {
     expect(
       screen.getByRole("button", { name: /add server/i }),
     ).toBeInTheDocument();
-    expect(useReactFlowDataCalls.at(-1)).toMatchObject({ hostedMode: false });
+    expect(useReactFlowDataCalls.at(-1)).toMatchObject({
+      isEditingSpaceOnBehalf: false,
+    });
   });
 });

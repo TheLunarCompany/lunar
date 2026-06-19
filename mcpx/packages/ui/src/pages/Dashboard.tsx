@@ -1,10 +1,9 @@
 import { EditServerModal } from "@/components/dashboard/EditServerModal";
 import { MetricsPanel } from "@/components/dashboard/MetricsPanel";
 import { ConnectivityDiagram } from "@/components/dashboard/SystemConnectivity/ConnectivityDiagram";
-import { HostedModeNotice } from "@/components/dashboard/SystemConnectivity/HostedModeNotice";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { useInitialHostedMcpEditContext } from "@/data/use-initial-hosted-mode";
+import { useIsEditingSpaceOnBehalf } from "@/data/identity";
 
 import { routes } from "@/routes";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
@@ -111,8 +110,7 @@ export default function Dashboard() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { dismiss } = useToast();
-  const initialHostedMcpEditContext = useInitialHostedMcpEditContext();
-  const isHostedMode = initialHostedMcpEditContext !== null;
+  const isEditingSpaceOnBehalf = useIsEditingSpaceOnBehalf();
 
   // Use individual selectors to prevent re-renders from object creation
   const isDiagramExpanded = useDashboardStore((s) => s.isDiagramExpanded);
@@ -298,13 +296,6 @@ export default function Dashboard() {
           servers={mcpServers}
           systemUsage={processedData.systemUsage}
         />
-        {isHostedMode && (
-          <div className="mb-4">
-            <HostedModeNotice
-              returnUrl={initialHostedMcpEditContext.returnUrl}
-            />
-          </div>
-        )}
         <Card
           className={
             "py-0 border-0 ring-0 shadow-none bg-white flex min-h-0 flex-col" +
@@ -326,7 +317,7 @@ export default function Dashboard() {
                 mcpxStatus={mcpxSystemActualStatus}
                 version={mcpxVersion}
                 initialOpenAddServerModal={shouldOpenAddServerModal}
-                hostedMode={isHostedMode}
+                isEditingSpaceOnBehalf={isEditingSpaceOnBehalf}
               />
             )}
           </CardContent>
