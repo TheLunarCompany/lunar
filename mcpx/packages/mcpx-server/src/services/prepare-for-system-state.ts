@@ -1,4 +1,8 @@
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  Prompt,
+  PromptMessage,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 import { TargetServer } from "../model/target-servers.js";
 import { extractToolParameters } from "./client-extension.js";
 import { TargetServerNewWithoutUsage } from "./system-state.js";
@@ -24,11 +28,33 @@ export function buildSystemStateToolsPayload(
   };
 }
 
+export function buildSystemStatePromptsPayload(
+  approvedPrompts: Prompt[],
+  rawPrompts: Prompt[],
+  promptMessages: Record<string, PromptMessage[]> | undefined,
+): {
+  prompts: TargetServerNewWithoutUsage["prompts"];
+  originalPrompts: Prompt[];
+} {
+  return {
+    prompts: approvedPrompts.map((prompt) => ({
+      name: prompt.name,
+      description: prompt.description,
+      arguments: prompt.arguments,
+      messages: promptMessages?.[prompt.name],
+    })),
+    originalPrompts: rawPrompts,
+  };
+}
+
 export function prepareForSystemState(
   targetClient: TargetClient,
   estimateTokens: (tool: Tool) => number,
   approvedTools: Tool[] = [],
   originalTools: Tool[] = [],
+  approvedPrompts: Prompt[] = [],
+  originalPrompts: Prompt[] = [],
+  promptMessages?: Record<string, PromptMessage[]>,
 ): TargetServerNewWithoutUsage {
   switch (targetClient._state) {
     case "connecting":
@@ -36,24 +62,22 @@ export function prepareForSystemState(
         type: "connecting",
       });
     case "connected":
-      return buildSystemStateEntry(
-        targetClient.targetServer,
-        { type: "connected" },
-        buildSystemStateToolsPayload(
-          approvedTools,
-          originalTools,
-          estimateTokens,
-        ),
-      );
     case "pending-auth":
       return buildSystemStateEntry(
         targetClient.targetServer,
-        { type: "pending-auth" },
-        buildSystemStateToolsPayload(
-          approvedTools,
-          originalTools,
-          estimateTokens,
-        ),
+        { type: targetClient._state },
+        {
+          ...buildSystemStateToolsPayload(
+            approvedTools,
+            originalTools,
+            estimateTokens,
+          ),
+          ...buildSystemStatePromptsPayload(
+            approvedPrompts,
+            originalPrompts,
+            promptMessages,
+          ),
+        },
       );
     case "pending-input":
       return buildSystemStateEntry(targetClient.targetServer, {
@@ -74,23 +98,26 @@ function buildSystemStateEntry(
   overrides?: {
     tools: TargetServerNewWithoutUsage["tools"];
     originalTools: TargetServerNewWithoutUsage["originalTools"];
+    prompts: TargetServerNewWithoutUsage["prompts"];
+    originalPrompts: TargetServerNewWithoutUsage["originalPrompts"];
   },
 ): TargetServerNewWithoutUsage {
-  const tools = overrides?.tools ?? [];
-  const originalTools = overrides?.originalTools ?? [];
+  const common = {
+    state,
+    tools: overrides?.tools ?? [],
+    originalTools: overrides?.originalTools ?? [],
+    prompts: overrides?.prompts ?? [],
+    originalPrompts: overrides?.originalPrompts ?? [],
+  };
+  // Per-branch construction (not a cast) so each server type is checked against
+  // its own member: a new required field fails to compile until it's set here.
   switch (targetServer.type) {
     case "stdio":
-      return { _type: "stdio", state, ...targetServer, tools, originalTools };
+      return { _type: "stdio", ...targetServer, ...common };
     case "sse":
-      return { _type: "sse", state, ...targetServer, tools, originalTools };
+      return { _type: "sse", ...targetServer, ...common };
     case "streamable-http":
-      return {
-        _type: "streamable-http",
-        state,
-        ...targetServer,
-        tools,
-        originalTools,
-      };
+      return { _type: "streamable-http", ...targetServer, ...common };
   }
 }
 

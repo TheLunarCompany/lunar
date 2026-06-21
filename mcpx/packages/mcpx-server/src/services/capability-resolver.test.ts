@@ -620,6 +620,21 @@ describe("CapabilityResolver", () => {
       expect(names).toEqual(["summarize"]);
     });
 
+    it("getApprovedPromptsForServer returns unprefixed definitions", () => {
+      registry.registerServer("notion", {
+        prompts: [makePrompt("summarize"), makePrompt("draft")],
+      });
+      registry.registerServer("slack", {
+        prompts: [makePrompt("compose")],
+      });
+
+      const notionPrompts = resolver.getApprovedPromptsForServer("notion");
+      expect(notionPrompts.map((p) => p.name)).toEqual(["summarize", "draft"]);
+      expect(
+        resolver.getApprovedPromptsForServer("slack").map((p) => p.name),
+      ).toEqual(["compose"]);
+    });
+
     it("getVisiblePrompts passes capabilityKind='prompts' to permission check", () => {
       const seen: CapabilityKind[] = [];
       ({ registry, catalog, resolver } = setup(

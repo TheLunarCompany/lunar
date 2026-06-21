@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, it } from "@jest/globals";
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { ErrorCode, McpError, Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  ErrorCode,
+  McpError,
+  Prompt,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 
 import { resetEnv } from "../env.js";
 import {
   CapabilitySource,
   fetchPromptCapabilities,
+  fetchPromptMessages,
   fetchServerCapabilities,
   fetchToolCapabilities,
 } from "./fetch-capabilities.js";
@@ -22,19 +28,24 @@ function setPromptCapability(enabled: boolean): void {
   resetEnv();
 }
 
-// CapabilitySource is exactly the two methods the fetchers call, so the fake
-// is fully typed against it — overrides are checked against the real listTools
-// / listPrompts return shapes, no `unknown` and no cast.
+// CapabilitySource is exactly the methods the fetchers call, so the fake is
+// fully typed against it — overrides are checked against the real listTools /
+// listPrompts / getPrompt return shapes, no `unknown` and no cast.
 function fakeClient(overrides: Partial<CapabilitySource>): CapabilitySource {
   return {
     listTools:
       overrides.listTools ?? (async () => ({ tools: [], toolParentNames: {} })),
     listPrompts: overrides.listPrompts ?? (async () => ({ prompts: [] })),
+    getPrompt: overrides.getPrompt ?? (async () => ({ messages: [] })),
   };
 }
 
 function makeTool(name: string): Tool {
   return { name, inputSchema: { type: "object", properties: {} } };
+}
+
+function makePrompt(name: string): Prompt {
+  return { name, description: `does ${name}` };
 }
 
 const methodNotFound = new McpError(ErrorCode.MethodNotFound, "not found");
@@ -278,5 +289,81 @@ describe("fetchServerCapabilities (one capability, not the other is OK)", () => 
     await expect(fetchServerCapabilities(client, noOpLogger)).rejects.toBe(
       methodNotFound,
     );
+  });
+});
+
+describe("fetchPromptMessages", () => {
+  const message = (text: string) => ({
+    role: "user" as const,
+    content: { type: "text" as const, text },
+  });
+
+  it("caches messages per prompt name, keyed by name", async () => {
+    const client = fakeClient({
+      getPrompt: async ({ name }) => ({ messages: [message(`hi ${name}`)] }),
+    });
+
+    const result = await fetchPromptMessages(
+      client,
+      [makePrompt("summarize"), makePrompt("draft")],
+      noOpLogger,
+    );
+
+    expect(result).toEqual({
+      summarize: [message("hi summarize")],
+      draft: [message("hi draft")],
+    });
+  });
+
+  it("fetches each prompt with empty arguments", async () => {
+    const calls: unknown[] = [];
+    const client = fakeClient({
+      getPrompt: async (params) => {
+        calls.push(params);
+        return { messages: [] };
+      },
+    });
+
+    await fetchPromptMessages(client, [makePrompt("summarize")], noOpLogger);
+
+    expect(calls).toEqual([{ name: "summarize", arguments: {} }]);
+  });
+
+  it("skips prompts whose getPrompt fails (e.g. requires arguments)", async () => {
+    const client = fakeClient({
+      getPrompt: async ({ name }) => {
+        if (name === "needs-args")
+          throw new McpError(ErrorCode.InvalidParams, "missing arg");
+        return { messages: [message("ok")] };
+      },
+    });
+
+    const result = await fetchPromptMessages(
+      client,
+      [makePrompt("needs-args"), makePrompt("simple")],
+      noOpLogger,
+    );
+
+    expect(result).toEqual({ simple: [message("ok")] });
+    expect(result["needs-args"]).toBeUndefined();
+  });
+
+  it("returns an empty record when every prompt fails", async () => {
+    const client = fakeClient({
+      getPrompt: async () => Promise.reject(boom),
+    });
+
+    const result = await fetchPromptMessages(
+      client,
+      [makePrompt("a"), makePrompt("b")],
+      noOpLogger,
+    );
+
+    expect(result).toEqual({});
+  });
+
+  it("returns an empty record for no prompts", async () => {
+    const result = await fetchPromptMessages(fakeClient({}), [], noOpLogger);
+    expect(result).toEqual({});
   });
 });

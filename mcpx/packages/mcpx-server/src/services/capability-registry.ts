@@ -1,4 +1,8 @@
-import { Prompt, Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  Prompt,
+  PromptMessage,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
 import { env } from "../env.js";
 import { safeEmit } from "./capability-notifications.js";
@@ -33,7 +37,28 @@ export type ServerCapabilities = {
   // Extended child tool name → original parent tool name.
   toolParentNames?: Record<string, string>;
   prompts?: RegisteredPrompt[];
+  // Cached messages from prompts/get, fetched best-effort after discovery
+  // and keyed by upstream prompt name. Missing entries mean the getPrompt
+  // call failed (e.g. the prompt requires arguments we don't have at
+  // discovery).
+  promptMessages?: Record<string, PromptMessage[]>;
 };
+
+// Keep the promptMessages preview cache a subset of the current prompts, so a
+// prompt that's no longer advertised can't leave an orphaned preview behind.
+function reconcilePromptMessages(
+  capabilities: ServerCapabilities,
+): ServerCapabilities {
+  const { promptMessages, prompts } = capabilities;
+  if (!promptMessages) return capabilities;
+  const names = new Set((prompts ?? []).map((p) => p.definition.name));
+  return {
+    ...capabilities,
+    promptMessages: Object.fromEntries(
+      Object.entries(promptMessages).filter(([name]) => names.has(name)),
+    ),
+  };
+}
 
 // Tag flat lists with a single origin (upstream-handler for proxied,
 // dynamic-capabilities for in-process).
@@ -71,7 +96,7 @@ export class CapabilityRegistry {
   }
 
   registerServer(serverName: string, capabilities: ServerCapabilities): void {
-    this._servers.set(serverName, capabilities);
+    this._servers.set(serverName, reconcilePromptMessages(capabilities));
     this.logger.debug("Server registered", {
       serverName,
       toolCount: capabilities.tools?.length ?? 0,

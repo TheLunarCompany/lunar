@@ -10,8 +10,10 @@ import {
 import {
   CapabilityOrigin,
   CapabilityRegistry,
+  RegisteredPrompt,
   RegisteredTool,
 } from "./capability-registry.js";
+import { PromptMessage } from "@modelcontextprotocol/sdk/types.js";
 
 function makeTool(
   name: string,
@@ -26,6 +28,18 @@ function makeTool(
     origin,
   };
 }
+
+function makePrompt(
+  name: string,
+  origin: CapabilityOrigin = "upstream",
+): RegisteredPrompt {
+  return { definition: { name, description: `Prompt ${name}` }, origin };
+}
+
+const sampleMessage = (text: string): PromptMessage => ({
+  role: "user",
+  content: { type: "text", text },
+});
 
 describe("CapabilityRegistry", () => {
   let registry: CapabilityRegistry;
@@ -72,6 +86,46 @@ describe("CapabilityRegistry", () => {
       expect(registry.servers.get("github")?.toolParentNames).toEqual({
         create_issue_for_project: "create_issue",
       });
+    });
+
+    it("prunes promptMessages for prompts no longer advertised", () => {
+      registry.registerServer("notion", {
+        prompts: [makePrompt("summarize"), makePrompt("draft")],
+        promptMessages: {
+          summarize: [sampleMessage("a")],
+          draft: [sampleMessage("b")],
+        },
+      });
+      // "draft" dropped from the prompt set; its cached preview must go too.
+      registry.registerServer("notion", {
+        prompts: [makePrompt("summarize")],
+        promptMessages: {
+          summarize: [sampleMessage("a")],
+          draft: [sampleMessage("b")],
+        },
+      });
+
+      expect(registry.servers.get("notion")?.promptMessages).toEqual({
+        summarize: [sampleMessage("a")],
+      });
+    });
+
+    it("keeps promptMessages for still-advertised prompts", () => {
+      registry.registerServer("notion", {
+        prompts: [makePrompt("summarize")],
+        promptMessages: { summarize: [sampleMessage("a")] },
+      });
+
+      expect(registry.servers.get("notion")?.promptMessages).toEqual({
+        summarize: [sampleMessage("a")],
+      });
+    });
+
+    it("leaves capabilities untouched when no promptMessages present", () => {
+      const capabilities = { tools: [makeTool("a")] };
+      registry.registerServer("github", capabilities);
+
+      expect(registry.servers.get("github")?.promptMessages).toBeUndefined();
     });
   });
 

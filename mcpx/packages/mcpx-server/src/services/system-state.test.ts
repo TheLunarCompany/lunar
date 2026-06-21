@@ -72,6 +72,8 @@ describe("MetricRecorder", () => {
       command: "start-server",
       name: "server1",
       originalTools: [],
+      prompts: [],
+      originalPrompts: [],
       tools: [
         {
           name: "tool1",
@@ -127,6 +129,8 @@ describe("MetricRecorder", () => {
       command: "start-server",
       name: "server1",
       originalTools: [],
+      prompts: [],
+      originalPrompts: [],
       tools: [
         {
           name: "tool1",
@@ -143,6 +147,8 @@ describe("MetricRecorder", () => {
       command: "start-server",
       name: "server2",
       originalTools: [],
+      prompts: [],
+      originalPrompts: [],
       tools: [
         {
           name: "tool2",
@@ -171,6 +177,8 @@ describe("MetricRecorder", () => {
       command: "start-server",
       name: "service1",
       originalTools: [],
+      prompts: [],
+      originalPrompts: [],
       tools: [
         {
           name: "tool1",
@@ -203,6 +211,8 @@ describe("MetricRecorder", () => {
       command: "start-server",
       name: "service1",
       originalTools: [],
+      prompts: [],
+      originalPrompts: [],
       tools: [
         {
           name: "tool1",
@@ -219,6 +229,8 @@ describe("MetricRecorder", () => {
       command: "start-server",
       name: "service2",
       originalTools: [],
+      prompts: [],
+      originalPrompts: [],
       tools: [
         {
           name: "tool2",
@@ -297,6 +309,8 @@ describe("MetricRecorder", () => {
         name: "server1",
         originalTools,
         tools: originalTools,
+        prompts: [],
+        originalPrompts: [],
       });
 
       const metricsBefore = recorder.export();
@@ -325,6 +339,8 @@ describe("MetricRecorder", () => {
         name: "server1",
         originalTools,
         tools: originalTools,
+        prompts: [],
+        originalPrompts: [],
       });
 
       recorder.recordToolCall({
@@ -363,6 +379,8 @@ describe("MetricRecorder", () => {
         name: "server1",
         originalTools,
         tools: originalTools,
+        prompts: [],
+        originalPrompts: [],
       });
 
       // Subscribe returns initial state immediately (1 call)
@@ -412,6 +430,8 @@ describe("MetricRecorder", () => {
         command: "start-server",
         name: "server1",
         originalTools: [],
+        prompts: [],
+        originalPrompts: [],
         tools: [
           {
             name: "read-tool",
@@ -448,6 +468,8 @@ describe("MetricRecorder", () => {
         command: "start-server",
         name: "server1",
         originalTools: [],
+        prompts: [],
+        originalPrompts: [],
         tools: [],
       });
 
@@ -742,6 +764,8 @@ describe("connectedClientClusters — identity-based grouping", () => {
         command: "x",
         name,
         originalTools: [],
+        prompts: [],
+        originalPrompts: [],
         tools: toolNames.map((toolName) => ({
           name: toolName,
           description: "",

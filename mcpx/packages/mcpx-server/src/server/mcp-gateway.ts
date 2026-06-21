@@ -130,14 +130,23 @@ export async function getServer(
         const session = sessionId
           ? services.sessions.getSession(sessionId)
           : undefined;
-        return services.upstreamHandler.getPrompt(entry.serverName, {
-          ...request.params,
-          name: entry.capabilityName,
-          _meta: withCallerAuthorization(
-            request.params._meta,
-            session?.metadata.authorization,
-          ),
+        const result = await services.upstreamHandler.getPrompt(
+          entry.serverName,
+          {
+            ...request.params,
+            name: entry.capabilityName,
+            _meta: withCallerAuthorization(
+              request.params._meta,
+              session?.metadata.authorization,
+            ),
+          },
+        );
+        services.systemStateTracker.recordPromptGet({
+          targetServerName: entry.serverName,
+          promptName: entry.capabilityName,
+          sessionId,
         });
+        return result;
       },
     );
   }

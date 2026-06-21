@@ -1,10 +1,25 @@
+// No unit test: this is a god object that interleaves pure decisions, effectful
+// collaborator calls, and timers (setTimeout/setInterval/queueMicrotask), so
+// testing any behavior means mocking all ten collaborators and fighting fake
+// timers. Behavior is covered by the it/ integration tests for now. To make it
+// unit-testable, extract these collaborators and leave this class as wiring:
+//   - ReconnectScheduler: reconnectQueue + backoff, behind an injected clock.
+//   - ClientStore: _clientsByService + lookups + listChanged subscriptions.
+//   - CapabilitySync: performSync, refreshClientCapability, kickoffPromptMessagesFetch.
+//   - AuthRecovery: executeWithAuthRetry, handleAuthFailure, checkTokenExpiry.
+//   - Pass ENABLE_PROMPT_CAPABILITY/READ_TARGET_SERVERS_FROM_FILE via config
+//     instead of reading env inline.
 import {
   makeError,
   normalizeServerName,
   stringifyEq,
 } from "@mcpx/toolkit-core/data";
 import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  Prompt,
+  PromptMessage,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
@@ -30,6 +45,7 @@ import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
 import { ExtendedClientI, isTransportError } from "./client-extension.js";
 import {
   fetchPromptCapabilities,
+  fetchPromptMessages,
   fetchServerCapabilities,
   fetchToolCapabilities,
 } from "./fetch-capabilities.js";
@@ -47,6 +63,7 @@ import {
 import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
 import { ToolTokenEstimator } from "./tool-token-estimator.js";
 import {
+  buildSystemStatePromptsPayload,
   buildSystemStateToolsPayload,
   prepareForSystemState,
 } from "./prepare-for-system-state.js";
@@ -81,6 +98,10 @@ export interface UpstreamHandlerOAuthHandler {
     callbackUrl?: string,
   ): Promise<InitiateOAuthResult>;
   completeOAuthByState(state: string, code: string): Promise<void>;
+}
+
+function sameStringSet(a: Set<string>, b: Set<string>): boolean {
+  return a.size === b.size && [...a].every((x) => b.has(x));
 }
 
 // This class manages connections to upstream MCP servers, via initializing
@@ -156,9 +177,16 @@ export class UpstreamHandler
     client: ConnectedTargetClient,
   ): Promise<void> {
     if (!env.ENABLE_PROMPT_CAPABILITY) return;
-    await this.refreshClientCapability("prompts", name, client, (ec) =>
-      fetchPromptCapabilities(ec),
+    const ok = await this.refreshClientCapability(
+      "prompts",
+      name,
+      client,
+      (ec) => fetchPromptCapabilities(ec),
     );
+    // Registry already pruned previews for any dropped prompts; kickoff fills
+    // in previews for prompts still missing one. Both no-op when nothing
+    // changed, so this is cheap to call on every refresh.
+    if (ok) void this.kickoffPromptMessagesFetch(name, client);
   }
 
   // Fetcher returns a partial registry entry for `kind`; merged with the
@@ -187,7 +215,7 @@ export class UpstreamHandler
       });
       this.notifyPostChangeHooks();
       // Explicit sync: resolver only notifies on approved-set changes,
-      // not on raw originalTools movement.
+      // not on raw originalTools/originalPrompts movement.
       this.syncSystemStateWithApprovals();
       this.logger.debug(`Refreshed ${kind} for client`, { name });
       return true;
@@ -333,6 +361,20 @@ export class UpstreamHandler
         name: client.targetServer.name,
         ...buildSystemStateToolsPayload(approvedTools, rawTools, (tool) =>
           this.toolTokenEstimator.estimateTokens(tool),
+        ),
+      });
+
+      const approvedPrompts =
+        this.capabilityResolver.getApprovedPromptsForServer(normalizedName);
+      const rawPrompts = (entry.prompts ?? [])
+        .filter((p) => p.origin === "upstream")
+        .map((p) => p.definition);
+      this.systemState.updateTargetServerPrompts({
+        name: client.targetServer.name,
+        ...buildSystemStatePromptsPayload(
+          approvedPrompts,
+          rawPrompts,
+          entry.promptMessages,
         ),
       });
     }
@@ -758,6 +800,8 @@ export class UpstreamHandler
         );
       }
       this._watchdog.watch(newTargetClient.targetServer.name);
+      // Registry already populated by finalizeConnection.
+      void this.kickoffPromptMessagesFetch(serverName, newTargetClient);
     } else if (newTargetClient._state === "pending-auth") {
       // Surface the auth tool so the agent can call it to complete OAuth even
       // before the upstream tools are reachable.
@@ -778,16 +822,25 @@ export class UpstreamHandler
     const approvedTools = skipApprovals
       ? []
       : this.capabilityResolver.getApprovedToolsForServer(normalizedName);
+    const approvedPrompts = skipApprovals
+      ? []
+      : this.capabilityResolver.getApprovedPromptsForServer(normalizedName);
     const registryEntry = isConnected(newTargetClient)
       ? this.capabilityRegistry.servers.get(normalizedName)
       : undefined;
     const upstreamTools = (registryEntry?.tools ?? [])
       .filter((t) => t.origin === "upstream")
       .map((t) => t.definition);
+    const upstreamPrompts = (registryEntry?.prompts ?? [])
+      .filter((p) => p.origin === "upstream")
+      .map((p) => p.definition);
     const systemStateTargetServer = this.prepareForSystemState(
       newTargetClient,
       approvedTools,
       upstreamTools,
+      approvedPrompts,
+      upstreamPrompts,
+      registryEntry?.promptMessages,
     );
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
 
@@ -827,6 +880,63 @@ export class UpstreamHandler
           error: makeError(e),
         };
       });
+  }
+
+  // promptMessages isn't an ActiveCapability, so the resolver diff won't fire
+  // for it — this path syncs system-state explicitly. Returns the promise so
+  // callers can await completion; call sites void it to fire-and-forget.
+  private kickoffPromptMessagesFetch(
+    name: string,
+    client: ConnectedTargetClient,
+  ): Promise<void> {
+    if (!env.ENABLE_PROMPT_CAPABILITY) return Promise.resolve();
+    const normalizedName = normalizeServerName(name);
+    const entry = this.capabilityRegistry.servers.get(normalizedName);
+    const upstreamPrompts = (entry?.prompts ?? [])
+      .filter((p) => p.origin === "upstream")
+      .map((p) => p.definition);
+    // Only fetch previews we don't already have cached, so a list-changed
+    // refresh re-fetches just the new prompts, not the whole set.
+    const missing = upstreamPrompts.filter(
+      (p) => !entry?.promptMessages?.[p.name],
+    );
+    if (missing.length === 0) return Promise.resolve();
+    const initialNames = new Set(upstreamPrompts.map((p) => p.name));
+
+    return fetchPromptMessages(client.extendedClient, missing, this.logger)
+      .then((messages) => {
+        const refreshed = this.getConnectedClientByName(name);
+        if (!refreshed || refreshed !== client) return;
+        // Stale: a later refresh changed the prompt set; drop this result.
+        if (
+          !sameStringSet(initialNames, this.upstreamPromptNames(normalizedName))
+        )
+          return;
+        const currentEntry =
+          this.capabilityRegistry.servers.get(normalizedName);
+        this.capabilityRegistry.registerServer(normalizedName, {
+          ...currentEntry,
+          promptMessages: {
+            ...currentEntry?.promptMessages,
+            ...messages,
+          },
+        });
+        this.syncSystemStateWithApprovals();
+      })
+      .catch((e) => {
+        this.logger.warn("Background prompt-messages fetch failed", {
+          name,
+          error: loggableError(e),
+        });
+      });
+  }
+
+  private upstreamPromptNames(normalizedName: string): Set<string> {
+    return new Set(
+      (this.capabilityRegistry.servers.get(normalizedName)?.prompts ?? [])
+        .filter((p) => p.origin === "upstream")
+        .map((p) => p.definition.name),
+    );
   }
 
   private recordClientRemoved(name: string): void {
@@ -1368,12 +1478,18 @@ export class UpstreamHandler
     targetClient: TargetClient,
     approvedTools: Tool[] = [],
     originalTools?: Tool[],
+    approvedPrompts: Prompt[] = [],
+    originalPrompts?: Prompt[],
+    promptMessages?: Record<string, PromptMessage[]>,
   ): TargetServerNewWithoutUsage {
     return prepareForSystemState(
       targetClient,
       (tool) => this.toolTokenEstimator.estimateTokens(tool),
       approvedTools,
       originalTools,
+      approvedPrompts,
+      originalPrompts,
+      promptMessages,
     );
   }
 }

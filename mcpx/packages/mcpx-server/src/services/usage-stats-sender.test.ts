@@ -363,6 +363,8 @@ describe("buildUsageStatsPayload", () => {
     state: { type: "connected" },
     tools: [],
     originalTools: [],
+    prompts: [],
+    originalPrompts: [],
     usage: { callCount: 0 },
     ...overrides,
   });
@@ -376,6 +378,8 @@ describe("buildUsageStatsPayload", () => {
     state: { type: "connected" },
     tools: [],
     originalTools: [],
+    prompts: [],
+    originalPrompts: [],
     usage: { callCount: 0 },
     ...overrides,
   });

@@ -1,5 +1,6 @@
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
+import { Prompt, PromptMessage } from "@modelcontextprotocol/sdk/types.js";
 import { env } from "../env.js";
 import {
   ServerCapabilities,
@@ -9,10 +10,10 @@ import {
 import { ExtendedClientI, isMethodNotFoundError } from "./client-extension.js";
 
 // The slice of the extended client the capability fetchers use, so tests can
-// supply a fully-typed fake of just these two methods.
+// supply a fully-typed fake of just these methods.
 export type CapabilitySource = Pick<
   ExtendedClientI,
-  "listTools" | "listPrompts"
+  "listTools" | "listPrompts" | "getPrompt"
 >;
 
 // A prompts/list failure is tolerated when tools came back non-empty, so a
@@ -83,4 +84,30 @@ export async function fetchPromptCapabilities(
         ? tagPrompts(upstreamPrompts, "upstream")
         : undefined,
   };
+}
+
+// Best-effort preview fetch for the system-state UI, keyed by prompt name. A
+// prompt that requires arguments fails the empty-args getPrompt and is skipped
+// (no entry), so a missing key means "no preview available", not an error.
+export async function fetchPromptMessages(
+  extendedClient: CapabilitySource,
+  prompts: Prompt[],
+  logger: Logger,
+): Promise<Record<string, PromptMessage[]>> {
+  const entries = await Promise.all(
+    prompts.map(async (prompt) => {
+      const messages = await extendedClient
+        .getPrompt({ name: prompt.name, arguments: {} })
+        .then((result) => result.messages)
+        .catch((e) => {
+          logger.debug(
+            "getPrompt failed during capability discovery; caching prompt without messages",
+            { promptName: prompt.name, error: loggableError(e) },
+          );
+          return undefined;
+        });
+      return messages ? ([prompt.name, messages] as const) : undefined;
+    }),
+  );
+  return Object.fromEntries(entries.filter((e) => e !== undefined));
 }

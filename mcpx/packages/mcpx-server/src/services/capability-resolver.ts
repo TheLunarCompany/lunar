@@ -107,6 +107,10 @@ export class CapabilityResolver {
     return approvedForServer(this.activeTools, serverName);
   }
 
+  getApprovedPromptsForServer(serverName: string): Prompt[] {
+    return approvedForServer(this.activePrompts, serverName);
+  }
+
   getVisibleTools(consumer: ConsumerContext): ActiveTool[] {
     return this.visibleCapabilities(this.activeTools, "tools", consumer);
   }

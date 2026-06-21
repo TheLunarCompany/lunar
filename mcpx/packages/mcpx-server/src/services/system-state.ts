@@ -5,6 +5,7 @@ import {
   StdioTargetServer,
   StreamableHTTPTargetServer,
   SystemState,
+  TargetServerPrompt,
   TargetServerState,
   TargetServerTool,
   TargetServerToolParameter,
@@ -13,7 +14,10 @@ import {
 import { compact, distinct } from "@mcpx/toolkit-core/data";
 import { Clock } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";
-import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  Prompt as McpPrompt,
+  Tool as McpTool,
+} from "@modelcontextprotocol/sdk/types.js";
 import { EnvValue, Tool } from "../model/target-servers.js";
 
 class InternalUsage {
@@ -66,6 +70,8 @@ interface InternalStdioTargetServer {
   icon?: string;
   toolsByName: Map<string, InternalTargetServerTool>;
   originalTools: McpTool[];
+  promptsByName: Map<string, InternalTargetServerPrompt>;
+  originalPrompts: McpPrompt[];
   usage: InternalUsage;
 }
 
@@ -77,6 +83,8 @@ interface InternalRemoteTargetServer {
   icon?: string;
   toolsByName: Map<string, InternalTargetServerTool>;
   originalTools: McpTool[];
+  promptsByName: Map<string, InternalTargetServerPrompt>;
+  originalPrompts: McpPrompt[];
   usage: InternalUsage;
 }
 
@@ -130,8 +138,16 @@ interface InternalTargetServerTool {
   annotations?: McpTool["annotations"];
 }
 
-type WithoutUsage<T> = Omit<T, "usage" | "tools"> & {
+interface InternalTargetServerPrompt {
+  usage: InternalUsage;
+  description?: string;
+  arguments?: TargetServerPrompt["arguments"];
+  messages?: TargetServerPrompt["messages"];
+}
+
+type WithoutUsage<T> = Omit<T, "usage" | "tools" | "prompts"> & {
   tools: Omit<TargetServerTool, "usage">[];
+  prompts: Omit<TargetServerPrompt, "usage">[];
 };
 type StdioTargetServerWithoutUsage = WithoutUsage<StdioTargetServer>;
 type SSETargetServerWithoutUsage = WithoutUsage<SSETargetServer>;
@@ -265,6 +281,63 @@ export class SystemStateTracker {
     this.notifyListeners();
   }
 
+  updateTargetServerPrompts(props: {
+    name: string;
+    prompts: TargetServerNewWithoutUsage["prompts"];
+    originalPrompts: McpPrompt[];
+  }): void {
+    const { name, prompts, originalPrompts } = props;
+    const current = this.state.targetServersByName_new.get(name);
+    if (!current) {
+      this.logger.warn("Cannot update prompts for non-existent server", {
+        name,
+      });
+      return;
+    }
+
+    const newPromptsByName = new Map(
+      prompts.map((prompt) => {
+        const existing = current.promptsByName.get(prompt.name);
+        return [
+          prompt.name,
+          {
+            usage: existing?.usage ?? new InternalUsage(),
+            description: prompt.description,
+            arguments: prompt.arguments,
+            messages: prompt.messages,
+          },
+        ];
+      }),
+    );
+
+    current.promptsByName = newPromptsByName;
+    current.originalPrompts = originalPrompts;
+    this.state.lastUpdatedAt = this.clock.now();
+    this.notifyListeners();
+  }
+
+  recordPromptGet(call: {
+    targetServerName: string;
+    promptName: string;
+    sessionId?: string;
+  }): void {
+    const now = this.clock.now();
+    this.state.lastUpdatedAt = now;
+
+    this.state.usage.increment({ now });
+
+    this.recordPromptGetInternal(call, this.state.targetServersByName_new, now);
+
+    if (call.sessionId) {
+      const client = this.state.connectedClientsBySessionId.get(call.sessionId);
+      if (client) {
+        client.usage.increment({ now });
+      }
+    }
+
+    this.notifyListeners();
+  }
+
   recordToolCall(call: {
     targetServerName: string;
     toolName: string;
@@ -345,6 +418,15 @@ export class SystemStateTracker {
             annotations: tool.annotations,
           }),
         );
+        const prompts = Array.from(server.promptsByName.entries()).map(
+          ([promptName, prompt]) => ({
+            name: promptName,
+            usage: prompt.usage,
+            description: prompt.description,
+            arguments: prompt.arguments,
+            messages: prompt.messages,
+          }),
+        );
         switch (server._type) {
           case "stdio":
             return {
@@ -358,6 +440,8 @@ export class SystemStateTracker {
               icon: server.icon,
               tools,
               originalTools: server.originalTools,
+              prompts,
+              originalPrompts: server.originalPrompts,
               usage: server.usage,
             };
           case "sse":
@@ -372,6 +456,8 @@ export class SystemStateTracker {
               icon: server.icon,
               tools,
               originalTools: server.originalTools,
+              prompts,
+              originalPrompts: server.originalPrompts,
               usage: server.usage,
             };
           }
@@ -437,6 +523,28 @@ export class SystemStateTracker {
     tool.usage.increment({ now });
   }
 
+  private recordPromptGetInternal(
+    call: {
+      targetServerName: string;
+      promptName: string;
+      sessionId?: string;
+    },
+    map: Map<string, InternalTargetServerNew>,
+    now: Date,
+  ): void {
+    const server = map.get(call.targetServerName);
+    if (!server) {
+      return;
+    }
+    server.usage.increment({ now });
+
+    const prompt = server.promptsByName.get(call.promptName);
+    if (!prompt) {
+      return;
+    }
+    prompt.usage.increment({ now });
+  }
+
   private translateRemoteTargetServer(
     targetServer:
       | SSETargetServerWithoutUsage
@@ -451,6 +559,8 @@ export class SystemStateTracker {
       icon: targetServer.icon,
       toolsByName: this.translateTools(targetServer.tools),
       originalTools: targetServer.originalTools,
+      promptsByName: this.translatePrompts(targetServer.prompts),
+      originalPrompts: targetServer.originalPrompts ?? [],
       usage: new InternalUsage(),
     };
   }
@@ -467,6 +577,8 @@ export class SystemStateTracker {
       icon: targetServer.icon,
       toolsByName: this.translateTools(targetServer.tools),
       originalTools: targetServer.originalTools,
+      promptsByName: this.translatePrompts(targetServer.prompts),
+      originalPrompts: targetServer.originalPrompts ?? [],
       usage: new InternalUsage(),
     };
   }
@@ -484,6 +596,22 @@ export class SystemStateTracker {
           estimatedTokens: tool.estimatedTokens,
           parameters: tool.parameters,
           annotations: tool.annotations,
+        },
+      ]),
+    );
+  }
+
+  private translatePrompts(
+    prompts: TargetServerNewWithoutUsage["prompts"],
+  ): Map<string, InternalTargetServerPrompt> {
+    return new Map(
+      prompts.map((prompt) => [
+        prompt.name,
+        {
+          usage: new InternalUsage(),
+          description: prompt.description,
+          arguments: prompt.arguments,
+          messages: prompt.messages,
         },
       ]),
     );

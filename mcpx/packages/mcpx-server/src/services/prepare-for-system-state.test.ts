@@ -1,9 +1,14 @@
 import { describe, it, expect } from "@jest/globals";
 import {
+  buildSystemStatePromptsPayload,
   prepareForSystemState,
   prepareError,
 } from "./prepare-for-system-state.js";
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  Prompt,
+  PromptMessage,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 
 const stubEstimateTokens = () => 42;
 
@@ -41,6 +46,8 @@ describe("prepareForSystemState", () => {
         ...stdioServer,
         tools: [],
         originalTools: [],
+        prompts: [],
+        originalPrompts: [],
       });
     });
 
@@ -173,6 +180,42 @@ describe("prepareForSystemState", () => {
       expect(result.tools).toEqual([]);
       expect(result.originalTools).toEqual([]);
     });
+
+    it("projects approved prompts and originalPrompts with cached messages", () => {
+      const promptA: Prompt = { name: "summarize", description: "sum" };
+      const promptB: Prompt = { name: "draft", description: "draft" };
+      const messages = {
+        summarize: [
+          {
+            role: "user" as const,
+            content: { type: "text" as const, text: "hi" },
+          },
+        ],
+      };
+      const result = prepareForSystemState(
+        {
+          _state: "connected",
+          targetServer: stdioServer,
+          extendedClient: {} as never,
+        },
+        stubEstimateTokens,
+        [],
+        [],
+        [promptA],
+        [promptA, promptB],
+        messages,
+      );
+
+      expect(result.prompts).toEqual([
+        {
+          name: "summarize",
+          description: "sum",
+          arguments: undefined,
+          messages: messages.summarize,
+        },
+      ]);
+      expect(result.originalPrompts).toEqual([promptA, promptB]);
+    });
   });
 
   describe("pending-auth", () => {
@@ -254,6 +297,57 @@ describe("prepareForSystemState", () => {
       expect(result._type).toBe("streamable-http");
       expect(result.tools).toEqual([]);
     });
+  });
+});
+
+describe("buildSystemStatePromptsPayload", () => {
+  const makePrompt = (name: string): Prompt => ({
+    name,
+    description: `does ${name}`,
+    arguments: [{ name: "topic", description: "topic", required: true }],
+  });
+  const sampleMessage: PromptMessage = {
+    role: "user",
+    content: { type: "text", text: "hello" },
+  };
+
+  it("projects approved prompts with cached messages", () => {
+    const approved = [makePrompt("summarize"), makePrompt("draft")];
+    const messages = { summarize: [sampleMessage] };
+
+    const result = buildSystemStatePromptsPayload(approved, approved, messages);
+
+    expect(result.prompts).toEqual([
+      {
+        name: "summarize",
+        description: "does summarize",
+        arguments: [{ name: "topic", description: "topic", required: true }],
+        messages: [sampleMessage],
+      },
+      {
+        name: "draft",
+        description: "does draft",
+        arguments: [{ name: "topic", description: "topic", required: true }],
+        messages: undefined,
+      },
+    ]);
+  });
+
+  it("passes raw originalPrompts through verbatim", () => {
+    const approved = [makePrompt("summarize")];
+    const raw = [makePrompt("summarize"), makePrompt("draft")];
+    const result = buildSystemStatePromptsPayload(approved, raw, undefined);
+    expect(result.originalPrompts).toBe(raw);
+  });
+
+  it("returns no messages when promptMessages cache is undefined", () => {
+    const approved = [makePrompt("summarize")];
+    const result = buildSystemStatePromptsPayload(
+      approved,
+      approved,
+      undefined,
+    );
+    expect(result.prompts[0]?.messages).toBeUndefined();
   });
 });
 
