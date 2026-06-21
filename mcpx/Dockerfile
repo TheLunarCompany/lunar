@@ -160,8 +160,8 @@ RUN apk add --no-cache \
     python3=3.12.13-r0 \
     py3-pip=25.1.1-r0 \
     uv=0.7.22-r0 \
-    ca-certificates=20250619-r0 \
-    libexpat=2.7.5-r0
+    ca-certificates=20260611-r0 \
+    libexpat=2.8.1-r0
 
 # Install supervisor with pinned setuptools to avoid pkg_resources warning
 RUN pip3 install --no-cache-dir --break-system-packages 'setuptools<81' supervisor==4.2.5
