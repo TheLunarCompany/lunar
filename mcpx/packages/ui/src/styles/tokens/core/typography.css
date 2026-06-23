@@ -1,0 +1,36 @@
+/* Core Typography Tokens */
+:root {
+  /* Font families */
+  --font-families-heading: "Inter", sans-serif;
+  --font-families-body: "Roboto", sans-serif;
+
+  /* Line heights */
+  --line-heights-heading: 1.1;
+  --line-heights-body: 1.4;
+
+  /* Letter spacing */
+  --letter-spacing-default: 0;
+  --letter-spacing-increased: 0.15em;
+  --letter-spacing-decreased: -0.05em;
+
+  /* Paragraph spacing */
+  --paragraph-spacing-h1: 32px;
+  --paragraph-spacing-h2: 26px;
+
+  /* Font weights */
+  --font-weights-heading-regular: 400;
+  --font-weights-heading-bold: 700;
+  --font-weights-body-regular: 400;
+  --font-weights-body-bold: 700;
+
+  /* Font sizes (calculated from base 16px) */
+  --font-sizes-body: 16px;
+  --font-sizes-xs: 10.4px; /* body * 0.65 */
+  --font-sizes-sm: 13.6px; /* body * 0.85 */
+  --font-sizes-h6: 16px; /* same as body */
+  --font-sizes-h5: 20px; /* body * 1.25^1 */
+  --font-sizes-h4: 25px; /* body * 1.25^2 */
+  --font-sizes-h3: 31px; /* body * 1.25^3 */
+  --font-sizes-h2: 39px; /* body * 1.25^4 */
+  --font-sizes-h1: 49px; /* body * 1.25^5 */
+}
