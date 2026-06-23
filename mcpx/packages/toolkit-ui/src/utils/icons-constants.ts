@@ -94,6 +94,11 @@ export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
   postgresql: { kind: "base" },
   prometheus: { kind: "base" },
   puppeteer: { kind: "base" },
+  qaenvtest: {
+    kind: "custom",
+    iconifyId: "material-icon-theme:test-ts",
+    color: "#5147E4",
+  },
   redis: { kind: "custom", iconifyId: "simple-icons:redis", color: "#c6302b" },
   rollbar: {
     kind: "custom",
@@ -145,6 +150,11 @@ export const AGENT_ICON_REGISTRY: Record<string, AgentIconEntry> = {
   inspector: {
     kind: "custom",
     iconifyId: "hugeicons:mcp-server",
+    color: "#5147E4",
+  },
+  lunarorbiter: {
+    kind: "custom",
+    iconifyId: "famicons:rocket-sharp",
     color: "#5147E4",
   },
   n8n: { kind: "custom", iconifyId: "simple-icons:n8n", color: "#EA4B71" },

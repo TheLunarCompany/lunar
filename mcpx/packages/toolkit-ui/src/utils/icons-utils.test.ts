@@ -143,8 +143,15 @@ describe("getAgentIconEntry", () => {
   });
 
   it("Lunar orbiter", () => {
-    expect(getAgentIconEntry("orbiter")).toBeNull();
-    expect(getAgentIconEntry("Lunar orbiter")).toBeNull();
+    const expected = {
+      key: "lunarorbiter",
+      entry: {
+        kind: "custom",
+        iconifyId: "famicons:rocket-sharp",
+        color: "#5147E4",
+      },
+    };
+    expect(getAgentIconEntry("Lunar orbiter")).toEqual(expected);
   });
 
   it("returns null for unknown agent", () => {
