@@ -111,11 +111,12 @@ export function getAgentIconEntry(
   return { key, entry };
 }
 
-// Admin-ui helper: kind "local" falls back to MCP since admin-ui has no local icon files.
+// Admin-ui helper: kind "local" resolves to /icons/<key>.svg, served from
+// admin-ui's public/icons (the local agent svgs are copied there).
 export function getAgentIconUrl(name: string): string {
   const result = getAgentIconEntry(name);
   if (!result) return MCP_ICON_URL(name);
-  if (result.entry.kind === "local") return MCP_ICON_URL(name);
+  if (result.entry.kind === "local") return `/icons/${result.key}.svg`;
   return buildIconifyUrl(result.entry.iconifyId, result.entry.color);
 }
 

@@ -237,8 +237,9 @@ describe("getAgentIconUrl", () => {
     );
   });
 
-  it("falls back to MCP URL for local kind (admin-ui has no local icon files)", () => {
-    expect(getAgentIconUrl("codex")).toContain("hugeicons/mcp-server.svg");
+  it("returns local /icons/<key>.svg path for local kind", () => {
+    expect(getAgentIconUrl("codex")).toBe("/icons/codex.svg");
+    expect(getAgentIconUrl("Gemini CLI")).toBe("/icons/geminicli.svg");
   });
 
   it("falls back to MCP URL for unknown agent", () => {
