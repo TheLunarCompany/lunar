@@ -147,7 +147,7 @@ describe("getAgentIconEntry", () => {
       key: "lunarorbiter",
       entry: {
         kind: "custom",
-        iconifyId: "famicons:rocket-sharp",
+        iconifyId: "majesticons:planet-rocket-line",
         color: "#5147E4",
       },
     };
