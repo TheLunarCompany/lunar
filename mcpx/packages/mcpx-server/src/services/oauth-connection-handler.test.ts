@@ -167,6 +167,7 @@ describe("OAuthConnectionHandler", () => {
         },
         deleteOAuthTokensForServer: async (_serverName) => {},
         hasOAuthProvider: (_serverName) => false,
+        hasStaticOAuthForUrl: (_serverUrl) => false,
         getExistingOAuthProvider: (_serverName) => undefined,
         hasPersistedOAuthTokens: async () => false,
       };

@@ -1,6 +1,7 @@
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { withPolling } from "@mcpx/toolkit-core/time";
 import {
+  auth,
   UnauthorizedError,
   discoverOAuthProtectedResourceMetadata,
   discoverAuthorizationServerMetadata,
@@ -381,30 +382,20 @@ export class OAuthConnectionHandler {
             authProvider,
           });
 
-    // Fire-and-forget: redirectToAuthorization() now returns immediately and sets
-    // authorizationUrl synchronously. The SDK raises UnauthorizedError, which
-    // finishAuth() resolves later when the user completes the browser redirect.
-    transport.start().catch((_e: unknown) => {
-      this.logger.debug("expected transport.start() error, continuing");
-    });
-
-    if (targetServer.type === "streamable-http") {
-      // Hack inspired by `mcp-remote` - also don't await
-      const testTransport = new StreamableHTTPClientTransport(
-        new URL(targetServer.url),
-        { authProvider },
-      );
-      const testClient = new Client(
-        { name: "mcpx-fallback-test", version: "0.0.0" },
-        { capabilities: {} },
-      );
-      testClient.connect(testTransport).catch((_e: unknown) => {
-        this.logger.debug(
-          "expected client.connect() error on mcpx-fallback-test, continuing",
-          { error: loggableError(_e) },
-        );
-      });
-    }
+    // Drive the authorization request directly instead of waiting for the
+    // transport to receive a 401. Servers that allow unauthenticated connects
+    // never challenge, so the transport-triggered auth would never fire. auth()
+    // runs discovery + PKCE and calls redirectToAuthorization(), which records
+    // the URL polled for below and returns without blocking. Not awaited: the
+    // token exchange happens later in completeOAuthFlow via transport.finishAuth().
+    void auth(authProvider, { serverUrl: targetServer.url }).catch(
+      (e: unknown) => {
+        this.logger.debug("auth() settled before authorization completed", {
+          name: targetServer.name,
+          error: loggableError(e),
+        });
+      },
+    );
 
     // Poll for authorization URL (quick, should be available fast)
     const authorizationUrl = await withPolling({
@@ -656,6 +647,12 @@ export class OAuthConnectionHandler {
    */
   isOAuthServer(serverName: string): boolean {
     return this.oauthSessionManager.hasOAuthProvider(serverName);
+  }
+
+  // True when static OAuth is configured for the server's host. Unlike
+  // isOAuthServer, this reads config, so it answers before any provider exists.
+  hasStaticOAuthForUrl(serverUrl: string): boolean {
+    return this.oauthSessionManager.hasStaticOAuthForUrl(serverUrl);
   }
 
   /**

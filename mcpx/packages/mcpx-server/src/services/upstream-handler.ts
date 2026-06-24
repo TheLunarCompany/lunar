@@ -1150,6 +1150,29 @@ export class UpstreamHandler
         ? catalogServer.server.config.env
         : undefined;
 
+    // Static OAuth configured means the server needs auth, even if a plain
+    // connect would succeed. Route through the OAuth path so it reuses tokens
+    // or transitions to pending-auth instead of finalizing without a provider.
+    if (
+      (targetServer.type === "sse" ||
+        targetServer.type === "streamable-http") &&
+      this.oauthConnectionHandler.hasStaticOAuthForUrl(targetServer.url)
+    ) {
+      this.logger.debug(
+        "Static OAuth configuration found for server, attempting OAuth flow",
+        { name: targetServer.name },
+      );
+      try {
+        return await this.initiateRemoteUnauthedClient(targetServer);
+      } catch (oauthError) {
+        return {
+          _state: "connection-failed",
+          targetServer,
+          error: makeError(oauthError),
+        };
+      }
+    }
+
     try {
       const extendedClient = await this.connectionFactory.createConnection(
         targetServer,

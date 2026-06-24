@@ -24,7 +24,8 @@ export interface OAuthSessionManagerI {
     serverUrl: string;
     callbackUrl?: string;
   }): McpxOAuthProviderI;
-  hasOAuthProvider(serverName: string): boolean;
+  hasOAuthProvider(serverName: string): boolean; // Runtime: is a provider already instantiated for this server name?
+  hasStaticOAuthForUrl(serverUrl: string): boolean; // Config: is static OAuth configured for this server's host?
   getExistingOAuthProvider(serverName: string): McpxOAuthProviderI | undefined;
   hasPersistedOAuthTokens(serverName: string): Promise<boolean>;
   startOAuthFlow(serverName: string, serverUrl: string, state: string): void;
@@ -128,6 +129,10 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
 
   hasOAuthProvider(serverName: string): boolean {
     return this.oauthProviders.has(serverName);
+  }
+
+  hasStaticOAuthForUrl(serverUrl: string): boolean {
+    return this.providerFactory.hasStaticOAuthForUrl(serverUrl);
   }
 
   getExistingOAuthProvider(serverName: string): McpxOAuthProviderI | undefined {

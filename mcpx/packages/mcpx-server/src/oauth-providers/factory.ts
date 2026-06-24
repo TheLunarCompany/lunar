@@ -119,6 +119,28 @@ export class OAuthProviderFactory {
     });
   }
 
+  /**
+   * Whether static OAuth (user- or system-defined) is configured for the
+   * server's host. Used to treat such servers as OAuth-requiring even when
+   * they connect unauthenticated and only enforce auth at tool-call time.
+   */
+  hasStaticOAuthForUrl(serverUrl: string): boolean {
+    return (
+      this.matchesStaticConfig(this.staticOauthConfig, serverUrl) ||
+      this.matchesStaticConfig(DEFAULT_STATIC_OAUTH, serverUrl)
+    );
+  }
+
+  private matchesStaticConfig(
+    config: StaticOAuth | undefined,
+    serverUrl: string,
+  ): boolean {
+    if (!config) return false;
+    const domain = new URL(serverUrl).hostname;
+    const providerKey = resolveProviderKey(domain, config.mapping);
+    return Boolean(providerKey && config.providers[providerKey]);
+  }
+
   private createFromConfig(
     config: StaticOAuth,
     kind: "user-defined" | "system-defined",
