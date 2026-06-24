@@ -216,7 +216,10 @@ export class SetupManager implements SetupManagerI {
       source: "user",
       setupId: "reset",
       targetServers: emptyTargetServers,
-      config: this.getDefaultConfig(),
+      config: {
+        ...this.getDefaultConfig(),
+        staticOauth: this.configService.getConfig().staticOauth,
+      },
     });
   }
 

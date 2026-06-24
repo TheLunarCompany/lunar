@@ -8,6 +8,7 @@ import {
   TestHarness,
 } from "./utils.js";
 import { McpxBoundPayloads } from "@mcpx/webapp-protocol/messages";
+import { StaticOAuth } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { TargetServer } from "../src/model/target-servers.js";
 
@@ -130,6 +131,45 @@ describe("SetupManager Integration Tests", () => {
     const connectedNames = getConnectedServerNames(harness);
     expect(connectedNames).toContain(calculatorTargetServer.name);
     expect(connectedNames).toHaveLength(2);
+  });
+
+  it("resetSetup preserves staticOauth and resets everything else", async () => {
+    const staticOauth: StaticOAuth = {
+      mapping: { "example.com": "p1" },
+      providers: {
+        p1: {
+          authMethod: "device_flow",
+          credentials: { clientId: { type: "literal", value: "client-id" } },
+          scopes: ["openid"],
+          endpoints: {
+            deviceAuthorizationUrl: "https://example.com/device/code",
+            tokenUrl: "https://example.com/token",
+            userVerificationUrl: "https://example.com/device",
+          },
+        },
+      },
+    };
+
+    await harness.services.setupManager.applySetup({
+      source: "profile",
+      setupId: "initial",
+      targetServers: {
+        [echoTargetServer.name]: toTargetServerEntry(echoTargetServer),
+      },
+      config: {
+        ...createSetupPayload([]).config,
+        auth: { enabled: true },
+        toolGroups: [{ name: "my-group", services: { slack: ["post"] } }],
+        staticOauth,
+      },
+    });
+
+    await harness.services.setupManager.resetSetup();
+
+    const { config } = harness.services.setupManager.getCurrentSetup();
+    expect(config?.staticOauth).toEqual(staticOauth); // preserved
+    expect(config?.auth).toEqual({ enabled: false }); // reset
+    expect(config?.toolGroups).toEqual([]); // reset
   });
 
   it("replaces servers on subsequent setup", async () => {
