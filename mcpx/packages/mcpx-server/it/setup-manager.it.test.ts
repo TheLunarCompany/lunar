@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import {
   catalogItemsToPayload,
   echoTargetServer,
@@ -80,6 +81,53 @@ describe("SetupManager Integration Tests", () => {
 
     const connectedNames = getConnectedServerNames(harness);
     expect(connectedNames).toContain(echoTargetServer.name);
+    expect(connectedNames).toContain(calculatorTargetServer.name);
+    expect(connectedNames).toHaveLength(2);
+  });
+
+  it("does not tear down unchanged servers on re-apply", async () => {
+    // Re-applying a setup (e.g. on sub-catalog reassignment) must not remove
+    // and re-add unchanged servers, which would drop their OAuth tokens.
+    await harness.services.setupManager.applySetup(
+      createSetupPayload([echoTargetServer, calculatorTargetServer]),
+    );
+    const echoBefore = harness.services.upstreamHandler.clientsByService.get(
+      echoTargetServer.name,
+    );
+
+    // Re-apply the same setup with a different setupId (as a reassignment would).
+    await harness.services.setupManager.applySetup(
+      createSetupPayload(
+        [echoTargetServer, calculatorTargetServer],
+        "test-setup-002",
+      ),
+    );
+
+    const echoAfter = harness.services.upstreamHandler.clientsByService.get(
+      echoTargetServer.name,
+    );
+    // toBe, not toEqual: same instance means it was never removed + recreated.
+    expect(echoAfter).toBe(echoBefore);
+    expect(getConnectedServerNames(harness)).toHaveLength(2);
+  });
+
+  it("only touches the changed server when one is added", async () => {
+    await harness.services.setupManager.applySetup(
+      createSetupPayload([echoTargetServer]),
+    );
+    const echoBefore = harness.services.upstreamHandler.clientsByService.get(
+      echoTargetServer.name,
+    );
+
+    await harness.services.setupManager.applySetup(
+      createSetupPayload([echoTargetServer, calculatorTargetServer]),
+    );
+
+    const echoAfter = harness.services.upstreamHandler.clientsByService.get(
+      echoTargetServer.name,
+    );
+    expect(echoAfter).toBe(echoBefore); // unchanged server left as-is
+    const connectedNames = getConnectedServerNames(harness);
     expect(connectedNames).toContain(calculatorTargetServer.name);
     expect(connectedNames).toHaveLength(2);
   });

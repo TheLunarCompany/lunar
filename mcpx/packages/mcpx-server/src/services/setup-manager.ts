@@ -1,5 +1,10 @@
 import { EventEmitter } from "events";
-import { makeError, stringifyEq } from "@mcpx/toolkit-core/data";
+import {
+  indexBy,
+  makeError,
+  normalizeServerName,
+  stringifyEq,
+} from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import {
   McpxBoundPayloads,
@@ -19,6 +24,43 @@ type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
 type SetupConfigPayload = ApplySetupPayload["config"];
 
 export type CurrentSetup = Omit<WebappBoundPayloadOf<"setup-change">, "source">;
+
+export interface TargetServerDiff {
+  toAdd: TargetServer[];
+  toRemove: TargetServer[];
+}
+
+// Diff by normalized name: remove gone/changed servers, add new/changed ones,
+// leave unchanged ones alone so their connection and OAuth tokens survive.
+export function diffTargetServers({
+  current,
+  incoming,
+}: {
+  current: TargetServer[];
+  incoming: TargetServer[];
+}): TargetServerDiff {
+  const currentByName = indexBy(current, (s) => normalizeServerName(s.name));
+  const incomingByName = indexBy(incoming, (s) => normalizeServerName(s.name));
+
+  const toRemove = current.filter((s) => {
+    const next = incomingByName[normalizeServerName(s.name)];
+    return !next || !sameTargetServer(s, next);
+  });
+  const toAdd = incoming.filter((s) => {
+    const prev = currentByName[normalizeServerName(s.name)];
+    return !prev || !sameTargetServer(prev, s);
+  });
+
+  return { toAdd, toRemove };
+}
+
+// Compare with normalized names so a casing-only difference isn't a change.
+function sameTargetServer(a: TargetServer, b: TargetServer): boolean {
+  return stringifyEq(
+    { ...a, name: normalizeServerName(a.name) },
+    { ...b, name: normalizeServerName(b.name) },
+  );
+}
 
 export interface SetupManagerI {
   applySetup(
@@ -271,33 +313,31 @@ export class SetupManager implements SetupManagerI {
       catalogItemId,
     }));
 
+    // Diff instead of removing all and re-adding all, so a re-apply (e.g. on
+    // sub-catalog reassignment) doesn't tear down unchanged servers and drop
+    // their OAuth tokens (removeClient deletes tokens for remote servers).
+    const { toAdd, toRemove } = diffTargetServers({
+      current: this.upstreamHandler.servers,
+      incoming: incomingServers,
+    });
+
     this.logger.info("Applying target servers", {
-      count: incomingServers.length,
+      incoming: incomingServers.length,
+      add: toAdd.map((s) => s.name),
+      remove: toRemove.map((s) => s.name),
     });
 
-    // Get current server names
-    const currentServerNames = Array.from(
-      this.upstreamHandler.clientsByService.keys(),
-    );
-
-    // Remove all current servers
-    this.logger.debug("Removing current target servers", {
-      count: currentServerNames.length,
-    });
+    // Remove before add so a changed server is gone before its re-add.
     await Promise.all(
-      currentServerNames.map((name) => this.upstreamHandler.removeClient(name)),
+      toRemove.map((server) => this.upstreamHandler.removeClient(server.name)),
     );
 
-    // Add all incoming servers
-    this.logger.debug("Adding incoming target servers", {
-      count: incomingServers.length,
-    });
     const results = await Promise.allSettled(
-      incomingServers.map((server) => this.upstreamHandler.addClient(server)),
+      toAdd.map((server) => this.upstreamHandler.addClient(server)),
     );
 
     const failures = results
-      .map((r, i) => ({ result: r, server: incomingServers[i] }))
+      .map((r, i) => ({ result: r, server: toAdd[i] }))
       .filter(
         (i): i is { result: PromiseRejectedResult; server: TargetServer } =>
           i.result.status === "rejected",
@@ -311,10 +351,10 @@ export class SetupManager implements SetupManagerI {
       this.logger.error("Failed to add some target servers", {
         failures: failureDetails,
         failureCount: failures.length,
-        totalCount: incomingServers.length,
+        totalCount: toAdd.length,
       });
       throw new Error(
-        `Failed to add ${failures.length}/${incomingServers.length} target servers: ${failureDetails.map((f) => f.name).join(", ")}`,
+        `Failed to add ${failures.length}/${toAdd.length} target servers: ${failureDetails.map((f) => f.name).join(", ")}`,
       );
     }
 

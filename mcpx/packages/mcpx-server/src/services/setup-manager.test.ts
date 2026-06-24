@@ -1,5 +1,9 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { sanitizeIncomingConfig, SetupManager } from "./setup-manager.js";
+import {
+  diffTargetServers,
+  sanitizeIncomingConfig,
+  SetupManager,
+} from "./setup-manager.js";
 import { TargetServer } from "../model/target-servers.js";
 import { Config } from "../model/config/config.js";
 import { ConfigService } from "../config.js";
@@ -27,6 +31,12 @@ const calculatorServer: TargetServer = {
   command: "node",
   args: ["calc.js"],
   env: {},
+};
+
+const notionServer: TargetServer = {
+  type: "streamable-http",
+  name: "notion",
+  url: "https://mcp.notion.com",
 };
 
 const baseConfig: Config = {
@@ -245,6 +255,64 @@ describe("SetupManager", () => {
       expect(result?.config?.toolGroups).toHaveLength(1);
       expect(result?.config?.toolGroups?.[0]?.name).toBe("hub-group");
     });
+  });
+});
+
+describe("diffTargetServers", () => {
+  it("returns empty diff when nothing changed", () => {
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [echoServer, notionServer],
+      incoming: [echoServer, notionServer],
+    });
+
+    expect(toAdd).toEqual([]);
+    expect(toRemove).toEqual([]);
+  });
+
+  it("leaves an unchanged server untouched when another is added", () => {
+    // Re-applying must not drop a server that didn't change.
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer],
+      incoming: [notionServer, echoServer],
+    });
+
+    expect(toAdd).toEqual([echoServer]);
+    expect(toRemove).toEqual([]);
+  });
+
+  it("removes only servers gone from the incoming list", () => {
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer, calculatorServer],
+      incoming: [notionServer],
+    });
+
+    expect(toAdd).toEqual([]);
+    expect(toRemove).toEqual([calculatorServer]);
+  });
+
+  it("recreates a server whose config changed (re-auth on new endpoint)", () => {
+    const movedNotion: TargetServer = {
+      ...notionServer,
+      url: "https://mcp.notion.so",
+    };
+
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer],
+      incoming: [movedNotion],
+    });
+
+    expect(toAdd).toEqual([movedNotion]);
+    expect(toRemove).toEqual([notionServer]);
+  });
+
+  it("matches names case-insensitively", () => {
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer],
+      incoming: [{ ...notionServer, name: "Notion" }],
+    });
+
+    expect(toAdd).toEqual([]);
+    expect(toRemove).toEqual([]);
   });
 });
 
