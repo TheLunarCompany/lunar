@@ -26,8 +26,6 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   private _state: string;
   private logger: Logger;
   private tokenStore: OAuthTokenStoreI;
-  private authorizationPromise: Promise<string | undefined> | null = null;
-  private authorizationResolve: ((code?: string) => void) | null = null;
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
   private discoveredScope: string | null = null;
@@ -145,38 +143,24 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
     }
   }
 
+  // Non-blocking: record the URL and return. The SDK then throws
+  // UnauthorizedError. Interactive auth completes later via the /oauth/callback
+  // -> finishAuth() path; silent token reuse fails fast instead of hanging on a
+  // user who may never come back.
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
-    this.authorizationPromise = new Promise<string | undefined>((resolve) => {
-      this.authorizationResolve = resolve;
-    });
-
     // Force account selection so users can switch accounts via delete+re-add
     authorizationUrl.searchParams.set("prompt", "select_account");
+    this.authorizationUrl = authorizationUrl;
 
-    // In a server environment, we can't automatically open a browser
-    // Instead, we'll log the URL and expect the client to handle the redirect
     this.logger.info("OAuth authorization required", {
       serverName: this.serverName,
       authorizationUrl: authorizationUrl.toString(),
-    });
-    this.authorizationUrl = authorizationUrl;
-
-    const authorizationCode = await this.authorizationPromise;
-
-    this.logger.info("Authorization code received", {
-      serverName: this.serverName,
-      hasCode: !!authorizationCode,
     });
   }
 
   completeAuthorization(authorizationCode?: string): void {
     this.authorizationCode = authorizationCode || null;
-    if (this.authorizationResolve) {
-      this.authorizationResolve(authorizationCode);
-      this.authorizationResolve = null;
-      this.authorizationPromise = null;
-      this.authorizationUrl = null;
-    }
+    this.authorizationUrl = null; // flow is finishing; drop the pending URL
   }
 
   getAuthorizationCode(): string | null {

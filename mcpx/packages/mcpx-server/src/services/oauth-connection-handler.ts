@@ -381,10 +381,9 @@ export class OAuthConnectionHandler {
             authProvider,
           });
 
-    // Start the transport WITHOUT awaiting - this triggers OAuth flow in the background.
-    // The transport will block waiting for auth to complete, but we want to return
-    // the authorization URL immediately. The URL is set synchronously in the auth
-    // provider's redirectToAuthorization() before it starts waiting for the code.
+    // Fire-and-forget: redirectToAuthorization() now returns immediately and sets
+    // authorizationUrl synchronously. The SDK raises UnauthorizedError, which
+    // finishAuth() resolves later when the user completes the browser redirect.
     transport.start().catch((_e: unknown) => {
       this.logger.debug("expected transport.start() error, continuing");
     });
@@ -472,7 +471,7 @@ export class OAuthConnectionHandler {
     this.logger.debug("Completing OAuth flow", { serverName });
 
     try {
-      // Complete authorization (resolves the provider's promise)
+      // Store the code in the provider so the SDK can exchange it in finishAuth().
       provider.completeAuthorization(authorizationCode);
 
       // Handle device flow differently - tokens are already obtained
@@ -527,9 +526,8 @@ export class OAuthConnectionHandler {
     }
   }
 
-  // Drop the flow entry, release the provider's pending auth (completeAuthorization
-  // clears the stale URL, no-op once finished or for device flows), and close the
-  // transport, which is started without awaiting and would otherwise leak.
+  // Drop the flow entry, clear the provider's pending URL via completeAuthorization(),
+  // and close the transport that was started without awaiting.
   private cleanupPendingFlow(serverName: string): void {
     this.flows.delete(serverName);
     const pending = this.pendingFlows.get(serverName);
