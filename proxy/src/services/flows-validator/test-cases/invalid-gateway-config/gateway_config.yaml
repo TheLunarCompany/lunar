@@ -1,0 +1,4 @@
+allowed_domains:
+-"facebook.com"
+blocked_domains:
+-"google.com"
