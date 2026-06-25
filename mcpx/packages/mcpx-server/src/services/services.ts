@@ -336,17 +336,36 @@ export class Services {
     });
 
     this._catalogManager.subscribe((change) => {
-      const { addedServers, removedServers, approvedToolsChanges } = change;
+      const {
+        addedServers,
+        removedServers,
+        approvedToolsChanges,
+        approvedPromptsChanges,
+      } = change;
       if (
         addedServers.length === 0 &&
         removedServers.length === 0 &&
-        approvedToolsChanges.length === 0
+        approvedToolsChanges.length === 0 &&
+        approvedPromptsChanges.length === 0
       ) {
         return;
       }
       this._auditLogService.log({
         eventType: "catalog_updated",
-        payload: { addedServers, removedServers, approvedToolsChanges },
+        payload: {
+          addedServers,
+          removedServers,
+          approvedToolsChanges: approvedToolsChanges.map((c) => ({
+            serverName: c.serverName,
+            addedTools: c.added,
+            removedTools: c.removed,
+          })),
+          approvedPromptsChanges: approvedPromptsChanges.map((c) => ({
+            serverName: c.serverName,
+            addedPrompts: c.added,
+            removedPrompts: c.removed,
+          })),
+        },
       });
     });
   }

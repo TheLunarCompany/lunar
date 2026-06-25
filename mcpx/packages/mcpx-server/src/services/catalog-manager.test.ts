@@ -54,7 +54,12 @@ describe("CatalogManager", () => {
   function createCatalogItem(
     name: string,
     approvedTools?: string[],
+    approvedPrompts?: string[],
   ): CatalogItemWire {
+    const adminConfig =
+      approvedTools || approvedPrompts
+        ? { approvedTools, approvedPrompts }
+        : undefined;
     return {
       server: {
         id: uuidv7(),
@@ -67,7 +72,7 @@ describe("CatalogManager", () => {
           env: {},
         },
       },
-      adminConfig: approvedTools ? { approvedTools } : undefined,
+      adminConfig,
     };
   }
 
@@ -218,6 +223,66 @@ describe("CatalogManager", () => {
     });
   });
 
+  describe("#isPromptApproved", () => {
+    it("approves all prompts in non-strict mode (parity with tools)", () => {
+      // Regression: prompts previously skipped the strictness short-circuit, so
+      // an allowlisted prompt was filtered even where tools were unrestricted.
+      const manager = createCatalogManager(
+        createStubIdentityService(enterpriseSpaceIdentity),
+      );
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", [], ["greet"])),
+      );
+      expect(manager.isPromptApproved("slack", "any-prompt")).toBe(true);
+    });
+
+    it("approves all prompts when strictness disabled", () => {
+      const manager = createCatalogManager(
+        createStubIdentityService(enterpriseUserIdentity),
+        false,
+      );
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", [], ["greet"])),
+      );
+      expect(manager.isPromptApproved("slack", "any-prompt")).toBe(true);
+    });
+
+    it("returns false for server not in catalog when strict", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(makeCatalog());
+
+      expect(manager.isPromptApproved("unknown-server", "any-prompt")).toBe(
+        false,
+      );
+    });
+
+    it("returns true when no approvedPrompts configured (no restriction)", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
+
+      expect(manager.isPromptApproved("slack", "any-prompt")).toBe(true);
+    });
+
+    it("returns false when approvedPrompts is empty array", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", undefined, [])),
+      );
+
+      expect(manager.isPromptApproved("slack", "any-prompt")).toBe(false);
+    });
+
+    it("respects the approved prompt allowlist", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", undefined, ["greet"])),
+      );
+
+      expect(manager.isPromptApproved("slack", "greet")).toBe(true);
+      expect(manager.isPromptApproved("slack", "farewell")).toBe(false);
+    });
+  });
+
   describe("subscribe and change detection", () => {
     it("notifies listener on setCatalog", () => {
       const manager = createCatalogManager();
@@ -272,8 +337,30 @@ describe("CatalogManager", () => {
       );
 
       expect(changes[0]?.approvedToolsChanges).toEqual([
-        { serverName: "slack", addedTools: ["tool2"], removedTools: [] },
+        { serverName: "slack", added: ["tool2"], removed: [] },
       ]);
+    });
+
+    it("detects approved prompts changes", () => {
+      // Regression: prompt-only approval edits previously produced no change
+      // record, so the resolver never recomputed and prompts/list_changed never
+      // fired. The change must be detected just like a tool change.
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", undefined, ["greet"])),
+      );
+
+      const changes: CatalogChange[] = [];
+      manager.subscribe((change) => changes.push(change));
+
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", undefined, ["farewell"])),
+      );
+
+      expect(changes[0]?.approvedPromptsChanges).toEqual([
+        { serverName: "slack", added: ["farewell"], removed: ["greet"] },
+      ]);
+      expect(changes[0]?.approvedToolsChanges).toEqual([]);
     });
 
     it("notifies with empty change when approved tools are same but different order", () => {
@@ -327,7 +414,7 @@ describe("CatalogManager", () => {
       manager.setCatalog(makeCatalog(createCatalogItem("slack", ["tool1"])));
 
       expect(changes[0]?.approvedToolsChanges).toEqual([
-        { serverName: "slack", addedTools: ["tool1"], removedTools: [] },
+        { serverName: "slack", added: ["tool1"], removed: [] },
       ]);
     });
 
@@ -341,7 +428,7 @@ describe("CatalogManager", () => {
       manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
       expect(changes[0]?.approvedToolsChanges).toEqual([
-        { serverName: "slack", addedTools: [], removedTools: ["tool1"] },
+        { serverName: "slack", added: [], removed: ["tool1"] },
       ]);
     });
 

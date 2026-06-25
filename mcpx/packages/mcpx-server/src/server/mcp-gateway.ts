@@ -146,6 +146,16 @@ export async function getServer(
           promptName: entry.capabilityName,
           sessionId,
         });
+        const promptUsedEvent: AuditLogEvent = {
+          eventType: "prompt_used",
+          payload: {
+            promptName: entry.capabilityName,
+            targetServerName: entry.serverName,
+            args: request.params.arguments || undefined,
+            consumerTag: consumer.consumerTag || undefined,
+          },
+        };
+        services.auditLog.log(promptUsedEvent);
         return result;
       },
     );

@@ -148,9 +148,9 @@ export class CapabilityResolver {
       (def, serverName, cap, origin) =>
         origin === "internal" || this.isToolApproved(serverName, def.name, cap),
     );
-    // Prompts in this phase are upstream-only (no internal-origin prompts) and
-    // are gated by `catalogManager.isPromptApproved`, which currently stubs to
-    // `true`. Per-prompt allowlists arrive with the webapp-side wire change.
+    // Prompts are upstream-only (no internal-origin prompts) and are gated by
+    // `catalogManager.isPromptApproved`, which applies the admin per-prompt
+    // allowlist (and the strictness short-circuit) the same way tools are gated.
     const nextPrompts = this.buildActiveSet<Prompt>(
       (cap) => cap.prompts,
       (def, serverName) =>
@@ -304,7 +304,8 @@ function catalogChangeAffectsApprovals(change: CatalogChange): boolean {
     change.strictnessChanged ||
     change.addedServers.length > 0 ||
     change.removedServers.length > 0 ||
-    change.approvedToolsChanges.length > 0
+    change.approvedToolsChanges.length > 0 ||
+    change.approvedPromptsChanges.length > 0
   );
 }
 

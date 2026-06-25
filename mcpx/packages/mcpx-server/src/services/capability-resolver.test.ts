@@ -54,6 +54,7 @@ const NOOP_CHANGE: CatalogChange = {
   addedServers: [],
   removedServers: [],
   approvedToolsChanges: [],
+  approvedPromptsChanges: [],
   strictnessChanged: false,
 };
 
@@ -351,13 +352,43 @@ describe("CapabilityResolver", () => {
         approvedToolsChanges: [
           {
             serverName: "github",
-            addedTools: ["list_issues"],
-            removedTools: [],
+            added: ["list_issues"],
+            removed: [],
           },
         ],
       });
       expect(cb).toHaveBeenCalledTimes(1);
       expect(cb).toHaveBeenCalledWith("tools");
+    });
+
+    it("recomputes and notifies on a prompt-only approval change", () => {
+      // Regression: a CatalogChange carrying only approvedPromptsChanges must
+      // pass the recompute gate, otherwise prompt approvals never take effect
+      // and no prompts/list_changed is emitted.
+      const approvals = new Map<string, string[] | null>([["github", []]]);
+      ({ registry, catalog, resolver } = setup({
+        isStrict: true,
+        approvals,
+      }));
+      registry.registerServer("github", {
+        prompts: [makePrompt("summarize")],
+      });
+      const cb = jest.fn<(kind: CapabilityKind) => void>();
+      resolver.onChanged(cb);
+
+      approvals.set("github", ["summarize"]);
+      catalog._notify({
+        ...NOOP_CHANGE,
+        approvedPromptsChanges: [
+          {
+            serverName: "github",
+            added: ["summarize"],
+            removed: [],
+          },
+        ],
+      });
+      expect(cb).toHaveBeenCalledTimes(1);
+      expect(cb).toHaveBeenCalledWith("prompts");
     });
   });
 

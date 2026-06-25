@@ -17,6 +17,7 @@ export const catalogItemAdminConfigSchema = z.object({
   // Approved tools (allowlist).
   // Can be undefined, probably because no Sandbox Analysis was run so admin couldn't set any.
   approvedTools: z.array(z.string()).optional(),
+  approvedPrompts: z.array(z.string()).optional(),
   // Admin-only headers injected into requests to remote servers (see privateHeadersSchema).
   privateHeaders: privateHeadersSchema.optional(),
 });

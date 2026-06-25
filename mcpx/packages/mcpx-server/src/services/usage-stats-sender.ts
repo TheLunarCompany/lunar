@@ -104,6 +104,7 @@ function buildTargetServerPayload(
     name: server.name,
     status: server.state.type,
     tools: buildToolsRecord(server),
+    prompts: buildPromptsRecord(server),
   };
 
   if (server._type === "stdio") {
@@ -118,6 +119,25 @@ function buildTargetServerPayload(
   }
 
   return { ...base, type: server._type };
+}
+
+function buildPromptsRecord(
+  server: SystemState["targetServers"][number],
+): UsageStatsTargetServerInput["prompts"] {
+  if (!server.prompts) return {};
+  return Object.fromEntries(
+    server.prompts.map((prompt) => [
+      prompt.name,
+      {
+        description: prompt.description,
+        arguments: prompt.arguments,
+        usage: {
+          callCount: prompt.usage.callCount,
+          lastCalledAt: prompt.usage.lastCalledAt?.toISOString(),
+        },
+      },
+    ]),
+  );
 }
 
 function buildToolsRecord(

@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 
 export const auditLogEventTypeSchema = z.enum([
   "tool_used",
+  "prompt_used",
   "target_server_added",
   "target_server_removed",
   "agent_permission_updated",
@@ -21,11 +22,26 @@ const approvedToolsChangeSchema = z.object({
   removedTools: z.array(z.string()),
 });
 
+const approvedPromptsChangeSchema = z.object({
+  serverName: z.string(),
+  addedPrompts: z.array(z.string()),
+  removedPrompts: z.array(z.string()),
+});
+
 export const auditLogEntrySchema = z.discriminatedUnion("eventType", [
   baseAuditLogSchema.extend({
     eventType: z.literal("tool_used"),
     payload: z.object({
       toolName: z.string(),
+      targetServerName: z.string(),
+      args: z.record(z.string(), z.unknown()).optional(),
+      consumerTag: z.string().optional(),
+    }),
+  }),
+  baseAuditLogSchema.extend({
+    eventType: z.literal("prompt_used"),
+    payload: z.object({
+      promptName: z.string(),
       targetServerName: z.string(),
       args: z.record(z.string(), z.unknown()).optional(),
       consumerTag: z.string().optional(),
@@ -54,6 +70,9 @@ export const auditLogEntrySchema = z.discriminatedUnion("eventType", [
       addedServers: z.array(z.string()),
       removedServers: z.array(z.string()),
       approvedToolsChanges: z.array(approvedToolsChangeSchema),
+      // Optional with a default so audit logs persisted before prompt support
+      // (which lack this field) still parse on read.
+      approvedPromptsChanges: z.array(approvedPromptsChangeSchema).default([]),
     }),
   }),
 ]);

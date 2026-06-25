@@ -59,6 +59,13 @@ describe("AuditLogService with FileAuditLogPersistence (integration)", () => {
             removedTools: [],
           },
         ],
+        approvedPromptsChanges: [
+          {
+            serverName: "github",
+            addedPrompts: ["summarize"],
+            removedPrompts: [],
+          },
+        ],
       },
     });
 

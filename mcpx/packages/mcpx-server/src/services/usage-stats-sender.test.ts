@@ -46,6 +46,7 @@ describe("UsageStatsSender", () => {
       status: "connected" as const,
       type: "stdio" as const,
       tools: toolsPerServer || {},
+      prompts: {},
     })),
   });
 
@@ -457,6 +458,7 @@ describe("buildUsageStatsPayload", () => {
         status: "pending-input",
         type: "stdio",
         tools: {},
+        prompts: {},
         missingEnvVars,
       });
     });
@@ -477,6 +479,7 @@ describe("buildUsageStatsPayload", () => {
         status: "connected",
         type: "stdio",
         tools: {},
+        prompts: {},
         missingEnvVars: undefined,
       });
     });
@@ -497,6 +500,7 @@ describe("buildUsageStatsPayload", () => {
         status: "pending-auth",
         type: "streamable-http",
         tools: {},
+        prompts: {},
       });
       expect(payload.targetServers[0]).not.toHaveProperty("missingEnvVars");
     });

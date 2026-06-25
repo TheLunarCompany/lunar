@@ -27,6 +27,7 @@ const ALL_EVENT_TYPES: AuditLogEventType[] = [
   "agent_permission_updated",
   "catalog_updated",
   "tool_used",
+  "prompt_used",
 ];
 
 const EVENT_LABEL: Record<AuditLogEventType, string> = {
@@ -35,6 +36,7 @@ const EVENT_LABEL: Record<AuditLogEventType, string> = {
   agent_permission_updated: "Agent permission updated",
   catalog_updated: "Catalog updated",
   tool_used: "Tool used",
+  prompt_used: "Prompt used",
 };
 
 type BadgeVariant = "success" | "danger" | "info" | "outline";
@@ -55,6 +57,11 @@ const EVENT_BADGE: Record<
     variant: "outline",
     className:
       "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-200 dark:border-yellow-800",
+  },
+  prompt_used: {
+    variant: "outline",
+    className:
+      "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-800",
   },
 };
 
@@ -135,6 +142,14 @@ function summarize(entry: AuditLogEntry): React.ReactNode {
       return (
         <>
           Tool <strong>{entry.payload.toolName}</strong> used on{" "}
+          <strong>{entry.payload.targetServerName}</strong>
+          {entry.payload.consumerTag ? ` by ${entry.payload.consumerTag}` : ""}
+        </>
+      );
+    case "prompt_used":
+      return (
+        <>
+          Prompt <strong>{entry.payload.promptName}</strong> used on{" "}
           <strong>{entry.payload.targetServerName}</strong>
           {entry.payload.consumerTag ? ` by ${entry.payload.consumerTag}` : ""}
         </>

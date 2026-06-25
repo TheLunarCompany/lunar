@@ -31,10 +31,32 @@ export const toolSchema = z.object({
   }),
 });
 
+export const promptSchema = z.object({
+  description: z.string().optional(),
+  arguments: z
+    .array(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        required: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+  usage: z.object({
+    callCount: z.number().int().nonnegative(),
+    lastCalledAt: z.string().pipe(z.coerce.date()).optional(),
+  }),
+});
+
+// Tools and prompts are symmetric capability types: a server may expose either,
+// both, or neither. Both records are optional (treated as empty when absent) so a
+// single-capability server, and an older mcpx-server that predates prompts, are
+// all accepted without forcing one capability type to always be present.
 const baseTargetServerSchema = z.object({
   name: z.string(),
   status: targetServerStatus,
-  tools: z.record(z.string(), toolSchema),
+  tools: z.record(z.string(), toolSchema).optional(),
+  prompts: z.record(z.string(), promptSchema).optional(),
 });
 
 export const targetSever = z.discriminatedUnion("type", [

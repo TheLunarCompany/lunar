@@ -5,6 +5,13 @@ export type ToolUsedPayload = {
   consumerTag?: string;
 };
 
+export type PromptUsedPayload = {
+  promptName: string;
+  targetServerName: string;
+  args?: Record<string, unknown>;
+  consumerTag?: string;
+};
+
 export type TargetServerAddedPayload = {
   name: string;
 };
@@ -20,21 +27,36 @@ export type AgentPermissionUpdatedPayload = {
   removedServers: string[];
 };
 
+// Audit payload mirrors the shared-model audit-log schema (the persisted/served
+// contract), which names fields per kind. The internal CatalogChange uses a
+// generic {added, removed} shape; services.ts maps it to these at the emit site.
 export type ApprovedToolsChangePayload = {
   serverName: string;
   addedTools: string[];
   removedTools: string[];
 };
 
+export type ApprovedPromptsChangePayload = {
+  serverName: string;
+  addedPrompts: string[];
+  removedPrompts: string[];
+};
+
 export type CatalogUpdatedPayload = {
   addedServers: string[];
   removedServers: string[];
   approvedToolsChanges: ApprovedToolsChangePayload[];
+  approvedPromptsChanges: ApprovedPromptsChangePayload[];
 };
 
 export interface ToolUsedEvent {
   eventType: "tool_used";
   payload: ToolUsedPayload;
+}
+
+export interface PromptUsedEvent {
+  eventType: "prompt_used";
+  payload: PromptUsedPayload;
 }
 
 export interface TargetServerAddedEvent {
@@ -59,6 +81,7 @@ export interface CatalogUpdatedEvent {
 
 export type AuditLogEvent =
   | ToolUsedEvent
+  | PromptUsedEvent
   | TargetServerAddedEvent
   | TargetServerRemovedEvent
   | AgentPermissionUpdatedEvent

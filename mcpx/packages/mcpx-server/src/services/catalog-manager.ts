@@ -9,6 +9,7 @@ import { normalizeServerName } from "@mcpx/toolkit-core/data";
 import { EnvRequirement } from "@mcpx/shared-model";
 import { EnvVarManager } from "./env-var-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
+import { CapabilityKind } from "./capability-registry.js";
 
 const DEFAULT_CATALOG_BY_NAME = new Map(
   backendDefaultServers.map((server) => [
@@ -19,8 +20,16 @@ const DEFAULT_CATALOG_BY_NAME = new Map(
 
 type SetCatalogPayload = z.infer<typeof McpxBoundPayloads.setCatalog>;
 
-function getApprovedTools(item: CatalogItemWire): string[] | undefined {
-  return item.adminConfig?.approvedTools;
+// Single accessor for both capability kinds: tools and prompts are stored
+// symmetrically on adminConfig, so one kind-parameterized getter avoids the
+// parallel tool/prompt code paths that previously drifted out of sync.
+function getApprovedNames(
+  item: CatalogItemWire,
+  kind: CapabilityKind,
+): string[] | undefined {
+  return kind === "tools"
+    ? item.adminConfig?.approvedTools
+    : item.adminConfig?.approvedPrompts;
 }
 
 // See unit tests for normalization logic (with edge cases)
@@ -34,16 +43,20 @@ export function toProcessEnvKey(
     .replace(/_{2,}/g, "_");
 }
 
-export interface ApprovedToolsChange {
+// One change shape for both kinds. The owning array (approvedToolsChanges /
+// approvedPromptsChanges) identifies the capability kind, so the element stays
+// kind-agnostic instead of repeating added/removed under kind-suffixed names.
+export interface ApprovedNamesChange {
   serverName: string;
-  addedTools: string[];
-  removedTools: string[];
+  added: string[];
+  removed: string[];
 }
 
 export interface CatalogChange {
   addedServers: string[];
   removedServers: string[];
-  approvedToolsChanges: ApprovedToolsChange[];
+  approvedToolsChanges: ApprovedNamesChange[];
+  approvedPromptsChanges: ApprovedNamesChange[];
   strictnessChanged: boolean;
 }
 
@@ -141,6 +154,7 @@ export class CatalogManager implements CatalogManagerI {
       addedServers: [],
       removedServers: [],
       approvedToolsChanges: [],
+      approvedPromptsChanges: [],
       strictnessChanged: true,
     });
   }
@@ -173,7 +187,8 @@ export class CatalogManager implements CatalogManagerI {
       serverCount: normalizedPayload.items.length,
       serverNames: normalizedPayload.items.map((i) => ({
         name: i.server.name,
-        approvedTools: getApprovedTools(i),
+        approvedTools: getApprovedNames(i, "tools"),
+        approvedPrompts: getApprovedNames(i, "prompts"),
       })),
     });
 
@@ -193,6 +208,22 @@ export class CatalogManager implements CatalogManagerI {
   }
 
   isToolApproved(serviceName: string, toolName: string): boolean {
+    return this.isCapabilityApproved("tools", serviceName, toolName);
+  }
+
+  isPromptApproved(serviceName: string, promptName: string): boolean {
+    return this.isCapabilityApproved("prompts", serviceName, promptName);
+  }
+
+  // Single approval rule for both kinds: non-strict contexts approve everything,
+  // an unknown server is denied, a server with no allowlist approves everything,
+  // otherwise the name must be on the allowlist. Tools and prompts share this so
+  // they cannot diverge (previously prompts skipped the strictness short-circuit).
+  private isCapabilityApproved(
+    kind: CapabilityKind,
+    serviceName: string,
+    capabilityName: string,
+  ): boolean {
     if (!this.isStrict()) {
       return true;
     }
@@ -200,18 +231,11 @@ export class CatalogManager implements CatalogManagerI {
     if (!server) {
       return false;
     }
-    const approvedTools = getApprovedTools(server);
-    if (!approvedTools) {
+    const approvedNames = getApprovedNames(server, kind);
+    if (!approvedNames) {
       return true;
     }
-    return approvedTools.includes(toolName);
-  }
-
-  // Per-prompt allowlists ride on a wire field that doesn't exist yet
-  // (`approvedCapabilities.prompts`); always-approve until the matching
-  // webapp-side PR introduces it.
-  isPromptApproved(_serviceName: string, _promptName: string): boolean {
-    return true;
+    return approvedNames.includes(capabilityName);
   }
 
   private computeChange(payload: SetCatalogPayload): CatalogChange {
@@ -226,28 +250,39 @@ export class CatalogManager implements CatalogManagerI {
       (name) => !newNames.has(name),
     );
 
-    const approvedToolsChanges: ApprovedToolsChange[] = [];
-    for (const item of payload.items) {
-      const oldItem = this.catalogByName.get(item.server.name);
-      if (!oldItem) continue;
-      const oldTools = getApprovedTools(oldItem);
-      const newTools = getApprovedTools(item);
-      if (this.approvedToolsEqual(oldTools, newTools)) continue;
-      const oldSet = new Set(oldTools ?? []);
-      const newSet = new Set(newTools ?? []);
-      approvedToolsChanges.push({
-        serverName: item.server.name,
-        addedTools: [...newSet].filter((t) => !oldSet.has(t)).sort(),
-        removedTools: [...oldSet].filter((t) => !newSet.has(t)).sort(),
-      });
-    }
-
     return {
       addedServers,
       removedServers,
-      approvedToolsChanges,
+      approvedToolsChanges: this.computeApprovedChanges(payload, "tools"),
+      approvedPromptsChanges: this.computeApprovedChanges(payload, "prompts"),
       strictnessChanged: false,
     };
+  }
+
+  // Diff the approved-name allowlist for one capability kind across the catalog.
+  // Runs once per kind so a prompt-only edit produces a change record exactly
+  // like a tool edit (previously only tools were diffed, so prompt approval
+  // edits silently never triggered a resolver recompute).
+  private computeApprovedChanges(
+    payload: SetCatalogPayload,
+    kind: CapabilityKind,
+  ): ApprovedNamesChange[] {
+    const changes: ApprovedNamesChange[] = [];
+    for (const item of payload.items) {
+      const oldItem = this.catalogByName.get(item.server.name);
+      if (!oldItem) continue;
+      const oldNames = getApprovedNames(oldItem, kind);
+      const newNames = getApprovedNames(item, kind);
+      if (this.approvedNamesEqual(oldNames, newNames)) continue;
+      const oldSet = new Set(oldNames ?? []);
+      const newSet = new Set(newNames ?? []);
+      changes.push({
+        serverName: item.server.name,
+        added: [...newSet].filter((n) => !oldSet.has(n)).sort(),
+        removed: [...oldSet].filter((n) => !newSet.has(n)).sort(),
+      });
+    }
+    return changes;
   }
 
   private protectSecretPrefilledLiterals(item: CatalogItemWire): {
@@ -294,7 +329,7 @@ export class CatalogManager implements CatalogManagerI {
     };
   }
 
-  private approvedToolsEqual(
+  private approvedNamesEqual(
     a: string[] | undefined,
     b: string[] | undefined,
   ): boolean {
