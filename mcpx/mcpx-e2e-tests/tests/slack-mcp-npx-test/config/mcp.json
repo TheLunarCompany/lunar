@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "slack": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "slack-mcp-server@latest",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "SLACK_TEAM_ID": "T03TDLYAKM2",
+        "SLACK_CHANNEL_IDS": "C08NRRKPSTC"
+      }
+    }
+  }
+}
