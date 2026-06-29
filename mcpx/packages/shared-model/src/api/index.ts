@@ -7,3 +7,4 @@ export * from "./catalog-servers.js";
 export * from "./saved-setups.js";
 export * from "./admin-schemas.js";
 export * from "./audit-log.js";
+export * from "./skill.js";
