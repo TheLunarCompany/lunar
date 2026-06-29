@@ -1,0 +1,165 @@
+/// <reference types="vitest" />
+import { defineConfig, loadEnv, searchForWorkspaceRoot } from "vite";
+import react from "@vitejs/plugin-react";
+import svgr from "vite-plugin-svgr";
+import { resolve } from "node:path";
+
+// https://vite.dev/config/
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const monorepoRoot = resolve(__dirname, "../..");
+
+  const getEnvDefaults = () => {
+    switch (mode) {
+      case "development":
+        return {
+          VITE_AUTH0_DOMAIN:
+            process.env.VITE_AUTH0_DOMAIN ||
+            "dev-b8usc66hvtpq73zg.us.auth0.com",
+          VITE_AUTH0_CLIENT_ID:
+            process.env.VITE_AUTH0_CLIENT_ID ||
+            "p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO",
+          VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
+          VITE_ENABLE_ENTERPRISE: process.env.VITE_ENABLE_ENTERPRISE || "false",
+          VITE_MCPX_SERVER_URL: process.env.VITE_MCPX_SERVER_URL || undefined,
+          VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
+          VITE_AUTH_BFF_URL:
+            process.env.VITE_AUTH_BFF_URL || "http://localhost:3002",
+          VITE_ENABLE_PERMISSIONS:
+            process.env.VITE_ENABLE_PERMISSIONS || "false",
+          VITE_ENABLE_CAPABILITIES_UI:
+            process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
+        };
+      case "production":
+        return {
+          VITE_AUTH0_DOMAIN: process.env.VITE_AUTH0_DOMAIN || "",
+          VITE_AUTH0_CLIENT_ID: process.env.VITE_AUTH0_CLIENT_ID || "",
+          VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
+          VITE_ENABLE_ENTERPRISE: process.env.VITE_ENABLE_ENTERPRISE || "false",
+          VITE_MCPX_SERVER_URL: process.env.VITE_MCPX_SERVER_URL || undefined,
+          VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
+          VITE_AUTH_BFF_URL: process.env.VITE_AUTH_BFF_URL || "",
+          VITE_ENABLE_PERMISSIONS:
+            process.env.VITE_ENABLE_PERMISSIONS || "false",
+          VITE_ENABLE_CAPABILITIES_UI:
+            process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
+        };
+      default:
+        return {
+          VITE_AUTH0_DOMAIN:
+            process.env.VITE_AUTH0_DOMAIN ||
+            "dev-b8usc66hvtpq73zg.us.auth0.com",
+          VITE_AUTH0_CLIENT_ID:
+            process.env.VITE_AUTH0_CLIENT_ID ||
+            "p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO",
+          VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
+          VITE_ENABLE_ENTERPRISE: process.env.VITE_ENABLE_ENTERPRISE || "false",
+          VITE_MCPX_SERVER_URL: process.env.VITE_MCPX_SERVER_URL || undefined,
+          VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
+          VITE_AUTH_BFF_URL:
+            process.env.VITE_AUTH_BFF_URL || "http://localhost:3002",
+          VITE_ENABLE_PERMISSIONS:
+            process.env.VITE_ENABLE_PERMISSIONS || "false",
+          VITE_ENABLE_CAPABILITIES_UI:
+            process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
+        };
+    }
+  };
+
+  const envDefaults = getEnvDefaults();
+
+  return {
+    plugins: [react(), svgr()],
+    test: {
+      globals: true,
+      environment: "happy-dom",
+      setupFiles: "./src/test/setup.ts",
+      css: false,
+      threads: false,
+      include: ["src/**/*.test.{ts,tsx}"], // Only look for .test.ts files in src
+      exclude: ["e2e/**/*", "node_modules/**/*"], // ignore e2e
+    },
+    server: {
+      allowedHosts: true,
+      fs: {
+        allow: [searchForWorkspaceRoot(process.cwd()), monorepoRoot],
+      },
+    },
+    resolve: {
+      alias: {
+        "@": resolve(__dirname, "./src"),
+      },
+      extensions: [".mjs", ".js", ".jsx", ".ts", ".tsx", ".json"],
+    },
+    build: {
+      // esbuild 0.28 (pinned via overrides for the security fix in #3080) will
+      // not lower some destructuring in the monaco workers for the default
+      // browserslist target. Pin a modern target that supports it natively.
+      target: "es2022",
+      commonjsOptions: {
+        include: [/shared-model/, /node_modules/],
+      },
+    },
+    optimizeDeps: {
+      include: [
+        "@mcpx/shared-model",
+        "monaco-yaml/yaml.worker.js",
+        "monaco-editor/esm/vs/editor/editor.worker.js",
+        "monaco-editor/esm/vs/language/json/json.worker.js",
+      ],
+      esbuildOptions: {
+        // Match build.target (see above) for the dev-server dep pre-bundle.
+        target: "es2022",
+        loader: {
+          ".js": "jsx",
+        },
+      },
+    },
+    define: {
+      __DEV__: mode === "development",
+      __STAGING__: mode === "staging",
+      __PROD__: mode === "production",
+
+      "import.meta.env.VITE_AUTH0_DOMAIN": JSON.stringify(
+        env.VITE_AUTH0_DOMAIN || envDefaults.VITE_AUTH0_DOMAIN,
+      ),
+      "import.meta.env.VITE_AUTH0_CLIENT_ID": JSON.stringify(
+        env.VITE_AUTH0_CLIENT_ID || envDefaults.VITE_AUTH0_CLIENT_ID,
+      ),
+      "import.meta.env.VITE_AUTH0_AUDIENCE": JSON.stringify(
+        env.VITE_AUTH0_AUDIENCE || envDefaults.VITE_AUTH0_AUDIENCE,
+      ),
+      "import.meta.env.VITE_ENABLE_ENTERPRISE": JSON.stringify(
+        env.VITE_ENABLE_ENTERPRISE || envDefaults.VITE_ENABLE_ENTERPRISE,
+      ),
+      "import.meta.env.VITE_MCPX_SERVER_URL": JSON.stringify(
+        env.VITE_MCPX_SERVER_URL || envDefaults.VITE_MCPX_SERVER_URL,
+      ),
+      "import.meta.env.VITE_MCPX_SERVER_PORT": JSON.stringify(
+        env.VITE_MCPX_SERVER_PORT || envDefaults.VITE_MCPX_SERVER_PORT,
+      ),
+      "import.meta.env.VITE_WS_URL": JSON.stringify(
+        env.VITE_WS_URL || undefined,
+      ),
+      "import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL": JSON.stringify(
+        env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
+      ),
+      "import.meta.env.VITE_AUTH_BFF_URL": JSON.stringify(
+        env.VITE_AUTH_BFF_URL || envDefaults.VITE_AUTH_BFF_URL,
+      ),
+      "import.meta.env.VITE_ENABLE_PERMISSIONS": JSON.stringify(
+        env.VITE_ENABLE_PERMISSIONS || envDefaults.VITE_ENABLE_PERMISSIONS,
+      ),
+      "import.meta.env.VITE_ENABLE_CAPABILITIES_UI": JSON.stringify(
+        env.VITE_ENABLE_CAPABILITIES_UI ||
+          envDefaults.VITE_ENABLE_CAPABILITIES_UI,
+      ),
+      "import.meta.env.VITE_MCPX_MOCK_TOOLS": JSON.stringify(
+        env.VITE_MCPX_MOCK_TOOLS || envDefaults.VITE_MCPX_MOCK_TOOLS,
+      ),
+    },
+  };
+});
