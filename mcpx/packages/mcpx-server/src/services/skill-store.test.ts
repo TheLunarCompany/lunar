@@ -9,37 +9,34 @@ function makeSkill(overrides: Partial<Skill> & { id: string }): Skill {
     body: "body",
     exposeAsPrompt: true,
     author: { setupOwnerId: "owner-1", displayName: "Owner One" },
-    isShared: false,
-    deletion: null,
     updatedAt: new Date("2026-01-01T00:00:00Z"),
     ...overrides,
   };
 }
 
 // Records calls and returns whatever was set on it before the call, modelling the record
-// Hub sends back (e.g. the now-shared skill). Throws if a method is hit without a return
+// Hub sends back (e.g. the minted skill). Throws if a create/update is hit without a return
 // configured, so unconfigured calls surface instead of returning junk.
 class FakeSkillHubClient implements SkillHubClient {
   public readonly createdDrafts: SkillDraft[] = [];
-  public readonly sharedIds: string[] = [];
-  public readonly deletedParams: { id: string; reason?: string }[] = [];
+  public readonly updatedCalls: { id: string; draft: SkillDraft }[] = [];
+  public readonly deletedIds: string[] = [];
   public createReturn?: Skill;
-  public shareReturn?: Skill;
-  public deleteReturn?: Skill;
+  public updateReturn?: Skill;
 
   createSkill(draft: SkillDraft): Promise<Skill> {
     this.createdDrafts.push(draft);
     return this.respond(this.createReturn);
   }
 
-  shareSkill(id: string): Promise<Skill> {
-    this.sharedIds.push(id);
-    return this.respond(this.shareReturn);
+  updateSkill(id: string, draft: SkillDraft): Promise<Skill> {
+    this.updatedCalls.push({ id, draft });
+    return this.respond(this.updateReturn);
   }
 
-  deleteSkill(params: { id: string; reason?: string }): Promise<Skill> {
-    this.deletedParams.push(params);
-    return this.respond(this.deleteReturn);
+  deleteSkill(id: string): Promise<void> {
+    this.deletedIds.push(id);
+    return Promise.resolve();
   }
 
   private respond(skill: Skill | undefined): Promise<Skill> {
@@ -62,10 +59,10 @@ class RejectingSkillHubClient implements SkillHubClient {
   createSkill(): Promise<Skill> {
     return Promise.reject(this.error);
   }
-  shareSkill(): Promise<Skill> {
+  updateSkill(): Promise<Skill> {
     return Promise.reject(this.error);
   }
-  deleteSkill(): Promise<Skill> {
+  deleteSkill(): Promise<void> {
     return Promise.reject(this.error);
   }
 }
@@ -74,52 +71,44 @@ function makeRejectingStore(error = new Error("ack failed")): SkillStore {
   return new SkillStore(noOpLogger, new RejectingSkillHubClient(error));
 }
 
+const draft: SkillDraft = {
+  name: "new",
+  description: "d",
+  body: "b",
+  exposeAsPrompt: true,
+};
+
 describe("SkillStore", () => {
   describe("apply + read", () => {
-    it("applySharedSkills exposes the pushed skills under getCatalog().others", () => {
+    it("applyPersonalSkills exposes the pushed skills under getCatalog().mine", () => {
       const { store } = makeStore();
-      const a = makeSkill({ id: "a" });
-      const b = makeSkill({ id: "b" });
 
-      store.applySharedSkills({ skills: [a, b] });
+      store.applyPersonalSkills({
+        skills: [makeSkill({ id: "a" }), makeSkill({ id: "b" })],
+      });
 
       expect(
         store
           .getCatalog()
-          .others.map((s) => s.id)
+          .mine.map((s) => s.id)
           .sort(),
       ).toEqual(["a", "b"]);
     });
 
-    it("applyPersonalSkills exposes the pushed skills under getCatalog().mine", () => {
+    it("replaces (not merges) the personal stream on each apply", () => {
       const { store } = makeStore();
-
       store.applyPersonalSkills({ skills: [makeSkill({ id: "a" })] });
 
-      expect(store.getCatalog().mine.map((s) => s.id)).toEqual(["a"]);
+      store.applyPersonalSkills({ skills: [makeSkill({ id: "b" })] });
+
+      expect(store.getCatalog().mine.map((s) => s.id)).toEqual(["b"]);
     });
 
-    it("replaces (not merges) the shared stream on each apply", () => {
+    it("getById returns the personal skill", () => {
       const { store } = makeStore();
-      store.applySharedSkills({ skills: [makeSkill({ id: "a" })] });
+      store.applyPersonalSkills({ skills: [makeSkill({ id: "x" })] });
 
-      store.applySharedSkills({ skills: [makeSkill({ id: "b" })] });
-
-      expect(store.getCatalog().others.map((s) => s.id)).toEqual(["b"]);
-    });
-
-    it("getById prefers the personal copy over the shared copy", () => {
-      // unrealistic and not really possible that same id will be shared, yet...
-      const { store } = makeStore();
-      store.applySharedSkills({
-        skills: [makeSkill({ id: "x", isShared: true })],
-      });
-      expect(store.getById("x")?.isShared).toBe(true);
-      store.applyPersonalSkills({
-        skills: [makeSkill({ id: "x", isShared: false })],
-      });
-
-      expect(store.getById("x")?.isShared).toBe(false);
+      expect(store.getById("x")?.id).toBe("x");
     });
 
     it("getById returns undefined for an unknown id", () => {
@@ -128,63 +117,28 @@ describe("SkillStore", () => {
     });
   });
 
-  describe("getCatalog partition", () => {
-    it("puts a self-authored shared skill only under mine, not others", () => {
+  describe("getCatalog", () => {
+    it("keeps others empty (no sharing yet)", () => {
       const { store } = makeStore();
-      store.applySharedSkills({
-        skills: [makeSkill({ id: "x", isShared: true })],
-      });
-      store.applyPersonalSkills({
-        skills: [makeSkill({ id: "x", isShared: true, body: "mine" })],
-      });
+      store.applyPersonalSkills({ skills: [makeSkill({ id: "a" })] });
 
-      const catalog = store.getCatalog();
-
-      expect(catalog.others).toHaveLength(0);
-      expect(catalog.mine).toHaveLength(1);
-      expect(catalog.mine[0]?.body).toBe("mine");
-    });
-
-    it("keeps others' shared skills under others, separate from mine", () => {
-      const { store } = makeStore();
-      store.applySharedSkills({
-        skills: [
-          makeSkill({ id: "theirs-1", isShared: true }),
-          makeSkill({ id: "theirs-2", isShared: true }),
-        ],
-      });
-      store.applyPersonalSkills({ skills: [makeSkill({ id: "mine-1" })] });
-
-      const catalog = store.getCatalog();
-
-      expect(catalog.others.map((s) => s.id).sort()).toEqual([
-        "theirs-1",
-        "theirs-2",
-      ]);
-      expect(catalog.mine.map((s) => s.id)).toEqual(["mine-1"]);
+      expect(store.getCatalog().others).toEqual([]);
     });
 
     it("returns clones so mutating the result does not affect the store", () => {
       const { store } = makeStore();
-      store.applySharedSkills({ skills: [makeSkill({ id: "a" })] });
+      store.applyPersonalSkills({ skills: [makeSkill({ id: "a" })] });
 
-      const firstSkill = store.getCatalog().others[0];
+      const firstSkill = store.getCatalog().mine[0];
       if (firstSkill) {
         firstSkill.name = "mutated";
       }
 
-      expect(store.getCatalog().others[0]?.name).toBe("skill");
+      expect(store.getCatalog().mine[0]?.name).toBe("skill");
     });
   });
 
   describe("authoring round-trips", () => {
-    const draft: SkillDraft = {
-      name: "new",
-      description: "d",
-      body: "b",
-      exposeAsPrompt: true,
-    };
-
     it("createSkill delegates to the hub client and ingests the result", async () => {
       const minted = makeSkill({ id: "minted", name: "new" });
       const { store, hub } = makeStore();
@@ -197,48 +151,32 @@ describe("SkillStore", () => {
       expect(store.getById("minted")).toEqual(minted);
     });
 
-    it("shareSkill flips the prior skill from private to shared", async () => {
-      const before = makeSkill({ id: "s1", isShared: false });
+    it("updateSkill delegates with the id and ingests the updated record", async () => {
+      const before = makeSkill({ id: "s1", name: "before" });
       const { store, hub } = makeStore();
       store.applyPersonalSkills({ skills: [before] });
-      expect(store.getById("s1")?.isShared).toBe(false);
 
-      // Hub marks it shared and returns the updated record.
-      hub.shareReturn = { ...before, isShared: true };
-      await store.shareSkill("s1");
+      const edit: SkillDraft = { ...draft, name: "after" };
+      hub.updateReturn = { ...before, name: "after" };
+      const result = await store.updateSkill("s1", edit);
 
-      expect(hub.sharedIds).toEqual(["s1"]);
-      expect(store.getById("s1")?.isShared).toBe(true);
+      expect(hub.updatedCalls).toEqual([{ id: "s1", draft: edit }]);
+      expect(result.name).toBe("after");
+      expect(store.getById("s1")?.name).toBe("after");
     });
 
-    it("deleteSkill ingests the soft-deleted skill with its reason", async () => {
-      const before = makeSkill({ id: "s1" });
+    it("deleteSkill delegates and removes the skill from the store", async () => {
       const { store, hub } = makeStore();
-      store.applyPersonalSkills({ skills: [before] });
+      store.applyPersonalSkills({ skills: [makeSkill({ id: "s1" })] });
 
-      // Hub records the soft-delete and returns the updated record.
-      hub.deleteReturn = {
-        ...before,
-        deletion: { bySetupOwnerId: "owner-1", reason: "stale" },
-      };
-      await store.deleteSkill({ id: "s1", reason: "stale" });
+      await store.deleteSkill("s1");
 
-      expect(hub.deletedParams).toEqual([{ id: "s1", reason: "stale" }]);
-      expect(store.getById("s1")?.deletion).toEqual({
-        bySetupOwnerId: "owner-1",
-        reason: "stale",
-      });
+      expect(hub.deletedIds).toEqual(["s1"]);
+      expect(store.getById("s1")).toBeUndefined();
     });
   });
 
   describe("hub ack failure", () => {
-    const draft: SkillDraft = {
-      name: "new",
-      description: "d",
-      body: "b",
-      exposeAsPrompt: true,
-    };
-
     it("createSkill rejects and leaves local state untouched", async () => {
       const store = makeRejectingStore();
       let notified = 0;
@@ -252,26 +190,26 @@ describe("SkillStore", () => {
       expect(notified).toBe(0);
     });
 
-    it("shareSkill rejects without mutating the prior skill", async () => {
+    it("updateSkill rejects without mutating the prior skill", async () => {
       const store = makeRejectingStore();
       store.applyPersonalSkills({
-        skills: [makeSkill({ id: "s1", isShared: false })],
+        skills: [makeSkill({ id: "s1", name: "before" })],
       });
 
-      await expect(store.shareSkill("s1")).rejects.toThrow("ack failed");
+      await expect(
+        store.updateSkill("s1", { ...draft, name: "after" }),
+      ).rejects.toThrow("ack failed");
 
-      expect(store.getById("s1")?.isShared).toBe(false);
+      expect(store.getById("s1")?.name).toBe("before");
     });
 
-    it("deleteSkill rejects without soft-deleting locally", async () => {
+    it("deleteSkill rejects without removing the skill locally", async () => {
       const store = makeRejectingStore();
       store.applyPersonalSkills({ skills: [makeSkill({ id: "s1" })] });
 
-      await expect(store.deleteSkill({ id: "s1" })).rejects.toThrow(
-        "ack failed",
-      );
+      await expect(store.deleteSkill("s1")).rejects.toThrow("ack failed");
 
-      expect(store.getById("s1")?.deletion).toBeNull();
+      expect(store.getById("s1")?.id).toBe("s1");
     });
   });
 
@@ -284,19 +222,13 @@ describe("SkillStore", () => {
         count += 1;
       });
 
-      store.applySharedSkills({ skills: [] });
       store.applyPersonalSkills({ skills: [] });
-      await store.createSkill({
-        name: "n",
-        description: "d",
-        body: "b",
-        exposeAsPrompt: true,
-      });
-      expect(count).toBe(3);
+      await store.createSkill(draft);
+      expect(count).toBe(2);
 
       unsubscribe();
-      store.applySharedSkills({ skills: [] });
-      expect(count).toBe(3);
+      store.applyPersonalSkills({ skills: [] });
+      expect(count).toBe(2);
     });
 
     it("a throwing listener does not skip others or escape the apply", () => {
@@ -309,7 +241,7 @@ describe("SkillStore", () => {
         reached = true;
       });
 
-      expect(() => store.applySharedSkills({ skills: [] })).not.toThrow();
+      expect(() => store.applyPersonalSkills({ skills: [] })).not.toThrow();
       expect(reached).toBe(true);
     });
   });

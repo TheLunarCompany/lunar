@@ -1,8 +1,5 @@
 import { Skill, SkillDraft } from "@mcpx/shared-model";
-import {
-  SetSharedSkillsPayload,
-  SetPersonalSkillsPayload,
-} from "@mcpx/webapp-protocol/messages";
+import { SetPersonalSkillsPayload } from "@mcpx/webapp-protocol/messages";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
 
@@ -11,35 +8,30 @@ import { Logger } from "winston";
 // HubService / a socket client; tests pass a hand-crafted fake.
 export interface SkillHubClient {
   createSkill(draft: SkillDraft): Promise<Skill>;
-  shareSkill(id: string): Promise<Skill>;
-  deleteSkill(params: { id: string; reason?: string }): Promise<Skill>;
+  updateSkill(id: string, draft: SkillDraft): Promise<Skill>;
+  deleteSkill(id: string): Promise<void>;
 }
 
-// Partitioned by ownership. mine = authored by us (the owner-only personal stream, shared
-// or not). others = skills authored by others, which reach us only because they are shared.
-// This is a derived view of the streams arriving over the websocket, the shape MCPX itself
-// cares about.
+// Only the owner's own skills exist (no sharing yet). `others` stays empty; it's kept so the
+// shape doesn't churn when shared skills return.
 export interface SkillCatalog {
   mine: Skill[];
   others: Skill[];
 }
 
 export interface SkillStoreI {
-  // apply* are named after the push streams they ingest (not the { mine, others } view).
-  applySharedSkills(payload: SetSharedSkillsPayload): void;
   applyPersonalSkills(payload: SetPersonalSkillsPayload): void;
   createSkill(draft: SkillDraft): Promise<Skill>;
-  shareSkill(id: string): Promise<Skill>;
-  deleteSkill(params: { id: string; reason?: string }): Promise<Skill>; // soft-delete!
+  updateSkill(id: string, draft: SkillDraft): Promise<Skill>;
+  deleteSkill(id: string): Promise<void>; // hard delete (mine only)
   getCatalog(): SkillCatalog;
   getById(id: string): Skill | undefined;
   subscribe(listener: () => void): () => void;
 }
 
-// Holds the two pushed streams (shared: org-wide, personal: owner-only) and the local authoring surface.
+// Holds the pushed personal stream plus the local authoring surface.
 export class SkillStore implements SkillStoreI {
   private readonly logger: Logger;
-  private sharedById = new Map<string, Skill>();
   private personalById = new Map<string, Skill>();
   private readonly listeners = new Set<() => void>();
 
@@ -48,14 +40,6 @@ export class SkillStore implements SkillStoreI {
     private readonly hubClient: SkillHubClient,
   ) {
     this.logger = logger.child({ component: "SkillStore" });
-  }
-
-  applySharedSkills(payload: SetSharedSkillsPayload): void {
-    this.sharedById = new Map(payload.skills.map((s) => [s.id, s]));
-    this.logger.debug("Applied shared skills", {
-      count: payload.skills.length,
-    });
-    this.notify();
   }
 
   applyPersonalSkills(payload: SetPersonalSkillsPayload): void {
@@ -67,11 +51,11 @@ export class SkillStore implements SkillStoreI {
   }
 
   // These round-trips are Hub-ACKed, but an ACK can report failure or time out. On failure
-  // we throw and leave local state untouched. share/delete act on an existing id, so a retry
+  // we throw and leave local state untouched. update/delete act on an existing id, so a retry
   // is naturally idempotent. create mints a new id, so a lost ACK is ambiguous: Hub may have
   // persisted the skill without us learning its id. Today the next authoritative push
-  // (applyShared/applyPersonalSkills) reconciles that. A client-supplied idempotency key would
-  // make create retries safe (dedupe instead of duplicate); not implemented yet.
+  // (applyPersonalSkills) reconciles that. A client-supplied idempotency key would make create
+  // retries safe (dedupe instead of duplicate); not implemented yet.
   // TODO RND-823: better resiliency
   async createSkill(draft: SkillDraft): Promise<Skill> {
     const skill = await this.hubClient.createSkill(draft);
@@ -79,29 +63,25 @@ export class SkillStore implements SkillStoreI {
     return skill;
   }
 
-  async shareSkill(id: string): Promise<Skill> {
-    const skill = await this.hubClient.shareSkill(id);
+  async updateSkill(id: string, draft: SkillDraft): Promise<Skill> {
+    const skill = await this.hubClient.updateSkill(id, draft);
     this.ingestPersonal(skill);
     return skill;
   }
 
-  async deleteSkill(params: { id: string; reason?: string }): Promise<Skill> {
-    const skill = await this.hubClient.deleteSkill(params);
-    this.ingestPersonal(skill);
-    return skill;
+  async deleteSkill(id: string): Promise<void> {
+    await this.hubClient.deleteSkill(id);
+    this.personalById.delete(id);
+    this.notify();
   }
 
-  // A skill we authored and shared lands on both streams; keep it under `mine` only.
   getCatalog(): SkillCatalog {
     const mine = Array.from(this.personalById.values());
-    const others = Array.from(this.sharedById.values()).filter(
-      (skill) => !this.personalById.has(skill.id),
-    );
-    return structuredClone({ mine, others });
+    return structuredClone({ mine, others: [] });
   }
 
   getById(id: string): Skill | undefined {
-    const skill = this.personalById.get(id) ?? this.sharedById.get(id);
+    const skill = this.personalById.get(id);
     return skill ? structuredClone(skill) : undefined;
   }
 
@@ -116,7 +96,7 @@ export class SkillStore implements SkillStoreI {
   }
 
   // Isolate listeners: a throwing subscriber must not skip the others or escape into
-  // the hub push handler that drives applySharedSkills / applyPersonalSkills.
+  // the hub push handler that drives applyPersonalSkills.
   private notify(): void {
     this.listeners.forEach((listener) => {
       try {

@@ -48,6 +48,8 @@ import { HubTokenClient } from "./hub-token-client.js";
 import { HubDownstreamSessionClient } from "./hub-downstream-session-client.js";
 import { CapabilityRegistry } from "./capability-registry.js";
 import { CapabilityResolver } from "./capability-resolver.js";
+import { SkillStore } from "./skill-store.js";
+import { TempSkillHubClient } from "./temp-skill-hub-client.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -74,6 +76,7 @@ export class Services {
   private _capabilityRegistry: CapabilityRegistry;
   private _capabilityResolver: CapabilityResolver;
   private _internalCapabilities: InternalCapabilitiesService;
+  private _skillStore: SkillStore;
 
   private logger: LunarLogger;
   private initialized = false;
@@ -204,6 +207,11 @@ export class Services {
     const downstreamSessionStore = new HubDownstreamSessionClient(
       () => this._hubService.getSocketAdapter(),
       logger,
+    );
+
+    this._skillStore = new SkillStore(
+      logger,
+      new TempSkillHubClient(this._identityService),
     );
 
     const sessionsManager = new SessionsManager(
@@ -512,5 +520,10 @@ export class Services {
   get capabilityResolver(): CapabilityResolver {
     this.ensureInitialized();
     return this._capabilityResolver;
+  }
+
+  get skillStore(): SkillStore {
+    this.ensureInitialized();
+    return this._skillStore;
   }
 }

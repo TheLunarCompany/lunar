@@ -25,19 +25,12 @@ export const skillToolGroupSchema = z.object({
 });
 export type SkillToolGroup = z.infer<typeof skillToolGroupSchema>;
 
-// setupOwnerId decides mine-vs-others in MCPX; displayName powers "by <author>".
+// displayName powers "by <author>" attribution.
 export const skillAuthorSchema = z.object({
   setupOwnerId: z.string(),
   displayName: z.string(),
 });
 export type SkillAuthor = z.infer<typeof skillAuthorSchema>;
-
-// null = active; presence = soft-deleted (powers un-serve with a reason).
-export const skillDeletionSchema = z.object({
-  bySetupOwnerId: z.string(),
-  reason: z.string().optional(),
-});
-export type SkillDeletion = z.infer<typeof skillDeletionSchema>;
 
 // The authored core, before Hub mints metadata.
 export const skillDraftSchema = z.object({
@@ -54,8 +47,6 @@ export type SkillDraft = z.infer<typeof skillDraftSchema>;
 export const skillSchema = skillDraftSchema.extend({
   id: z.uuidv7(),
   author: skillAuthorSchema,
-  isShared: z.boolean(),
-  deletion: skillDeletionSchema.nullable().default(null),
   updatedAt: z.coerce.date(),
 });
 export type Skill = z.infer<typeof skillSchema>;
