@@ -118,8 +118,8 @@ const envSchema = z
     UPSTREAM_RECONNECT_BASE_DELAY_MS: z.coerce.number().default(30_000),
     STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
     // Policy gate: when false, stdio MCP servers are not allowed (UI add is
-    // rejected and spawning is blocked). Default true.
-    ENABLE_STDIO_MCP_SERVERS: z.stringbool().default(true),
+    // rejected and spawning is blocked). Default false.
+    ENABLE_STDIO_MCP_SERVERS: z.stringbool().default(false),
     TOKENIZER_ENCODING: z
       .enum(TokenizerEncoding)
       .default(DEFAULT_TOKENIZER_ENCODING),

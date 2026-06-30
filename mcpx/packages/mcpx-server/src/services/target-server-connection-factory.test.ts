@@ -161,8 +161,13 @@ describe("TargetServerConnectionFactory — ENABLE_STDIO_MCP_SERVERS gate", () =
     await expect(promise).rejects.toThrow(STDIO_SERVERS_DISABLED_MESSAGE);
   });
 
-  it("does not block stdio on the disabled path when the flag defaults to true", async () => {
-    process.env = { ...originalEnv, VERSION: "1.0.0", INSTANCE_ID: "0" };
+  it("does not block stdio when the flag is explicitly true", async () => {
+    process.env = {
+      ...originalEnv,
+      VERSION: "1.0.0",
+      INSTANCE_ID: "0",
+      ENABLE_STDIO_MCP_SERVERS: "true",
+    };
     resetEnv();
 
     // With the gate open the connection proceeds past the guard and fails for
