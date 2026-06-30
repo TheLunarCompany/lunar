@@ -6,6 +6,7 @@ import {
 } from "./setup-manager.js";
 import { TargetServer } from "../model/target-servers.js";
 import { Config } from "../model/config/config.js";
+import { StaticOAuth } from "@mcpx/shared-model";
 import { ConfigService } from "../config.js";
 import { UpstreamHandler } from "./upstream-handler.js";
 
@@ -38,6 +39,28 @@ const notionServer: TargetServer = {
   name: "notion",
   url: "https://mcp.notion.com",
 };
+
+// Static OAuth mapping the notion host to a client-credentials provider.
+// `key` lets tests rename the provider key while keeping the config identical.
+function notionStaticOauth(
+  scopes: string[],
+  key = "notion",
+): NonNullable<StaticOAuth> {
+  return {
+    mapping: { "mcp.notion.com": key },
+    providers: {
+      [key]: {
+        authMethod: "client_credentials",
+        credentials: {
+          clientId: { type: "literal", value: "client-1" },
+          clientSecret: { type: "literal", value: "secret-1" },
+        },
+        scopes,
+        tokenAuthMethod: "client_secret_basic",
+      },
+    },
+  };
+}
 
 const baseConfig: Config = {
   permissions: {
@@ -313,6 +336,116 @@ describe("diffTargetServers", () => {
 
     expect(toAdd).toEqual([]);
     expect(toRemove).toEqual([]);
+  });
+
+  it("reconnects a server whose static-OAuth scopes changed", () => {
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer],
+      incoming: [notionServer],
+      currentStaticOauth: notionStaticOauth(["read"]),
+      incomingStaticOauth: notionStaticOauth(["read", "write"]),
+    });
+
+    expect(toAdd).toEqual([notionServer]);
+    expect(toRemove).toEqual([notionServer]);
+  });
+
+  it("leaves a server alone when its static OAuth is unchanged", () => {
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer],
+      incoming: [notionServer],
+      currentStaticOauth: notionStaticOauth(["read"]),
+      incomingStaticOauth: notionStaticOauth(["read"]),
+    });
+
+    expect(toAdd).toEqual([]);
+    expect(toRemove).toEqual([]);
+  });
+
+  it("reconnects when static OAuth is dropped", () => {
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer],
+      incoming: [notionServer],
+      currentStaticOauth: notionStaticOauth(["read"]),
+      incomingStaticOauth: undefined,
+    });
+
+    expect(toAdd).toEqual([notionServer]);
+    expect(toRemove).toEqual([notionServer]);
+  });
+
+  it("does not reconnect when only the provider key is renamed but config is identical", () => {
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer],
+      incoming: [notionServer],
+      currentStaticOauth: notionStaticOauth(["read"], "notion"),
+      incomingStaticOauth: notionStaticOauth(["read"], "notion-renamed"),
+    });
+
+    expect(toAdd).toEqual([]);
+    expect(toRemove).toEqual([]);
+  });
+
+  it("ignores key ordering when comparing provider config", () => {
+    const reordered = notionStaticOauth(["read"]);
+    // Rebuild the provider object with keys in reverse insertion order.
+    reordered.providers["notion"] = {
+      tokenAuthMethod: "client_secret_basic",
+      scopes: ["read"],
+      credentials: {
+        clientSecret: { value: "secret-1", type: "literal" },
+        clientId: { value: "client-1", type: "literal" },
+      },
+      authMethod: "client_credentials",
+    };
+
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer],
+      incoming: [notionServer],
+      currentStaticOauth: notionStaticOauth(["read"]),
+      incomingStaticOauth: reordered,
+    });
+
+    expect(toAdd).toEqual([]);
+    expect(toRemove).toEqual([]);
+  });
+
+  it("ignores static OAuth for stdio servers", () => {
+    // echoServer is stdio (no URL), so static OAuth can never apply to it.
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [echoServer],
+      incoming: [echoServer],
+      currentStaticOauth: notionStaticOauth(["read"]),
+      incomingStaticOauth: notionStaticOauth(["read", "write"]),
+    });
+
+    expect(toAdd).toEqual([]);
+    expect(toRemove).toEqual([]);
+  });
+
+  it("an OAuth change on one server doesn't drag an unchanged server into the diff", () => {
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [notionServer, echoServer],
+      incoming: [notionServer, echoServer],
+      currentStaticOauth: notionStaticOauth(["read"]),
+      incomingStaticOauth: notionStaticOauth(["read", "write"]),
+    });
+
+    expect(toAdd).toEqual([notionServer]);
+    expect(toRemove).toEqual([notionServer]);
+  });
+
+  it("tolerates a static OAuth object missing its mapping", () => {
+    // resolveProviderKey would throw on a missing mapping; the diff must not.
+    const malformed = { providers: {} } as unknown as StaticOAuth;
+    expect(() =>
+      diffTargetServers({
+        current: [notionServer],
+        incoming: [notionServer],
+        currentStaticOauth: malformed,
+        incomingStaticOauth: malformed,
+      }),
+    ).not.toThrow();
   });
 });
 

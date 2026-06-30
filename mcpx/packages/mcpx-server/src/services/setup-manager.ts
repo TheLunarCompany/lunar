@@ -3,6 +3,7 @@ import {
   indexBy,
   makeError,
   normalizeServerName,
+  stableStringify,
   stringifyEq,
 } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -17,8 +18,13 @@ import { ConfigService } from "../config.js";
 import { Config } from "../model/config/config.js";
 import { TargetServer } from "../model/target-servers.js";
 import { UpstreamHandler } from "./upstream-handler.js";
-import { ConsumerConfig } from "@mcpx/shared-model";
+import {
+  ConsumerConfig,
+  StaticOAuth,
+  StaticOAuthProvider,
+} from "@mcpx/shared-model";
 import { ServiceToolGroup } from "../model/config/permissions.js";
+import { resolveProviderKey } from "../oauth-providers/host-matcher.js";
 
 type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
 type SetupConfigPayload = ApplySetupPayload["config"];
@@ -31,35 +37,90 @@ export interface TargetServerDiff {
 }
 
 // Diff by normalized name: remove gone/changed servers, add new/changed ones,
-// leave unchanged ones alone so their connection and OAuth tokens survive.
+// leave unchanged ones alone so their connection and OAuth tokens survive. A
+// server counts as changed if its entry OR its resolved static-OAuth provider
+// changed, so editing scopes/client/provider forces a re-add (and re-auth).
 export function diffTargetServers({
   current,
   incoming,
+  currentStaticOauth,
+  incomingStaticOauth,
 }: {
   current: TargetServer[];
   incoming: TargetServer[];
+  currentStaticOauth?: StaticOAuth;
+  incomingStaticOauth?: StaticOAuth;
 }): TargetServerDiff {
   const currentByName = indexBy(current, (s) => normalizeServerName(s.name));
   const incomingByName = indexBy(incoming, (s) => normalizeServerName(s.name));
 
   const toRemove = current.filter((s) => {
     const next = incomingByName[normalizeServerName(s.name)];
-    return !next || !sameTargetServer(s, next);
+    return (
+      !next ||
+      !sameTargetServer({
+        current: s,
+        incoming: next,
+        currentStaticOauth,
+        incomingStaticOauth,
+      })
+    );
   });
   const toAdd = incoming.filter((s) => {
     const prev = currentByName[normalizeServerName(s.name)];
-    return !prev || !sameTargetServer(prev, s);
+    return (
+      !prev ||
+      !sameTargetServer({
+        current: prev,
+        incoming: s,
+        currentStaticOauth,
+        incomingStaticOauth,
+      })
+    );
   });
 
   return { toAdd, toRemove };
 }
 
 // Compare with normalized names so a casing-only difference isn't a change.
-function sameTargetServer(a: TargetServer, b: TargetServer): boolean {
-  return stringifyEq(
-    { ...a, name: normalizeServerName(a.name) },
-    { ...b, name: normalizeServerName(b.name) },
+// stableStringify ignores object-key order (the running config is zod-parsed,
+// the incoming one is raw wire JSON) but keeps array order.
+function sameTargetServer({
+  current,
+  incoming,
+  currentStaticOauth,
+  incomingStaticOauth,
+}: {
+  current: TargetServer;
+  incoming: TargetServer;
+  currentStaticOauth?: StaticOAuth;
+  incomingStaticOauth?: StaticOAuth;
+}): boolean {
+  return (
+    stringifyEq(
+      { ...current, name: normalizeServerName(current.name) },
+      { ...incoming, name: normalizeServerName(incoming.name) },
+    ) &&
+    stableStringify(resolveStaticOauthProvider(current, currentStaticOauth)) ===
+      stableStringify(resolveStaticOauthProvider(incoming, incomingStaticOauth))
   );
+}
+
+// Resolve a server's static-OAuth provider from its URL host, like the factory
+// does at connect time. Uses the given config only (not DEFAULT_STATIC_OAUTH,
+// which is constant and can't cause a diff). stdio/unmatched hosts → undefined.
+function resolveStaticOauthProvider(
+  server: TargetServer,
+  staticOauth: StaticOAuth,
+): StaticOAuthProvider | undefined {
+  if (!staticOauth?.mapping || server.type === "stdio") return undefined;
+  try {
+    const host = new URL(server.url).hostname;
+    const key = resolveProviderKey(host, staticOauth.mapping);
+    return key ? staticOauth.providers[key] : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export interface SetupManagerI {
@@ -183,8 +244,15 @@ export class SetupManager implements SetupManagerI {
     const currentConfig = this.normalizeConfig(this.configService.getConfig());
 
     try {
-      await this.applyTargetServers(payload.targetServers);
+      // Config first, so the OAuth factory is rebuilt before we (re)connect
+      // servers and the diff's re-adds use the new provider config. The diff
+      // still compares old vs new via the staticOauth captured above.
       await this.applyConfig(payload.config);
+      await this.applyTargetServers({
+        targetServers: payload.targetServers,
+        currentStaticOauth: currentConfig.staticOauth,
+        incomingStaticOauth: payload.config.staticOauth,
+      });
 
       this.logger.info("Successfully applied setup", {
         source: payload.source,
@@ -236,21 +304,8 @@ export class SetupManager implements SetupManagerI {
     const entries: Record<string, TargetServerEntry> = Object.fromEntries(
       targetServers.map(SetupManager.targetServerToEntry),
     );
-    // Attempt to restore previous state
-    try {
-      this.logger.info("Restoring previous target servers", {
-        count: targetServers.length,
-      });
-      await this.applyTargetServers(entries);
-    } catch (restoreError) {
-      this.logger.error(
-        "Failed to restore target servers after setup failure",
-        {
-          error: loggableError(restoreError),
-        },
-      );
-    }
-
+    // Restore config (and its OAuth factory) before servers, mirroring the
+    // apply order so restored servers reconnect against the restored config.
     try {
       this.logger.info("Restoring previous config");
       await this.applyConfig(config);
@@ -258,6 +313,25 @@ export class SetupManager implements SetupManagerI {
       this.logger.error("Failed to restore config after setup failure", {
         error: loggableError(restoreError),
       });
+    }
+
+    try {
+      this.logger.info("Restoring previous target servers", {
+        count: targetServers.length,
+      });
+      // Same static OAuth on both sides so rollback only restores entries.
+      await this.applyTargetServers({
+        targetServers: entries,
+        currentStaticOauth: config.staticOauth,
+        incomingStaticOauth: config.staticOauth,
+      });
+    } catch (restoreError) {
+      this.logger.error(
+        "Failed to restore target servers after setup failure",
+        {
+          error: loggableError(restoreError),
+        },
+      );
     }
     // Update currentSetup to reflect actual state after restoration attempt
     this.currentSetup = {
@@ -304,24 +378,36 @@ export class SetupManager implements SetupManagerI {
     };
   }
 
-  private async applyTargetServers(
-    targetServersPayload: Record<string, TargetServerEntry>,
-  ): Promise<void> {
+  private async applyTargetServers({
+    targetServers,
+    currentStaticOauth,
+    incomingStaticOauth,
+  }: {
+    targetServers: Record<string, TargetServerEntry>;
+    currentStaticOauth?: StaticOAuth;
+    incomingStaticOauth?: StaticOAuth;
+  }): Promise<void> {
     // Convert payload to TargetServer[]
-    const incomingServers: TargetServer[] = Object.entries(
-      targetServersPayload,
-    ).map(([name, { initiation, catalogItemId }]) => ({
-      name,
-      ...initiation,
-      catalogItemId,
-    }));
+    const incomingServers: TargetServer[] = Object.entries(targetServers).map(
+      ([name, { initiation, catalogItemId }]) => ({
+        name,
+        ...initiation,
+        catalogItemId,
+      }),
+    );
 
     // Diff instead of removing all and re-adding all, so a re-apply (e.g. on
     // sub-catalog reassignment) doesn't tear down unchanged servers and drop
     // their OAuth tokens (removeClient deletes tokens for remote servers).
+    //
+    // A server whose static OAuth changed is re-added here. applyConfig already
+    // committed the new OAuth factory, so the re-add connects against the new
+    // provider config (dropped tokens force re-auth).
     const { toAdd, toRemove } = diffTargetServers({
       current: this.upstreamHandler.servers,
       incoming: incomingServers,
+      currentStaticOauth,
+      incomingStaticOauth,
     });
 
     this.logger.info("Applying target servers", {
