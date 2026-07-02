@@ -205,6 +205,10 @@ FROM mcpx-server AS mcpx
 
 ENV BUILD_SCOPE="all"
 
+# All-in-one enables STDIO MCP servers and DIND by default
+ENV ENABLE_STDIO_MCP_SERVERS=true
+ENV DIND_ENABLED=true
+
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/scripts/generate-config.sh /usr/local/bin/generate-config.sh
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/ui/dist packages/ui
 
