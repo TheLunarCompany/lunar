@@ -9,6 +9,7 @@ export const WS_CONNECTION_ERROR = {
 export enum UI_ServerBoundMessage {
   GetAppConfig = "getAppConfig",
   GetSystemState = "getSystemState",
+  // TODO (RND-837): writes moved to REST; remove these members after rollout.
   PatchAppConfig = "patchAppConfig",
   AddTargetServer = "addTargetServer",
   RemoveTargetServer = "removeTargetServer",
@@ -19,6 +20,7 @@ export enum UI_ServerBoundMessage {
 export enum UI_ClientBoundMessage {
   AppConfig = "appConfig",
   GetAppConfigFailed = "getAppConfigFailed",
+  // TODO (RND-837): write ack/failure messages; remove after rollout.
   PatchAppConfigFailed = "patchAppConfigFailed",
 
   SystemState = "systemState",
@@ -26,6 +28,7 @@ export enum UI_ClientBoundMessage {
 
   IdentityChanged = "identityChanged",
 
+  // TODO (RND-837): target server write ack/failure messages; remove after rollout.
   TargetServerAdded = "targetServerAdded",
   AddTargetServerFailed = "addTargetServerFailed",
 

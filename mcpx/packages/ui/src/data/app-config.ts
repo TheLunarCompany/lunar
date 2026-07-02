@@ -4,7 +4,7 @@ import {
 } from "@mcpx/shared-model";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { axiosClient } from "./axios-client";
-import { useSocketStore } from "@/store/socket";
+import { apiClient } from "@/lib/api";
 
 export async function getAppConfig(): Promise<SerializedAppConfig> {
   const response = await axiosClient.get("/app-config");
@@ -18,16 +18,12 @@ export const useGetAppConfig = () =>
   });
 
 export function useUpdateAppConfig() {
-  const emitPatchAppConfig = useSocketStore(
-    (state) => state.emitPatchAppConfig,
-  );
-
   return useMutation({
     mutationKey: ["update-app-config"],
     mutationFn: async (
       params: ApplyParsedAppConfigRequest,
     ): Promise<SerializedAppConfig> => {
-      return await emitPatchAppConfig(params);
+      return await apiClient.patchAppConfig(params);
     },
   });
 }

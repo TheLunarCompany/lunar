@@ -137,6 +137,7 @@ async function handleWsEvent(
         socket.emit(UI_ClientBoundMessage.SystemState, systemState);
         break;
       }
+      // TODO (RND-837): UI writes moved to REST; remove these dead handlers after rollout.
       case UI_ServerBoundMessage.PatchAppConfig: {
         logger.debug("Patching app config");
         try {

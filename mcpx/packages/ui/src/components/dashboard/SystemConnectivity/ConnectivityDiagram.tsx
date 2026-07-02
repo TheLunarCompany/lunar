@@ -20,7 +20,10 @@ import { AgentDetailsModal } from "../AgentDetailsModal";
 import { McpxDetailsModal } from "../McpxDetailsModal";
 import { useToast } from "@/components/ui/use-toast";
 import { ServerContextMenu } from "./nodes/ServerContextMenu";
-import { useDeleteMcpServer } from "@/data/mcp-server";
+import {
+  useDeleteMcpServer,
+  useSetTargetServerActive,
+} from "@/data/mcp-server";
 import { usePermissions } from "@/data/permissions";
 import { SERVER_STATUS } from "@/types/mcp-server";
 import { getEditTargetServer } from "../server-edit-target";
@@ -131,10 +134,11 @@ const ConnectivityDiagramComponent = ({
   const setOptimisticallyRemovedServerName = useDashboardStore(
     (s) => s.setOptimisticallyRemovedServerName,
   );
-  const { emitPatchAppConfig, appConfig } = useSocketStore((s) => ({
-    emitPatchAppConfig: s.emitPatchAppConfig,
+  const { appConfig } = useSocketStore((s) => ({
     appConfig: s.appConfig,
   }));
+  const { mutateAsync: setTargetServerActiveAsync } =
+    useSetTargetServerActive();
   const { mutate: deleteServer } = useDeleteMcpServer();
 
   const handleAddAgent = useCallback(() => {
@@ -252,14 +256,7 @@ const ConnectivityDiagramComponent = ({
     setContextMenu(null);
 
     try {
-      const currentAttrs = appConfig?.targetServerAttributes ?? {};
-      await emitPatchAppConfig({
-        ...appConfig,
-        targetServerAttributes: {
-          ...currentAttrs,
-          [name]: { ...currentAttrs[name], inactive: !wasInactive },
-        },
-      });
+      await setTargetServerActiveAsync({ name, active: wasInactive });
     } catch {
       toast({
         title: "Error",
@@ -267,7 +264,7 @@ const ConnectivityDiagramComponent = ({
         variant: "destructive",
       });
     }
-  }, [contextMenu, appConfig, emitPatchAppConfig, toast]);
+  }, [contextMenu, setTargetServerActiveAsync, toast]);
 
   const handleContextDelete = useCallback(() => {
     if (!contextMenu) return;

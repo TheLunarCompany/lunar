@@ -68,6 +68,7 @@ vi.mock("./nodes/ServerContextMenu", () => ({
 
 vi.mock("@/data/mcp-server", () => ({
   useDeleteMcpServer: () => ({ mutate: vi.fn() }),
+  useSetTargetServerActive: () => ({ mutateAsync: vi.fn() }),
 }));
 
 vi.mock("@/data/permissions", () => ({
@@ -98,7 +99,6 @@ const modalsState = {
 
 const socketState = {
   appConfig: null,
-  emitPatchAppConfig: vi.fn(),
 };
 
 vi.mock("@/store", () => ({

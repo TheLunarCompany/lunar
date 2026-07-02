@@ -628,4 +628,45 @@ export const handlers = [
   http.get("*/default-catalog/items", () => {
     return HttpResponse.json({ items: getEnrichedCatalogItems() });
   }),
+
+  // Custom target server writes. Keep after catalog handlers so
+  // `*/catalog-item/:id/target-server` wins over the `*/target-server` wildcard.
+  http.post("*/target-server", async ({ request }) => {
+    const payload = (await request.json()) as { name: string };
+    return HttpResponse.json(
+      { name: payload.name, state: { type: "connecting" } },
+      { status: 201 },
+    );
+  }),
+
+  http.patch("*/target-server/:name", async ({ params, request }) => {
+    const payload = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ ...payload, name: String(params.name) });
+  }),
+
+  http.delete("*/target-server/:name", ({ params }) => {
+    return HttpResponse.json({
+      message: `Target server ${String(params.name)} removed successfully`,
+    });
+  }),
+
+  http.put("*/config/target-server/:name/activate", ({ params }) => {
+    return HttpResponse.json({
+      message: `Target server ${String(params.name)} activated successfully`,
+    });
+  }),
+
+  http.put("*/config/target-server/:name/deactivate", ({ params }) => {
+    return HttpResponse.json({
+      message: `Target server ${String(params.name)} deactivated successfully`,
+    });
+  }),
+
+  http.patch("*/app-config", () => {
+    return HttpResponse.json({
+      yaml: "",
+      version: 1,
+      lastModified: "2026-05-11T08:00:00.000Z",
+    });
+  }),
 ];

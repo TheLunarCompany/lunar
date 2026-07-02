@@ -1,9 +1,6 @@
 import {
   AppConfig,
   appConfigSchema,
-  ApplyParsedAppConfigRequest,
-  RawCreateTargetServerRequest,
-  RawUpdateTargetServerRequest,
   SerializedAppConfig,
   type SystemState,
   UI_ClientBoundMessage,
@@ -21,55 +18,6 @@ import { isEnterpriseEnabled } from "@/config/runtime-config";
 import { createDevtoolsOptions } from "./devtools";
 import { debounce } from "../utils";
 
-class ResponseHandler {
-  private handlers = new Map<
-    string,
-    {
-      resolve: (value: unknown) => void;
-      reject: (error: unknown) => void;
-      timeout: ReturnType<typeof setTimeout>;
-    }
-  >();
-
-  createPromise<T>(operationId: string, timeoutMs: number = 10000): Promise<T> {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.handlers.delete(operationId);
-        reject(new Error(`Operation ${operationId} timed out`));
-      }, timeoutMs);
-
-      this.handlers.set(operationId, {
-        resolve: resolve as (value: unknown) => void,
-        reject,
-        timeout,
-      });
-    });
-  }
-
-  resolve(operationId: string, value: unknown): void {
-    const handler = this.handlers.get(operationId);
-    if (handler) {
-      clearTimeout(handler.timeout);
-      this.handlers.delete(operationId);
-      handler.resolve(value);
-    }
-  }
-
-  reject(operationId: string, error: unknown): void {
-    const handler = this.handlers.get(operationId);
-    if (handler) {
-      clearTimeout(handler.timeout);
-      this.handlers.delete(operationId);
-      handler.reject(error);
-    }
-  }
-
-  cleanup(): void {
-    this.handlers.forEach(({ timeout }) => clearTimeout(timeout));
-    this.handlers.clear();
-  }
-}
-
 export type SocketStore = {
   // Socket State
   appConfig: AppConfig | null;
@@ -84,17 +32,6 @@ export type SocketStore = {
   // Socket Actions
   connect: (token?: string) => Promise<void>;
   disconnect: () => void;
-  emitPatchAppConfig: (
-    config: ApplyParsedAppConfigRequest,
-  ) => Promise<SerializedAppConfig>;
-  emitAddTargetServer: (
-    server: RawCreateTargetServerRequest,
-  ) => Promise<SerializedAppConfig>;
-  emitRemoveTargetServer: (name: string) => Promise<SerializedAppConfig>;
-  emitUpdateTargetServer: (
-    name: string,
-    server: RawUpdateTargetServerRequest,
-  ) => Promise<SerializedAppConfig>;
 };
 
 function shouldSendCredentials(): boolean {
@@ -105,7 +42,6 @@ export const socketStore = create<SocketStore>()(
   devtools(
     immer((set, get) => {
       let socket: Socket | null = null;
-      const responseHandler = new ResponseHandler();
       let listenersBound = false;
       let pendingAppConfig = true;
       let pendingSystemState = true;
@@ -147,7 +83,6 @@ export const socketStore = create<SocketStore>()(
                 pendingAppConfig = false;
                 if (!pendingSystemState && get().isPending)
                   set({ isPending: false });
-                responseHandler.resolve("patchAppConfig", payload);
                 return;
               }
 
@@ -162,20 +97,6 @@ export const socketStore = create<SocketStore>()(
             pendingAppConfig = false;
             if (!pendingSystemState && get().isPending)
               set({ isPending: false });
-            responseHandler.resolve("patchAppConfig", payload);
-          },
-        );
-
-        socket.on(
-          UI_ClientBoundMessage.PatchAppConfigFailed,
-          (payload: { error?: string }) => {
-            const errorMessage = payload?.error || "Failed to patch app config";
-            console.error(
-              "[Socket] PatchAppConfig failed:",
-              errorMessage,
-              payload,
-            );
-            responseHandler.reject("patchAppConfig", new Error(errorMessage));
           },
         );
 
@@ -194,60 +115,6 @@ export const socketStore = create<SocketStore>()(
             debouncedSystemStateUpdate(payload);
           }
         });
-
-        socket.on(
-          UI_ClientBoundMessage.TargetServerAdded,
-          (payload: SerializedAppConfig) => {
-            responseHandler.resolve("addTargetServer", payload);
-            emitGetSystemState();
-          },
-        );
-
-        socket.on(
-          UI_ClientBoundMessage.TargetServerRemoved,
-          (payload: SerializedAppConfig) => {
-            responseHandler.resolve("removeTargetServer", payload);
-            emitGetSystemState();
-          },
-        );
-
-        socket.on(
-          UI_ClientBoundMessage.TargetServerUpdated,
-          (payload: SerializedAppConfig) => {
-            responseHandler.resolve("updateTargetServer", payload);
-            emitGetSystemState();
-          },
-        );
-
-        socket.on(
-          UI_ClientBoundMessage.AddTargetServerFailed,
-          (payload: { error?: string }) => {
-            responseHandler.reject(
-              "addTargetServer",
-              new Error(payload.error || "Failed to add target server"),
-            );
-          },
-        );
-
-        socket.on(
-          UI_ClientBoundMessage.RemoveTargetServerFailed,
-          (payload: { error?: string }) => {
-            responseHandler.reject(
-              "removeTargetServer",
-              new Error(payload.error || "Failed to remove target server"),
-            );
-          },
-        );
-
-        socket.on(
-          UI_ClientBoundMessage.UpdateTargetServerFailed,
-          (payload: { error?: string }) => {
-            responseHandler.reject(
-              "updateTargetServer",
-              new Error(payload.error || "Failed to update target server"),
-            );
-          },
-        );
       }
 
       let isConnecting = false;
@@ -361,12 +228,6 @@ export const socketStore = create<SocketStore>()(
 
         socket.off(UI_ClientBoundMessage.AppConfig);
         socket.off(UI_ClientBoundMessage.SystemState);
-        socket.off(UI_ClientBoundMessage.TargetServerAdded);
-        socket.off(UI_ClientBoundMessage.TargetServerRemoved);
-        socket.off(UI_ClientBoundMessage.TargetServerUpdated);
-        socket.off(UI_ClientBoundMessage.AddTargetServerFailed);
-        socket.off(UI_ClientBoundMessage.RemoveTargetServerFailed);
-        socket.off(UI_ClientBoundMessage.UpdateTargetServerFailed);
       }
 
       function disconnect() {
@@ -375,7 +236,6 @@ export const socketStore = create<SocketStore>()(
           socket.disconnect();
           socket = null;
         }
-        responseHandler.cleanup();
         set({ isConnected: false, connectError: false, isPending: false });
       }
 
@@ -386,20 +246,6 @@ export const socketStore = create<SocketStore>()(
         socket.emit(message, data);
       }
 
-      function createOperation<T>(
-        operationId: string,
-        message: UI_ServerBoundMessage,
-        data?: unknown,
-        timeoutMs?: number,
-      ): Promise<T> {
-        const promise = responseHandler.createPromise<T>(
-          operationId,
-          timeoutMs,
-        );
-        safeEmit(message, data);
-        return promise;
-      }
-
       function emitGetAppConfig() {
         safeEmit(UI_ServerBoundMessage.GetAppConfig);
       }
@@ -408,58 +254,12 @@ export const socketStore = create<SocketStore>()(
         safeEmit(UI_ServerBoundMessage.GetSystemState);
       }
 
-      function emitPatchAppConfig(
-        config: ApplyParsedAppConfigRequest,
-      ): Promise<SerializedAppConfig> {
-        return createOperation<SerializedAppConfig>(
-          "patchAppConfig",
-          UI_ServerBoundMessage.PatchAppConfig,
-          config,
-        );
-      }
-
-      function emitAddTargetServer(
-        server: RawCreateTargetServerRequest,
-      ): Promise<SerializedAppConfig> {
-        return createOperation<SerializedAppConfig>(
-          "addTargetServer",
-          UI_ServerBoundMessage.AddTargetServer,
-          server,
-          30000, // 30 second timeout for server operations
-        );
-      }
-
-      function emitRemoveTargetServer(
-        name: string,
-      ): Promise<SerializedAppConfig> {
-        return createOperation<SerializedAppConfig>(
-          "removeTargetServer",
-          UI_ServerBoundMessage.RemoveTargetServer,
-          { name },
-        );
-      }
-
-      function emitUpdateTargetServer(
-        name: string,
-        server: RawUpdateTargetServerRequest,
-      ): Promise<SerializedAppConfig> {
-        return createOperation<SerializedAppConfig>(
-          "updateTargetServer",
-          UI_ServerBoundMessage.UpdateTargetServer,
-          { name, server },
-        );
-      }
-
       return {
         appConfig: null,
         connect,
         disconnect,
         connectError: false,
         connectionRejectedHubRequired: false,
-        emitAddTargetServer,
-        emitPatchAppConfig,
-        emitRemoveTargetServer,
-        emitUpdateTargetServer,
         isConnected: false,
         isPending: true,
         serializedAppConfig: null,

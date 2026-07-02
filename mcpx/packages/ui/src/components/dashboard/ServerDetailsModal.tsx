@@ -11,14 +11,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { AuthenticationDialog } from "./AuthenticationDialog";
 import { EnvVarsEditor } from "./EnvVarsEditor";
-import { useDeleteMcpServer, useEditMcpServer } from "@/data/mcp-server";
-import { useInitiateServerAuth } from "@/data/server-auth";
 import {
-  useDashboardStore,
-  useModalsStore,
-  useSocketStore,
-  socketStore,
-} from "@/store";
+  useDeleteMcpServer,
+  useEditMcpServer,
+  useSetTargetServerActive,
+} from "@/data/mcp-server";
+import { useInitiateServerAuth } from "@/data/server-auth";
+import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
 import { usePermissions } from "@/data/permissions";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
@@ -141,9 +140,8 @@ export const ServerDetailsModal = ({
   const [switchChecked, setSwitchChecked] = useState<boolean>(true);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-  const { emitPatchAppConfig } = useSocketStore((s) => ({
-    emitPatchAppConfig: s.emitPatchAppConfig,
-  }));
+  const { mutateAsync: setTargetServerActiveAsync } =
+    useSetTargetServerActive();
 
   const systemState = useSocketStore((s) => s.systemState);
   const detailsServer = useMemo(
@@ -247,38 +245,16 @@ export const ServerDetailsModal = ({
       return;
     }
 
-    const currentAppConfig = socketStore.getState().appConfig;
-
-    // Guard: Check if appConfig is available from store
-    if (!currentAppConfig) {
-      return;
-    }
     setSwitchChecked(checked);
     setIsToggling(true);
 
     try {
-      // 2. Prepare updated config
-      const currentTargetServerAttributes =
-        currentAppConfig.targetServerAttributes ?? {};
-
-      const updatedTargetServerAttributes = {
-        ...currentTargetServerAttributes,
-      };
-      updatedTargetServerAttributes[currentServer.name] = {
-        ...updatedTargetServerAttributes[currentServer.name],
-        inactive: !checked, // checked=true means active, so inactive=false
-      };
-
-      const updatedConfig = {
-        ...currentAppConfig,
-        targetServerAttributes: updatedTargetServerAttributes,
-      };
-
-      await emitPatchAppConfig(updatedConfig);
-
-      // handleClose();
+      await setTargetServerActiveAsync({
+        name: currentServer.name,
+        active: checked,
+      });
     } catch (error) {
-      // 5. Error - revert switch state
+      // Revert the optimistic switch state on failure.
       setSwitchChecked(!checked);
       toast({
         title: "Error",

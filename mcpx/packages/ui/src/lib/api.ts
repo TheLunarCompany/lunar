@@ -16,6 +16,10 @@ import type {
   CreateServerFromCatalogRequest,
   CatalogMCPServerItem,
   UpdateTargetServerRequest,
+  RawCreateTargetServerRequest,
+  RawUpdateTargetServerRequest,
+  ApplyParsedAppConfigRequest,
+  SerializedAppConfig,
   AuditLogEntry,
   AuditLogEventType,
 } from "@mcpx/shared-model";
@@ -174,6 +178,70 @@ class ApiClient {
       "PATCH",
       config,
       z.custom<TargetServer>(), // TODO: replace with validation RND-404
+    );
+  }
+
+  // ==================== CUSTOM (non-catalog) TARGET SERVERS ====================
+
+  async addTargetServer(
+    payload: RawCreateTargetServerRequest,
+  ): Promise<TargetServer> {
+    return this.requestWithBody(
+      "/target-server",
+      "POST",
+      payload,
+      z.custom<TargetServer>(), // TODO: replace with validation RND-404
+    );
+  }
+
+  async updateTargetServer(
+    name: string,
+    payload: RawUpdateTargetServerRequest,
+  ): Promise<TargetServer> {
+    return this.requestWithBody(
+      `/target-server/${encodeURIComponent(name)}`,
+      "PATCH",
+      payload,
+      z.custom<TargetServer>(), // TODO: replace with validation RND-404
+    );
+  }
+
+  async deleteTargetServer(name: string): Promise<MessageResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/target-server/${encodeURIComponent(name)}`,
+      { method: "DELETE", credentials: "include" },
+    );
+
+    if (!response.ok) {
+      // 404 on delete is fine — server already gone.
+      if (response.status === 404) {
+        return { message: `Target server ${name} removed successfully` };
+      }
+      throw await getApiError(response);
+    }
+
+    const data = await response.json();
+    const result = messageResponseSchema.safeParse(data);
+    if (!result.success) {
+      console.error(`Schema validation failed for DELETE /target-server:`, {
+        error: result.error,
+        data,
+      });
+      throw result.error;
+    }
+    return result.data;
+  }
+
+  // ==================== APP CONFIG ====================
+
+  async patchAppConfig(
+    config: ApplyParsedAppConfigRequest,
+  ): Promise<SerializedAppConfig> {
+    return this.requestWithBody(
+      "/app-config",
+      "PATCH",
+      config,
+      z.custom<SerializedAppConfig>(), // TODO: replace with validation RND-404
     );
   }
 
@@ -382,15 +450,19 @@ class ApiClient {
   }
 
   async activateTargetServer(name: string): Promise<{ message: string }> {
-    return this.request(
+    return this.requestWithBody(
       `/config/target-server/${encodeURIComponent(name)}/activate`,
+      "PUT",
+      {},
       z.object({ message: z.string() }),
     );
   }
 
   async deactivateTargetServer(name: string): Promise<{ message: string }> {
-    return this.request(
+    return this.requestWithBody(
       `/config/target-server/${encodeURIComponent(name)}/deactivate`,
+      "PUT",
+      {},
       z.object({ message: z.string() }),
     );
   }

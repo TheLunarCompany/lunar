@@ -32,8 +32,8 @@ import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { useResetSetup, useSaveSetup } from "@/data/saved-setups";
+import { useSetTargetServerActive } from "@/data/mcp-server";
 import { McpxData } from "./SystemConnectivity/types";
-import { type AppConfig } from "@mcpx/shared-model";
 import { getMcpServerStatusFromTargetServer } from "./helpers";
 import { McpxServerCard } from "./McpxServerCard";
 import { ServerStatusBadge } from "./ServerStatusBadge";
@@ -122,10 +122,11 @@ export const McpxDetailsModal = ({
     );
   }, [serversList, searchQuery]);
 
-  const { appConfig, emitPatchAppConfig } = useSocketStore((s) => ({
+  const { appConfig } = useSocketStore((s) => ({
     appConfig: s.appConfig,
-    emitPatchAppConfig: s.emitPatchAppConfig,
   }));
+  const { mutateAsync: setTargetServerActiveAsync } =
+    useSetTargetServerActive();
 
   const saveConfiguration = useCallback(async () => {
     if (!mcpxData) {
@@ -137,57 +138,39 @@ export const McpxDetailsModal = ({
       return;
     }
 
-    if (pendingServerToggles.size === 0 || !appConfig) {
+    if (pendingServerToggles.size === 0) {
       return;
     }
 
-    try {
-      const appConfigTyped = appConfig as AppConfig & {
-        targetServerAttributes?: Record<string, { inactive: boolean }>;
-      };
-      const currentTargetServerAttributes =
-        appConfigTyped.targetServerAttributes ?? {};
+    // Toggle each server independently; failed ones stay pending for retry.
+    const results = await Promise.all(
+      Array.from(pendingServerToggles, (entry) =>
+        setTargetServerActiveAsync({ name: entry[0], active: entry[1] })
+          .then(() => ({ entry, ok: true }))
+          .catch(() => ({ entry, ok: false })),
+      ),
+    );
 
-      const updatedTargetServerAttributes = {
-        ...currentTargetServerAttributes,
-      };
-
-      pendingServerToggles.forEach((isActive, serverName) => {
-        const normalizedName = serverName.toLowerCase().trim();
-        updatedTargetServerAttributes[normalizedName] = {
-          ...updatedTargetServerAttributes[normalizedName],
-          inactive: !isActive,
-        };
-      });
-
-      const updatedConfig = {
-        ...appConfig,
-        targetServerAttributes: updatedTargetServerAttributes,
-      };
-      emitPatchAppConfig(updatedConfig);
-
-      setPendingServerToggles(new Map());
-
-      toast({
-        title: "Success",
-        description: "MCPX configuration updated successfully",
-      });
-
-      setTimeout(() => {
-        onClose();
-      }, DRAWER_CLOSING_DELAY_MS);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to update MCPX configuration";
+    const failed = results.filter((r) => !r.ok).map((r) => r.entry);
+    if (failed.length > 0) {
+      setPendingServerToggles(new Map(failed));
       toast({
         title: "Error",
-        description: errorMessage,
+        description: `Failed to update: ${failed.map(([name]) => name).join(", ")}`,
         variant: "destructive",
       });
+      return;
     }
-  }, [mcpxData, pendingServerToggles, appConfig, emitPatchAppConfig, onClose]);
+
+    setPendingServerToggles(new Map());
+    toast({
+      title: "Success",
+      description: "MCPX configuration updated successfully",
+    });
+    setTimeout(() => {
+      onClose();
+    }, DRAWER_CLOSING_DELAY_MS);
+  }, [mcpxData, pendingServerToggles, setTargetServerActiveAsync, onClose]);
 
   const handleClose = () => {
     dismiss();

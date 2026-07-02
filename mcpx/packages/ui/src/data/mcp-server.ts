@@ -2,50 +2,9 @@ import {
   RawCreateTargetServerRequest,
   TargetServer,
   UpdateTargetServerRequest,
-  updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { useMutation } from "@tanstack/react-query";
-import { z } from "zod/v4";
-import { socketStore } from "@/store/socket";
 import { apiClient } from "@/lib/api";
-
-export type UpdateTargetServerInput = z.input<
-  typeof updateTargetServerRequestSchema
->;
-
-// WebSocket-based target server operations
-function addMcpServerUsingWebSocket(
-  payload: RawCreateTargetServerRequest,
-): Promise<TargetServer> {
-  return new Promise((resolve, reject) => {
-    const { emitAddTargetServer, isConnected, socket } = socketStore.getState();
-
-    if (!isConnected || !socket) {
-      reject(new Error("Socket not connected"));
-      return;
-    }
-
-    // Set up event listeners for the response
-    const handleSuccess = (data: { name: string }) => {
-      socket.off("targetServerAdded", handleSuccess);
-      socket.off("addTargetServerFailed", handleError);
-      resolve({ name: data.name } as TargetServer);
-    };
-
-    const handleError = (data: { error: string }) => {
-      socket.off("targetServerAdded", handleSuccess);
-      socket.off("addTargetServerFailed", handleError);
-      reject(new Error(data.error));
-    };
-
-    // Listen for the response
-    socket.on("targetServerAdded", handleSuccess);
-    socket.on("addTargetServerFailed", handleError);
-
-    // Emit the request
-    emitAddTargetServer(payload);
-  });
-}
 
 export function addMcpServer({
   payload,
@@ -69,7 +28,7 @@ export function addMcpServer({
       envValues: envValues,
     });
   } else {
-    return addMcpServerUsingWebSocket(payload);
+    return apiClient.addTargetServer(payload);
   }
 }
 
@@ -84,31 +43,7 @@ export function deleteMcpServer({
 }: {
   name: string;
 }): Promise<{ message: string }> {
-  return new Promise((resolve, reject) => {
-    const { emitRemoveTargetServer, socket } = socketStore.getState();
-
-    if (!socket) {
-      reject(new Error("Socket not connected"));
-      return;
-    }
-
-    const handleSuccess = (data: { name: string }) => {
-      socket.off("targetServerRemoved", handleSuccess);
-      socket.off("removeTargetServerFailed", handleError);
-      resolve({ message: `Target server ${data.name} removed successfully` });
-    };
-
-    const handleError = (data: { error: string }) => {
-      socket.off("targetServerRemoved", handleSuccess);
-      socket.off("removeTargetServerFailed", handleError);
-      reject(new Error(data.error));
-    };
-
-    socket.on("targetServerRemoved", handleSuccess);
-    socket.on("removeTargetServerFailed", handleError);
-
-    emitRemoveTargetServer(name);
-  });
+  return apiClient.deleteTargetServer(name);
 }
 
 export const useDeleteMcpServer = () =>
@@ -127,45 +62,33 @@ export function editMcpServer({
   if (payload.catalogItemId) {
     return apiClient.updateCatalogServer(payload.catalogItemId, payload);
   } else {
-    return editMcpServerUsingWebSocket({ name, payload });
+    return apiClient.updateTargetServer(name, payload);
   }
-}
-export function editMcpServerUsingWebSocket({
-  name,
-  payload,
-}: {
-  name: string;
-  payload: UpdateTargetServerInput;
-}): Promise<TargetServer> {
-  return new Promise((resolve, reject) => {
-    const { emitUpdateTargetServer, socket } = socketStore.getState();
-
-    if (!socket) {
-      reject(new Error("Socket not connected"));
-      return;
-    }
-
-    const handleSuccess = (data: TargetServer) => {
-      socket.off("targetServerUpdated", handleSuccess);
-      socket.off("updateTargetServerFailed", handleError);
-      resolve(data);
-    };
-
-    const handleError = (data: { error: string }) => {
-      socket.off("targetServerUpdated", handleSuccess);
-      socket.off("updateTargetServerFailed", handleError);
-      reject(new Error(data.error));
-    };
-
-    socket.on("targetServerUpdated", handleSuccess);
-    socket.on("updateTargetServerFailed", handleError);
-
-    emitUpdateTargetServer(name, payload);
-  });
 }
 
 export const useEditMcpServer = () =>
   useMutation({
     mutationKey: ["edit-mcp-Server"],
     mutationFn: editMcpServer,
+  });
+
+// Enable/disable a server via the dedicated activate/deactivate endpoints, which
+// flip one attribute server-side — avoids the read-modify-write race of patching
+// the whole app-config just to toggle `inactive`.
+export function setTargetServerActive({
+  name,
+  active,
+}: {
+  name: string;
+  active: boolean;
+}): Promise<{ message: string }> {
+  return active
+    ? apiClient.activateTargetServer(name)
+    : apiClient.deactivateTargetServer(name);
+}
+
+export const useSetTargetServerActive = () =>
+  useMutation({
+    mutationKey: ["set-target-server-active"],
+    mutationFn: setTargetServerActive,
   });
