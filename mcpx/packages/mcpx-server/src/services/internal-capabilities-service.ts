@@ -1,4 +1,8 @@
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  GetPromptResult,
+  ReadResourceResult,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
 import { ToolCallResultUnion } from "../model/sessions.js";
 import {
@@ -6,7 +10,12 @@ import {
   CapabilityRegistry,
   ServerCapabilities,
 } from "./capability-registry.js";
-import { ActiveTool, ConsumerContext } from "./capability-resolver.js";
+import {
+  ActivePrompt,
+  ActiveResource,
+  ActiveTool,
+  ConsumerContext,
+} from "./capability-resolver.js";
 
 // Plugin contract for an origin="internal" capability. Each handler is tagged
 // with its kind so the service can grow to dispatch additional capability
@@ -23,7 +32,33 @@ export interface InternalToolHandler {
   }): Promise<ToolCallResultUnion>;
 }
 
-export type InternalCapabilityHandler = InternalToolHandler;
+export interface ResourceContent {
+  mimeType: string;
+  text: string;
+}
+
+// One reader for a whole server's resources (a per-server repository): keyed by
+// the server it owns, it reads any of that server's uris. Unlike tools (one
+// bespoke handler per name), a server's resources share one read behavior over
+// data.
+export interface InternalResourceHandler {
+  readonly kind: "resources";
+  readonly serverName: string;
+  read(uri: string): ResourceContent | undefined;
+}
+
+// Like the resource handler: one getter for a whole server's prompts, keyed by
+// serverName. `name` is the real (unprefixed) prompt name.
+export interface InternalPromptHandler {
+  readonly kind: "prompts";
+  readonly serverName: string;
+  getPrompt(name: string): GetPromptResult | undefined;
+}
+
+export type InternalCapabilityHandler =
+  | InternalToolHandler
+  | InternalResourceHandler
+  | InternalPromptHandler;
 
 export interface InternalCapabilityRegistration {
   serverName: string;
@@ -62,6 +97,13 @@ export function wireInternalCapabilityProvider(
 
 export class InternalCapabilitiesService {
   private readonly toolHandlers = new Map<string, InternalToolHandler>();
+  // Keyed by serverName: one resource repository per resource-owning server.
+  private readonly resourceHandlers = new Map<
+    string,
+    InternalResourceHandler
+  >();
+  // Keyed by serverName: one prompt getter per prompt-owning server.
+  private readonly promptHandlers = new Map<string, InternalPromptHandler>();
   private readonly logger: Logger;
 
   constructor(logger: Logger) {
@@ -69,15 +111,41 @@ export class InternalCapabilitiesService {
   }
 
   register(handler: InternalCapabilityHandler): void {
-    if (this.toolHandlers.has(handler.name)) {
-      throw new Error(`Internal tools already registered: ${handler.name}`);
+    switch (handler.kind) {
+      case "tools":
+        if (this.toolHandlers.has(handler.name)) {
+          throw new Error(`Internal tool already registered: ${handler.name}`);
+        }
+        this.toolHandlers.set(handler.name, handler);
+        return;
+      case "resources":
+        if (this.resourceHandlers.has(handler.serverName)) {
+          throw new Error(
+            `Internal resource handler already registered: ${handler.serverName}`,
+          );
+        }
+        this.resourceHandlers.set(handler.serverName, handler);
+        return;
+      case "prompts":
+        if (this.promptHandlers.has(handler.serverName)) {
+          throw new Error(
+            `Internal prompt handler already registered: ${handler.serverName}`,
+          );
+        }
+        this.promptHandlers.set(handler.serverName, handler);
+        return;
     }
-    this.toolHandlers.set(handler.name, handler);
   }
 
   hasHandler(kind: CapabilityKind, name: string): boolean {
-    if (kind !== "tools") return false;
-    return this.toolHandlers.has(name);
+    switch (kind) {
+      case "tools":
+        return this.toolHandlers.has(name);
+      case "resources":
+        return this.resourceHandlers.has(name);
+      case "prompts":
+        return this.promptHandlers.has(name);
+    }
   }
 
   visibleToolForListing(
@@ -109,6 +177,27 @@ export class InternalCapabilitiesService {
       args,
       consumer,
     });
+  }
+
+  // The owning server's repository reads any of its uris. Visibility was already
+  // gated by resolveResourceRead, same as dispatchTool.
+  dispatchResource(entry: ActiveResource): ReadResourceResult | undefined {
+    const handler = this.resourceHandlers.get(entry.serverName);
+    if (!handler) {
+      throw new UnknownInternalCapabilityError(entry.serverName);
+    }
+    const content = handler.read(entry.capabilityName);
+    if (!content) return undefined;
+    // Echo the advertised uri (what the client requested), not the real one.
+    return { contents: [{ uri: entry.definition.uri, ...content }] };
+  }
+
+  dispatchPrompt(entry: ActivePrompt): GetPromptResult | undefined {
+    const handler = this.promptHandlers.get(entry.serverName);
+    if (!handler) {
+      throw new UnknownInternalCapabilityError(entry.serverName);
+    }
+    return handler.getPrompt(entry.capabilityName);
   }
 
   private logDriftMiss(

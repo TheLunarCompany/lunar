@@ -28,6 +28,7 @@ const ALL_EVENT_TYPES: AuditLogEventType[] = [
   "catalog_updated",
   "tool_used",
   "prompt_used",
+  "resource_read",
 ];
 
 const EVENT_LABEL: Record<AuditLogEventType, string> = {
@@ -37,6 +38,7 @@ const EVENT_LABEL: Record<AuditLogEventType, string> = {
   catalog_updated: "Catalog updated",
   tool_used: "Tool used",
   prompt_used: "Prompt used",
+  resource_read: "Resource read",
 };
 
 type BadgeVariant = "success" | "danger" | "info" | "outline";
@@ -62,6 +64,11 @@ const EVENT_BADGE: Record<
     variant: "outline",
     className:
       "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-800",
+  },
+  resource_read: {
+    variant: "outline",
+    className:
+      "bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-800",
   },
 };
 
@@ -150,6 +157,14 @@ function summarize(entry: AuditLogEntry): React.ReactNode {
       return (
         <>
           Prompt <strong>{entry.payload.promptName}</strong> used on{" "}
+          <strong>{entry.payload.targetServerName}</strong>
+          {entry.payload.consumerTag ? ` by ${entry.payload.consumerTag}` : ""}
+        </>
+      );
+    case "resource_read":
+      return (
+        <>
+          Resource <strong>{entry.payload.resourceUri}</strong> read on{" "}
           <strong>{entry.payload.targetServerName}</strong>
           {entry.payload.consumerTag ? ` by ${entry.payload.consumerTag}` : ""}
         </>

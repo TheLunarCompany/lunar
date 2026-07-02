@@ -49,6 +49,7 @@ import { HubDownstreamSessionClient } from "./hub-downstream-session-client.js";
 import { CapabilityRegistry } from "./capability-registry.js";
 import { CapabilityResolver } from "./capability-resolver.js";
 import { SkillStore } from "./skill-store.js";
+import { SkillResourceProjector } from "./skill-resource-projector.js";
 import { HubSkillClient } from "./hub-skill-client.js";
 
 export interface ServicesOptions {
@@ -77,6 +78,7 @@ export class Services {
   private _capabilityResolver: CapabilityResolver;
   private _internalCapabilities: InternalCapabilitiesService;
   private _skillStore: SkillStore;
+  private _skillResourceProjector: SkillResourceProjector;
 
   private logger: LunarLogger;
   private initialized = false;
@@ -275,6 +277,14 @@ export class Services {
     );
 
     this._internalCapabilities = new InternalCapabilitiesService(logger);
+    this._skillResourceProjector = new SkillResourceProjector(
+      logger,
+      this._skillStore,
+      this._capabilityRegistry,
+      this._internalCapabilities,
+      env.ENABLE_RESOURCE_CAPABILITY,
+      env.ENABLE_PROMPT_CAPABILITY,
+    );
     wireInternalCapabilityProvider(
       this._oauthTools,
       this._internalCapabilities,
@@ -326,6 +336,12 @@ export class Services {
     startupLogger.info("Initializing DynamicCapabilitiesService...");
     await this._dynamicCapabilities.initialize();
     startupLogger.info("DynamicCapabilitiesService initialized");
+
+    if (env.ENABLE_RESOURCE_CAPABILITY || env.ENABLE_PROMPT_CAPABILITY) {
+      startupLogger.info("Initializing SkillResourceProjector...");
+      this._skillResourceProjector.initialize();
+      startupLogger.info("SkillResourceProjector initialized");
+    }
 
     startupLogger.info("Initializing SessionsManager...");
     await this._sessions.initialize();
@@ -409,6 +425,7 @@ export class Services {
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down services...");
 
+    this._skillResourceProjector.shutdown();
     this._capabilityResolver.shutdown();
     this._capabilityRegistry.shutdown();
 

@@ -1,4 +1,4 @@
-import { Prompt, Tool } from "@modelcontextprotocol/sdk/types.js";
+import { Prompt, Resource, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
 import { safeEmit } from "./capability-notifications.js";
 import {
@@ -22,6 +22,16 @@ export interface ActiveCapability<Definition> {
 
 export type ActiveTool = ActiveCapability<Tool>;
 export type ActivePrompt = ActiveCapability<Prompt>;
+export type ActiveResource = ActiveCapability<Resource>;
+
+// Per-kind result of turning a raw definition into its active-set entry: the
+// map key, the real (un-advertised) identity dispatch addresses, and the
+// advertised definition the client sees.
+interface ProjectedCapability<T> {
+  key: string;
+  capabilityName: string;
+  definition: T;
+}
 
 export interface ConsumerContext {
   consumerTag?: string;
@@ -49,6 +59,7 @@ export type ResolvedCapability<T> =
 
 export type ResolvedToolCall = ResolvedCapability<Tool>;
 export type ResolvedPromptGet = ResolvedCapability<Prompt>;
+export type ResolvedResourceRead = ResolvedCapability<Resource>;
 
 type ChangeListener = (kind: CapabilityKind) => void | Promise<void>;
 type Unsubscribe = () => void;
@@ -59,9 +70,11 @@ export class CapabilityResolver {
   private _activeByKind: {
     tools: Map<string, ActiveTool>;
     prompts: Map<string, ActivePrompt>;
+    resources: Map<string, ActiveResource>;
   } = {
     tools: new Map(),
     prompts: new Map(),
+    resources: new Map(),
   };
   // Admin-suppressed server names. Independent of registry membership: setting
   // a name inactive before its server registers still suppresses it on arrival.
@@ -93,6 +106,10 @@ export class CapabilityResolver {
     return this._activeByKind.prompts;
   }
 
+  get activeResources(): ReadonlyMap<string, ActiveResource> {
+    return this._activeByKind.resources;
+  }
+
   setInactiveServers(names: ReadonlySet<string>): void {
     if (setsEqual(this.inactiveNames, names)) return;
     this.inactiveNames.clear();
@@ -119,12 +136,28 @@ export class CapabilityResolver {
     return this.visibleCapabilities(this.activePrompts, "prompts", consumer);
   }
 
+  getVisibleResources(consumer: ConsumerContext): ActiveResource[] {
+    return this.visibleCapabilities(
+      this.activeResources,
+      "resources",
+      consumer,
+    );
+  }
+
   resolveToolCall(name: string, consumer: ConsumerContext): ResolvedToolCall {
     return this.resolve(this.activeTools, "tools", name, consumer);
   }
 
   resolvePromptGet(name: string, consumer: ConsumerContext): ResolvedPromptGet {
     return this.resolve(this.activePrompts, "prompts", name, consumer);
+  }
+
+  // Resources are keyed and resolved by uri, not a prefixed name.
+  resolveResourceRead(
+    uri: string,
+    consumer: ConsumerContext,
+  ): ResolvedResourceRead {
+    return this.resolve(this.activeResources, "resources", uri, consumer);
   }
 
   onChanged(callback: ChangeListener): Unsubscribe {
@@ -141,29 +174,46 @@ export class CapabilityResolver {
   private recompute(): void {
     const prevTools = this._activeByKind.tools;
     const prevPrompts = this._activeByKind.prompts;
+    const prevResources = this._activeByKind.resources;
     // Internal-origin capabilities bypass approval (mcpx-synthesized); they
     // dispatch through InternalCapabilitiesService which gates visibility.
     const nextTools = this.buildActiveSet<Tool>(
       (cap) => cap.tools,
       (def, serverName, cap, origin) =>
         origin === "internal" || this.isToolApproved(serverName, def.name, cap),
+      prefixedProjection,
     );
-    // Prompts are upstream-only (no internal-origin prompts) and are gated by
-    // `catalogManager.isPromptApproved`, which applies the admin per-prompt
-    // allowlist (and the strictness short-circuit) the same way tools are gated.
+    // Internal-origin prompts (skills projected as /slash) bypass approval, like
+    // tools; upstream prompts are gated by `catalogManager.isPromptApproved`.
     const nextPrompts = this.buildActiveSet<Prompt>(
       (cap) => cap.prompts,
-      (def, serverName) =>
+      (def, serverName, _cap, origin) =>
+        origin === "internal" ||
         this.catalogManager.isPromptApproved(serverName, def.name),
+      promptProjection,
+    );
+    // Only internal-origin resources are served; an upstream resource would
+    // need its own approval branch before being included here.
+    const nextResources = this.buildActiveSet<Resource>(
+      (cap) => cap.resources,
+      (_def, _serverName, _cap, origin) => origin === "internal",
+      resourceProjection,
     );
     this._activeByKind.tools = nextTools;
     this._activeByKind.prompts = nextPrompts;
+    this._activeByKind.resources = nextResources;
     if (!activeMapsEqual(prevTools, nextTools)) this.notify("tools");
     if (!activeMapsEqual(prevPrompts, nextPrompts)) this.notify("prompts");
+    if (!activeMapsEqual(prevResources, nextResources)) {
+      this.notify("resources");
+    }
   }
 
-  // Caller-supplied predicate encodes the full inclusion rule per kind.
-  private buildActiveSet<T extends { name: string }>(
+  // `shouldInclude` encodes the per-kind inclusion rule; `project` encodes the
+  // per-kind key + advertised identity (name-prefix for tools/prompts, uri
+  // server-injection for resources, bare name for internal prompts). The loop is
+  // identical across kinds.
+  private buildActiveSet<T>(
     getItems: (
       cap: ServerCapabilities,
     ) => RegisteredCapability<T>[] | undefined,
@@ -173,6 +223,11 @@ export class CapabilityResolver {
       cap: ServerCapabilities,
       origin: CapabilityOrigin,
     ) => boolean,
+    project: (
+      def: T,
+      serverName: string,
+      origin: CapabilityOrigin,
+    ) => ProjectedCapability<T>,
   ): Map<string, ActiveCapability<T>> {
     const result = new Map<string, ActiveCapability<T>>();
     for (const [serverName, capabilities] of this.registry.servers) {
@@ -181,11 +236,11 @@ export class CapabilityResolver {
         if (!shouldInclude(definition, serverName, capabilities, origin)) {
           continue;
         }
-        const prefixedName = `${serverName}${SERVICE_DELIMITER}${definition.name}`;
-        result.set(prefixedName, {
+        const projected = project(definition, serverName, origin);
+        result.set(projected.key, {
           serverName,
-          capabilityName: definition.name,
-          definition: { ...definition, name: prefixedName },
+          capabilityName: projected.capabilityName,
+          definition: projected.definition,
           origin,
         });
       }
@@ -282,6 +337,54 @@ export class CapabilityResolver {
       { kind },
     );
   }
+}
+
+// Internal prompts (skills as /slash) advertise their bare name — upstream
+// prompts are always server-prefixed, so a bare name can't collide. Keeps the
+// slash clean (`/greet-user`, not `/mcpx-skills__greet-user`).
+function promptProjection(
+  def: Prompt,
+  serverName: string,
+  origin: CapabilityOrigin,
+): ProjectedCapability<Prompt> {
+  if (origin === "internal") {
+    return { key: def.name, capabilityName: def.name, definition: def };
+  }
+  return prefixedProjection(def, serverName);
+}
+
+// Tools/prompts: advertise and key by `server__name`; capabilityName keeps the
+// real name so dispatch can address the upstream/internal server.
+function prefixedProjection<T extends { name: string }>(
+  def: T,
+  serverName: string,
+): ProjectedCapability<T> {
+  const key = `${serverName}${SERVICE_DELIMITER}${def.name}`;
+  return { key, capabilityName: def.name, definition: { ...def, name: key } };
+}
+
+// Resources: inject the server as the first segment after the uri scheme — the
+// disambiguation tools get from the name prefix. capabilityName keeps the real
+// (un-injected) uri the read dispatches against; we never reverse-parse the
+// advertised form.
+function resourceProjection(
+  def: Resource,
+  serverName: string,
+): ProjectedCapability<Resource> {
+  const advertisedUri = injectServerIntoUri(def.uri, serverName);
+  return {
+    key: advertisedUri,
+    capabilityName: def.uri,
+    definition: { ...def, uri: advertisedUri },
+  };
+}
+
+function injectServerIntoUri(uri: string, serverName: string): string {
+  const sep = uri.indexOf("://");
+  if (sep < 0) return `${serverName}/${uri}`;
+  const scheme = uri.slice(0, sep);
+  const rest = uri.slice(sep + "://".length);
+  return `${scheme}://${serverName}/${rest}`;
 }
 
 function approvedForServer<T extends { name: string }>(

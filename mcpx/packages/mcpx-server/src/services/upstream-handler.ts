@@ -128,6 +128,7 @@ export class UpstreamHandler
   > = {
     tools: new Map(),
     prompts: new Map(),
+    resources: new Map(), // unused: resources are currently local, not upstream
   };
   private _watchdog: UpstreamWatchdog;
   private readonly reconnectQueue = new Map<string, NodeJS.Timeout>();

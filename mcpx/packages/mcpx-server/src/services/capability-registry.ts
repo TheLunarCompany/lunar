@@ -1,6 +1,7 @@
 import {
   Prompt,
   PromptMessage,
+  Resource,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
@@ -14,14 +15,17 @@ import { safeEmit } from "./capability-notifications.js";
 // auth tool.
 export type CapabilityOrigin = "internal" | "upstream";
 
-export type CapabilityKind = "tools" | "prompts";
+export type CapabilityKind = "tools" | "prompts" | "resources";
 
 // Single source of truth for which capability kinds mcpx currently exposes.
-// `tools` is always on; `prompts` rides the rollout flag. Both the gateway's
-// advertised capabilities and the list-changed broadcasts derive from this, so
-// adding a kind (e.g. resources) is one edit here.
+// `tools` is always on; `prompts` and `resources` ride their rollout flags. Both
+// the gateway's advertised capabilities and the list-changed broadcasts derive
+// from this.
 export function enabledCapabilityKinds(): CapabilityKind[] {
-  return env.ENABLE_PROMPT_CAPABILITY ? ["tools", "prompts"] : ["tools"];
+  const kinds: CapabilityKind[] = ["tools"];
+  if (env.ENABLE_PROMPT_CAPABILITY) kinds.push("prompts");
+  if (env.ENABLE_RESOURCE_CAPABILITY) kinds.push("resources");
+  return kinds;
 }
 
 export interface RegisteredCapability<TDefinition> {
@@ -31,6 +35,7 @@ export interface RegisteredCapability<TDefinition> {
 
 export type RegisteredTool = RegisteredCapability<Tool>;
 export type RegisteredPrompt = RegisteredCapability<Prompt>;
+export type RegisteredResource = RegisteredCapability<Resource>;
 
 export type ServerCapabilities = {
   tools?: RegisteredTool[];
@@ -42,6 +47,10 @@ export type ServerCapabilities = {
   // call failed (e.g. the prompt requires arguments we don't have at
   // discovery).
   promptMessages?: Record<string, PromptMessage[]>;
+  // No content-preview cache (cf. promptMessages): resources are served from a
+  // local source today, so a read costs no round-trip. Revisit when upstream
+  // resources are supported.
+  resources?: RegisteredResource[];
 };
 
 // Keep the promptMessages preview cache a subset of the current prompts, so a
@@ -76,6 +85,13 @@ export function tagPrompts(
   return prompts.map((definition) => ({ definition, origin }));
 }
 
+export function tagResources(
+  resources: Resource[],
+  origin: CapabilityOrigin,
+): RegisteredResource[] {
+  return resources.map((definition) => ({ definition, origin }));
+}
+
 type ChangeListener = () => void | Promise<void>;
 type Unsubscribe = () => void;
 
@@ -101,6 +117,7 @@ export class CapabilityRegistry {
       serverName,
       toolCount: capabilities.tools?.length ?? 0,
       promptCount: capabilities.prompts?.length ?? 0,
+      resourceCount: capabilities.resources?.length ?? 0,
     });
     this.notify();
   }

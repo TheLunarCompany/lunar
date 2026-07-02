@@ -34,6 +34,7 @@ interface CapabilityBroadcastDef {
 const CAPABILITY_BROADCASTS: Record<CapabilityKind, CapabilityBroadcastDef> = {
   tools: { send: (s) => s.server.sendToolListChanged() },
   prompts: { send: (s) => s.server.sendPromptListChanged() },
+  resources: { send: (s) => s.server.sendResourceListChanged() },
 };
 
 export class SessionsManager {

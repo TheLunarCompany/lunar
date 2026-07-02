@@ -12,6 +12,12 @@ export type PromptUsedPayload = {
   consumerTag?: string;
 };
 
+export type ResourceReadPayload = {
+  resourceUri: string;
+  targetServerName: string;
+  consumerTag?: string;
+};
+
 export type TargetServerAddedPayload = {
   name: string;
 };
@@ -59,6 +65,11 @@ export interface PromptUsedEvent {
   payload: PromptUsedPayload;
 }
 
+export interface ResourceReadEvent {
+  eventType: "resource_read";
+  payload: ResourceReadPayload;
+}
+
 export interface TargetServerAddedEvent {
   eventType: "target_server_added";
   payload: TargetServerAddedPayload;
@@ -82,6 +93,7 @@ export interface CatalogUpdatedEvent {
 export type AuditLogEvent =
   | ToolUsedEvent
   | PromptUsedEvent
+  | ResourceReadEvent
   | TargetServerAddedEvent
   | TargetServerRemovedEvent
   | AgentPermissionUpdatedEvent

@@ -8,8 +8,11 @@ import {
   EmptyResultSchema,
   GetPromptRequestSchema,
   ListPromptsRequestSchema,
+  ListResourcesRequestSchema,
   ListToolsRequestSchema,
   Prompt,
+  ReadResourceRequestSchema,
+  Resource,
   ServerCapabilities,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -130,17 +133,22 @@ export async function getServer(
         const session = sessionId
           ? services.sessions.getSession(sessionId)
           : undefined;
-        const result = await services.upstreamHandler.getPrompt(
-          entry.serverName,
-          {
-            ...request.params,
-            name: entry.capabilityName,
-            _meta: withCallerAuthorization(
-              request.params._meta,
-              session?.metadata.authorization,
-            ),
-          },
-        );
+        // Internal prompts (skills as /slash) get their messages locally; upstream
+        // prompts forward to the owning server, like CallTool.
+        const result =
+          entry.origin === "internal"
+            ? services.internalCapabilities.dispatchPrompt(entry)
+            : await services.upstreamHandler.getPrompt(entry.serverName, {
+                ...request.params,
+                name: entry.capabilityName,
+                _meta: withCallerAuthorization(
+                  request.params._meta,
+                  session?.metadata.authorization,
+                ),
+              });
+        if (!result) {
+          throw makeUnavailableError("Prompt", request.params.name, "unknown");
+        }
         services.systemStateTracker.recordPromptGet({
           targetServerName: entry.serverName,
           promptName: entry.capabilityName,
@@ -156,6 +164,65 @@ export async function getServer(
           },
         };
         services.auditLog.log(promptUsedEvent);
+        return result;
+      },
+    );
+  }
+
+  if (env.ENABLE_RESOURCE_CAPABILITY) {
+    server.setRequestHandler(
+      ListResourcesRequestSchema,
+      async (_request, { sessionId }) => {
+        logger.info("ListResourcesRequest received", { sessionId });
+        const consumer = services.sessions.getConsumerContext(sessionId);
+        const resources: Resource[] = services.capabilityResolver
+          .getVisibleResources(consumer)
+          .map((cap) => cap.definition);
+        logger.debug("ListResourcesRequest response", {
+          resourceCount: resources.length,
+        });
+        return { resources };
+      },
+    );
+
+    server.setRequestHandler(
+      ReadResourceRequestSchema,
+      async (request, { sessionId }) => {
+        logger.info("ReadResourceRequest received", {
+          sessionId,
+          uri: request.params.uri,
+        });
+        const consumer = services.sessions.getConsumerContext(sessionId);
+        const resolved = services.capabilityResolver.resolveResourceRead(
+          request.params.uri,
+          consumer,
+        );
+        if (!resolved.ok) {
+          throw makeUnavailableError(
+            "Resource",
+            request.params.uri,
+            resolved.reason,
+          );
+        }
+        const { entry } = resolved;
+        // Only internal-origin resources exist today; an upstream resource
+        // would forward to entry.serverName, like GetPrompt.
+        const result =
+          entry.origin === "internal"
+            ? services.internalCapabilities.dispatchResource(entry)
+            : undefined;
+        if (!result) {
+          throw makeUnavailableError("Resource", request.params.uri, "unknown");
+        }
+        const resourceReadEvent: AuditLogEvent = {
+          eventType: "resource_read",
+          payload: {
+            resourceUri: entry.capabilityName,
+            targetServerName: entry.serverName,
+            consumerTag: consumer.consumerTag || undefined,
+          },
+        };
+        services.auditLog.log(resourceReadEvent);
         return result;
       },
     );
@@ -495,7 +562,7 @@ function executeUpstreamToolCall(options: {
 // Single mapping site for wire-level error strings. IT test asserts on
 // `/not available/i`.
 function makeUnavailableError(
-  kind: "Tool" | "Prompt",
+  kind: "Tool" | "Prompt" | "Resource",
   name: string,
   reason: UnavailableReason,
 ): Error {

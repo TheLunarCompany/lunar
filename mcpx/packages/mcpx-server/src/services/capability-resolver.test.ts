@@ -12,6 +12,7 @@ import {
   CapabilityOrigin,
   CapabilityRegistry,
   RegisteredPrompt,
+  RegisteredResource,
   RegisteredTool,
 } from "./capability-registry.js";
 import { CapabilityResolver, PermissionCheck } from "./capability-resolver.js";
@@ -40,6 +41,21 @@ function makePrompt(
     definition: {
       name,
       description: `Prompt ${name}`,
+    },
+    origin,
+  };
+}
+
+function makeResource(
+  uri: string,
+  origin: CapabilityOrigin = "internal",
+): RegisteredResource {
+  return {
+    definition: {
+      uri,
+      name: `Resource ${uri}`,
+      description: `Resource ${uri}`,
+      mimeType: "text/markdown",
     },
     origin,
   };
@@ -274,6 +290,79 @@ describe("CapabilityResolver", () => {
       expect(
         resolver.activeTools.has(`mcpx${SERVICE_DELIMITER}internal_tool`),
       ).toBe(true);
+    });
+  });
+
+  describe("resources", () => {
+    const SERVER = "mcpx-skills";
+    // Reminder: The alleged-tension between the real URI and the advertised one is the equivalent of
+    // prefixing tools with serverName and SERVICE_DELIMITER. Resources, unlike tools or prompts,
+    // are keyed by URI, so we inject the server as the first segment of the URI to avoid collisions.
+    // The resolver keeps the real URI in capabilityName for dispatch.
+    const REAL_URI = "skill://abc/SKILL.md";
+    const ADVERTISED_URI = "skill://mcpx-skills/abc/SKILL.md";
+
+    it("keys an internal resource by the server-injected URI", () => {
+      registry.registerServer(SERVER, { resources: [makeResource(REAL_URI)] });
+
+      const entry = resolver.activeResources.get(ADVERTISED_URI);
+      expect(entry?.serverName).toBe(SERVER);
+      expect(entry?.origin).toBe("internal");
+      // capabilityName keeps the real uri the read dispatches against; the
+      // advertised definition carries the injected one.
+      expect(entry?.capabilityName).toBe(REAL_URI);
+      expect(entry?.definition.uri).toBe(ADVERTISED_URI);
+    });
+
+    it("injects the server as first segment for a scheme-less URI", () => {
+      registry.registerServer(SERVER, {
+        resources: [makeResource("notes/readme.md")],
+      });
+
+      expect(resolver.activeResources.has("mcpx-skills/notes/readme.md")).toBe(
+        true,
+      );
+    });
+
+    it("excludes upstream-origin resources (only internal are served today)", () => {
+      registry.registerServer("github", {
+        resources: [makeResource(REAL_URI, "upstream")],
+      });
+
+      expect(resolver.activeResources.size).toBe(0);
+    });
+
+    it("resolveResourceRead resolves by the advertised URI", () => {
+      registry.registerServer(SERVER, { resources: [makeResource(REAL_URI)] });
+
+      const resolved = resolver.resolveResourceRead(ADVERTISED_URI, {});
+      expect(resolved.ok).toBe(true);
+      if (resolved.ok) expect(resolved.entry.capabilityName).toBe(REAL_URI);
+    });
+
+    it("resolveResourceRead returns unknown for an unregistered uri", () => {
+      const resolved = resolver.resolveResourceRead(ADVERTISED_URI, {});
+      expect(resolved).toEqual({ ok: false, reason: "unknown" });
+    });
+
+    it("getVisibleResources returns internal resources even when permissions deny all", () => {
+      ({ registry, catalog, resolver } = setup(
+        { isStrict: false, approvals: new Map() },
+        makePermissions(() => false),
+      ));
+      registry.registerServer(SERVER, { resources: [makeResource(REAL_URI)] });
+
+      const visible = resolver.getVisibleResources({});
+      expect(visible.map((r) => r.capabilityName)).toEqual([REAL_URI]);
+    });
+
+    it("notifies a resources change on registration", () => {
+      const notified: CapabilityKind[] = [];
+      resolver.onChanged((kind) => {
+        notified.push(kind);
+      });
+      registry.registerServer(SERVER, { resources: [makeResource(REAL_URI)] });
+      expect(notified).toContain("resources");
     });
   });
 

@@ -9,9 +9,20 @@ import {
   DynamicCapabilitiesMatchingPayload,
   DynamicCapabilitiesMatchingAck,
   PersistedDownstreamSessionDataWire,
+  saveSkillPayloadSchema,
+  updateSkillPayloadSchema,
+  deleteSkillPayloadSchema,
+  SkillWriteAck,
+  DeleteSkillAck,
 } from "@mcpx/webapp-protocol/messages";
+import { Skill } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { v7 as uuidv7 } from "uuid";
+
+const MOCK_SKILL_AUTHOR = {
+  setupOwnerId: "mock-owner",
+  displayName: "Mock Author",
+};
 
 export type SetCatalogPayload = z.input<typeof McpxBoundPayloads.setCatalog>;
 export type SavedSetupItem = z.infer<typeof savedSetupItemSchema>;
@@ -40,6 +51,7 @@ export class MockHubServer {
   private catalogPayload: SetCatalogPayload | undefined;
   private identityPayload: SetIdentityPayload;
   private savedSetups: Map<string, SavedSetupItem> = new Map();
+  private skills: Map<string, Skill> = new Map();
   private downstreamSessions: Map<string, PersistedDownstreamSessionDataWire> =
     new Map();
   private dynamicCapabilitiesResponse: DynamicCapabilitiesMatchingAck = {
@@ -493,6 +505,79 @@ export class MockHubServer {
               errorCode: "not_found",
             });
           }
+        },
+      );
+
+      // Skill authoring handlers
+      socket.on(
+        WEBAPP_BOUND_EVENTS.SAVE_SKILL,
+        (envelope: { payload: unknown }, ack: (res: SkillWriteAck) => void) => {
+          const parsed = saveSkillPayloadSchema.safeParse(envelope.payload);
+          if (!parsed.success) {
+            ack({ success: false, error: "Invalid save-skill payload" });
+            return;
+          }
+          const skill: Skill = {
+            ...parsed.data,
+            id: uuidv7(),
+            author: MOCK_SKILL_AUTHOR,
+            updatedAt: new Date(),
+          };
+          this.skills.set(skill.id, skill);
+          this.logger.info("Saved skill", { id: skill.id, name: skill.name });
+          ack({ success: true, skill });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.UPDATE_SKILL,
+        (envelope: { payload: unknown }, ack: (res: SkillWriteAck) => void) => {
+          const parsed = updateSkillPayloadSchema.safeParse(envelope.payload);
+          if (!parsed.success) {
+            ack({ success: false, error: "Invalid update-skill payload" });
+            return;
+          }
+          const existing = this.skills.get(parsed.data.id);
+          if (!existing) {
+            ack({
+              success: false,
+              error: "Skill not found",
+              errorCode: "not_found",
+            });
+            return;
+          }
+          const skill: Skill = {
+            ...parsed.data,
+            author: existing.author,
+            updatedAt: new Date(),
+          };
+          this.skills.set(skill.id, skill);
+          this.logger.info("Updated skill", { id: skill.id });
+          ack({ success: true, skill });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.DELETE_SKILL,
+        (
+          envelope: { payload: unknown },
+          ack: (res: DeleteSkillAck) => void,
+        ) => {
+          const parsed = deleteSkillPayloadSchema.safeParse(envelope.payload);
+          if (!parsed.success) {
+            ack({ success: false, error: "Invalid delete-skill payload" });
+            return;
+          }
+          if (!this.skills.delete(parsed.data.id)) {
+            ack({
+              success: false,
+              error: "Skill not found",
+              errorCode: "not_found",
+            });
+            return;
+          }
+          this.logger.info("Deleted skill", { id: parsed.data.id });
+          ack({ success: true });
         },
       );
 

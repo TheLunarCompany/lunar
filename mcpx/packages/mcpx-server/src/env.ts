@@ -1,7 +1,13 @@
 import { createEnv } from "@mcpx/toolkit-core/config";
-import "dotenv/config";
+import dotenv from "dotenv";
 import path from "path";
 import { z } from "zod/v4";
+
+// Only load .env outside tests. Jest sets JEST_WORKER_ID; IT runs preload via
+// dotenv-cli. Loading here would leak .env into tests and override their setup.
+if (process.env["NODE_ENV"] !== "test" && !process.env["JEST_WORKER_ID"]) {
+  dotenv.config();
+}
 
 /*
  * Enum of allowed tags for log hiding
@@ -125,6 +131,7 @@ const envSchema = z
       .default(DEFAULT_TOKENIZER_ENCODING),
     STRICTNESS_REQUIRED: z.stringbool().default(false),
     ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
+    ENABLE_RESOURCE_CAPABILITY: z.stringbool().default(false),
     LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
     LLM_REQUEST_TIMEOUT_MS: z.coerce.number().default(20000),
     MCPX_SERVER_URL: z.string().default("http://127.0.0.1:9000"),
@@ -201,6 +208,7 @@ const NON_SECRET_KEYS = [
   "IS_ENTERPRISE",
   "STRICTNESS_REQUIRED",
   "ENABLE_PROMPT_CAPABILITY",
+  "ENABLE_RESOURCE_CAPABILITY",
   "LOG_REDACT_KEYS",
   "LLM_REQUEST_TIMEOUT_MS",
   "MCPX_SERVER_URL",

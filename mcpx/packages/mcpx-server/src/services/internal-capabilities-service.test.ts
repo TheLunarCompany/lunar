@@ -1,11 +1,23 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  GetPromptResult,
+  Prompt,
+  Resource,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 import { CapabilityRegistry, tagTools } from "./capability-registry.js";
-import { ActiveTool, ConsumerContext } from "./capability-resolver.js";
+import {
+  ActivePrompt,
+  ActiveResource,
+  ActiveTool,
+  ConsumerContext,
+} from "./capability-resolver.js";
 import {
   HiddenInternalCapabilityError,
   InternalCapabilitiesService,
   InternalCapabilityProvider,
+  InternalPromptHandler,
+  InternalResourceHandler,
   InternalToolHandler,
   UnknownInternalCapabilityError,
   wireInternalCapabilityProvider,
@@ -35,6 +47,38 @@ function activeTool(serverName: string, capabilityName: string): ActiveTool {
     definition: makeTool(capabilityName),
     origin: "internal",
   };
+}
+
+// capabilityName is the real uri; definition.uri is the advertised (injected) one.
+function activeResource(
+  serverName: string,
+  capabilityName: string,
+  advertisedUri: string,
+): ActiveResource {
+  const definition: Resource = { uri: advertisedUri, name: capabilityName };
+  return { serverName, capabilityName, definition, origin: "internal" };
+}
+
+function resourceHandler(
+  serverName: string,
+  read: (uri: string) => { mimeType: string; text: string } | undefined,
+): InternalResourceHandler {
+  return { kind: "resources", serverName, read };
+}
+
+function activePrompt(
+  serverName: string,
+  capabilityName: string,
+): ActivePrompt {
+  const definition: Prompt = { name: capabilityName };
+  return { serverName, capabilityName, definition, origin: "internal" };
+}
+
+function promptHandler(
+  serverName: string,
+  getPrompt: (name: string) => GetPromptResult | undefined,
+): InternalPromptHandler {
+  return { kind: "prompts", serverName, getPrompt };
 }
 
 describe("wireInternalCapabilityProvider", () => {
@@ -205,5 +249,92 @@ describe("InternalCapabilitiesService.dispatchTool", () => {
         {} as ConsumerContext,
       ),
     ).rejects.toBeInstanceOf(HiddenInternalCapabilityError);
+  });
+});
+
+describe("InternalCapabilitiesService.dispatchResource", () => {
+  const REAL_URI = "skill://abc/SKILL.md";
+  const ADVERTISED_URI = "skill://mcpx-skills/abc/SKILL.md";
+
+  it("reads by the real uri and echoes the advertised uri in the envelope", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    let readArg = "";
+    service.register(
+      resourceHandler("mcpx-skills", (uri) => {
+        readArg = uri;
+        return { mimeType: "text/markdown", text: "# body" };
+      }),
+    );
+
+    const result = service.dispatchResource(
+      activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI),
+    );
+
+    expect(readArg).toBe(REAL_URI);
+    expect(result).toEqual({
+      contents: [
+        { uri: ADVERTISED_URI, mimeType: "text/markdown", text: "# body" },
+      ],
+    });
+  });
+
+  it("returns undefined when the repository has no content for the uri", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    service.register(resourceHandler("mcpx-skills", () => undefined));
+
+    expect(
+      service.dispatchResource(
+        activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("throws UnknownInternalCapabilityError when no handler owns the server", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    // no handler registered for mcpx-skills this time
+    expect(() =>
+      service.dispatchResource(
+        activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI),
+      ),
+    ).toThrow(UnknownInternalCapabilityError);
+  });
+});
+
+describe("InternalCapabilitiesService.dispatchPrompt", () => {
+  const result: GetPromptResult = {
+    messages: [{ role: "user", content: { type: "text", text: "hi" } }],
+  };
+
+  it("gets by the real prompt name", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    let nameArg = "";
+    service.register(
+      promptHandler("mcpx-skills", (name) => {
+        nameArg = name;
+        return result;
+      }),
+    );
+
+    expect(service.dispatchPrompt(activePrompt("mcpx-skills", "greet"))).toBe(
+      result,
+    );
+    expect(nameArg).toBe("greet");
+  });
+
+  it("returns undefined when the handler has no such prompt", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    service.register(promptHandler("mcpx-skills", () => undefined));
+
+    expect(
+      service.dispatchPrompt(activePrompt("mcpx-skills", "missing")),
+    ).toBeUndefined();
+  });
+
+  it("throws UnknownInternalCapabilityError when no handler owns the server", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    // no handler registered for mcpx-skills this time
+    expect(() =>
+      service.dispatchPrompt(activePrompt("mcpx-skills", "greet")),
+    ).toThrow(UnknownInternalCapabilityError);
   });
 });

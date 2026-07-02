@@ -15,6 +15,14 @@ import {
 } from "../services/capability-registry.js";
 import { CapabilityResolver } from "../services/capability-resolver.js";
 import { CatalogManagerI } from "../services/catalog-manager.js";
+import {
+  InternalCapabilityHandler,
+  InternalToolHandler,
+} from "../services/internal-capabilities-service.js";
+
+const isToolHandler = (
+  h: InternalCapabilityHandler,
+): h is InternalToolHandler => h.kind === "tools";
 
 type ConsumerConfig = { _type: string; allow?: string[] };
 
@@ -228,7 +236,7 @@ describe("DynamicCapabilitiesService", () => {
 
       const { handlers, eagerRegistrations } =
         service.getInternalCapabilityRegistrations();
-      const names = handlers.map((h) => h.name);
+      const names = handlers.filter(isToolHandler).map((h) => h.name);
       expect(names).toContain("get_new_capabilities");
       expect(names).toContain("clear_tools");
       expect(handlers).toHaveLength(2);
@@ -249,7 +257,8 @@ describe("DynamicCapabilitiesService", () => {
 
       const handler = service
         .getInternalCapabilityRegistrations()
-        .handlers.find((h) => h.name === "get_new_capabilities");
+        .handlers.filter(isToolHandler)
+        .find((h) => h.name === "get_new_capabilities");
       expect(
         handler?.isVisible(
           { consumerTag: "no-mode" },

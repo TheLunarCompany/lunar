@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 export const auditLogEventTypeSchema = z.enum([
   "tool_used",
   "prompt_used",
+  "resource_read",
   "target_server_added",
   "target_server_removed",
   "agent_permission_updated",
@@ -44,6 +45,14 @@ export const auditLogEntrySchema = z.discriminatedUnion("eventType", [
       promptName: z.string(),
       targetServerName: z.string(),
       args: z.record(z.string(), z.unknown()).optional(),
+      consumerTag: z.string().optional(),
+    }),
+  }),
+  baseAuditLogSchema.extend({
+    eventType: z.literal("resource_read"),
+    payload: z.object({
+      resourceUri: z.string(),
+      targetServerName: z.string(),
       consumerTag: z.string().optional(),
     }),
   }),
