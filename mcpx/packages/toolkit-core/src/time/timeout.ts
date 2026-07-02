@@ -14,19 +14,26 @@ export async function withTimeout<T>(
   operation?: string,
 ): Promise<T> {
   const operationDesc = operation ?? "Operation";
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () =>
-          reject(
-            new TimeoutError(
-              `${operationDesc} timed out after ${timeoutMs}ms`,
-              timeoutMs,
-            ),
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(
+          new TimeoutError(
+            `${operationDesc} timed out after ${timeoutMs}ms`,
+            timeoutMs,
           ),
-        timeoutMs,
-      ),
-    ),
-  ]);
+        ),
+      timeoutMs,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
