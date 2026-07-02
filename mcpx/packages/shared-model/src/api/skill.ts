@@ -2,28 +2,30 @@ import { z } from "zod/v4";
 
 // ============ Skill Domain Model ============
 // A skill is inert instruction text (SKILL.md: name, description, body) plus an optional
-// tool group. The single shape that gets authored, stored, pushed, adopted, and served.
+// capability group. The single shape that gets authored, stored, pushed, adopted, and served.
 // Lives in the lowest layer; the hub→MCPX wire format and the admin-ui API build on it.
 
-// Distinct from setup tool groups, which key items by server name. A shared skill must
-// reference catalog items everyone can resolve, so items carry the stable catalogItemId.
-export const catalogItemIdSchema = z.string().brand<"CatalogItemId">();
-export type CatalogItemId = z.infer<typeof catalogItemIdSchema>;
+const capabilitySelectionSchema = z.union([
+  z.array(z.string()),
+  z.literal("*"),
+]);
 
-// Similar to toolGroup schema from Setup, but different semantics.
-// Stored as an array, not a record: keeps the CatalogItemId brand (zod strips brands on
-// record keys) and stays extensible. Build a Map at lookup sites for O(1). "*" = all tools.
-export const skillToolGroupItemSchema = z.object({
-  catalogItemId: catalogItemIdSchema,
-  tools: z.union([z.array(z.string()), z.literal("*")]),
+// Per catalog item, the tools and prompts this skill's capability group selects.
+// Either list may be "*" (all from that item) or empty (none).
+export const skillCapabilityGroupItemSchema = z.object({
+  catalogItemId: z.uuid(),
+  tools: capabilitySelectionSchema,
+  prompts: capabilitySelectionSchema,
 });
-export type SkillToolGroupItem = z.infer<typeof skillToolGroupItemSchema>;
+export type SkillCapabilityGroupItem = z.infer<
+  typeof skillCapabilityGroupItemSchema
+>;
 
-export const skillToolGroupSchema = z.object({
+export const skillCapabilityGroupSchema = z.object({
   name: z.string().optional(),
-  items: z.array(skillToolGroupItemSchema),
+  items: z.array(skillCapabilityGroupItemSchema),
 });
-export type SkillToolGroup = z.infer<typeof skillToolGroupSchema>;
+export type SkillCapabilityGroup = z.infer<typeof skillCapabilityGroupSchema>;
 
 // displayName powers "by <author>" attribution.
 export const skillAuthorSchema = z.object({
@@ -34,12 +36,13 @@ export type SkillAuthor = z.infer<typeof skillAuthorSchema>;
 
 // The authored core, before Hub mints metadata.
 export const skillDraftSchema = z.object({
-  name: z.string(),
-  description: z.string(),
+  // name/description caps mirror the agentskills.io SKILL.md spec.
+  name: z.string().max(64),
+  description: z.string().max(1024),
   body: z.string(),
   // Also project the Prompt / `/slash` face, not just the skill:// Resource.
   exposeAsPrompt: z.boolean().default(true),
-  toolGroup: skillToolGroupSchema.optional(),
+  capabilityGroup: skillCapabilityGroupSchema.optional(),
 });
 export type SkillDraft = z.infer<typeof skillDraftSchema>;
 

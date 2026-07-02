@@ -18,6 +18,11 @@ import {
   loadDownstreamSessionPayloadSchema,
   deleteDownstreamSessionPayloadSchema,
 } from "./downstream-session.js";
+import {
+  saveSkillPayloadSchema,
+  updateSkillPayloadSchema,
+  deleteSkillPayloadSchema,
+} from "./author-skill.js";
 
 // Raw payload schemas
 export const WebappBoundPayloads = {
@@ -35,6 +40,9 @@ export const WebappBoundPayloads = {
   storeDownstreamSession: storeDownstreamSessionPayloadSchema,
   loadDownstreamSession: loadDownstreamSessionPayloadSchema,
   deleteDownstreamSession: deleteDownstreamSessionPayloadSchema,
+  saveSkill: saveSkillPayloadSchema,
+  updateSkill: updateSkillPayloadSchema,
+  deleteSkill: deleteSkillPayloadSchema,
 } as const;
 
 export type WebappBoundPayload =
@@ -56,6 +64,9 @@ export const WEBAPP_BOUND_EVENTS = {
   STORE_DOWNSTREAM_SESSION: "store-downstream-session",
   LOAD_DOWNSTREAM_SESSION: "load-downstream-session",
   DELETE_DOWNSTREAM_SESSION: "delete-downstream-session",
+  SAVE_SKILL: "save-skill",
+  UPDATE_SKILL: "update-skill",
+  DELETE_SKILL: "delete-skill",
 } as const;
 
 export type WebappBoundEventName =
@@ -100,7 +111,13 @@ export type WebappBoundPayloadOf<E extends WebappBoundEventName> =
                                 ? z.input<
                                     typeof deleteDownstreamSessionPayloadSchema
                                   >
-                                : never;
+                                : E extends typeof WEBAPP_BOUND_EVENTS.SAVE_SKILL
+                                  ? z.input<typeof saveSkillPayloadSchema>
+                                  : E extends typeof WEBAPP_BOUND_EVENTS.UPDATE_SKILL
+                                    ? z.input<typeof updateSkillPayloadSchema>
+                                    : E extends typeof WEBAPP_BOUND_EVENTS.DELETE_SKILL
+                                      ? z.input<typeof deleteSkillPayloadSchema>
+                                      : never;
 
 // This maps the kebab-case event names to their enveloped message types
 export type WebappBoundEnvelopedOf<E extends WebappBoundEventName> =

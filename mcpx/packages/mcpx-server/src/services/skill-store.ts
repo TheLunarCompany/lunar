@@ -56,7 +56,7 @@ export class SkillStore implements SkillStoreI {
   // persisted the skill without us learning its id. Today the next authoritative push
   // (applyPersonalSkills) reconciles that. A client-supplied idempotency key would make create
   // retries safe (dedupe instead of duplicate); not implemented yet.
-  // TODO RND-823: better resiliency
+  // TODO: better resiliency
   async createSkill(draft: SkillDraft): Promise<Skill> {
     const skill = await this.hubClient.createSkill(draft);
     this.ingestPersonal(skill);

@@ -37,6 +37,22 @@ export type {
 export { privateHeadersSchema } from "./mcpx-bound/set-catalog.js";
 export { setPersonalSkillsPayloadSchema } from "./mcpx-bound/set-skills.js";
 export type { SetPersonalSkillsPayload } from "./mcpx-bound/set-skills.js";
+export {
+  saveSkillPayloadSchema,
+  updateSkillPayloadSchema,
+  deleteSkillPayloadSchema,
+  skillErrorCodeSchema,
+  skillWriteAckSchema,
+  deleteSkillAckSchema,
+} from "./webapp-bound/author-skill.js";
+export type {
+  SkillErrorCode,
+  SkillWriteAck,
+  DeleteSkillAck,
+  SaveSkillPayload,
+  UpdateSkillPayload,
+  DeleteSkillPayload,
+} from "./webapp-bound/author-skill.js";
 export type { SetProfileSecretsPayload } from "./mcpx-bound/set-profile-secrets.js";
 export type { SetOauthCredentialsPayload } from "./mcpx-bound/set-oauth-credentials.js";
 export type {

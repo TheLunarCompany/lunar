@@ -49,7 +49,7 @@ import { HubDownstreamSessionClient } from "./hub-downstream-session-client.js";
 import { CapabilityRegistry } from "./capability-registry.js";
 import { CapabilityResolver } from "./capability-resolver.js";
 import { SkillStore } from "./skill-store.js";
-import { TempSkillHubClient } from "./temp-skill-hub-client.js";
+import { HubSkillClient } from "./hub-skill-client.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -211,7 +211,7 @@ export class Services {
 
     this._skillStore = new SkillStore(
       logger,
-      new TempSkillHubClient(this._identityService),
+      new HubSkillClient(() => this._hubService.getSocketAdapter(), logger),
     );
 
     const sessionsManager = new SessionsManager(
@@ -314,6 +314,10 @@ export class Services {
     this._hubService.addStatusListener((status) => {
       this.logger.debug("Hub connection status changed", status);
     });
+
+    this._hubService.addPersonalSkillsListener((payload) =>
+      this._skillStore.applyPersonalSkills(payload),
+    );
 
     startupLogger.info("Initializing HubService...");
     await this._hubService.initialize();

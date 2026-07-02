@@ -7,6 +7,7 @@ import { setIdentityPayloadSchema } from "./set-identity.js";
 import { initiateOAuthPayloadSchema } from "./initiate-oauth.js";
 import { completeOAuthPayloadSchema } from "./complete-oauth.js";
 import { setOauthCredentialsPayloadSchema } from "./set-oauth-credentials.js";
+import { setPersonalSkillsPayloadSchema } from "./set-skills.js";
 
 // Raw payload schemas
 export const McpxBoundPayloads = {
@@ -17,6 +18,7 @@ export const McpxBoundPayloads = {
   setIdentity: setIdentityPayloadSchema,
   initiateOAuth: initiateOAuthPayloadSchema,
   completeOAuth: completeOAuthPayloadSchema,
+  setPersonalSkills: setPersonalSkillsPayloadSchema,
 } as const;
 
 export type McpxBoundPayload =
@@ -30,6 +32,7 @@ export const MCPX_BOUND_EVENTS = {
   SET_IDENTITY: "set-identity",
   INITIATE_OAUTH: "initiate-oauth",
   COMPLETE_OAUTH: "complete-oauth",
+  SET_PERSONAL_SKILLS: "set-personal-skills",
 } as const;
 
 export type McpxBoundEventName =
@@ -51,7 +54,9 @@ export type McpxBoundPayloadOf<E extends McpxBoundEventName> =
               ? z.input<typeof initiateOAuthPayloadSchema>
               : E extends typeof MCPX_BOUND_EVENTS.COMPLETE_OAUTH
                 ? z.input<typeof completeOAuthPayloadSchema>
-                : never;
+                : E extends typeof MCPX_BOUND_EVENTS.SET_PERSONAL_SKILLS
+                  ? z.input<typeof setPersonalSkillsPayloadSchema>
+                  : never;
 
 // This maps the kebab-case event names to their enveloped message types
 export type McpxBoundEnvelopedOf<E extends McpxBoundEventName> =

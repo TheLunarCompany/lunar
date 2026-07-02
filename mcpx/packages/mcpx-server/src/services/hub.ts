@@ -8,6 +8,7 @@ import {
   dynamicCapabilitiesMatchingAckSchema,
   McpxBoundPayloads,
   safeParseEnvelopedMessage,
+  SetPersonalSkillsPayload,
   WEBAPP_BOUND_EVENTS,
   WebappBoundEventName,
   WebappBoundPayloadOf,
@@ -131,6 +132,10 @@ const envelopedSetOauthCredentialsSafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.setOauthCredentials,
 );
 
+const envelopedSetPersonalSkillsSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setPersonalSkills,
+);
+
 export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
@@ -186,6 +191,9 @@ export class HubService {
   private readonly identityService: IdentityServiceI;
   private readonly upstreamHandler: TargetServerChangeNotifier &
     UpstreamHandlerOAuthHandler;
+  private readonly personalSkillsListeners = new Set<
+    (payload: SetPersonalSkillsPayload) => void
+  >();
   readonly savedSetups: SavedSetupsClient;
 
   constructor(
@@ -262,6 +270,12 @@ export class HubService {
 
   addStatusListener(listener: (status: AuthStatus) => void): void {
     this._status.addListener(listener);
+  }
+
+  addPersonalSkillsListener(
+    listener: (payload: SetPersonalSkillsPayload) => void,
+  ): void {
+    this.personalSkillsListeners.add(listener);
   }
 
   get latestBootPhase(): BootPhase {
@@ -620,6 +634,35 @@ export class HubService {
           ack?.({ ok: true });
         } catch (e) {
           this.logger.error("Failed to handle set-identity", {
+            ...loggableError(e),
+            envelope,
+          });
+          ack?.({ ok: false });
+        }
+      },
+    );
+
+    this.socket.on(
+      "set-personal-skills",
+      (envelope, ack?: (res: { ok: boolean }) => void) => {
+        try {
+          const parseResult = envelopedSetPersonalSkillsSafeParse(envelope);
+          if (!parseResult.success) {
+            this.logger.error("Failed to parse set-personal-skills message", {
+              error: parseResult.error,
+              envelope,
+            });
+            ack?.({ ok: false });
+            return;
+          }
+          const message = parseResult.data.payload;
+          this.logger.info("Received set-personal-skills message from Hub", {
+            count: message.skills.length,
+          });
+          this.personalSkillsListeners.forEach((listener) => listener(message));
+          ack?.({ ok: true });
+        } catch (e) {
+          this.logger.error("Failed to handle set-personal-skills", {
             ...loggableError(e),
             envelope,
           });
