@@ -10,6 +10,8 @@ const capabilitySelectionSchema = z.union([
   z.literal("*"),
 ]);
 
+export const skillNameSlugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 // Per catalog item, the tools and prompts this skill's capability group selects.
 // Either list may be "*" (all from that item) or empty (none).
 export const skillCapabilityGroupItemSchema = z.object({
@@ -37,9 +39,9 @@ export type SkillAuthor = z.infer<typeof skillAuthorSchema>;
 // The authored core, before Hub mints metadata.
 export const skillDraftSchema = z.object({
   // name/description caps mirror the agentskills.io SKILL.md spec.
-  name: z.string().max(64),
-  description: z.string().max(1024),
-  body: z.string(),
+  name: z.string().trim().min(1).max(64).regex(skillNameSlugRegex),
+  description: z.string().trim().min(1).max(1024),
+  body: z.string().trim().min(1),
   // Also project the Prompt / `/slash` face, not just the skill:// Resource.
   exposeAsPrompt: z.boolean().default(true),
   capabilityGroup: skillCapabilityGroupSchema.optional(),
@@ -53,3 +55,14 @@ export const skillSchema = skillDraftSchema.extend({
   updatedAt: z.coerce.date(),
 });
 export type Skill = z.infer<typeof skillSchema>;
+
+export const skillCatalogResponseSchema = z.object({
+  skills: z.array(skillSchema),
+});
+export type SkillCatalogResponse = z.infer<typeof skillCatalogResponseSchema>;
+
+export const upsertSkillRequestSchema = skillDraftSchema;
+export type UpsertSkillRequest = z.input<typeof upsertSkillRequestSchema>;
+
+export const createSkillResponseSchema = skillSchema;
+export type CreateSkillResponse = z.infer<typeof createSkillResponseSchema>;

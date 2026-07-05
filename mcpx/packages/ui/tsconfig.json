@@ -10,6 +10,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
+      "@mcpx/shared-model": ["../shared-model/src/index.ts"],
+      "@mcpx/shared-model/*": ["../shared-model/src/*"],
       "@mcpx/*": ["../packages/*/src"]
     },
     "allowJs": true,

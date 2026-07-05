@@ -20,6 +20,7 @@ import { makeHubConnectionGuard } from "./hub-connection-guard.js";
 import { buildOAuthRouter } from "./oauth-router.js";
 import { buildCatalogRouter } from "./catalog.js";
 import { buildDownstreamTransportsRouter } from "./downstream-transports.js";
+import { buildSkillsRouter } from "./skills.js";
 import { bindUIWebsocket } from "./ws-ui.js";
 import { LOG_FLAGS } from "../log-flags.js";
 
@@ -135,6 +136,14 @@ export async function buildMcpxServer(
       authGuard,
       services,
       logger.child({ component: "CatalogRouter" }),
+    ),
+  );
+  app.use(
+    "/skills",
+    buildSkillsRouter(
+      authGuard,
+      services,
+      logger.child({ component: "SkillsRouter" }),
     ),
   );
 

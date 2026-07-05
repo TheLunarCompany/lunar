@@ -8,7 +8,8 @@ import {
   expect,
   it,
 } from "vitest";
-import { handlers, resetMockApiState } from "./handlers";
+import { handlers, parseMockSkills, resetMockApiState } from "./handlers";
+import { skillSchema } from "@mcpx/shared-model";
 
 const server = setupServer(...handlers);
 const slackCatalogItemId = "018f6f21-5f3e-7b40-a84d-c276df5b9d91";
@@ -180,5 +181,208 @@ describe("MSW handlers", () => {
       message: "The following capabilities are not approved at catalog level",
       invalid: [{ type: "prompt", name: "not-org-approved" }],
     });
+  });
+
+  it("mocks personal skill reads", async () => {
+    const response = await fetch("http://localhost:9000/skills");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      skills: expect.arrayContaining([
+        expect.objectContaining({
+          name: "review-pull-requests",
+          body: expect.stringContaining("# Review pull requests"),
+        }),
+      ]),
+    });
+  });
+
+  it("warns and skips invalid mock skill records instead of throwing", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const skills = parseMockSkills([
+      {
+        id: "0190a000-0000-7000-8000-000000000001",
+        name: "valid-mock-skill",
+        description: "A valid mock skill.",
+        body: "# Valid",
+        exposeAsPrompt: true,
+        author: {
+          setupOwnerId: "mock-user",
+          displayName: "Mock User",
+        },
+        updatedAt: new Date("2026-06-29T10:00:00.000Z"),
+      },
+      {
+        id: "0190a000-0000-7000-8000-000000000002",
+        name: "x".repeat(65),
+        description: "Invalid mock skill.",
+        body: "# Invalid",
+        exposeAsPrompt: true,
+        author: {
+          setupOwnerId: "mock-user",
+          displayName: "Mock User",
+        },
+        updatedAt: new Date("2026-06-29T10:00:00.000Z"),
+      },
+    ]);
+
+    expect(skills).toHaveLength(1);
+    expect(skills[0]?.name).toBe("valid-mock-skill");
+    expect(warn).toHaveBeenCalledWith(
+      "Invalid mock skill skipped",
+      expect.any(Object),
+    );
+    warn.mockRestore();
+  });
+
+  it("mocks personal skill creation with valid skill metadata", async () => {
+    const response = await fetch("http://localhost:9000/skills", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "write-release-notes",
+        description: "Summarize shipped changes.",
+        body: "# Write release notes",
+        exposeAsPrompt: true,
+      }),
+    });
+
+    expect(response.status).toBe(201);
+    const skill = await response.json();
+    expect(skillSchema.safeParse(skill).success).toBe(true);
+    expect(skill).toMatchObject({
+      name: "write-release-notes",
+      author: { displayName: "Mock User" },
+    });
+
+    const listResponse = await fetch("http://localhost:9000/skills");
+    await expect(listResponse.json()).resolves.toEqual({
+      skills: expect.arrayContaining([
+        expect.objectContaining({ name: "write-release-notes" }),
+      ]),
+    });
+  });
+
+  it("mocks personal skill updates", async () => {
+    const listResponse = await fetch("http://localhost:9000/skills");
+    const { skills } = (await listResponse.json()) as {
+      skills: Array<{ id: string }>;
+    };
+
+    const response = await fetch(
+      `http://localhost:9000/skills/${skills[0].id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "updated-skill",
+          description: "Updated description.",
+          body: "# Updated",
+          exposeAsPrompt: false,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      id: skills[0].id,
+      name: "updated-skill",
+      exposeAsPrompt: false,
+    });
+
+    const updatedListResponse = await fetch("http://localhost:9000/skills");
+    await expect(updatedListResponse.json()).resolves.toEqual({
+      skills: expect.arrayContaining([
+        expect.objectContaining({
+          id: skills[0].id,
+          name: "updated-skill",
+        }),
+      ]),
+    });
+  });
+
+  it("mocks missing skill updates as 404", async () => {
+    const response = await fetch(
+      "http://localhost:9000/skills/0190a000-0000-7000-8000-000000000099",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "updated-skill",
+          description: "Updated description.",
+          body: "# Updated",
+          exposeAsPrompt: true,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      message: "Skill not found",
+    });
+  });
+
+  it("mocks personal skill hard delete", async () => {
+    const listResponse = await fetch("http://localhost:9000/skills");
+    const { skills } = (await listResponse.json()) as {
+      skills: Array<{ id: string }>;
+    };
+
+    const deleteResponse = await fetch(
+      `http://localhost:9000/skills/${skills[0].id}`,
+      { method: "DELETE" },
+    );
+
+    expect(deleteResponse.status).toBe(204);
+
+    const updatedListResponse = await fetch("http://localhost:9000/skills");
+    await expect(updatedListResponse.json()).resolves.toEqual({
+      skills: expect.not.arrayContaining([
+        expect.objectContaining({ id: skills[0].id }),
+      ]),
+    });
+  });
+
+  it("mocks missing skill deletes as 404", async () => {
+    const response = await fetch(
+      "http://localhost:9000/skills/0190a000-0000-7000-8000-000000000099",
+      { method: "DELETE" },
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      message: "Skill not found",
+    });
+  });
+
+  it("resets mocked personal skills", async () => {
+    await fetch("http://localhost:9000/skills", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "temporary-skill",
+        description: "Created during a mock test.",
+        body: "# Temporary skill",
+        exposeAsPrompt: true,
+      }),
+    });
+
+    resetMockApiState();
+
+    const response = await fetch("http://localhost:9000/skills");
+    const { skills } = (await response.json()) as {
+      skills: Array<{ name: string }>;
+    };
+    expect(skills).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "review-pull-requests" }),
+      ]),
+    );
+    expect(skills).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "temporary-skill" }),
+      ]),
+    );
   });
 });

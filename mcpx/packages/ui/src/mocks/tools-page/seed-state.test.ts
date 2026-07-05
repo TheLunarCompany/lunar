@@ -32,7 +32,7 @@ describe("seedToolsPageMockState", () => {
     );
     expect(
       state.systemState?.targetServers.map((server) => server.name),
-    ).toEqual(["github", "linear", "calculator", "broken-server"]);
+    ).toEqual(["github", "linear", "calculator", "broken-server", "slack"]);
 
     const githubServer = state.systemState?.targetServers.find(
       (server) => server.name === "github",
@@ -91,6 +91,9 @@ describe("seedToolsPageMockState", () => {
           services: {
             github: ["list_issues"],
             linear: ["list_projects", "sprint_planning_brief"],
+            calculator: ["evaluate"],
+            "broken-server": ["health_check"],
+            slack: ["post_message"],
           },
         },
         {
@@ -103,6 +106,11 @@ describe("seedToolsPageMockState", () => {
       ]),
     );
     expect(state.appConfig?.toolGroups).toHaveLength(10);
+    expect(
+      state.appConfig?.toolGroups.filter(
+        (group) => Object.keys(group.services).length === 5,
+      ),
+    ).toHaveLength(3);
     expect(toolsStore.getState().tools).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

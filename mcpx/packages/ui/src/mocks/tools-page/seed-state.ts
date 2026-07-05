@@ -597,6 +597,7 @@ const mockSystemState: SystemState = {
     {
       _type: "stdio",
       name: "calculator",
+      catalogItemId: "0192f1c6-ca1c-7d52-89aa-b76c4d6e8ef1",
       state: {
         type: "pending-input",
         missingEnvVars: [
@@ -607,22 +608,90 @@ const mockSystemState: SystemState = {
       command: "npx",
       args: ["-y", "@example/mcp-calculator"],
       usage: { callCount: 0 },
-      tools: [],
-      originalTools: [],
+      tools: [
+        {
+          name: "evaluate",
+          description: "Evaluate a deterministic calculation",
+          inputSchema: { type: "object", properties: {} },
+          parameters: [],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalTools: [
+        {
+          name: "evaluate",
+          description: "Evaluate a deterministic calculation",
+          inputSchema: { type: "object", properties: {} },
+        },
+      ],
       prompts: [],
       originalPrompts: [],
     },
     {
       _type: "sse",
       name: "broken-server",
+      catalogItemId: "0192f1c6-b20c-7d52-89aa-b76c4d6e8ef1",
       state: {
         type: "connection-failed",
         error: { name: "Error", message: "ECONNREFUSED 127.0.0.1:8080" },
       },
       url: "http://127.0.0.1:8080/sse",
       usage: { callCount: 0 },
-      tools: [],
-      originalTools: [],
+      tools: [
+        {
+          name: "health_check",
+          description: "Check whether the remote server is healthy",
+          inputSchema: { type: "object", properties: {} },
+          parameters: [],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalTools: [
+        {
+          name: "health_check",
+          description: "Check whether the remote server is healthy",
+          inputSchema: { type: "object", properties: {} },
+        },
+      ],
+      prompts: [],
+      originalPrompts: [],
+    },
+    {
+      _type: "streamable-http",
+      name: "slack",
+      catalogItemId: "0192f1c6-51ac-7d52-89aa-b76c4d6e8ef1",
+      state: { type: "connected" },
+      url: "https://mcp.slack.example.com/mcp",
+      headers: {},
+      usage: { callCount: 0 },
+      tools: [
+        {
+          name: "post_message",
+          description: "Post a message to a Slack channel",
+          inputSchema: { type: "object", properties: {} },
+          parameters: [],
+          usage: { callCount: 0 },
+        },
+        {
+          name: "search_messages",
+          description: "Search recent Slack messages",
+          inputSchema: { type: "object", properties: {} },
+          parameters: [],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalTools: [
+        {
+          name: "post_message",
+          description: "Post a message to a Slack channel",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "search_messages",
+          description: "Search recent Slack messages",
+          inputSchema: { type: "object", properties: {} },
+        },
+      ],
       prompts: [],
       originalPrompts: [],
     },
@@ -755,6 +824,9 @@ const mockAppConfig: AppConfig = {
       services: {
         github: ["list_issues"],
         linear: ["list_projects", "sprint_planning_brief"],
+        calculator: ["evaluate"],
+        "broken-server": ["health_check"],
+        slack: ["post_message"],
       },
     },
     {
@@ -763,6 +835,9 @@ const mockAppConfig: AppConfig = {
       services: {
         github: ["list_issues", "internal_pr_template"],
         linear: ["update_issue_status", "sprint_planning_brief"],
+        calculator: ["evaluate"],
+        "broken-server": ["health_check"],
+        slack: ["post_message"],
       },
     },
     {
@@ -772,6 +847,9 @@ const mockAppConfig: AppConfig = {
       services: {
         github: ["create_issue", "issue_template"],
         linear: ["create_issue", "update_issue_status"],
+        calculator: ["evaluate"],
+        "broken-server": ["health_check"],
+        slack: ["search_messages"],
       },
     },
     {
@@ -857,6 +935,12 @@ export function seedToolsPageMockState(): void {
         "      linear:",
         '        - "list_projects"',
         '        - "sprint_planning_brief"',
+        "      calculator:",
+        '        - "evaluate"',
+        "      broken-server:",
+        '        - "health_check"',
+        "      slack:",
+        '        - "post_message"',
         '  - name: "Release Coordination"',
         '    description: "PR update prompts and Linear status changes for releases."',
         "    services:",
@@ -866,6 +950,12 @@ export function seedToolsPageMockState(): void {
         "      linear:",
         '        - "update_issue_status"',
         '        - "sprint_planning_brief"',
+        "      calculator:",
+        '        - "evaluate"',
+        "      broken-server:",
+        '        - "health_check"',
+        "      slack:",
+        '        - "post_message"',
         '  - name: "Incident Follow-up"',
         '    description: "Create GitHub and Linear follow-up work from incident reviews."',
         "    services:",
@@ -875,6 +965,12 @@ export function seedToolsPageMockState(): void {
         "      linear:",
         '        - "create_issue"',
         '        - "update_issue_status"',
+        "      calculator:",
+        '        - "evaluate"',
+        "      broken-server:",
+        '        - "health_check"',
+        "      slack:",
+        '        - "search_messages"',
         '  - name: "All GitHub Capabilities"',
         '    description: "Wildcard group covering every GitHub tool and prompt."',
         "    services:",

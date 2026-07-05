@@ -1,19 +1,36 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type {
+  MultipleServersOptions,
+  MultipleServersResult,
+} from "@mcpx/toolkit-ui/src/utils/server-helpers";
 
 import { AddServerModal } from "./AddServerModal";
 
-let handleMultipleServersImpl = vi.fn(() =>
+type HandleMultipleServers = (
+  options: MultipleServersOptions,
+) => Promise<MultipleServersResult>;
+
+let handleMultipleServersImpl: HandleMultipleServers = () =>
   Promise.resolve({
     successfulServers: ["linear"],
     failedServers: [],
-  }),
-);
-let handleMultipleServersPromise: Promise<unknown> = Promise.resolve({
+    failedServerErrors: [],
+  });
+let handleMultipleServersPromise: Promise<MultipleServersResult> =
+  Promise.resolve({
+    successfulServers: ["linear"],
+    failedServers: [],
+    failedServerErrors: [],
+  });
+
+const successfulMultipleServersResult: MultipleServersResult = {
   successfulServers: ["linear"],
   failedServers: [],
-});
+  failedServerErrors: [],
+};
+
 const addServerMock = vi.fn();
 const addServerAsyncMock = vi.fn();
 const toastMock = vi.fn();
@@ -152,15 +169,14 @@ describe("AddServerModal", () => {
     addServerMock.mockReset();
     addServerAsyncMock.mockReset();
     toastMock.mockReset();
-    handleMultipleServersPromise = Promise.resolve({
-      successfulServers: ["linear"],
-      failedServers: [],
-    });
-    handleMultipleServersImpl = vi.fn(() => handleMultipleServersPromise);
+    handleMultipleServersPromise = Promise.resolve(
+      successfulMultipleServersResult,
+    );
+    handleMultipleServersImpl = () => handleMultipleServersPromise;
   });
 
   it("shows a loading state while saving migrated JSON uploads", () => {
-    handleMultipleServersPromise = new Promise(() => {});
+    handleMultipleServersPromise = new Promise<MultipleServersResult>(() => {});
 
     render(<AddServerModal onClose={vi.fn()} />);
 
@@ -185,13 +201,25 @@ describe("AddServerModal", () => {
   });
 
   it("keeps partial multi-server adds visible as a warning instead of a failed-all error", async () => {
-    handleMultipleServersImpl = vi.fn(async (options) => {
+    handleMultipleServersImpl = async (options) => {
       options.addServer(
-        { payload: { name: "linear", type: "streamable-http" } },
+        {
+          payload: {
+            name: "linear",
+            type: "streamable-http",
+            url: "https://mcp.linear.app/mcp",
+          },
+        },
         { onSuccess: vi.fn(), onError: vi.fn() },
       );
       options.addServer(
-        { payload: { name: "atlassian", type: "sse" } },
+        {
+          payload: {
+            name: "atlassian",
+            type: "sse",
+            url: "https://mcp.atlassian.com/v1/sse",
+          },
+        },
         { onSuccess: vi.fn(), onError: vi.fn() },
       );
       return {
@@ -204,7 +232,7 @@ describe("AddServerModal", () => {
           },
         ],
       };
-    });
+    };
     addServerAsyncMock
       .mockResolvedValueOnce({ name: "linear" })
       .mockRejectedValueOnce(new Error("failed"));
@@ -267,7 +295,7 @@ describe("AddServerModal", () => {
   });
 
   it("shows all failed multi-server errors as bullet points", async () => {
-    handleMultipleServersImpl = vi.fn(async () => ({
+    handleMultipleServersImpl = async () => ({
       successfulServers: [],
       failedServers: ["linear", "time"],
       failedServerErrors: [
@@ -282,7 +310,7 @@ describe("AddServerModal", () => {
             'Server with name "time" already in catalog. Use the catalog or change the server name',
         },
       ],
-    }));
+    });
 
     render(<AddServerModal onClose={vi.fn()} />);
 

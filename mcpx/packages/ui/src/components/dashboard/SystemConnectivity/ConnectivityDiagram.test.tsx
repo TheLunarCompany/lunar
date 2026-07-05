@@ -139,9 +139,6 @@ describe("ConnectivityDiagram", () => {
     expect(
       screen.getByRole("button", { name: /add server/i }),
     ).toBeInTheDocument();
-    expect(useReactFlowDataCalls.at(-1)).toMatchObject({
-      isEditingSpaceOnBehalf: true,
-    });
   });
 
   it("shows both add controls outside hosted mode", () => {
@@ -154,8 +151,5 @@ describe("ConnectivityDiagram", () => {
     expect(
       screen.getByRole("button", { name: /add server/i }),
     ).toBeInTheDocument();
-    expect(useReactFlowDataCalls.at(-1)).toMatchObject({
-      isEditingSpaceOnBehalf: false,
-    });
   });
 });

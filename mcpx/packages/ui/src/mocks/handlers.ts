@@ -2,7 +2,10 @@ import { http, HttpResponse } from "msw";
 import type {
   CatalogMCPServerItem,
   CatalogMCPServerList,
+  Skill,
+  SkillDraft,
 } from "@mcpx/shared-model";
+import { skillSchema } from "@mcpx/shared-model";
 
 type ApprovedCapabilityType = "tool" | "prompt";
 
@@ -57,6 +60,12 @@ type EnrichedCatalogItem = {
 };
 
 const PLAYWRIGHT_CATALOG_ITEM_ID = "018f6f21-668f-7357-b1e5-7b3ba814d195";
+const GITHUB_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000010";
+const SLACK_CATALOG_ITEM_ID = "018f6f21-5f3e-7b40-a84d-c276df5b9d91";
+const GOOGLE_DRIVE_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000011";
+const POSTGRES_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000012";
+const DATADOG_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000013";
+const FILESYSTEM_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000014";
 const STDIO_MCP_SERVERS_NOT_ALLOWED_RESPONSE = {
   message:
     "This organization does not allow STDIO MCP servers. Contact your administrator for access.",
@@ -66,6 +75,216 @@ const STDIO_MCP_SERVERS_NOT_ALLOWED_RESPONSE = {
       "This organization does not allow STDIO MCP servers. Contact your administrator for access.",
   },
 };
+
+export function parseMockSkills(records: unknown[]): Skill[] {
+  return records.flatMap((record) => {
+    const result = skillSchema.safeParse(record);
+    if (!result.success) {
+      console.warn("Invalid mock skill skipped", result.error);
+      return [];
+    }
+
+    return [result.data];
+  });
+}
+
+const initialPersonalSkills: Skill[] = parseMockSkills([
+  {
+    id: "0190a000-0000-7000-8000-000000000001",
+    name: "review-pull-requests",
+    description: "Review repository changes with local project rules.",
+    body: "# Review pull requests\n\nCheck tests, risks, and regressions.",
+    exposeAsPrompt: true,
+    author: {
+      setupOwnerId: "mock-user",
+      displayName: "Mock User",
+    },
+    updatedAt: new Date("2026-06-29T10:00:00.000Z"),
+    capabilityGroup: {
+      name: "Repository",
+      items: [
+        {
+          catalogItemId: GITHUB_CATALOG_ITEM_ID,
+          tools: ["pull_request_read"],
+          prompts: [],
+        },
+      ],
+    },
+  },
+  // Edge case: very long single-token name (no spaces) — tests truncation.
+  {
+    id: "0190a000-0000-7000-8000-000000000002",
+    name: "automated-e2e-regression-suite-orchestration-flaky-quarantine",
+    description:
+      "Run the full browser regression suite, retry flaky specs, and quarantine persistently failing tests.",
+    body: "# E2E regression\n\nOrchestrate Playwright runs and quarantine flaky specs.",
+    exposeAsPrompt: true,
+    author: {
+      setupOwnerId: "mock-user",
+      displayName: "Mock User",
+    },
+    updatedAt: new Date("2026-06-28T14:30:00.000Z"),
+    capabilityGroup: {
+      name: "Browser & CI",
+      items: [
+        { catalogItemId: PLAYWRIGHT_CATALOG_ITEM_ID, tools: "*", prompts: [] },
+        {
+          catalogItemId: GITHUB_CATALOG_ITEM_ID,
+          tools: ["actions_read", "checks_read", "workflow_dispatch"],
+          prompts: [],
+        },
+        {
+          catalogItemId: SLACK_CATALOG_ITEM_ID,
+          tools: ["post_message"],
+          prompts: [],
+        },
+      ],
+    },
+  },
+  // Edge case: very long description — tests 2-line clamp.
+  {
+    id: "0190a000-0000-7000-8000-000000000003",
+    name: "incident-response",
+    description:
+      "Coordinate the full incident lifecycle from the first alert to the postmortem: page the on-call rotation, open a dedicated war-room channel, pull the relevant dashboards and recent deploys, draft customer-facing status updates, track remediation action items, and assemble a blameless retrospective with a timeline once the incident is resolved.",
+    body: "# Incident response\n\nDeclare, mitigate, communicate, resolve, and review.",
+    exposeAsPrompt: true,
+    author: {
+      setupOwnerId: "mock-user",
+      displayName: "Mock User",
+    },
+    updatedAt: new Date("2026-06-30T09:15:00.000Z"),
+  },
+  // Edge case: exposeAsPrompt = false (renders the "Resource only" pill) + no tool group.
+  {
+    id: "0190a000-0000-7000-8000-000000000004",
+    name: "brand-voice-guidelines",
+    description:
+      "Reference for tone, terminology, and formatting when drafting external copy.",
+    body: "# Brand voice\n\nWrite in second person, active voice, no jargon.",
+    exposeAsPrompt: false,
+    author: {
+      setupOwnerId: "mock-user",
+      displayName: "Mock User",
+    },
+    updatedAt: new Date("2026-05-12T08:00:00.000Z"),
+  },
+  // Edge case: very long author displayName + long-ish title.
+  {
+    id: "0190a000-0000-7000-8000-000000000005",
+    name: "quarterly-board-deck-assembler",
+    description:
+      "Compile metrics, narrative, and appendix slides into the standard board template.",
+    body: "# Board deck\n\nPull KPIs and assemble the standard template.",
+    exposeAsPrompt: true,
+    author: {
+      setupOwnerId: "mock-user-long",
+      displayName:
+        "Alexandra Constantinescu-Featherstonehaugh (Revenue Operations)",
+    },
+    updatedAt: new Date("2026-06-21T17:45:00.000Z"),
+    capabilityGroup: {
+      name: "Docs",
+      items: [
+        {
+          catalogItemId: GOOGLE_DRIVE_CATALOG_ITEM_ID,
+          tools: ["create", "read"],
+          prompts: [],
+        },
+      ],
+    },
+  },
+  // Edge case: emoji / unicode in the name.
+  {
+    id: "0190a000-0000-7000-8000-000000000006",
+    name: "release-notes-generator",
+    description:
+      "Summarize merged PRs since the last tag into grouped, human-readable release notes.",
+    body: "# Release notes\n\nGroup merged PRs by type and summarize.",
+    exposeAsPrompt: true,
+    author: {
+      setupOwnerId: "mock-user",
+      displayName: "Mock User",
+    },
+    updatedAt: new Date("2026-06-15T11:20:00.000Z"),
+    capabilityGroup: {
+      name: "Repository",
+      items: [
+        {
+          catalogItemId: GITHUB_CATALOG_ITEM_ID,
+          tools: ["releases_write"],
+          prompts: [],
+        },
+      ],
+    },
+  },
+  // Edge case: minimal skill — short everything, no tool group.
+  {
+    id: "0190a000-0000-7000-8000-000000000007",
+    name: "echo",
+    description: "Repeat the input back.",
+    body: "# Echo\n\nReturn the input unchanged.",
+    exposeAsPrompt: true,
+    author: {
+      setupOwnerId: "mock-user",
+      displayName: "QA",
+    },
+    updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+  },
+  // Edge case: large tool group spanning many catalog items.
+  {
+    id: "0190a000-0000-7000-8000-000000000008",
+    name: "full-stack-debugging-copilot",
+    description:
+      "Trace an issue across the browser, API, database, and logs in one pass.",
+    body: "# Debug copilot\n\nCorrelate symptoms across the stack.",
+    exposeAsPrompt: true,
+    author: {
+      setupOwnerId: "mock-user",
+      displayName: "Platform Team",
+    },
+    updatedAt: new Date("2026-06-27T13:05:00.000Z"),
+    capabilityGroup: {
+      name: "Full stack",
+      items: [
+        { catalogItemId: PLAYWRIGHT_CATALOG_ITEM_ID, tools: "*", prompts: [] },
+        {
+          catalogItemId: POSTGRES_CATALOG_ITEM_ID,
+          tools: ["query"],
+          prompts: [],
+        },
+        {
+          catalogItemId: DATADOG_CATALOG_ITEM_ID,
+          tools: ["logs_read", "metrics_read"],
+          prompts: [],
+        },
+        {
+          catalogItemId: GITHUB_CATALOG_ITEM_ID,
+          tools: ["code_search"],
+          prompts: [],
+        },
+        { catalogItemId: FILESYSTEM_CATALOG_ITEM_ID, tools: "*", prompts: [] },
+      ],
+    },
+  },
+  // Edge case: extremely long description — stress-tests the 2-line clamp.
+  {
+    id: "0190a000-0000-7000-8000-000000000009",
+    name: "codebase-onboarding-tour",
+    description:
+      "Generate a guided, top-to-bottom tour of an unfamiliar repository for a brand-new engineer: start from the entry points and build and run scripts, map the high-level module boundaries and how a request flows from the edge through the service layer down to the data stores, call out the project's conventions for testing, error handling, configuration, and logging, surface the handful of files that change most often alongside the ones that are load-bearing but rarely touched, list the environment variables and external services required to run everything locally, link each area to the most relevant documentation and code owners, and finish with a short, ordered set of starter tasks that progressively build familiarity without touching critical paths on the very first day.",
+    body: "# Onboarding tour\n\nWalk a new engineer through the repository in order.",
+    exposeAsPrompt: true,
+    author: {
+      setupOwnerId: "mock-user",
+      displayName: "Platform Team",
+    },
+    updatedAt: new Date("2026-06-26T10:30:00.000Z"),
+  },
+]);
+
+let personalSkills = structuredClone(initialPersonalSkills);
+let nextSkillId = 10;
 
 export const catalogMcpServers: CatalogMCPServerList = [
   {
@@ -460,9 +679,79 @@ function isApprovedCapabilityType(
 export function resetMockApiState(): void {
   orgApprovedCapabilities = structuredClone(initialApprovedCapabilities);
   curatedApprovedCapabilities = structuredClone(initialApprovedCapabilities);
+  personalSkills = structuredClone(initialPersonalSkills);
+  nextSkillId = 10;
 }
 
 export const handlers = [
+  http.get("*/skills", () => {
+    return HttpResponse.json({ skills: personalSkills });
+  }),
+
+  http.get("*/skills/:id", ({ params }) => {
+    const skill = personalSkills.find((item) => item.id === String(params.id));
+
+    if (!skill) {
+      return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
+    }
+
+    return HttpResponse.json(skill);
+  }),
+
+  http.post("*/skills", async ({ request }) => {
+    const draft = (await request.json()) as SkillDraft;
+    const skill: Skill = {
+      ...draft,
+      id: `0190a000-0000-7000-8000-${String(nextSkillId).padStart(12, "0")}`,
+      author: {
+        setupOwnerId: "mock-user",
+        displayName: "Mock User",
+      },
+      updatedAt: new Date("2026-06-29T11:00:00.000Z"),
+    };
+
+    nextSkillId += 1;
+    personalSkills = [...personalSkills, skill];
+
+    return HttpResponse.json(skill, { status: 201 });
+  }),
+
+  http.put("*/skills/:id", async ({ params, request }) => {
+    const id = String(params.id);
+    const existingSkill = personalSkills.find((skill) => skill.id === id);
+
+    if (!existingSkill) {
+      return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
+    }
+
+    const draft = (await request.json()) as SkillDraft;
+    const skill: Skill = {
+      ...existingSkill,
+      ...draft,
+      id,
+      updatedAt: new Date("2026-06-29T11:30:00.000Z"),
+    };
+
+    personalSkills = personalSkills.map((item) =>
+      item.id === id ? skill : item,
+    );
+
+    return HttpResponse.json(skill);
+  }),
+
+  http.delete("*/skills/:id", ({ params }) => {
+    const id = String(params.id);
+    const existingSkill = personalSkills.find((skill) => skill.id === id);
+
+    if (!existingSkill) {
+      return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
+    }
+
+    personalSkills = personalSkills.filter((skill) => skill.id !== id);
+
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.get("*/catalog/mcp-servers", () => {
     return HttpResponse.json(catalogMcpServers);
   }),

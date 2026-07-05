@@ -22,6 +22,8 @@ import type {
   SerializedAppConfig,
   AuditLogEntry,
   AuditLogEventType,
+  Skill,
+  SkillDraft,
 } from "@mcpx/shared-model";
 import {
   singleToolGroupSchema,
@@ -37,6 +39,8 @@ import {
   dynamicCapabilitiesStatusResponseSchema,
   catalogMCPServerListSchema,
   auditLogsResponseSchema,
+  skillCatalogResponseSchema,
+  skillSchema,
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getAdminWebserverURL, getMcpxServerURL } from "@/config/api-config";
@@ -671,6 +675,47 @@ class ApiClient {
       auditLogsResponseSchema,
     );
     return events;
+  }
+
+  // ==================== SKILLS ====================
+
+  async getSkills(): Promise<Skill[]> {
+    const { skills } = await this.request(
+      "/skills",
+      skillCatalogResponseSchema,
+    );
+    return skills;
+  }
+
+  async getSkill(id: string): Promise<Skill> {
+    return this.request(`/skills/${encodeURIComponent(id)}`, skillSchema);
+  }
+
+  async createSkill(draft: SkillDraft): Promise<Skill> {
+    return this.requestWithBody("/skills", "POST", draft, skillSchema);
+  }
+
+  async updateSkill(id: string, draft: SkillDraft): Promise<Skill> {
+    return this.requestWithBody(
+      `/skills/${encodeURIComponent(id)}`,
+      "PUT",
+      draft,
+      skillSchema,
+    );
+  }
+
+  async deleteSkill(id: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/skills/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
+
+    if (!response.ok) {
+      throw await getApiError(response);
+    }
   }
 }
 

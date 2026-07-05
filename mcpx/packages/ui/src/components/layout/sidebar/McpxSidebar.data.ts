@@ -2,11 +2,15 @@ import {
   Gauge,
   Hammer,
   Library,
+  FileText,
   ScrollText,
   SlidersHorizontal,
   Zap,
 } from "lucide-react";
-import { isCapabilitiesEnabled } from "@/config/runtime-config";
+import {
+  isCapabilitiesEnabled,
+  isSkillsPageEnabled,
+} from "@/config/runtime-config";
 import { routes } from "@/routes";
 import type { McpxSidebarSection } from "./McpxSidebar";
 
@@ -28,6 +32,15 @@ export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
       label: "Capabilities",
       icon: Zap,
       url: routes.capabilities,
+    });
+  }
+
+  if (isSkillsPageEnabled()) {
+    workspaceItems.push({
+      id: "skills",
+      label: "Skills",
+      icon: FileText,
+      url: routes.skills,
     });
   }
 

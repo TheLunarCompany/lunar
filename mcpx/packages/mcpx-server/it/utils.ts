@@ -33,6 +33,7 @@ import {
 import { buildCatalogRouter } from "../src/server/catalog.js";
 import { buildAdminRouter } from "../src/server/admin.js";
 import { buildIdentityRouter } from "../src/server/identity.js";
+import { buildSkillsRouter } from "../src/server/skills.js";
 
 const MCPX_PORT = 9000;
 let nextHubPort = 3030; // Start from 3030 and increment for each harness
@@ -203,6 +204,7 @@ export class TestHarness {
     mockHubServer: MockHubServer,
     private clientConnectExtraHeaders: Record<string, string> = {},
     private targetServers: TargetServer[] = stdioTargetServers,
+    private mcpxPort: number = MCPX_PORT,
   ) {
     // Track loggers for this harness instance
     this.loggers.push(testLogger);
@@ -260,8 +262,22 @@ export class TestHarness {
         this.services.upstreamHandler.addClient(target),
       ),
     );
-    await this.server.listen(MCPX_PORT, () => {
-      this.testLogger.info(`Test MCPX server listening on port ${MCPX_PORT}`);
+    // server.listen is event-based; wait for the actual listening/error result.
+    await new Promise<void>((resolve, reject) => {
+      const onError = (error: Error) => {
+        this.server.off("listening", onListening);
+        reject(error);
+      };
+      const onListening = () => {
+        this.server.off("error", onError);
+        this.testLogger.info(
+          `Test MCPX server listening on port ${this.mcpxPort}`,
+        );
+        resolve();
+      };
+      this.server.once("error", onError);
+      this.server.once("listening", onListening);
+      this.server.listen(this.mcpxPort);
     });
 
     const transport = this.buildTransport(transportType);
@@ -305,7 +321,7 @@ export class TestHarness {
     switch (transportType) {
       case "SSE":
         return new SSEClientTransport(
-          new URL(`http://localhost:${MCPX_PORT}/sse`),
+          new URL(`http://localhost:${this.mcpxPort}/sse`),
           {
             requestInit: {
               headers: this.clientConnectExtraHeaders,
@@ -314,7 +330,7 @@ export class TestHarness {
         );
       case "StreamableHTTP":
         return new StreamableHTTPClientTransport(
-          new URL(`http://localhost:${MCPX_PORT}/mcp`),
+          new URL(`http://localhost:${this.mcpxPort}/mcp`),
           {
             requestInit: {
               headers: this.clientConnectExtraHeaders,
@@ -334,6 +350,7 @@ interface TestHarnessProps {
   clientConnectExtraHeaders?: Record<string, string>;
   targetServers?: TargetServer[];
   catalogItems?: CatalogMCPServerItem[];
+  mcpxPort?: number;
 }
 function defaultTestHarnessProps(): Required<TestHarnessProps> {
   return {
@@ -343,6 +360,7 @@ function defaultTestHarnessProps(): Required<TestHarnessProps> {
     clientConnectExtraHeaders: {},
     targetServers: stdioTargetServers,
     catalogItems: stdioCatalogItems,
+    mcpxPort: MCPX_PORT,
   };
 }
 export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
@@ -354,6 +372,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     clientConnectExtraHeaders,
     targetServers,
     catalogItems,
+    mcpxPort,
   } = {
     ...defaultTestHarnessProps(),
     ...props,
@@ -390,6 +409,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   const catalogRouter = buildCatalogRouter(authGuard, services, mcpxLogger);
   const adminRouter = buildAdminRouter(authGuard, services, mcpxLogger);
   const identityRouter = buildIdentityRouter(authGuard, services);
+  const skillsRouter = buildSkillsRouter(authGuard, services, mcpxLogger);
 
   const app = express();
   const httpServer = createServer(app);
@@ -403,6 +423,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   app.use("/catalog", catalogRouter);
   app.use("/admin", adminRouter);
   app.use("/identity", identityRouter);
+  app.use("/skills", skillsRouter);
 
   // Create mock Hub server for this test (port already assigned above)
   // Emit catalog with test servers (strictness is determined by identity)
@@ -422,6 +443,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     mockHubServer,
     clientConnectExtraHeaders,
     targetServers,
+    mcpxPort,
   );
 
   // Track the mcpxLogger in this harness instance

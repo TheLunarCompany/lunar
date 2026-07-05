@@ -91,6 +91,7 @@ export const Layout: FC<LayoutProps> = ({
     "/catalog": "catalog",
     "/tools": "tools",
     "/capabilities": "capabilities",
+    "/skills": "skills",
     "/saved-setups": "saved-setups",
     "/audit-log": "audit-log",
   };

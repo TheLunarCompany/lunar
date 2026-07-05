@@ -29,6 +29,7 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_ENABLE_PERMISSIONS || "false",
           VITE_ENABLE_CAPABILITIES_UI:
             process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_SHOW_SKILLS_PAGE: process.env.VITE_SHOW_SKILLS_PAGE || "false",
           VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
       case "production":
@@ -44,6 +45,7 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_ENABLE_PERMISSIONS || "false",
           VITE_ENABLE_CAPABILITIES_UI:
             process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_SHOW_SKILLS_PAGE: process.env.VITE_SHOW_SKILLS_PAGE || "false",
           VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
       default:
@@ -64,6 +66,7 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_ENABLE_PERMISSIONS || "false",
           VITE_ENABLE_CAPABILITIES_UI:
             process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_SHOW_SKILLS_PAGE: process.env.VITE_SHOW_SKILLS_PAGE || "false",
           VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
     }
@@ -159,6 +162,9 @@ export default defineConfig(({ command, mode }) => {
       ),
       "import.meta.env.VITE_MCPX_MOCK_TOOLS": JSON.stringify(
         env.VITE_MCPX_MOCK_TOOLS || envDefaults.VITE_MCPX_MOCK_TOOLS,
+      ),
+      "import.meta.env.VITE_SHOW_SKILLS_PAGE": JSON.stringify(
+        env.VITE_SHOW_SKILLS_PAGE || envDefaults.VITE_SHOW_SKILLS_PAGE,
       ),
     },
   };
