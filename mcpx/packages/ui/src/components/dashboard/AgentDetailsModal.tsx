@@ -1,0 +1,1062 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SearchInput } from "@/components/ui/search-input";
+import { Switch } from "@/components/ui/switch";
+
+import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
+const VisuallyHidden = VisuallyHiddenPrimitive.Root;
+import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Agent } from "@/types";
+import { formatDateTime } from "@/utils";
+import { ChevronDown, Sparkles, TriangleAlert } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAccessControlsStore, useSocketStore } from "@/store";
+import { apiClient } from "@/lib/api";
+import { routes } from "@/routes";
+import type { ConsumerConfig } from "@mcpx/shared-model";
+import type { AgentProfile, ToolGroup } from "@/store/access-controls";
+import { toast } from "@/components/ui/use-toast";
+import { getAgentType } from "./helpers";
+import { deriveAgentDisplay } from "./agent-display";
+import {
+  PermissionEntriesByName,
+  getTotalConnectedTools,
+  getConsumerToolAccess,
+} from "@/hooks/toolCount";
+import { agentsData } from "./constants";
+import { isDynamicCapabilitiesEnabled } from "@/config/runtime-config";
+import { DomainBadge } from "./DomainBadge";
+
+function getAgentDrawerPermissionFromConfig(
+  entriesByName: PermissionEntriesByName,
+  lookupKeys: string[],
+  toolGroups: { id: string; name: string }[],
+) {
+  const fingerprint = JSON.stringify(
+    lookupKeys.map((key) => [key, entriesByName?.[key] ?? null]),
+  );
+
+  if (!entriesByName || lookupKeys.length === 0) {
+    return {
+      allowAll: true,
+      selectedIds: [] as string[],
+      hadConsumerConfig: false,
+      fingerprint,
+    };
+  }
+
+  const groupNames = new Set<string>();
+  let allTools = false;
+  let emptyAllow = false;
+  let hasGroups = false;
+  let hadConfig = false;
+
+  for (const key of lookupKeys) {
+    const config = entriesByName[key];
+    if (config) hadConfig = true;
+    const result = getConsumerToolAccess(config);
+    if (result.kind === "all") {
+      allTools = true;
+      break;
+    }
+    if (result.kind === "none") {
+      emptyAllow = true;
+      continue;
+    }
+    result.groupNames.forEach((n) => groupNames.add(n));
+    hasGroups = true;
+  }
+
+  if (allTools)
+    return {
+      allowAll: true,
+      selectedIds: [] as string[],
+      hadConsumerConfig: hadConfig,
+      fingerprint,
+    };
+
+  if (groupNames.size === 0) {
+    const isBlockAll = emptyAllow && !hasGroups;
+    return {
+      allowAll: !isBlockAll,
+      selectedIds: [] as string[],
+      hadConsumerConfig: hadConfig,
+      fingerprint,
+    };
+  }
+
+  const selectedIds = toolGroups
+    .filter((g) => groupNames.has(g.name))
+    .map((g) => g.id);
+  return {
+    allowAll: false,
+    selectedIds,
+    hadConsumerConfig: hadConfig,
+    fingerprint,
+  };
+}
+
+interface AgentDetailsModalProps {
+  agent: Agent | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const AgentDetailsModal = ({
+  agent,
+  isOpen,
+  onClose,
+}: AgentDetailsModalProps) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [allowAll, setAllowAll] = useState(false);
+  const [originalAllowAll, setOriginalAllowAll] = useState(false);
+  const [originalToolGroups, setOriginalToolGroups] = useState<Set<string>>(
+    new Set(),
+  );
+  const [hadOriginalProfile, setHadOriginalProfile] = useState(false);
+  const [editedToolGroups, setEditedToolGroups] = useState<Set<string>>(
+    new Set(),
+  );
+  const [dynamicCapabilitiesMode, setDynamicCapabilitiesMode] = useState(false);
+  const [dynamicCapabilitiesLoading, setDynamicCapabilitiesLoading] =
+    useState(false);
+  const navigate = useNavigate();
+
+  const { toolGroups, profiles, setProfiles } = useAccessControlsStore((s) => {
+    return {
+      toolGroups: s.toolGroups || [],
+      profiles: s.profiles || [],
+      setProfiles: s.setProfiles,
+      setAppConfigUpdates: s.setAppConfigUpdates,
+      appConfigUpdates: s.appConfigUpdates,
+      hasPendingChanges: s.hasPendingChanges,
+      resetAppConfigUpdates: s.resetAppConfigUpdates,
+    };
+  });
+
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const { systemState, appConfig } = useSocketStore((s) => ({
+    systemState: s.systemState,
+    appConfig: s.appConfig,
+  }));
+
+  // Get consumerTag from x-lunar-consumer-tag header
+  const consumerTag = useMemo(() => {
+    if (!agent?.sessionIds || agent.sessionIds.length === 0) {
+      return null;
+    }
+    const lastSessionId = agent.sessionIds[agent.sessionIds.length - 1];
+    const session = systemState?.connectedClients?.find(
+      (client) => client.sessionId === lastSessionId,
+    );
+    return (
+      session?.consumerTag ||
+      session?.clientInfo?.name ||
+      agent?.identifier ||
+      null
+    );
+  }, [agent?.sessionIds, systemState, agent?.identifier]);
+
+  // Count tools in the dynamic tool group for this consumer
+  const dynamicToolsCount = useMemo(() => {
+    if (!consumerTag || !toolGroups) return 0;
+    const dynamicGroupName = `${consumerTag}_dynamic`;
+    const dynamicGroup = toolGroups.find((g) => g.name === dynamicGroupName);
+    if (!dynamicGroup) return 0;
+    return Object.values(dynamicGroup.services).flat().length;
+  }, [consumerTag, toolGroups]);
+
+  const agentType = getAgentType(agent?.identifier, consumerTag);
+
+  const currentAgentData = agentsData[agentType ?? "DEFAULT"];
+
+  // Identity-aware display fields (mirror the agent-node box).
+  const display = useMemo(
+    () => (agent ? deriveAgentDisplay(agent) : null),
+    [agent],
+  );
+
+  // When there are no tool groups in the system, force "Allow All" and clear selections.
+  // Do not touch allowAll when tool groups exist: empty selections can mean "block all" (allowAll false).
+  useEffect(() => {
+    if (!toolGroups || toolGroups.length > 0) return;
+
+    setAllowAll(true);
+    setOriginalAllowAll(true);
+    setOriginalToolGroups(new Set());
+    setEditedToolGroups(new Set());
+  }, [toolGroups]);
+
+  // On open: sync internal state, dismiss toasts, fetch dynamic capabilities
+  useEffect(() => {
+    setInternalOpen(isOpen);
+    if (!isOpen) return;
+
+    if (consumerTag) {
+      apiClient
+        .getDynamicCapabilitiesStatus(consumerTag)
+        .then((status) => setDynamicCapabilitiesMode(status.enabled))
+        .catch((error) =>
+          console.warn("Failed to fetch dynamic capabilities status:", error),
+        );
+    }
+  }, [isOpen, consumerTag]);
+
+  const arraysEqual = (arr1: string[], arr2: string[]) => {
+    if (arr1.length !== arr2.length) return false;
+    const sorted1 = [...arr1].sort();
+    const sorted2 = [...arr2].sort();
+    return sorted1.every((val, index) => val === sorted2[index]);
+  };
+
+  // Check if there are changes to save
+  const hasChanges = useMemo(() => {
+    if (!agent || !toolGroups) return false;
+
+    let selectedToolGroupIds: string[];
+    if (allowAll) {
+      selectedToolGroupIds = [];
+    } else {
+      selectedToolGroupIds = Array.from(editedToolGroups);
+    }
+
+    // Compare with original state instead of current profile
+    const originalToolGroupIds = Array.from(originalToolGroups);
+
+    // Check if allowAll state changed
+    const allowAllChanged = allowAll !== originalAllowAll;
+
+    // Check if individual selections changed
+    let hasChangesResult = false;
+    if (!allowAll) {
+      hasChangesResult = !arraysEqual(
+        originalToolGroupIds,
+        selectedToolGroupIds,
+      );
+    } else {
+      // If allowAll is enabled, check if original had any restrictions
+      // OR if there was originally a profile that needs to be deleted
+      hasChangesResult = originalToolGroupIds.length > 0 || hadOriginalProfile;
+    }
+
+    // Return true if either allowAll changed or tool group selections changed
+    return allowAllChanged || hasChangesResult;
+  }, [
+    agent,
+    toolGroups,
+    allowAll,
+    originalAllowAll,
+    editedToolGroups,
+    originalToolGroups,
+    hadOriginalProfile,
+  ]);
+
+  // Permission entries for this agent live under either `consumers` or `clientNames`,
+  // keyed by the cluster's tag or clientName. Anonymous clusters have no key at all.
+  const permissionLookup = useMemo<{
+    scope: "consumers" | "clientNames";
+    keys: string[];
+  } | null>(() => {
+    if (!agent) return null;
+    switch (agent.identityType) {
+      case "consumerTag":
+        return { scope: "consumers", keys: [agent.consumerTag] };
+      case "clientName":
+        return { scope: "clientNames", keys: [agent.clientName] };
+      case "anonymous":
+        return null;
+    }
+  }, [agent]);
+
+  const agentToolGroups = useMemo(() => {
+    if (!toolGroups || !profiles || !agent?.identifier) return [];
+
+    try {
+      const agentProfile = profiles.find(
+        (profile) =>
+          profile?.name !== "default" &&
+          profile?.agents?.some((profileAgent) => {
+            return permissionLookup?.keys.includes(profileAgent.name);
+          }),
+      );
+
+      const activeServerNames = new Set<string>();
+      systemState?.targetServers?.forEach((server) => {
+        const isInactive =
+          appConfig?.targetServerAttributes?.[server.name]?.inactive === true;
+        if (!isInactive) activeServerNames.add(server.name);
+      });
+
+      const createToolGroup = (toolGroup: ToolGroup, enabled: boolean) => {
+        const mcpNames = Object.keys(toolGroup.services || {});
+        const activeTools = (
+          Object.entries(toolGroup.services || {}) as [string, string[]][]
+        )
+          .filter(([serverName]) => activeServerNames.has(serverName))
+          .flatMap(([, tools]) => tools);
+        const uniqueActiveTools = [...new Set(activeTools)];
+        const allTools = [
+          ...new Set(
+            (Object.values(toolGroup.services || {}) as string[][]).flat(),
+          ),
+        ];
+        const activeToolNames = new Set(uniqueActiveTools);
+
+        return {
+          id: toolGroup.id,
+          title: toolGroup.name,
+          description: toolGroup.description || `Tools from ${toolGroup.name}`,
+          enabled,
+          mcpNames: [...new Set(mcpNames)],
+          toolCount: uniqueActiveTools.length,
+          totalToolCount: allTools.length,
+          allTools: allTools.map((tool) => ({
+            name: tool,
+            isUnavailable: !activeToolNames.has(tool),
+          })),
+        };
+      };
+
+      const isEnabled = (toolGroup: ToolGroup) =>
+        agentProfile?.permission === "allow" &&
+        (agentProfile?.toolGroups?.includes(toolGroup.id) ||
+          agentProfile?.toolGroups?.includes(toolGroup.name));
+
+      return toolGroups.map((toolGroup) =>
+        createToolGroup(toolGroup, isEnabled(toolGroup)),
+      );
+    } catch (_error) {
+      return [];
+    }
+  }, [
+    toolGroups,
+    profiles,
+    agent?.identifier,
+    permissionLookup?.keys,
+    systemState,
+    appConfig,
+  ]);
+
+  // Track the last initialization state to detect when we need to re-initialize
+  const lastInitializedAgentRef = useRef<string | null>(null);
+  const lastInitializedProfilesRef = useRef<string>("");
+  const isInitializingRef = useRef(false);
+  const justSavedRef = useRef(false);
+  const dirtyRef = useRef(false);
+
+  const configPermission = useMemo(
+    () =>
+      getAgentDrawerPermissionFromConfig(
+        permissionLookup
+          ? appConfig?.permissions?.[permissionLookup.scope]
+          : undefined,
+        permissionLookup?.keys ?? [],
+        toolGroups,
+      ),
+    [appConfig?.permissions, permissionLookup, toolGroups],
+  );
+
+  // Sync drawer toggles from live appConfig when modal opens or config changes
+  useEffect(() => {
+    if (!agent || !isOpen || isInitializingRef.current) return;
+
+    if (
+      justSavedRef.current &&
+      lastInitializedProfilesRef.current === configPermission.fingerprint
+    )
+      return;
+    if (justSavedRef.current) justSavedRef.current = false;
+
+    const agentChanged = lastInitializedAgentRef.current !== agent.identifier;
+    const configChanged =
+      lastInitializedProfilesRef.current !== configPermission.fingerprint;
+    if (!agentChanged && !configChanged) return;
+
+    // Don't clobber in-progress edits from a WebSocket push
+    if (!agentChanged && configChanged && dirtyRef.current) return;
+
+    isInitializingRef.current = true;
+
+    setAllowAll(configPermission.allowAll);
+    setOriginalAllowAll(configPermission.allowAll);
+    setHadOriginalProfile(configPermission.hadConsumerConfig);
+    setOriginalToolGroups(new Set(configPermission.selectedIds));
+    setEditedToolGroups(new Set(configPermission.selectedIds));
+
+    lastInitializedAgentRef.current = agent.identifier;
+    lastInitializedProfilesRef.current = configPermission.fingerprint;
+    isInitializingRef.current = false;
+    dirtyRef.current = false;
+  }, [agent, isOpen, configPermission]);
+
+  // Reset refs when drawer closes so next open always syncs fresh
+  useEffect(() => {
+    if (!isOpen) {
+      lastInitializedAgentRef.current = null;
+      lastInitializedProfilesRef.current = "";
+      isInitializingRef.current = false;
+      justSavedRef.current = false;
+      dirtyRef.current = false;
+    }
+  }, [isOpen]);
+
+  const filteredGroups = agentToolGroups.filter(
+    (group) =>
+      group &&
+      group.title &&
+      (group.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.mcpNames.some((mcpName) =>
+          mcpName.toLowerCase().includes(searchQuery.toLowerCase()),
+        )),
+  );
+
+  const totalConnectedTools = useMemo(
+    () =>
+      getTotalConnectedTools(
+        systemState?.targetServers,
+        appConfig?.targetServerAttributes,
+      ),
+    [systemState?.targetServers, appConfig?.targetServerAttributes],
+  );
+
+  const goToToolCatalog = () => {
+    navigate(routes.tools);
+    onClose();
+  };
+
+  const toggleGroupExpansion = (groupId: string) => {
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId);
+      } else {
+        newSet.add(groupId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDynamicCapabilitiesToggle = async (checked: boolean) => {
+    if (!consumerTag) return;
+
+    setDynamicCapabilitiesLoading(true);
+    try {
+      if (checked) {
+        await apiClient.enableDynamicCapabilities(consumerTag);
+      } else {
+        await apiClient.disableDynamicCapabilities(consumerTag);
+      }
+      setDynamicCapabilitiesMode(checked);
+      toast({
+        title: checked
+          ? "Dynamic Capabilities Enabled"
+          : "Dynamic Capabilities Disabled",
+        description: checked
+          ? "Tools will be discovered on-demand via natural language"
+          : "All configured tools are now visible",
+      });
+    } catch (error) {
+      console.error("Failed to toggle dynamic capabilities:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle dynamic capabilities mode",
+        variant: "destructive",
+      });
+    } finally {
+      setDynamicCapabilitiesLoading(false);
+    }
+  };
+
+  const handleAllowAllToggle = (checked: boolean) => {
+    dirtyRef.current = true;
+    setAllowAll(checked);
+    if (checked) {
+      setEditedToolGroups(new Set());
+    }
+  };
+
+  const handleToolGroupToggle = (groupId: string, checked: boolean) => {
+    dirtyRef.current = true;
+    setAllowAll(false);
+
+    setEditedToolGroups((prev) => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(groupId);
+      } else {
+        newSet.delete(groupId);
+      }
+      return newSet;
+    });
+  };
+
+  const saveConfiguration = useCallback(async () => {
+    if (!agent) return;
+
+    // Anonymous clusters have neither a tag nor a clientName - nothing to write to.
+    if (agent.identityType === "anonymous") {
+      toast({
+        title: "Cannot save",
+        description:
+          "This connection has no consumer tag and no client name - no identity to attach permissions to.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Derive the single (key) under which this agent's permissions live.
+    const targetName: string =
+      agent.identityType === "consumerTag"
+        ? agent.consumerTag
+        : agent.clientName;
+
+    // Permission CRUD adapter - picks consumers-API vs clientNames-API based on the cluster's identity.
+    const consumersApi = {
+      getAll: () => apiClient.getPermissionConsumers(),
+      create: (req: { name: string; config: ConsumerConfig }) =>
+        apiClient.createPermissionConsumer(req),
+      update: (name: string, config: ConsumerConfig) =>
+        apiClient.updatePermissionConsumer(name, config),
+      delete: (name: string) => apiClient.deletePermissionConsumer(name),
+    };
+    const clientNamesApi = {
+      getAll: () => apiClient.getPermissionClientNames(),
+      create: (req: { name: string; config: ConsumerConfig }) =>
+        apiClient.createPermissionClientName(req),
+      update: (name: string, config: ConsumerConfig) =>
+        apiClient.updatePermissionClientName(name, config),
+      delete: (name: string) => apiClient.deletePermissionClientName(name),
+    };
+    const api =
+      agent.identityType === "consumerTag" ? consumersApi : clientNamesApi;
+
+    try {
+      // Get current entries from API
+      // Use case-insensitive matching to handle name variations
+      const currentConsumersResponse: Record<string, ConsumerConfig> = await api
+        .getAll()
+        .catch(() => ({}));
+
+      const currentConsumersMap = new Map<string, string>();
+      for (const key of Object.keys(currentConsumersResponse)) {
+        currentConsumersMap.set(key.toLowerCase().trim(), key);
+      }
+
+      // Determine selected tool group IDs
+      const selectedToolGroupIds = allowAll ? [] : Array.from(editedToolGroups);
+
+      // Convert tool group IDs to names for ConsumerConfig
+      const selectedToolGroupNames = selectedToolGroupIds
+        .map((id) => toolGroups.find((g) => g.id === id)?.name)
+        .filter(Boolean) as string[];
+
+      // Build ConsumerConfig based on state
+      let newConsumerConfig: ConsumerConfig | null = null;
+
+      if (!allowAll) {
+        if (selectedToolGroupNames.length > 0) {
+          newConsumerConfig = {
+            _type: "default-block",
+            consumerGroupKey: `${targetName} Profile`,
+            allow: selectedToolGroupNames,
+          };
+        } else {
+          newConsumerConfig = {
+            _type: "default-block",
+            consumerGroupKey: `${targetName} Profile`,
+            allow: [],
+          };
+        }
+      }
+
+      const operations: Array<{
+        type: "create" | "update" | "delete";
+        name: string;
+        config?: ConsumerConfig;
+      }> = [];
+
+      const normalizedName = targetName.toLowerCase().trim();
+      const originalKey = currentConsumersMap.get(normalizedName);
+      const currentConsumer = originalKey
+        ? currentConsumersResponse[originalKey]
+        : undefined;
+      const shouldHaveConsumer = newConsumerConfig !== null;
+      const apiConsumerName = originalKey || targetName;
+
+      if (!currentConsumer && shouldHaveConsumer) {
+        operations.push({
+          type: "create",
+          name: targetName,
+          config: newConsumerConfig!,
+        });
+      } else if (currentConsumer && shouldHaveConsumer) {
+        operations.push({
+          type: "update",
+          name: apiConsumerName,
+          config: newConsumerConfig!,
+        });
+      } else if (currentConsumer && !shouldHaveConsumer) {
+        operations.push({
+          type: "delete",
+          name: apiConsumerName,
+        });
+      }
+
+      await Promise.all(
+        operations.map(async (op) => {
+          try {
+            if (op.type === "create" && op.config) {
+              try {
+                await api.create({ name: op.name, config: op.config });
+              } catch (error) {
+                if (error instanceof Error && error.message.includes("409")) {
+                  await api.update(op.name, op.config);
+                } else {
+                  throw error;
+                }
+              }
+            } else if (op.type === "update" && op.config) {
+              await api.update(op.name, op.config);
+            } else if (op.type === "delete") {
+              await api.delete(op.name);
+            }
+          } catch (error) {
+            console.warn(
+              `Failed to ${op.type} permission entry ${op.name}:`,
+              error,
+            );
+            throw error;
+          }
+        }),
+      );
+
+      justSavedRef.current = true;
+      dirtyRef.current = false;
+
+      // Update local profile state for UI consistency
+      const currentProfiles = profiles || [];
+      const agentProfile = currentProfiles.find(
+        (profile) =>
+          profile &&
+          profile.name !== "default" &&
+          profile.agents &&
+          profile.agents.some(
+            (profileAgent) => profileAgent.name === targetName,
+          ),
+      );
+
+      if (agentProfile) {
+        if (allowAll) {
+          setProfiles(
+            (prev) => prev.filter((p) => p.id !== agentProfile.id),
+            true,
+          );
+        } else {
+          setProfiles(
+            (prev) =>
+              prev.map((p) =>
+                p.id === agentProfile.id
+                  ? {
+                      ...p,
+                      toolGroups: selectedToolGroupIds,
+                      permission: "allow" as const,
+                    }
+                  : p,
+              ),
+            true,
+          );
+        }
+      } else if (!allowAll) {
+        const newProfile: AgentProfile = {
+          id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: `${targetName} Profile`,
+          agents: [
+            {
+              name: targetName,
+              identityType:
+                agent.identityType === "consumerTag"
+                  ? "consumers"
+                  : "clientNames",
+            },
+          ],
+          permission: "allow" as const,
+          toolGroups: selectedToolGroupIds,
+        };
+        setProfiles((prev) => [...prev, newProfile], true);
+      }
+
+      toast({
+        title: "AI Agent Edited",
+        description: (
+          <>
+            <strong>
+              {currentAgentData.name.charAt(0).toUpperCase() +
+                currentAgentData.name.slice(1)}
+            </strong>{" "}
+            agent profile was updated successfully
+          </>
+        ),
+      });
+
+      setTimeout(() => {
+        justSavedRef.current = false;
+        onClose();
+      }, 500);
+    } catch (error) {
+      console.error("Error saving to backend:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save agent permissions",
+        variant: "destructive",
+      });
+    }
+  }, [
+    agent,
+    profiles,
+    toolGroups,
+    setProfiles,
+    allowAll,
+    editedToolGroups,
+    onClose,
+    currentAgentData.name,
+  ]);
+
+  const handleClose = () => {
+    setInternalOpen(false);
+    setTimeout(() => onClose(), 300); // Allow animation to complete
+  };
+
+  if (!isOpen || !agent) return null;
+
+  if (!agent.sessionIds || agent.sessionIds.length === 0) {
+    return null;
+  }
+
+  return (
+    <Sheet
+      open={internalOpen}
+      onOpenChange={(open: boolean) => !open && handleClose()}
+    >
+      <SheetContent
+        side="right"
+        className="w-[600px]! gap-0 max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden"
+      >
+        <SheetHeader className="px-6 pt-2 pb-4 flex flex-row justify-between items-center border-b gap-2">
+          <VisuallyHidden>
+            <SheetTitle>
+              {consumerTag || currentAgentData.name || "AI Agent"} Details
+            </SheetTitle>
+            <SheetDescription>
+              Configure tool access permissions for{" "}
+              {consumerTag || currentAgentData.name || "AI Agent"}
+            </SheetDescription>
+          </VisuallyHidden>
+          <div></div>
+          <div className="flex mt-0 gap-1.5 items-center text-[#7F7999]">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-4 h-4"
+              onClick={handleClose}
+            >
+              <ArrowRightIcon />
+            </Button>
+          </div>
+        </SheetHeader>
+
+        <div className="px-6 py-2  flex flex-col overflow-y-auto">
+          <div className="flex items-center gap-2 text-lg font-semibold  mt-2 mb-1">
+            <img
+              src={display?.icon.src ?? currentAgentData.icon}
+              alt={display?.icon.alt ?? `${currentAgentData.name} Agent Avatar`}
+              className="w-12 h-12 rounded-md"
+            />
+            <div className="flex flex-col items-start ">
+              <p className="text-2xl font-medium capitalize">
+                {display?.title || "AI Agent"}
+              </p>
+              {display?.subtitle &&
+                (display.subtitle.extraCount > 0 ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999] cursor-help">
+                        {display.subtitle.primary} +
+                        {display.subtitle.extraCount}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      align="start"
+                      className="flex-col items-start gap-1"
+                    >
+                      <div className="text-gray-400">All clients</div>
+                      <div className="space-y-0.5">
+                        {display.subtitle.allPrettified.map((name, idx) => (
+                          <div key={idx}>{name}</div>
+                        ))}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <span className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999]">
+                    {display.subtitle.primary}
+                  </span>
+                ))}
+            </div>
+          </div>
+          <SessionIdsTooltip
+            sessionIds={agent.sessionIds}
+            className="text-[#7F7999] font-medium text-sm"
+          />
+        </div>
+
+        <div className="px-6">
+          <div className="grid grid-cols-3 gap-6 text-sm w-full">
+            <div className="text-left border  rounded-lg p-4">
+              <div className="text-gray-600 font-medium mb-1">Status</div>
+              <Badge className="bg-green-100 text-green-800 border-green-200">
+                {agent.status || "CONNECTED"}
+              </Badge>
+            </div>
+            <div className="text-left border border-gray-200 rounded-lg p-4">
+              <div className="text-gray-600 font-medium mb-1">Calls</div>
+              <div className="">{agent.usage?.callCount || 0}</div>
+            </div>
+            <div className="text-left border border-gray-200 rounded-lg p-4">
+              <div className="text-gray-600 font-medium mb-1">Last Call</div>
+              <div className="">
+                {agent.usage?.lastCalledAt
+                  ? formatDateTime(agent.usage.lastCalledAt)
+                  : "N/A"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tool Catalog Section */}
+        <div className="px-6 flex-1 flex flex-col overflow-hidden">
+          <Separator className="my-4" />
+          <div className="text-lg font-semibold mb-2">Tools Access</div>
+
+          {isDynamicCapabilitiesEnabled() && (
+            <div className="flex items-center rounded-lg p-4 justify-between mb-4 shrink-0 bg-linear-to-r from-violet-100 to-purple-100 border border-violet-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white rounded-lg shadow-xs">
+                  <Sparkles className="w-5 h-5 text-violet-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-violet-900">
+                    Dynamic Tools Mode
+                  </h3>
+                  <p className="text-xs text-violet-600">
+                    Agent discovers tools on-demand
+                    {dynamicToolsCount > 0 &&
+                      ` (${dynamicToolsCount} tools exposed)`}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={dynamicCapabilitiesMode}
+                onCheckedChange={handleDynamicCapabilitiesToggle}
+                disabled={dynamicCapabilitiesLoading || !consumerTag}
+              />
+            </div>
+          )}
+
+          <div className="flex items-center border rounded-lg p-4 justify-between mb-4 shrink-0">
+            <h3 className="text-sm font-semibold ">
+              All Server Tools ({totalConnectedTools})
+            </h3>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={allowAll}
+                onCheckedChange={handleAllowAllToggle}
+                disabled={dynamicCapabilitiesMode}
+              />
+            </div>
+          </div>
+
+          {/* Tool Groups List */}
+          <div className="space-y-3 overflow-y-auto pb-6 mb-4 border rounded-lg p-4">
+            <div className="text-lg font-bold  mb-2">Tools </div>
+            <SearchInput
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              wrapperClassName="flex-1 shrink-0 mb-2"
+              className="bg-[#FBFBFF]"
+            />
+            {agentToolGroups.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="font-semibold  mb-2">No Tool Groups Defined</h4>
+                <p className="text-gray-600 mb-4">
+                  Create a Tool Group for effective agent control.
+                </p>
+                <p className="text-gray-500 text-sm mb-4">
+                  Go to the Tool Catalog area to set this up.
+                </p>
+                <Button onClick={goToToolCatalog}>
+                  Go to Tool Catalog &gt;
+                </Button>
+              </div>
+            ) : filteredGroups.length === 0 ? (
+              <div className="text-center py-6 text-gray-600">
+                No tool groups found
+              </div>
+            ) : (
+              filteredGroups.map((group) => {
+                return (
+                  <Card
+                    key={group.id}
+                    className="cursor-pointer gap-3 rounded-[8px] border border-[var(--colors-gray-200)] bg-white py-3 ring-0"
+                    onClick={() => toggleGroupExpansion(group.id)}
+                  >
+                    <CardHeader className="px-3 py-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 items-start gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="mt-0.5 size-5 rounded-[4px] p-0 text-[#1a1a1e] hover:bg-gray-100"
+                            aria-label={
+                              expandedGroups.has(group.id)
+                                ? "Collapse tool group"
+                                : "Expand tool group"
+                            }
+                            aria-expanded={expandedGroups.has(group.id)}
+                            aria-controls={`agent-tool-group-${group.id}-tools`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleGroupExpansion(group.id);
+                            }}
+                          >
+                            <ChevronDown
+                              className={`size-4 transition-transform ${
+                                expandedGroups.has(group.id) ? "rotate-180" : ""
+                              }`}
+                            />
+                          </Button>
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
+                              {group.title}
+                            </CardTitle>
+                            <p className="text-[10px] font-regular mt-1 line-clamp-2 cursor-default">
+                              {group.description}
+                            </p>
+                          </div>
+                        </div>
+                        <div
+                          className="flex h-full gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <Switch
+                            checked={
+                              !allowAll && editedToolGroups.has(group.id)
+                            }
+                            onCheckedChange={(checked: boolean) => {
+                              handleToolGroupToggle(group.id, checked);
+                            }}
+                            disabled={dynamicCapabilitiesMode}
+                          />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-3 py-0">
+                      {/* MCPs and Tool Count */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {group.mcpNames.map((mcpName, index) => (
+                          <DomainBadge
+                            key={index}
+                            domain={mcpName}
+                            groupId={group.id}
+                          />
+                        ))}
+                        <span className="text-xs ">
+                          {group.totalToolCount !== group.toolCount
+                            ? `${group.toolCount}/${group.totalToolCount} tools`
+                            : `${group.toolCount} tools`}
+                        </span>
+                        {group.totalToolCount !== group.toolCount && (
+                          <div className="w-full">
+                            <span className="flex items-center gap-2 text-xs font-semibold leading-[18px] text-[var(--colors-warning-700)]">
+                              <TriangleAlert
+                                aria-hidden="true"
+                                className="size-4 shrink-0"
+                                strokeWidth={2}
+                              />
+                              Some servers are currently unavailable
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Expanded Tools View */}
+                      {expandedGroups.has(group.id) && (
+                        <div
+                          id={`agent-tool-group-${group.id}-tools`}
+                          className="max-h-64 overflow-y-auto mt-2"
+                        >
+                          <div className="flex items-center mb-2 flex-wrap gap-2">
+                            {group.allTools.map((tool, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className={
+                                  tool.isUnavailable
+                                    ? "rounded-[4px] border border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] px-[6px] py-[2px] text-xs font-medium leading-[18px] text-[var(--colors-warning-700)]"
+                                    : "rounded-[4px] border-0 bg-[#dcdafa] px-[6px] py-[2px] text-xs font-medium leading-[18px] text-[#312b89]"
+                                }
+                              >
+                                {tool.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* View More/Less Button */}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-200 bg-white shrink-0">
+          <div className="flex gap-3 justify-end">
+            <Button
+              className=" disabled:bg-gray-400 disabled:cursor-not-allowed"
+              onClick={saveConfiguration}
+              disabled={!hasChanges}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
