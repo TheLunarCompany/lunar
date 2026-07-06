@@ -129,6 +129,8 @@ const envSchema = z
     TOKENIZER_ENCODING: z
       .enum(TokenizerEncoding)
       .default(DEFAULT_TOKENIZER_ENCODING),
+    // Only sandbox-analysis pods load the tokenizer; other instances skip it.
+    IS_SANDBOX_ANALYSIS: z.stringbool().default(false),
     STRICTNESS_REQUIRED: z.stringbool().default(false),
     ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
     ENABLE_RESOURCE_CAPABILITY: z.stringbool().default(false),
@@ -205,6 +207,7 @@ const NON_SECRET_KEYS = [
   "STDIO_INHERIT_PROCESS_ENV",
   "ENABLE_STDIO_MCP_SERVERS",
   "TOKENIZER_ENCODING",
+  "IS_SANDBOX_ANALYSIS",
   "IS_ENTERPRISE",
   "STRICTNESS_REQUIRED",
   "ENABLE_PROMPT_CAPABILITY",

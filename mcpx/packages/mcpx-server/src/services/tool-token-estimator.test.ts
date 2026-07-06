@@ -53,6 +53,30 @@ describe("ToolTokenEstimator", () => {
       });
     });
 
+    it("defaults to a no-op encoder that reports 0 tokens", () => {
+      const estimator = new ToolTokenEstimator();
+
+      const tool: Tool = {
+        name: "test-tool",
+        description: "A test tool",
+        inputSchema: { type: "object" },
+      };
+
+      expect(estimator.estimateTokens(tool)).toBe(0);
+    });
+
+    it("swaps in a real encoder via setEncoder", () => {
+      const estimator = new ToolTokenEstimator();
+      estimator.setEncoder({ encode: () => [1, 2, 3] });
+
+      const tool: Tool = {
+        name: "test-tool",
+        inputSchema: { type: "object" },
+      };
+
+      expect(estimator.estimateTokens(tool)).toBe(3);
+    });
+
     it("handles missing description", () => {
       let capturedInput = "";
       const capturingEncoder: TokenEncoder = {

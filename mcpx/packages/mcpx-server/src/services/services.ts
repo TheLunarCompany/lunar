@@ -1,7 +1,6 @@
 import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import path from "path";
-import { getEncoding } from "js-tiktoken";
 import { LunarLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
@@ -79,6 +78,7 @@ export class Services {
   private _internalCapabilities: InternalCapabilitiesService;
   private _skillStore: SkillStore;
   private _skillResourceProjector: SkillResourceProjector;
+  private _toolTokenEstimator: ToolTokenEstimator;
 
   private logger: LunarLogger;
   private initialized = false;
@@ -144,11 +144,9 @@ export class Services {
       this._envVarManager,
     );
 
-    startupLogger.info("Loading tokenizer...");
-    const toolTokenEstimator = new ToolTokenEstimator(
-      getEncoding(env.TOKENIZER_ENCODING),
-    );
-    startupLogger.info("Tokenizer loaded");
+    // Real encoder is loaded lazily in initialize() (sandbox-analysis only).
+    const toolTokenEstimator = new ToolTokenEstimator();
+    this._toolTokenEstimator = toolTokenEstimator;
 
     const capabilityRegistry = new CapabilityRegistry(logger);
     this._capabilityRegistry = capabilityRegistry;
@@ -306,6 +304,16 @@ export class Services {
     }
     const startupLogger = this.logger.child({ component: "Services" });
     startupLogger.info("Initializing services...");
+
+    // A static import would eagerly build js-tiktoken's ~5MB vocab map on every
+    // boot, so load it dynamically and only for sandbox-analysis. Must precede
+    // upstreamHandler.initialize(), which can trigger the first estimateTokens().
+    if (env.IS_SANDBOX_ANALYSIS) {
+      startupLogger.info("Loading tokenizer...");
+      const { getEncoding } = await import("js-tiktoken");
+      this._toolTokenEstimator.setEncoder(getEncoding(env.TOKENIZER_ENCODING));
+      startupLogger.info("Tokenizer loaded");
+    }
 
     this._config.registerConsumer(this._permissionManager);
     this._config.registerConsumer(new ConfigValidator(this._envVarManager));
