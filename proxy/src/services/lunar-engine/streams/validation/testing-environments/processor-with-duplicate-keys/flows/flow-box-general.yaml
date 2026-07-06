@@ -1,0 +1,83 @@
+name: BoxQueueFlow
+
+filter:
+    url: box.com/*
+
+processors:
+  QueueLimiterSearch:
+    processor: Queue
+    parameters:
+      - key: quota_id
+        value: 25aa703b-7836-4c68-b06b-22b3f7c8370d
+      - key: ttl_seconds
+        value: 60
+      - key: queue_size
+        value: 100
+      - key: queue_size
+        value: 60
+      - key: priority_group_by_header
+        value: x-lunar-consumer-tag
+      - key: priority_groups
+        value:
+          box-search-company-1: 1
+          box-search-company-2: 2
+
+  GenerateResponseTooManyRequests1:
+    processor: GenerateResponse
+    parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: Too many requests
+      - key: Content-Type
+        value: text/plain
+
+flow:
+  request:
+    # Start by queuing requests for the /search endpoint based on LimiterMinuteBoxCompany
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: QueueLimiterSearch
+
+    # If the queue is blocked, respond with a 429 status
+    - from:
+        processor:
+          name: QueueLimiterSearch
+          condition: blocked
+      to:
+        processor:
+          name: GenerateResponseTooManyRequests1
+
+    # If the request is allowed by the queue, continue processing
+    - from:
+        processor:
+          name: QueueLimiterSearch
+          condition: allowed
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+  response:
+    # Respond with 429 status if any processor condition failed
+    - from:
+        processor:
+          name: GenerateResponseTooManyRequests1
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    # Complete the flow if the request is processed successfully
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        stream:
+          name: globalStream
+          at: end
