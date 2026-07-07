@@ -9,6 +9,10 @@ export interface UserEnvVarRowProps {
   onValueChange: (key: string, value: EnvValue) => void;
   disabled: boolean;
   onKeyChange?: (oldKey: string, newKey: string) => void;
+  /** Used by HeadersEditor for literal values — disables literal input. */
+  disableLiteralInput?: boolean;
+  /** Used by HeadersEditor for literal values — tooltip text to explain why the value option is disabled. */
+  literalDisabledTooltip?: string;
 }
 
 export interface UserEnvVarsEditorProps {

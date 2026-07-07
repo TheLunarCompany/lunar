@@ -1,8 +1,4 @@
-import {
-  RemoteTargetServer,
-  StdioTargetServer,
-  TargetServer,
-} from "../model/target-servers.js";
+import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { ExtendedClientI } from "./client-extension.js";
 import { MissingEnvVar } from "../errors.js";
 
@@ -21,7 +17,7 @@ export interface PendingAuthTargetClient {
 
 export interface PendingInputTargetClient {
   _state: "pending-input";
-  targetServer: StdioTargetServer;
+  targetServer: TargetServer;
   missingEnvVars: MissingEnvVar[];
 }
 

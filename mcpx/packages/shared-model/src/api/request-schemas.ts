@@ -1,6 +1,14 @@
 import YAML from "yaml";
 import { z } from "zod/v4";
 
+export const HEADER_VALIDATION_REGEX =
+  /^(?:[^{}]|\{(?!\{)|\}(?!\})|\{\{[^{}]+\}\})*$/;
+
+export const HEADER_PARAMS_EXTRACTION_REGEX = /\{\{([^{}]+)\}\}/g;
+
+export const isValidHeaderTemplateString = (value: string): boolean =>
+  HEADER_VALIDATION_REGEX.test(value);
+
 // ZOD
 export const envValueSchema = z.union([
   z.string(),

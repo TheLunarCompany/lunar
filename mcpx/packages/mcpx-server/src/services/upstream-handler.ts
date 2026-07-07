@@ -1185,8 +1185,8 @@ export class UpstreamHandler
     } catch (initialError) {
       error = makeError(initialError);
 
-      // Check for pending input (missing env vars) - only for stdio servers
-      if (isPendingInputError(initialError) && targetServer.type === "stdio") {
+      // Check for pending input (missing env vars)
+      if (isPendingInputError(initialError)) {
         this.logger.info("Server has missing environment variables", {
           name: targetServer.name,
           missingEnvVars: initialError.missingEnvVars,

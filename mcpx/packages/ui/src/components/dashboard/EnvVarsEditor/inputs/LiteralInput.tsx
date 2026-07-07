@@ -14,6 +14,7 @@ export const LiteralInput = ({
   envKey,
   isRequired,
   isSecret,
+  hideLeaveEmpty = false,
 }: LiteralInputProps) => {
   const [valueVisible, setValueVisible] = useState(!isSecret);
 
@@ -45,7 +46,7 @@ export const LiteralInput = ({
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        {!isRequired && (
+        {!isRequired && !hideLeaveEmpty && (
           <>
             <Checkbox
               id={`leave-empty-${envKey}`}

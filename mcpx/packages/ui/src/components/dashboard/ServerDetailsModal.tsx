@@ -10,7 +10,7 @@ const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { useToast } from "@/components/ui/use-toast";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { AuthenticationDialog } from "./AuthenticationDialog";
-import { EnvVarsEditor } from "./EnvVarsEditor";
+import { EnvVarsEditor, HeadersEditor } from "./EnvVarsEditor";
 import {
   useDeleteMcpServer,
   useEditMcpServer,
@@ -309,6 +309,44 @@ export const ServerDetailsModal = ({
     );
   };
 
+  const handleSaveHeaders = (headers: Record<string, EnvValue>) => {
+    if (
+      currentServer.type !== "sse" &&
+      currentServer.type !== "streamable-http"
+    )
+      return;
+    if (!currentServer.url) return;
+
+    editServer(
+      {
+        name: currentServer.name,
+        payload: {
+          catalogItemId: currentServer.catalogItemId,
+          type: currentServer.type,
+          url: currentServer.url,
+          headers,
+          icon: currentServer.icon,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Headers Saved",
+            description: "Server headers updated.",
+          });
+          handleClose();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: `Failed to save headers: ${error.message}`,
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  };
+
   const handleEditServer = () => {
     dismiss(); // Dismiss all toasts when opening Edit Server modal
     openEditServerModal(getEditTargetServer(currentServer));
@@ -535,6 +573,16 @@ export const ServerDetailsModal = ({
                           isSaving={isEditPending}
                         />
                       )}
+                    {currentServer.headers &&
+                      currentServer.type !== "stdio" &&
+                      Object.keys(currentServer.headers).length > 0 && (
+                        <HeadersEditor
+                          headers={currentServer.headers}
+                          onSave={handleSaveHeaders}
+                          isSaving={isEditPending}
+                          missingEnvVars={currentServer.missingEnvVars}
+                        />
+                      )}
                   </>
                 ) : liveStatus === "pending_auth" ? (
                   <div className="flex flex-col gap-3">
@@ -549,6 +597,16 @@ export const ServerDetailsModal = ({
                       setUserCode={setUserCode}
                       userCode={userCode}
                     />
+                    {currentServer.headers &&
+                      currentServer.type !== "stdio" &&
+                      Object.keys(currentServer.headers).length > 0 && (
+                        <HeadersEditor
+                          headers={currentServer.headers}
+                          onSave={handleSaveHeaders}
+                          isSaving={isEditPending}
+                          missingEnvVars={currentServer.missingEnvVars}
+                        />
+                      )}
                     <ServerCapabilitiesSections server={currentServer} />
                   </div>
                 ) : (
@@ -580,6 +638,30 @@ export const ServerDetailsModal = ({
                                 onSave={(env) => handleSaveEnv(env)}
                                 isSaving={isEditPending}
                                 hideTitle
+                              />
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+                    {currentServer.headers &&
+                      currentServer.type !== "stdio" &&
+                      Object.keys(currentServer.headers).length > 0 && (
+                        <Collapsible
+                          defaultOpen
+                          className="rounded-lg border border-border p-4"
+                        >
+                          <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+                            Headers
+                            <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="pt-3">
+                              <HeadersEditor
+                                headers={currentServer.headers}
+                                onSave={handleSaveHeaders}
+                                isSaving={isEditPending}
+                                hideTitle
+                                missingEnvVars={currentServer.missingEnvVars}
                               />
                             </div>
                           </CollapsibleContent>

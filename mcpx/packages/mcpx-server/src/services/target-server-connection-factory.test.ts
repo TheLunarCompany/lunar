@@ -135,7 +135,7 @@ describe("resolveRemoteHeaders", () => {
       userHeaders: { "X-User-Env": { fromEnv: "MISSING_ENV" } },
     });
 
-    expect(headers).toEqual({});
+    expect(headers).toBeUndefined();
   });
 });
 

@@ -1,4 +1,5 @@
 import z from "zod/v4";
+
 export const isValidJson = (value: string): boolean => {
   try {
     JSON.parse(value);
@@ -96,27 +97,18 @@ export const parseServerPayload = (
   if (server.type === "stdio") {
     return localServerPayloadSchema.safeParse(server);
   }
-  // support http servers for UI compatibility
-  if (server.type === "http") {
-    return remoteServerPayloadSchema.safeParse({
-      ...server,
-      type: "streamable-http",
-    });
-  }
-  // Only set type if 'url' exists
-  if ("url" in server && typeof server.url === "string") {
-    const inferredType = inferServerTypeFromUrl(server.url);
-    // Ensure type is always set and matches expected union
-    if (inferredType === "sse") {
-      return remoteServerPayloadSchema.safeParse({ ...server, type: "sse" });
-    } else {
-      return remoteServerPayloadSchema.safeParse({
-        ...server,
-        type: "streamable-http",
-      });
-    }
-  }
-  return remoteServerPayloadSchema.safeParse(server);
+
+  const resolvedType =
+    server.type === "http"
+      ? ("streamable-http" as const)
+      : "url" in server && typeof server.url === "string"
+        ? (inferServerTypeFromUrl(server.url) ?? ("streamable-http" as const))
+        : ("streamable-http" as const);
+
+  return remoteServerPayloadSchema.safeParse({
+    ...server,
+    type: resolvedType,
+  });
 };
 
 /**

@@ -27,7 +27,10 @@ import {
 } from "./env-var-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { EnvRequirements } from "@mcpx/shared-model";
-import { resolveEnv } from "./target-server-env-resolution.js";
+import {
+  resolveEnv,
+  resolveHeadersValues,
+} from "./target-server-env-resolution.js";
 
 /**
  * Factory for creating connections to different types of target MCP servers
@@ -229,6 +232,7 @@ export function buildClient(targetServiceName: string): Client {
  * so it wins over a user header of the same name. Returns undefined when there are no
  * headers at all.
  */
+
 export function resolveRemoteHeaders(params: {
   userHeaders?: Record<string, EnvValue>;
   privateHeaders?: PrivateHeaders;
@@ -238,38 +242,21 @@ export function resolveRemoteHeaders(params: {
 }): Record<string, string> | undefined {
   const { userHeaders, privateHeaders, envVarsResolver, logger, isSpace } =
     params;
-  const resolvedUser = resolveHeaderValues(
-    userHeaders,
-    envVarsResolver,
-    logger,
-    isSpace,
-  );
-  const watermark = privateHeaders
-    ? { [privateHeaders.key]: privateHeaders.value }
-    : undefined;
-  if (!resolvedUser && !watermark) {
-    return undefined;
-  }
-  return { ...resolvedUser, ...watermark };
-}
-
-/** Resolves env-backed header values to concrete strings, throwing on missing (unless space). */
-function resolveHeaderValues(
-  headers: Record<string, EnvValue> | undefined,
-  envVarsResolver: TargetServerEnvResolver,
-  logger: Logger,
-  isSpace: boolean,
-): Record<string, string> | undefined {
-  if (!headers) {
-    return undefined;
-  }
-  const { resolved, missingVars } = resolveEnv({
-    envConfig: headers,
+  const { resolved: resolvedUser, missingVars } = resolveHeadersValues({
+    headers: userHeaders,
     envVarsResolver,
     logger,
   });
+
   if (missingVars.length > 0 && !isSpace) {
     throw new PendingInputError(missingVars);
   }
-  return resolved;
+
+  const watermark = privateHeaders
+    ? { [privateHeaders.key]: privateHeaders.value }
+    : undefined;
+  if (Object.keys(resolvedUser).length === 0 && !watermark) {
+    return undefined;
+  }
+  return { ...resolvedUser, ...watermark };
 }

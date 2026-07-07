@@ -2,7 +2,7 @@ import { v7 as uuidv7 } from "uuid";
 import { resetEnv } from "../src/env.js";
 import { TESTKIT_SERVER_ENV_READER } from "../src/testkit/root.js";
 import { getTestHarness } from "./utils.js";
-import { EnvRequirements } from "@mcpx/shared-model";
+import { EnvRequirements, EnvValue } from "@mcpx/shared-model";
 
 const MCPX_BASE_URL = "http://localhost:9000";
 const RECOVERY_ENV_VAR_NAME = "IT_TEST_RECOVERY_VAR";
@@ -12,6 +12,7 @@ const RECOVERY_ENV_VALUE = "recovered-value";
 const RECOVERABLE_SERVER_ID = "550e8400-e29b-41d4-a716-446655440001";
 const EMPTY_LITERAL_SERVER_ID = "550e8400-e29b-41d4-a716-446655440002";
 const NULL_LITERAL_SERVER_ID = "550e8400-e29b-41d4-a716-446655440003";
+const REMOTE_PENDING_SERVER_ID = "550e8400-e29b-41d4-a716-446655440004";
 
 // Used to add a target server via API, like UI does (REST and WS both use the same underlying engine)
 async function addServer(
@@ -29,6 +30,22 @@ async function addServer(
       args: [TESTKIT_SERVER_ENV_READER],
       env,
       catalogItemId,
+    }),
+  });
+}
+
+async function addRemoteServer(
+  name: string,
+  headers: Record<string, EnvValue>,
+): Promise<Response> {
+  return fetch(`${MCPX_BASE_URL}/target-server`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      type: "streamable-http",
+      url: "http://example.com/mcp",
+      headers,
     }),
   });
 }
@@ -69,32 +86,46 @@ describe("Target Server States - pending-input", () => {
 
     // Include all server names that will be used in tests
     // Note: strict mode is enabled by default (mock hub sends user/member identity)
-    testHarness.emitCatalog(
-      buildCatalogPayload(
-        {
-          "recoverable-server": {
-            REQUIRED_VAR: { kind: "required", isSecret: false },
-          },
-          "empty-literal-server": {
-            EMPTY_REQUIRED: { kind: "required", isSecret: false },
-            EMPTY_OPTIONAL: { kind: "optional", isSecret: false },
-            VALID_VAR: { kind: "optional", isSecret: false },
-          },
-          "null-env-server": undefined,
-          "null-literal-server": {
-            NULL_REQUIRED: { kind: "required", isSecret: false },
-            NULL_OPTIONAL: { kind: "optional", isSecret: false },
-            VALID_VAR: { kind: "optional", isSecret: false },
-          },
-          "multi-missing-server": undefined,
+    const stdioPayload = buildCatalogPayload(
+      {
+        "recoverable-server": {
+          REQUIRED_VAR: { kind: "required", isSecret: false },
         },
-        {
-          "recoverable-server": RECOVERABLE_SERVER_ID,
-          "empty-literal-server": EMPTY_LITERAL_SERVER_ID,
-          "null-literal-server": NULL_LITERAL_SERVER_ID,
+        "empty-literal-server": {
+          EMPTY_REQUIRED: { kind: "required", isSecret: false },
+          EMPTY_OPTIONAL: { kind: "optional", isSecret: false },
+          VALID_VAR: { kind: "optional", isSecret: false },
         },
-      ),
+        "null-env-server": undefined,
+        "null-literal-server": {
+          NULL_REQUIRED: { kind: "required", isSecret: false },
+          NULL_OPTIONAL: { kind: "optional", isSecret: false },
+          VALID_VAR: { kind: "optional", isSecret: false },
+        },
+        "multi-missing-server": undefined,
+      },
+      {
+        "recoverable-server": RECOVERABLE_SERVER_ID,
+        "empty-literal-server": EMPTY_LITERAL_SERVER_ID,
+        "null-literal-server": NULL_LITERAL_SERVER_ID,
+      },
     );
+    testHarness.emitCatalog({
+      items: [
+        ...stdioPayload.items,
+        {
+          server: {
+            id: REMOTE_PENDING_SERVER_ID,
+            name: "remote-pending-server",
+            displayName: "remote-pending-server",
+            config: {
+              type: "streamable-http" as const,
+              url: "http://example.com/mcp",
+            },
+          },
+        },
+      ],
+    });
   });
 
   afterAll(async () => {
@@ -383,6 +414,54 @@ describe("Target Server States - pending-input", () => {
         testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
       expect(client?._state).toBe("connected");
+    });
+  });
+
+  describe("remote server header pending-input", () => {
+    const serverName = "remote-pending-server";
+
+    afterEach(async () => {
+      await fetch(`${MCPX_BASE_URL}/target-server/${serverName}`, {
+        method: "DELETE",
+      });
+    });
+
+    it("fromEnv-backed header with missing env var → pending-input", async () => {
+      const response = await addRemoteServer(serverName, {
+        Authorization: { fromEnv: "MISSING_HEADER_VAR" },
+      });
+      expect(response.status).toBe(201);
+
+      const client =
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
+      expect(client).toBeDefined();
+      expect(client?._state).toBe("pending-input");
+      expect(
+        client?._state === "pending-input" && client.missingEnvVars,
+      ).toEqual([
+        {
+          key: "Authorization",
+          type: "fromEnv",
+          fromEnvName: "MISSING_HEADER_VAR",
+        },
+      ]);
+    });
+
+    it("param-template header with missing env var → pending-input", async () => {
+      const response = await addRemoteServer(serverName, {
+        Authorization: "Bearer {{MISSING_TOKEN}}",
+      });
+      expect(response.status).toBe(201);
+
+      const client =
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
+      expect(client).toBeDefined();
+      expect(client?._state).toBe("pending-input");
+      expect(
+        client?._state === "pending-input" && client.missingEnvVars,
+      ).toEqual([
+        { key: "Authorization", type: "fromEnv", fromEnvName: "MISSING_TOKEN" },
+      ]);
     });
   });
 

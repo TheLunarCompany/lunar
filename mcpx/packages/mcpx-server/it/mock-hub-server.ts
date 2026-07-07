@@ -650,6 +650,16 @@ export class MockHubServer {
           ack({ success: true });
         },
       );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.DELETE_OAUTH_TOKENS,
+        (_envelope: unknown, ack: (res: { success: boolean }) => void) => {
+          this.logger.info("Received delete-oauth-tokens", {
+            socketId: socket.id,
+          });
+          ack({ success: true });
+        },
+      );
     });
   }
 

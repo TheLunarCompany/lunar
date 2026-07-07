@@ -12,6 +12,7 @@ import {
   TargetServerRequest,
   catalogMCPServerSchema,
   catalogConfigSchema,
+  isValidHeaderTemplateString,
 } from "@mcpx/shared-model";
 
 export const catalogMCPServerConfigByNameSchema = catalogMCPServerSchema
@@ -178,6 +179,22 @@ export const validateAndProcessServer = (
       success: false,
       error: `Server configuration not found for "${serverName}".`,
     };
+  }
+
+  if ("headers" in serverConfig && serverConfig.headers) {
+    for (const [headerName, headerValue] of Object.entries(
+      serverConfig.headers,
+    )) {
+      if (
+        typeof headerValue === "string" &&
+        !isValidHeaderTemplateString(headerValue)
+      ) {
+        return {
+          success: false,
+          error: `Header "${headerName}" has invalid placeholder syntax. Use {{ENV_VAR}} format.`,
+        };
+      }
+    }
   }
 
   // Create payload

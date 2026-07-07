@@ -46,6 +46,8 @@ export const EnvVarRow = ({
   onValueChange,
   disabled,
   onKeyChange: _onKeyChange,
+  disableLiteralInput = false,
+  literalDisabledTooltip,
 }: UserEnvVarRowProps) => {
   const mode = getMode(value);
   const editorMode = mode === "literal" ? "literal" : "fromEnv";
@@ -241,6 +243,25 @@ export const EnvVarRow = ({
                         id={`mode-literal-${envKey}`}
                       />
                       <span className="text-sm text-foreground">Value</span>
+                      {literalDisabledTooltip && (
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex p-0.5 rounded text-muted-foreground hover:text-foreground focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+                                aria-label={literalDisabledTooltip}
+                              >
+                                <Info className="w-3.5 h-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {literalDisabledTooltip}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <RadioGroupItem
@@ -286,10 +307,11 @@ export const EnvVarRow = ({
                       onChange={handleLiteralChange}
                       onLeaveEmpty={handleLeaveEmpty}
                       isNull={isNullValue}
-                      disabled={disabled}
+                      disabled={disabled || disableLiteralInput}
                       envKey={envKey}
                       isRequired={isRequired}
                       isSecret={isSecret}
+                      hideLeaveEmpty={disableLiteralInput}
                     />
                   )}
                 </>

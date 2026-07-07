@@ -1,9 +1,11 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { EnvRequirement, EnvRequirements } from "@mcpx/shared-model";
+import { PendingInputError } from "../errors.js";
 import { EnvValue } from "../model/target-servers.js";
 import { TargetServerEnvResolver } from "./env-var-manager.js";
 import {
   resolveEnv,
+  resolveHeadersValues,
   ResolveEnvResult,
 } from "./target-server-env-resolution.js";
 
@@ -24,6 +26,21 @@ function run(args: {
     envVarsResolver: processEnvResolver,
     logger: noOpLogger,
   });
+}
+
+function runHeaders(args: {
+  headers: Record<string, EnvValue>;
+  isSpace?: boolean;
+}): Record<string, string> {
+  const { resolved, missingVars } = resolveHeadersValues({
+    headers: args.headers,
+    envVarsResolver: processEnvResolver,
+    logger: noOpLogger,
+  });
+  if (missingVars.length > 0 && !(args.isSpace ?? false)) {
+    throw new PendingInputError(missingVars);
+  }
+  return resolved;
 }
 
 function required(prefilled?: EnvValue): EnvRequirement {
@@ -763,6 +780,140 @@ describe("resolveEnv", () => {
       run({ envConfig, envRequirements });
       expect(envConfig).toEqual(envConfigCopy);
       expect(envRequirements).toEqual(envRequirementsCopy);
+    });
+  });
+});
+
+describe("HeaderTemplatesResolver", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  // ============================================================
+  // No param — plain string passthrough
+  // ============================================================
+  describe("no param", () => {
+    it("string with no {{}} → returned as-is", () => {
+      expect(runHeaders({ headers: { AUTH: "Bearer static-token" } })).toEqual({
+        AUTH: "Bearer static-token",
+      });
+    });
+  });
+
+  // ============================================================
+  // Single param
+  // ============================================================
+  describe("single param", () => {
+    it("param resolves", () => {
+      process.env["TOKEN"] = "tok-123";
+      expect(runHeaders({ headers: { AUTH: "{{TOKEN}}" } })).toEqual({
+        AUTH: "tok-123",
+      });
+    });
+
+    it("param resolves → interpolated into surrounding string", () => {
+      process.env["TOKEN"] = "tok-123";
+      expect(runHeaders({ headers: { AUTH: "Bearer {{TOKEN}}" } })).toEqual({
+        AUTH: "Bearer tok-123",
+      });
+    });
+
+    it("param missing → throws PendingInputError", () => {
+      delete process.env["TOKEN"];
+      expect(() =>
+        runHeaders({ headers: { AUTH: "Bearer {{TOKEN}}" } }),
+      ).toThrow(PendingInputError);
+    });
+
+    it("param missing → missingEnvVars carries the correct entry", () => {
+      delete process.env["TOKEN"];
+      try {
+        runHeaders({ headers: { AUTH: "Bearer {{TOKEN}}" } });
+        throw new Error("should have thrown");
+      } catch (e) {
+        expect(e).toBeInstanceOf(PendingInputError);
+        expect((e as PendingInputError).missingEnvVars).toEqual([
+          { key: "AUTH", type: "fromEnv", fromEnvName: "TOKEN" },
+        ]);
+      }
+    });
+
+    it("param missing, isSpace=true → no throw, header absent from resolved", () => {
+      delete process.env["TOKEN"];
+      expect(
+        runHeaders({ headers: { AUTH: "Bearer {{TOKEN}}" }, isSpace: true }),
+      ).toEqual({});
+    });
+
+    it("param value is empty string → throws (treated as missing)", () => {
+      process.env["TOKEN"] = "";
+      expect(() =>
+        runHeaders({ headers: { AUTH: "Bearer {{TOKEN}}" } }),
+      ).toThrow(PendingInputError);
+    });
+
+    it("param value is whitespace-only → throws (treated as missing)", () => {
+      process.env["TOKEN"] = "   ";
+      expect(() =>
+        runHeaders({ headers: { AUTH: "Bearer {{TOKEN}}" } }),
+      ).toThrow(PendingInputError);
+    });
+  });
+
+  // ============================================================
+  // Multi params
+  // ============================================================
+  describe("multi params", () => {
+    it("all params resolve → fully expanded", () => {
+      process.env["ORG"] = "lunar";
+      process.env["KEY"] = "k9x";
+      expect(runHeaders({ headers: { AUTH: "{{ORG}}:{{KEY}}" } })).toEqual({
+        AUTH: "lunar:k9x",
+      });
+    });
+
+    it("one param missing → only missing param reported", () => {
+      process.env["ORG"] = "lunar";
+      delete process.env["KEY"];
+      try {
+        runHeaders({ headers: { AUTH: "{{ORG}}:{{KEY}}" } });
+        throw new Error("should have thrown");
+      } catch (e) {
+        expect(e).toBeInstanceOf(PendingInputError);
+        expect((e as PendingInputError).missingEnvVars).toEqual([
+          { key: "AUTH", type: "fromEnv", fromEnvName: "KEY" },
+        ]);
+      }
+    });
+
+    it("multiple params missing → all reported in missingEnvVars, not just first", () => {
+      delete process.env["ORG"];
+      delete process.env["KEY"];
+      try {
+        runHeaders({ headers: { AUTH: "{{ORG}}:{{KEY}}" } });
+        throw new Error("should have thrown");
+      } catch (e) {
+        expect(e).toBeInstanceOf(PendingInputError);
+        expect((e as PendingInputError).missingEnvVars).toEqual(
+          expect.arrayContaining([
+            { key: "AUTH", type: "fromEnv", fromEnvName: "ORG" },
+            { key: "AUTH", type: "fromEnv", fromEnvName: "KEY" },
+          ]),
+        );
+      }
+    });
+
+    it("same param used twice → both occurrences replaced", () => {
+      process.env["X"] = "abc";
+      expect(runHeaders({ headers: { H: "{{X}}-{{X}}" } })).toEqual({
+        H: "abc-abc",
+      });
     });
   });
 });

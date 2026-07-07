@@ -1,4 +1,7 @@
-import { EnvRequirements } from "@mcpx/shared-model";
+import {
+  EnvRequirements,
+  HEADER_PARAMS_EXTRACTION_REGEX,
+} from "@mcpx/shared-model";
 import { Logger } from "winston";
 import { MissingEnvVar } from "../errors.js";
 import { EnvValue } from "../model/target-servers.js";
@@ -73,10 +76,107 @@ export function resolveEnv(props: {
   return { resolved, missingVars };
 }
 
+/** Resolves env-backed and params baked header values to concrete strings. Returns resolved headers and any missing vars. */
+export function resolveHeadersValues(props: {
+  headers: Record<string, EnvValue> | undefined;
+  envVarsResolver: TargetServerEnvResolver;
+  logger: Logger;
+}): ResolveEnvResult {
+  const { headers, envVarsResolver, logger } = props;
+  if (!headers) return { resolved: {}, missingVars: [] };
+
+  const resolved: Record<string, string> = {};
+  const missingVars: MissingEnvVar[] = [];
+
+  for (const [headerName, headerValue] of Object.entries(headers)) {
+    if (typeof headerValue === "string") {
+      const result = resolveHeaderWithParams(headerValue, envVarsResolver);
+      switch (result.lookup) {
+        case "found":
+          resolved[headerName] = result.value;
+          break;
+        case "failed":
+          logger.warn("Failed to resolve header params, treating as missing", {
+            headerName,
+            missingParams: result.missingReferences,
+          });
+          missingVars.push(
+            ...result.missingReferences.map((ref) => ({
+              key: headerName,
+              type: "fromEnv" as const,
+              fromEnvName: ref,
+            })),
+          );
+          break;
+      }
+    } else {
+      const result = resolveSingleEnvValue(headerValue, envVarsResolver);
+      switch (result.lookup) {
+        case "found":
+          resolved[headerName] = result.value;
+          break;
+        case "not-supplied":
+          break;
+        case "failed":
+          logger.warn("Failed to resolve header value, treating as missing", {
+            headerName,
+            suppliedValue: headerValue,
+          });
+          missingVars.push({
+            key: headerName,
+            type: "fromEnv",
+            fromEnvName: result.missingReference,
+          });
+          break;
+      }
+    }
+  }
+
+  return { resolved, missingVars };
+}
+
+// ========================
+// Single Value resolvers
+// ========================
+
 type ResolvedEnvVar =
   | { lookup: "found"; value: string }
   | { lookup: "not-supplied" }
   | { lookup: "failed"; missingReference: string };
+
+type ResolvedHeaderWithParams =
+  | { lookup: "found"; value: string }
+  | { lookup: "failed"; missingReferences: string[] };
+
+function resolveHeaderWithParams(
+  headerValue: string,
+  envVarsResolver: TargetServerEnvResolver,
+): ResolvedHeaderWithParams {
+  const params = [
+    ...new Set(
+      [...headerValue.matchAll(HEADER_PARAMS_EXTRACTION_REGEX)].reduce<
+        string[]
+      >(
+        (acc, match) => (match[1] !== undefined ? [...acc, match[1]] : acc),
+        [],
+      ),
+    ),
+  ];
+  const missingReferences: string[] = [];
+  let expanded = headerValue;
+  for (const param of params) {
+    // no op for a string with no params
+    const resolved = envVarsResolver.resolveTargetServerEnv(param);
+    if (resolved !== undefined && resolved.trim() !== "") {
+      expanded = expanded.replaceAll(`{{${param}}}`, resolved);
+    } else {
+      missingReferences.push(param);
+    }
+  }
+  return missingReferences.length > 0
+    ? { lookup: "failed", missingReferences }
+    : { lookup: "found", value: expanded };
+}
 
 function resolveSingleEnvValue(
   envValue: EnvValue,

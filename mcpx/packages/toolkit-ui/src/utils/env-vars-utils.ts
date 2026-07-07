@@ -236,6 +236,8 @@ export interface LiteralInputProps extends EditableEnvVarInputProps {
   envKey: string;
   isRequired: boolean;
   isSecret: boolean;
+  /** Used by HeadersEditor for header literal values — hides the "empty" checkbox. */
+  hideLeaveEmpty?: boolean;
 }
 
 export interface EnvReferenceInputProps
