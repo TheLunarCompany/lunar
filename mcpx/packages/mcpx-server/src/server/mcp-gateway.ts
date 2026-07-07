@@ -28,7 +28,11 @@ import {
   ToolCallResultUnion,
 } from "../model/sessions.js";
 import { enabledCapabilityKinds } from "../services/capability-registry.js";
-import { UnavailableReason } from "../services/capability-resolver.js";
+import {
+  ActiveCapability,
+  ConsumerContext,
+  UnavailableReason,
+} from "../services/capability-resolver.js";
 import {
   HiddenInternalCapabilityError,
   UnknownInternalCapabilityError,
@@ -50,8 +54,9 @@ export async function getServer(
   logger: Logger,
   shouldReturnEmptyServer: boolean,
 ): Promise<Server> {
+  const enabledKinds = enabledCapabilityKinds();
   const capabilities: ServerCapabilities = {};
-  for (const kind of enabledCapabilityKinds()) {
+  for (const kind of enabledKinds) {
     capabilities[kind] = { listChanged: true };
   }
   const server = new Server(
@@ -68,21 +73,12 @@ export async function getServer(
       logger.info("ListToolsRequest received", { sessionId });
       const consumer = services.sessions.getConsumerContext(sessionId);
 
-      // Per-handler visibility + enrichment for origin="internal" tools (auth,
-      // dynamic-capabilities, etc.) lives in InternalCapabilitiesService;
-      // upstream tools surface as-is.
-      const tools: Tool[] = [];
-      for (const cap of services.capabilityResolver.getVisibleTools(consumer)) {
-        if (cap.origin === "internal") {
-          const visible = services.internalCapabilities.visibleToolForListing(
-            cap,
-            consumer,
-          );
-          if (visible) tools.push(visible);
-          continue;
-        }
-        tools.push(cap.definition);
-      }
+      const tools: Tool[] = listVisibleDefinitions(
+        services.capabilityResolver.getPermittedTools(consumer),
+        consumer,
+        (cap, consumer) =>
+          services.internalCapabilities.visibleToolForListing(cap, consumer),
+      );
 
       if (logger.isSillyEnabled()) {
         logger.debug("ListToolsRequest response", { tools });
@@ -93,16 +89,21 @@ export async function getServer(
     },
   );
 
-  if (env.ENABLE_PROMPT_CAPABILITY) {
+  if (enabledKinds.includes("prompts")) {
     server.setRequestHandler(
       ListPromptsRequestSchema,
       async (_request, { sessionId }) => {
         logger.info("ListPromptsRequest received", { sessionId });
         const consumer = services.sessions.getConsumerContext(sessionId);
-        // Prompts in this phase are upstream-only; surface definitions as-is.
-        const prompts: Prompt[] = services.capabilityResolver
-          .getVisiblePrompts(consumer)
-          .map((cap) => cap.definition);
+        const prompts: Prompt[] = listVisibleDefinitions(
+          services.capabilityResolver.getPermittedPrompts(consumer),
+          consumer,
+          (cap, consumer) =>
+            services.internalCapabilities.visiblePromptForListing(
+              cap,
+              consumer,
+            ),
+        );
         logger.debug("ListPromptsRequest response", {
           promptCount: prompts.length,
         });
@@ -137,7 +138,7 @@ export async function getServer(
         // prompts forward to the owning server, like CallTool.
         const result =
           entry.origin === "internal"
-            ? services.internalCapabilities.dispatchPrompt(entry)
+            ? services.internalCapabilities.dispatchPrompt(entry, consumer)
             : await services.upstreamHandler.getPrompt(entry.serverName, {
                 ...request.params,
                 name: entry.capabilityName,
@@ -169,15 +170,21 @@ export async function getServer(
     );
   }
 
-  if (env.ENABLE_RESOURCE_CAPABILITY) {
+  if (enabledKinds.includes("resources")) {
     server.setRequestHandler(
       ListResourcesRequestSchema,
       async (_request, { sessionId }) => {
         logger.info("ListResourcesRequest received", { sessionId });
         const consumer = services.sessions.getConsumerContext(sessionId);
-        const resources: Resource[] = services.capabilityResolver
-          .getVisibleResources(consumer)
-          .map((cap) => cap.definition);
+        const resources: Resource[] = listVisibleDefinitions(
+          services.capabilityResolver.getPermittedResources(consumer),
+          consumer,
+          (cap, consumer) =>
+            services.internalCapabilities.visibleResourceForListing(
+              cap,
+              consumer,
+            ),
+        );
         logger.debug("ListResourcesRequest response", {
           resourceCount: resources.length,
         });
@@ -209,7 +216,7 @@ export async function getServer(
         // would forward to entry.serverName, like GetPrompt.
         const result =
           entry.origin === "internal"
-            ? services.internalCapabilities.dispatchResource(entry)
+            ? services.internalCapabilities.dispatchResource(entry, consumer)
             : undefined;
         if (!result) {
           throw makeUnavailableError("Resource", request.params.uri, "unknown");
@@ -556,6 +563,24 @@ function executeUpstreamToolCall(options: {
       return measureToolCallResult.result;
     }
     return Promise.reject(measureToolCallResult.error);
+  });
+}
+
+// One list-response shape for all kinds: upstream entries arrive already
+// permission-filtered by the resolver; internal entries defer to their
+// handler's per-consumer visibility (which may also enrich the definition).
+function listVisibleDefinitions<T>(
+  caps: ActiveCapability<T>[],
+  consumer: ConsumerContext,
+  visibleForListing: (
+    cap: ActiveCapability<T>,
+    consumer: ConsumerContext,
+  ) => T | undefined,
+): T[] {
+  return caps.flatMap((cap) => {
+    if (cap.origin !== "internal") return [cap.definition];
+    const visible = visibleForListing(cap, consumer);
+    return visible ? [visible] : [];
   });
 }
 

@@ -527,6 +527,7 @@ export class SetupManager implements SetupManagerI {
       },
       auth: { enabled: false },
       targetServerAttributes: {},
+      skills: { enabled: [] },
     };
   }
 }
@@ -585,6 +586,7 @@ function fillInConfig(partialConfig: SetupConfigPayload): Config {
     },
     auth: partialConfig.auth ?? { enabled: false },
     targetServerAttributes: partialConfig.targetServerAttributes ?? {},
+    skills: partialConfig.skills ?? { enabled: [] },
   };
 }
 

@@ -1,4 +1,5 @@
 import { ConfigValidator } from "./config-validator.js";
+import { DEFAULT_CONFIG } from "../config.js";
 import { Config } from "../model/config/config.js";
 import { resetEnv } from "../env.js";
 import { EnvVarManager } from "./env-var-manager.js";
@@ -19,21 +20,7 @@ describe("ConfigValidator", () => {
     resetEnv();
   });
 
-  const createBaseConfig = (): Config => ({
-    permissions: {
-      default: { _type: "default-allow", block: [] },
-      consumers: {},
-      clientNames: {},
-    },
-    toolGroups: [],
-    auth: {
-      enabled: false,
-    },
-    toolExtensions: {
-      services: {},
-    },
-    targetServerAttributes: {},
-  });
+  const createBaseConfig = (): Config => structuredClone(DEFAULT_CONFIG);
 
   describe("prepareConfig", () => {
     it("should validate config with auth disabled", async () => {

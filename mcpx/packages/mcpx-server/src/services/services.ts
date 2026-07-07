@@ -46,10 +46,11 @@ import { DiskTokenStore } from "./disk-token-store.js";
 import { HubTokenClient } from "./hub-token-client.js";
 import { HubDownstreamSessionClient } from "./hub-downstream-session-client.js";
 import { CapabilityRegistry } from "./capability-registry.js";
-import { CapabilityResolver } from "./capability-resolver.js";
-import { SkillStore } from "./skill-store.js";
-import { SkillResourceProjector } from "./skill-resource-projector.js";
-import { HubSkillClient } from "./hub-skill-client.js";
+import {
+  CapabilityResolver,
+  DeferredPermissionCheck,
+} from "./capability-resolver.js";
+import { buildSkillServices, SkillServices } from "./skills/index.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -76,8 +77,7 @@ export class Services {
   private _capabilityRegistry: CapabilityRegistry;
   private _capabilityResolver: CapabilityResolver;
   private _internalCapabilities: InternalCapabilitiesService;
-  private _skillStore: SkillStore;
-  private _skillResourceProjector: SkillResourceProjector;
+  private _skills: SkillServices;
   private _toolTokenEstimator: ToolTokenEstimator;
 
   private logger: LunarLogger;
@@ -154,10 +154,13 @@ export class Services {
     // Constructed before the resolver, which injects it.
     this._permissionManager = new PermissionManager(logger);
 
+    // Initialized after the skill services are built below.
+    const permissionCheck = new DeferredPermissionCheck();
+
     const capabilityResolver = new CapabilityResolver(
       capabilityRegistry,
       this._catalogManager,
-      this._permissionManager,
+      permissionCheck,
       logger,
     );
     this._capabilityResolver = capabilityResolver;
@@ -207,11 +210,6 @@ export class Services {
     const downstreamSessionStore = new HubDownstreamSessionClient(
       () => this._hubService.getSocketAdapter(),
       logger,
-    );
-
-    this._skillStore = new SkillStore(
-      logger,
-      new HubSkillClient(() => this._hubService.getSocketAdapter(), logger),
     );
 
     const sessionsManager = new SessionsManager(
@@ -275,13 +273,19 @@ export class Services {
     );
 
     this._internalCapabilities = new InternalCapabilitiesService(logger);
-    this._skillResourceProjector = new SkillResourceProjector(
+    this._skills = buildSkillServices(
+      {
+        getSocketAdapter: () => this._hubService.getSocketAdapter(),
+        getEnabledSkills: () => config.getConfig().skills.enabled,
+        getCatalogItemId: (serverName) =>
+          this._upstreamHandler.getTargetServer(serverName)?.catalogItemId,
+        capabilityRegistry: this._capabilityRegistry,
+        internalCapabilities: this._internalCapabilities,
+      },
       logger,
-      this._skillStore,
-      this._capabilityRegistry,
-      this._internalCapabilities,
-      env.ENABLE_RESOURCE_CAPABILITY,
-      env.ENABLE_PROMPT_CAPABILITY,
+    );
+    permissionCheck.initialize(
+      env.ENABLE_SKILL_SCOPING ? this._skills.scope : this._permissionManager,
     );
     wireInternalCapabilityProvider(
       this._oauthTools,
@@ -334,7 +338,7 @@ export class Services {
     });
 
     this._hubService.addPersonalSkillsListener((payload) =>
-      this._skillStore.applyPersonalSkills(payload),
+      this._skills.store.applyPersonalSkills(payload),
     );
 
     startupLogger.info("Initializing HubService...");
@@ -345,11 +349,9 @@ export class Services {
     await this._dynamicCapabilities.initialize();
     startupLogger.info("DynamicCapabilitiesService initialized");
 
-    if (env.ENABLE_RESOURCE_CAPABILITY || env.ENABLE_PROMPT_CAPABILITY) {
-      startupLogger.info("Initializing SkillResourceProjector...");
-      this._skillResourceProjector.initialize();
-      startupLogger.info("SkillResourceProjector initialized");
-    }
+    startupLogger.info("Initializing SkillResourceProjector...");
+    this._skills.projector.initialize();
+    startupLogger.info("SkillResourceProjector initialized");
 
     startupLogger.info("Initializing SessionsManager...");
     await this._sessions.initialize();
@@ -422,10 +424,19 @@ export class Services {
           .map(([name]) => name),
       );
       this._capabilityResolver.setInactiveServers(inactiveNames);
+      this._skills.scope.refresh();
       // Permission/visibility config changes don't move the resolver's active
       // set (permissions are applied per-consumer at read time), so they never
       // reach the onChanged path above. Re-broadcast every exposed kind here so
       // clients re-list.
+      this._sessions.scheduleBroadcastAllListChanged();
+    });
+
+    // A skill edit can change scope (its capability group) without moving the
+    // active tool set, so the projector's registry path never fires "tools".
+    // Refresh + full re-broadcast, like config changes above.
+    this._skills.store.subscribe(() => {
+      this._skills.scope.refresh();
       this._sessions.scheduleBroadcastAllListChanged();
     });
   }
@@ -433,7 +444,7 @@ export class Services {
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down services...");
 
-    this._skillResourceProjector.shutdown();
+    this._skills.projector.shutdown();
     this._capabilityResolver.shutdown();
     this._capabilityRegistry.shutdown();
 
@@ -551,8 +562,8 @@ export class Services {
     return this._capabilityResolver;
   }
 
-  get skillStore(): SkillStore {
+  get skills(): SkillServices {
     this.ensureInitialized();
-    return this._skillStore;
+    return this._skills;
   }
 }

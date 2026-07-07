@@ -345,14 +345,14 @@ describe("CapabilityResolver", () => {
       expect(resolved).toEqual({ ok: false, reason: "unknown" });
     });
 
-    it("getVisibleResources returns internal resources even when permissions deny all", () => {
+    it("getPermittedResources returns internal resources even when permissions deny all", () => {
       ({ registry, catalog, resolver } = setup(
         { isStrict: false, approvals: new Map() },
         makePermissions(() => false),
       ));
       registry.registerServer(SERVER, { resources: [makeResource(REAL_URI)] });
 
-      const visible = resolver.getVisibleResources({});
+      const visible = resolver.getPermittedResources({});
       expect(visible.map((r) => r.capabilityName)).toEqual([REAL_URI]);
     });
 
@@ -520,7 +520,7 @@ describe("CapabilityResolver", () => {
   });
 
   describe("per-consumer permission filtering", () => {
-    it("getVisibleTools applies permission filter on top of active set", () => {
+    it("getPermittedTools applies permission filter on top of active set", () => {
       const denied = new Set(["github__delete_issue"]);
       const permissions = makePermissions(
         ({ serviceName, capabilityName }) =>
@@ -535,7 +535,7 @@ describe("CapabilityResolver", () => {
         tools: [makeTool("create_issue"), makeTool("delete_issue")],
       });
 
-      const visible = resolver.getVisibleTools({
+      const visible = resolver.getPermittedTools({
         consumerTag: "alice",
         clientName: "claude",
       });
@@ -543,19 +543,19 @@ describe("CapabilityResolver", () => {
       expect(names).toEqual(["create_issue"]);
     });
 
-    it("getVisibleTools sorts deterministically by serverName then capabilityName", () => {
+    it("getPermittedTools sorts deterministically by serverName then capabilityName", () => {
       registry.registerServer("slack", {
         tools: [makeTool("z_tool"), makeTool("a_tool")],
       });
       registry.registerServer("github", { tools: [makeTool("b_tool")] });
 
-      const visible = resolver.getVisibleTools({});
+      const visible = resolver.getPermittedTools({});
       expect(visible.map((c) => `${c.serverName}/${c.capabilityName}`)).toEqual(
         ["github/b_tool", "slack/a_tool", "slack/z_tool"],
       );
     });
 
-    it("internal-origin tools bypass the permission gate in getVisibleTools", () => {
+    it("internal-origin tools bypass the permission gate in getPermittedTools", () => {
       // Consumer that denies every tool through the PermissionManager.
       const permissions = makePermissions(() => false);
       ({ registry, catalog, resolver } = setup(
@@ -570,7 +570,7 @@ describe("CapabilityResolver", () => {
         ],
       });
 
-      const visible = resolver.getVisibleTools({ consumerTag: "alice" });
+      const visible = resolver.getPermittedTools({ consumerTag: "alice" });
       const names = visible.map((c) => c.capabilityName);
       expect(names).toEqual(["request_authentication_link"]);
     });
@@ -628,7 +628,7 @@ describe("CapabilityResolver", () => {
       ));
       registry.registerServer("github", { tools: [makeTool("create_issue")] });
 
-      resolver.getVisibleTools({
+      resolver.getPermittedTools({
         consumerTag: "alice",
         clientName: "claude",
       });
@@ -755,7 +755,7 @@ describe("CapabilityResolver", () => {
       ).toEqual(["compose"]);
     });
 
-    it("getVisiblePrompts passes capabilityKind='prompts' to permission check", () => {
+    it("getPermittedPrompts passes capabilityKind='prompts' to permission check", () => {
       const seen: CapabilityKind[] = [];
       ({ registry, catalog, resolver } = setup(
         { isStrict: false, approvals: new Map() },
@@ -765,7 +765,7 @@ describe("CapabilityResolver", () => {
         }),
       ));
       registry.registerServer("notion", { prompts: [makePrompt("summarize")] });
-      resolver.getVisiblePrompts({});
+      resolver.getPermittedPrompts({});
       expect(seen).toContain("prompts");
       expect(seen).not.toContain("tools");
     });

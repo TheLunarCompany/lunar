@@ -134,6 +134,8 @@ const envSchema = z
     STRICTNESS_REQUIRED: z.stringbool().default(false),
     ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
     ENABLE_RESOURCE_CAPABILITY: z.stringbool().default(false),
+    // Capability scoping via enabled skills instead of permissions+toolGroups.
+    ENABLE_SKILL_SCOPING: z.stringbool().default(false),
     LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
     LLM_REQUEST_TIMEOUT_MS: z.coerce.number().default(20000),
     MCPX_SERVER_URL: z.string().default("http://127.0.0.1:9000"),
@@ -212,6 +214,7 @@ const NON_SECRET_KEYS = [
   "STRICTNESS_REQUIRED",
   "ENABLE_PROMPT_CAPABILITY",
   "ENABLE_RESOURCE_CAPABILITY",
+  "ENABLE_SKILL_SCOPING",
   "LOG_REDACT_KEYS",
   "LLM_REQUEST_TIMEOUT_MS",
   "MCPX_SERVER_URL",

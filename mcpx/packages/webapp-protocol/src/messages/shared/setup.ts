@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import {
   authSchema,
   permissionsSchema,
+  skillsConfigSchema,
   staticOAuthSchema,
   targetServerAttributesSchema,
   toolExtensionsSchema,
@@ -77,4 +78,5 @@ export const setupConfigSchema = z.object({
   toolExtensions: toolExtensionsSchema,
   targetServerAttributes: targetServerAttributesSchema,
   staticOauth: staticOAuthSchema,
+  skills: skillsConfigSchema,
 });

@@ -48,6 +48,30 @@ export interface PermissionCheck {
   }): boolean;
 }
 
+// Set-once late binding for the resolver's permission source: wiring needs the
+// resolver before the source can be constructed. initialize() completes the
+// two-phase construction; checks before it are a wiring bug and throw.
+// Once we fully migrate to Skills, this can be removed and construction simplified.
+export class DeferredPermissionCheck implements PermissionCheck {
+  private source?: PermissionCheck;
+
+  initialize(source: PermissionCheck): void {
+    if (this.source) {
+      throw new Error("DeferredPermissionCheck is already initialized");
+    }
+    this.source = source;
+  }
+
+  hasPermission(
+    props: Parameters<PermissionCheck["hasPermission"]>[0],
+  ): boolean {
+    if (!this.source) {
+      throw new Error("DeferredPermissionCheck is not initialized");
+    }
+    return this.source.hasPermission(props);
+  }
+}
+
 export type UnavailableReason =
   | "unknown"
   | "server-inactive"
@@ -65,7 +89,7 @@ type ChangeListener = (kind: CapabilityKind) => void | Promise<void>;
 type Unsubscribe = () => void;
 
 // Active capability set per kind = registry ∩ admin-active ∩ catalog approvals.
-// Per-consumer permissions are layered on top via visibleCapabilities / allows.
+// Per-consumer permissions are layered on top via permittedCapabilities / allows.
 export class CapabilityResolver {
   private _activeByKind: {
     tools: Map<string, ActiveTool>;
@@ -128,16 +152,16 @@ export class CapabilityResolver {
     return approvedForServer(this.activePrompts, serverName);
   }
 
-  getVisibleTools(consumer: ConsumerContext): ActiveTool[] {
-    return this.visibleCapabilities(this.activeTools, "tools", consumer);
+  getPermittedTools(consumer: ConsumerContext): ActiveTool[] {
+    return this.permittedCapabilities(this.activeTools, "tools", consumer);
   }
 
-  getVisiblePrompts(consumer: ConsumerContext): ActivePrompt[] {
-    return this.visibleCapabilities(this.activePrompts, "prompts", consumer);
+  getPermittedPrompts(consumer: ConsumerContext): ActivePrompt[] {
+    return this.permittedCapabilities(this.activePrompts, "prompts", consumer);
   }
 
-  getVisibleResources(consumer: ConsumerContext): ActiveResource[] {
-    return this.visibleCapabilities(
+  getPermittedResources(consumer: ConsumerContext): ActiveResource[] {
+    return this.permittedCapabilities(
       this.activeResources,
       "resources",
       consumer,
@@ -295,7 +319,7 @@ export class CapabilityResolver {
     );
   }
 
-  private visibleCapabilities<T>(
+  private permittedCapabilities<T>(
     source: ReadonlyMap<string, ActiveCapability<T>>,
     kind: CapabilityKind,
     consumer: ConsumerContext,

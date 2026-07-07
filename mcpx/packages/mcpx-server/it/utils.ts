@@ -13,7 +13,11 @@ import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import express from "express";
 import { createServer, Server } from "http";
 import { v7 as uuidv7 } from "uuid";
-import { ConfigService, InMemoryConfigStore } from "../src/config.js";
+import {
+  ConfigService,
+  DEFAULT_CONFIG,
+  InMemoryConfigStore,
+} from "../src/config.js";
 import { Config } from "../src/model/config/config.js";
 import { TargetServer } from "../src/model/target-servers.js";
 import { AuthGuard, noOpAuthGuard } from "../src/server/auth.js";
@@ -65,36 +69,9 @@ export const closeAllLoggers = (): void => {
   allLoggers.clear();
 };
 
-const BASE_CONFIG: Config = {
-  permissions: {
-    default: { _type: "default-allow", block: [] },
-    consumers: {},
-    clientNames: {},
-  },
-  toolGroups: [],
-  auth: { enabled: false },
-  toolExtensions: { services: {} },
-  targetServerAttributes: {},
-};
 export function buildConfig(props: Partial<Config> = {}): ConfigService {
-  const {
-    auth,
-    permissions,
-    toolGroups,
-    toolExtensions,
-    targetServerAttributes,
-  } = {
-    ...BASE_CONFIG,
-    ...props,
-  };
   return new ConfigService(
-    {
-      permissions,
-      toolGroups,
-      auth,
-      toolExtensions,
-      targetServerAttributes,
-    },
+    { ...structuredClone(DEFAULT_CONFIG), ...props },
     new InMemoryConfigStore(),
     getMcpxLogger(),
   );

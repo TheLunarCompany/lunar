@@ -62,8 +62,15 @@ function activeResource(
 function resourceHandler(
   serverName: string,
   read: (uri: string) => { mimeType: string; text: string } | undefined,
+  overrides: Partial<InternalResourceHandler> = {},
 ): InternalResourceHandler {
-  return { kind: "resources", serverName, read };
+  return {
+    kind: "resources",
+    serverName,
+    isVisible: () => true,
+    read,
+    ...overrides,
+  };
 }
 
 function activePrompt(
@@ -77,8 +84,15 @@ function activePrompt(
 function promptHandler(
   serverName: string,
   getPrompt: (name: string) => GetPromptResult | undefined,
+  overrides: Partial<InternalPromptHandler> = {},
 ): InternalPromptHandler {
-  return { kind: "prompts", serverName, getPrompt };
+  return {
+    kind: "prompts",
+    serverName,
+    isVisible: () => true,
+    getPrompt,
+    ...overrides,
+  };
 }
 
 describe("wireInternalCapabilityProvider", () => {
@@ -268,6 +282,7 @@ describe("InternalCapabilitiesService.dispatchResource", () => {
 
     const result = service.dispatchResource(
       activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI),
+      {},
     );
 
     expect(readArg).toBe(REAL_URI);
@@ -285,6 +300,25 @@ describe("InternalCapabilitiesService.dispatchResource", () => {
     expect(
       service.dispatchResource(
         activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI),
+        {},
+      ),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when the handler hides the resource", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    service.register(
+      resourceHandler(
+        "mcpx-skills",
+        () => ({ mimeType: "text/markdown", text: "# body" }),
+        { isVisible: () => false },
+      ),
+    );
+
+    expect(
+      service.dispatchResource(
+        activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI),
+        {},
       ),
     ).toBeUndefined();
   });
@@ -295,8 +329,67 @@ describe("InternalCapabilitiesService.dispatchResource", () => {
     expect(() =>
       service.dispatchResource(
         activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI),
+        {},
       ),
     ).toThrow(UnknownInternalCapabilityError);
+  });
+});
+
+describe("InternalCapabilitiesService.visibleResourceForListing", () => {
+  const REAL_URI = "skill://abc/SKILL.md";
+  const ADVERTISED_URI = "skill://mcpx-skills/abc/SKILL.md";
+
+  it("returns the definition when visible, undefined when hidden", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    service.register(
+      resourceHandler("mcpx-skills", () => undefined, {
+        isVisible: (consumer) => consumer.consumerTag === "devs",
+      }),
+    );
+
+    const cap = activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI);
+    expect(
+      service.visibleResourceForListing(cap, { consumerTag: "devs" }),
+    ).toBe(cap.definition);
+    expect(
+      service.visibleResourceForListing(cap, { consumerTag: "ops" }),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when the handler is missing (drift)", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    expect(
+      service.visibleResourceForListing(
+        activeResource("mcpx-skills", REAL_URI, ADVERTISED_URI),
+        {},
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe("InternalCapabilitiesService.visiblePromptForListing", () => {
+  it("returns the definition when visible, undefined when hidden", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    service.register(
+      promptHandler("mcpx-skills", () => undefined, {
+        isVisible: (consumer) => consumer.consumerTag === "devs",
+      }),
+    );
+
+    const cap = activePrompt("mcpx-skills", "greet");
+    expect(service.visiblePromptForListing(cap, { consumerTag: "devs" })).toBe(
+      cap.definition,
+    );
+    expect(
+      service.visiblePromptForListing(cap, { consumerTag: "ops" }),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when the handler is missing (drift)", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    expect(
+      service.visiblePromptForListing(activePrompt("mcpx-skills", "greet"), {}),
+    ).toBeUndefined();
   });
 });
 
@@ -315,9 +408,9 @@ describe("InternalCapabilitiesService.dispatchPrompt", () => {
       }),
     );
 
-    expect(service.dispatchPrompt(activePrompt("mcpx-skills", "greet"))).toBe(
-      result,
-    );
+    expect(
+      service.dispatchPrompt(activePrompt("mcpx-skills", "greet"), {}),
+    ).toBe(result);
     expect(nameArg).toBe("greet");
   });
 
@@ -326,7 +419,18 @@ describe("InternalCapabilitiesService.dispatchPrompt", () => {
     service.register(promptHandler("mcpx-skills", () => undefined));
 
     expect(
-      service.dispatchPrompt(activePrompt("mcpx-skills", "missing")),
+      service.dispatchPrompt(activePrompt("mcpx-skills", "missing"), {}),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when the handler hides the prompt", () => {
+    const service = new InternalCapabilitiesService(noOpLogger);
+    service.register(
+      promptHandler("mcpx-skills", () => result, { isVisible: () => false }),
+    );
+
+    expect(
+      service.dispatchPrompt(activePrompt("mcpx-skills", "greet"), {}),
     ).toBeUndefined();
   });
 
@@ -334,7 +438,7 @@ describe("InternalCapabilitiesService.dispatchPrompt", () => {
     const service = new InternalCapabilitiesService(noOpLogger);
     // no handler registered for mcpx-skills this time
     expect(() =>
-      service.dispatchPrompt(activePrompt("mcpx-skills", "greet")),
+      service.dispatchPrompt(activePrompt("mcpx-skills", "greet"), {}),
     ).toThrow(UnknownInternalCapabilityError);
   });
 });

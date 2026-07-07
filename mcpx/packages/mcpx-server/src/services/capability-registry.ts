@@ -17,11 +17,13 @@ export type CapabilityOrigin = "internal" | "upstream";
 
 export type CapabilityKind = "tools" | "prompts" | "resources";
 
-// Single source of truth for which capability kinds mcpx currently exposes.
-// `tools` is always on; `prompts` and `resources` ride their rollout flags. Both
-// the gateway's advertised capabilities and the list-changed broadcasts derive
-// from this.
+// Single source of truth for which capability kinds mcpx speaks to clients:
+// advertised capabilities, gateway handlers and list-changed broadcasts all
+// derive from this. `tools` is always on. A kind flag turns on upstream
+// serving of its kind; skill scoping serves internal-origin prompts and
+// resources regardless of them.
 export function enabledCapabilityKinds(): CapabilityKind[] {
+  if (env.ENABLE_SKILL_SCOPING) return ["tools", "prompts", "resources"];
   const kinds: CapabilityKind[] = ["tools"];
   if (env.ENABLE_PROMPT_CAPABILITY) kinds.push("prompts");
   if (env.ENABLE_RESOURCE_CAPABILITY) kinds.push("resources");

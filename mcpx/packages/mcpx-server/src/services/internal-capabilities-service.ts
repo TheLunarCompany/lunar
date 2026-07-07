@@ -1,6 +1,8 @@
 import {
   GetPromptResult,
+  Prompt,
   ReadResourceResult,
+  Resource,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
@@ -44,6 +46,7 @@ export interface ResourceContent {
 export interface InternalResourceHandler {
   readonly kind: "resources";
   readonly serverName: string;
+  isVisible(consumer: ConsumerContext, cap: ActiveResource): boolean;
   read(uri: string): ResourceContent | undefined;
 }
 
@@ -52,6 +55,7 @@ export interface InternalResourceHandler {
 export interface InternalPromptHandler {
   readonly kind: "prompts";
   readonly serverName: string;
+  isVisible(consumer: ConsumerContext, cap: ActivePrompt): boolean;
   getPrompt(name: string): GetPromptResult | undefined;
 }
 
@@ -179,24 +183,59 @@ export class InternalCapabilitiesService {
     });
   }
 
-  // The owning server's repository reads any of its uris. Visibility was already
-  // gated by resolveResourceRead, same as dispatchTool.
-  dispatchResource(entry: ActiveResource): ReadResourceResult | undefined {
+  visibleResourceForListing(
+    cap: ActiveResource,
+    consumer: ConsumerContext,
+  ): Resource | undefined {
+    const handler = this.resourceHandlers.get(cap.serverName);
+    if (!handler) {
+      this.logDriftMiss("resources", cap.serverName, cap.capabilityName);
+      return undefined;
+    }
+    if (!handler.isVisible(consumer, cap)) return undefined;
+    return cap.definition;
+  }
+
+  visiblePromptForListing(
+    cap: ActivePrompt,
+    consumer: ConsumerContext,
+  ): Prompt | undefined {
+    const handler = this.promptHandlers.get(cap.serverName);
+    if (!handler) {
+      this.logDriftMiss("prompts", cap.serverName, cap.capabilityName);
+      return undefined;
+    }
+    if (!handler.isVisible(consumer, cap)) return undefined;
+    return cap.definition;
+  }
+
+  // The owning server's repository reads any of its uris. Internal-origin
+  // entries bypass the resolver's permission gate, so per-consumer visibility
+  // is enforced here; hidden answers undefined, indistinguishable from missing.
+  dispatchResource(
+    entry: ActiveResource,
+    consumer: ConsumerContext,
+  ): ReadResourceResult | undefined {
     const handler = this.resourceHandlers.get(entry.serverName);
     if (!handler) {
       throw new UnknownInternalCapabilityError(entry.serverName);
     }
+    if (!handler.isVisible(consumer, entry)) return undefined;
     const content = handler.read(entry.capabilityName);
     if (!content) return undefined;
     // Echo the advertised uri (what the client requested), not the real one.
     return { contents: [{ uri: entry.definition.uri, ...content }] };
   }
 
-  dispatchPrompt(entry: ActivePrompt): GetPromptResult | undefined {
+  dispatchPrompt(
+    entry: ActivePrompt,
+    consumer: ConsumerContext,
+  ): GetPromptResult | undefined {
     const handler = this.promptHandlers.get(entry.serverName);
     if (!handler) {
       throw new UnknownInternalCapabilityError(entry.serverName);
     }
+    if (!handler.isVisible(consumer, entry)) return undefined;
     return handler.getPrompt(entry.capabilityName);
   }
 

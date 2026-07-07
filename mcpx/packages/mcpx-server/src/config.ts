@@ -24,6 +24,7 @@ export const DEFAULT_CONFIG: Config = {
   auth: { enabled: false },
   toolExtensions: { services: {} },
   targetServerAttributes: {},
+  skills: { enabled: [] },
 };
 
 export interface ConfigSnapshot {

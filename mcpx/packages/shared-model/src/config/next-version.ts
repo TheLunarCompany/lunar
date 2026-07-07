@@ -40,6 +40,36 @@ export const permissionsSchema = z.object({
     .default({}),
 });
 
+// Who a skill is enabled for. 
+export const scopeSubjectSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("consumerTag"), value: z.string().min(1) }),
+  z.object({ kind: z.literal("clientName"), value: z.string().min(1) }),
+]);
+export type ScopeSubject = z.infer<typeof scopeSubjectSchema>;
+
+// Canonical identity of a subject; use as Map key or for equality.
+export function scopeSubjectKey(subject: ScopeSubject): string {
+  return `${subject.kind}:${subject.value}`;
+}
+
+export function scopeSubjectsEqual(a: ScopeSubject, b: ScopeSubject): boolean {
+  return scopeSubjectKey(a) === scopeSubjectKey(b);
+}
+
+export const enabledSkillsSchema = z.object({
+  subject: scopeSubjectSchema,
+  skillIds: z.array(z.uuid()),
+});
+export type EnabledSkills = z.infer<typeof enabledSkillsSchema>;
+
+export const skillsConfigSchema = z
+  .object({
+    enabled: z.array(enabledSkillsSchema).default([]),
+  })
+  .optional()
+  .default({ enabled: [] });
+export type SkillsConfig = z.infer<typeof skillsConfigSchema>;
+
 export const toolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =
   z.lazy(() =>
     z
@@ -263,6 +293,7 @@ export const appConfigSchema = z.object({
   toolExtensions: toolExtensionsSchema,
   targetServerAttributes: targetServerAttributesSchema,
   staticOauth: staticOAuthSchema,
+  skills: skillsConfigSchema,
 });
 
 export type AppConfig = z.infer<typeof appConfigSchema>;

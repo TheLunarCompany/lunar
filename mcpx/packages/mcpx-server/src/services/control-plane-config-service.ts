@@ -1,6 +1,9 @@
 import {
   ConsumerConfig,
+  EnabledSkills,
   Permissions,
+  ScopeSubject,
+  scopeSubjectsEqual,
   ToolExtension,
   ToolExtensions,
   ToolGroup,
@@ -228,6 +231,31 @@ export class ControlPlaneConfigService {
       scope: "clientNames",
       name: props.name,
     });
+  }
+
+  // ==================== SKILLS ====================
+
+  getEnabledSkills(): EnabledSkills[] {
+    return this.configService.getConfig().skills.enabled;
+  }
+
+  // Both toggles are idempotent.
+  async enableSkill(props: {
+    subject: ScopeSubject;
+    skillId: string;
+  }): Promise<void> {
+    return this.configService.withLock(() =>
+      this.updateEnabledSkillIds({ ...props, action: "enable" }),
+    );
+  }
+
+  async disableSkill(props: {
+    subject: ScopeSubject;
+    skillId: string;
+  }): Promise<void> {
+    return this.configService.withLock(() =>
+      this.updateEnabledSkillIds({ ...props, action: "disable" }),
+    );
   }
 
   // ==================== TOOL EXTENSIONS ====================
@@ -572,6 +600,37 @@ export class ControlPlaneConfigService {
       };
       await this.configService.updateConfig(updatedConfig);
       this.logger.info(`Permission ${label} '${name}' deleted successfully`);
+    });
+  }
+
+  // Applies the action to the subject's row in the config; an empty result removes the row.
+  // MUST be called within withLock().
+  private async updateEnabledSkillIds(props: {
+    subject: ScopeSubject;
+    skillId: string;
+    action: "enable" | "disable";
+  }): Promise<void> {
+    const { subject, skillId, action } = props;
+    const config = this.configService.getConfig();
+    const currentSubjectConfig = config.skills.enabled.find((entry) =>
+      scopeSubjectsEqual(entry.subject, subject),
+    );
+    const currentSubjectSkillIds = currentSubjectConfig?.skillIds ?? [];
+    const subjectUpdatedSkillIds =
+      action === "enable"
+        ? [...new Set([...currentSubjectSkillIds, skillId])]
+        : currentSubjectSkillIds.filter((id) => id !== skillId);
+    const allOtherSubjects = config.skills.enabled.filter(
+      (entry) => entry !== currentSubjectConfig,
+    );
+    // If no skill ids remain for this subject, we drop the subject's entry entirely.
+    const enabled = subjectUpdatedSkillIds.length
+      ? [...allOtherSubjects, { subject, skillIds: subjectUpdatedSkillIds }]
+      : allOtherSubjects;
+
+    await this.configService.updateConfig({
+      ...config,
+      skills: { ...config.skills, enabled },
     });
   }
 }

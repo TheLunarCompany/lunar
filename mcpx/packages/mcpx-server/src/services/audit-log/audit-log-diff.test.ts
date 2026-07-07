@@ -1,21 +1,11 @@
 import { describe, it, expect } from "@jest/globals";
+import { DEFAULT_CONFIG } from "../../config.js";
 import { Config } from "../../model/config/config.js";
 import { ToolGroup } from "../../model/config/permissions.js";
 import { diffConfigForAudit } from "./audit-log-diff.js";
 
 function makeConfig(overrides: Partial<Config> = {}): Config {
-  return {
-    permissions: {
-      default: { _type: "default-allow", block: [] },
-      consumers: {},
-      clientNames: {},
-    },
-    toolGroups: [],
-    auth: { enabled: false },
-    toolExtensions: { services: {} },
-    targetServerAttributes: {},
-    ...overrides,
-  };
+  return { ...structuredClone(DEFAULT_CONFIG), ...overrides };
 }
 
 describe("diffConfigForAudit", () => {

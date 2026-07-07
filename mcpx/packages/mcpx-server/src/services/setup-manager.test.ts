@@ -7,7 +7,7 @@ import {
 import { TargetServer } from "../model/target-servers.js";
 import { Config } from "../model/config/config.js";
 import { StaticOAuth } from "@mcpx/shared-model";
-import { ConfigService } from "../config.js";
+import { ConfigService, DEFAULT_CONFIG } from "../config.js";
 import { UpstreamHandler } from "./upstream-handler.js";
 
 // Minimal stubs - these methods don't use the dependencies
@@ -62,17 +62,7 @@ function notionStaticOauth(
   };
 }
 
-const baseConfig: Config = {
-  permissions: {
-    default: { _type: "default-allow", block: [] },
-    consumers: {},
-    clientNames: {},
-  },
-  toolGroups: [],
-  auth: { enabled: false },
-  toolExtensions: { services: {} },
-  targetServerAttributes: {},
-};
+const baseConfig: Config = structuredClone(DEFAULT_CONFIG);
 
 describe("SetupManager", () => {
   describe("#buildUserTargetServersChangePayload", () => {

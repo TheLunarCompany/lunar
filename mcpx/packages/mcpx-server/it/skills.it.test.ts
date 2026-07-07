@@ -19,17 +19,14 @@ const seedSkill: Skill = {
 describe("Skills endpoints", () => {
   let harness: TestHarness;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     harness = getTestHarness({ targetServers: [], mcpxPort: MCPX_PORT });
     await harness.initialize("StreamableHTTP");
+    harness.services.skills.store.applyPersonalSkills({ skills: [seedSkill] });
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await harness.shutdown();
-  });
-
-  beforeEach(() => {
-    harness.services.skillStore.applyPersonalSkills({ skills: [seedSkill] });
   });
 
   it("returns personal skills", async () => {
@@ -84,7 +81,7 @@ describe("Skills endpoints", () => {
       exposeAsPrompt: true,
     });
 
-    const created = harness.services.skillStore.getById(body.id);
+    const created = harness.services.skills.store.getById(body.id);
     expect(created).toMatchObject({ id: body.id, name: "write-release-notes" });
   });
 
@@ -111,7 +108,7 @@ describe("Skills endpoints", () => {
     });
 
     expect(response.status).toBe(204);
-    expect(harness.services.skillStore.getById(created.id)).toBeUndefined();
+    expect(harness.services.skills.store.getById(created.id)).toBeUndefined();
   });
 
   it("returns 404 when deleting a missing personal skill", async () => {
@@ -142,7 +139,7 @@ describe("Skills endpoints", () => {
       id: created.id,
       name: "review-pull-requests-v2",
     });
-    expect(harness.services.skillStore.getById(created.id)).toMatchObject({
+    expect(harness.services.skills.store.getById(created.id)).toMatchObject({
       name: "review-pull-requests-v2",
     });
   });
@@ -177,6 +174,151 @@ describe("Skills endpoints", () => {
       message: "Invalid request schema",
     });
   });
+
+  describe("skill enablement", () => {
+    it("enables a skill for a subject and lists it", async () => {
+      const put = await fetch(enablementUrl(seedSkill.id, "devs"), {
+        method: "PUT",
+      });
+      expect(put.status).toBe(204);
+
+      const list = await fetch(`${MCPX_BASE_URL}/skills/enabled`);
+      expect(list.status).toBe(200);
+      await expect(list.json()).resolves.toEqual({
+        enabled: [
+          {
+            subject: { kind: "consumerTag", value: "devs" },
+            skillIds: [seedSkill.id],
+          },
+        ],
+      });
+    });
+
+    it("enable is idempotent", async () => {
+      await fetch(enablementUrl(seedSkill.id, "devs"), { method: "PUT" });
+      const second = await fetch(enablementUrl(seedSkill.id, "devs"), {
+        method: "PUT",
+      });
+      expect(second.status).toBe(204);
+
+      const { enabled } = await (
+        await fetch(`${MCPX_BASE_URL}/skills/enabled`)
+      ).json();
+      expect(enabled).toEqual([
+        {
+          subject: { kind: "consumerTag", value: "devs" },
+          skillIds: [seedSkill.id],
+        },
+      ]);
+    });
+
+    it("accumulates enabled skills per subject", async () => {
+      const created = await createSkill();
+      await fetch(enablementUrl(seedSkill.id, "devs"), { method: "PUT" });
+      await fetch(enablementUrl(created.id, "devs"), { method: "PUT" });
+
+      const { enabled } = await (
+        await fetch(`${MCPX_BASE_URL}/skills/enabled`)
+      ).json();
+      expect(enabled).toEqual([
+        {
+          subject: { kind: "consumerTag", value: "devs" },
+          skillIds: [seedSkill.id, created.id],
+        },
+      ]);
+    });
+
+    it("disabling removes the skill; removing the last drops the row", async () => {
+      const created = await createSkill();
+      await fetch(enablementUrl(seedSkill.id, "devs"), { method: "PUT" });
+      await fetch(enablementUrl(created.id, "devs"), { method: "PUT" });
+
+      const first = await fetch(enablementUrl(created.id, "devs"), {
+        method: "DELETE",
+      });
+      expect(first.status).toBe(204);
+      const afterFirst = await (
+        await fetch(`${MCPX_BASE_URL}/skills/enabled`)
+      ).json();
+      expect(afterFirst.enabled).toEqual([
+        {
+          subject: { kind: "consumerTag", value: "devs" },
+          skillIds: [seedSkill.id],
+        },
+      ]);
+
+      const last = await fetch(enablementUrl(seedSkill.id, "devs"), {
+        method: "DELETE",
+      });
+      expect(last.status).toBe(204);
+      const afterLast = await (
+        await fetch(`${MCPX_BASE_URL}/skills/enabled`)
+      ).json();
+      expect(afterLast.enabled).toEqual([]);
+    });
+
+    it("returns 404 when enabling a missing skill", async () => {
+      const response = await fetch(
+        enablementUrl("0190a000-0000-7000-8000-000000000099", "devs"),
+        { method: "PUT" },
+      );
+      expect(response.status).toBe(404);
+    });
+
+    it("rejects a subject kind outside the union", async () => {
+      const response = await fetch(
+        `${MCPX_BASE_URL}/skills/${seedSkill.id}/enabled/team/devs`,
+        { method: "PUT" },
+      );
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({
+        message: "Invalid subject",
+      });
+    });
+
+    it("disable cleans a row whose skill was deleted", async () => {
+      const created = await createSkill();
+      await fetch(enablementUrl(created.id, "devs"), { method: "PUT" });
+      await fetch(`${MCPX_BASE_URL}/skills/${created.id}`, {
+        method: "DELETE",
+      });
+
+      const response = await fetch(enablementUrl(created.id, "devs"), {
+        method: "DELETE",
+      });
+      expect(response.status).toBe(204);
+      const { enabled } = await (
+        await fetch(`${MCPX_BASE_URL}/skills/enabled`)
+      ).json();
+      expect(enabled).toEqual([]);
+    });
+
+    it("decodes an encoded subject value", async () => {
+      const response = await fetch(
+        enablementUrl(seedSkill.id, "my agent", "clientName"),
+        { method: "PUT" },
+      );
+      expect(response.status).toBe(204);
+
+      const { enabled } = await (
+        await fetch(`${MCPX_BASE_URL}/skills/enabled`)
+      ).json();
+      expect(enabled).toEqual([
+        {
+          subject: { kind: "clientName", value: "my agent" },
+          skillIds: [seedSkill.id],
+        },
+      ]);
+    });
+  });
+
+  function enablementUrl(
+    skillId: string,
+    value: string,
+    kind: "consumerTag" | "clientName" = "consumerTag",
+  ): string {
+    return `${MCPX_BASE_URL}/skills/${skillId}/enabled/${kind}/${encodeURIComponent(value)}`;
+  }
 
   async function createSkill(): Promise<Skill> {
     const response = await fetch(`${MCPX_BASE_URL}/skills`, {

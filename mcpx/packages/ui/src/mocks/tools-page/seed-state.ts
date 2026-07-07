@@ -863,6 +863,7 @@ const mockAppConfig: AppConfig = {
   toolExtensions: { services: {} },
   targetServerAttributes: {},
   auth: { enabled: false },
+  skills: { enabled: [] },
 };
 
 export function seedToolsPageMockState(): void {

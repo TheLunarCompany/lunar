@@ -1,4 +1,4 @@
-import { StaticOAuth, Permissions } from "@mcpx/shared-model";
+import { SkillsConfig, StaticOAuth, Permissions } from "@mcpx/shared-model";
 import { ToolGroup } from "./permissions.js";
 import { ToolExtensions } from "./tool-extensions.js";
 
@@ -12,6 +12,7 @@ export interface Config {
   toolExtensions: ToolExtensions;
   targetServerAttributes: Record<string, TargetServerAttributes>;
   staticOauth?: StaticOAuth;
+  skills: SkillsConfig;
 }
 
 export interface TargetServerAttributes {

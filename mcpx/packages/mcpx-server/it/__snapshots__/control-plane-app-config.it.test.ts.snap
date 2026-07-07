@@ -20,6 +20,9 @@ exports[`Control Plane App Config Full Config Integration creates tool groups, p
       "block": [],
     },
   },
+  "skills": {
+    "enabled": [],
+  },
   "targetServerAttributes": {},
   "toolExtensions": {
     "services": {

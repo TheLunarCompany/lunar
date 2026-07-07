@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { enabledSkillsSchema } from "../config/next-version.js";
 
 // ============ Skill Domain Model ============
 // A skill is inert instruction text (SKILL.md: name, description, body) plus an optional
@@ -63,6 +64,11 @@ export type SkillCatalogResponse = z.infer<typeof skillCatalogResponseSchema>;
 
 export const upsertSkillRequestSchema = skillDraftSchema;
 export type UpsertSkillRequest = z.input<typeof upsertSkillRequestSchema>;
+
+export const enabledSkillsResponseSchema = z.object({
+  enabled: z.array(enabledSkillsSchema),
+});
+export type EnabledSkillsResponse = z.infer<typeof enabledSkillsResponseSchema>;
 
 export const createSkillResponseSchema = skillSchema;
 export type CreateSkillResponse = z.infer<typeof createSkillResponseSchema>;

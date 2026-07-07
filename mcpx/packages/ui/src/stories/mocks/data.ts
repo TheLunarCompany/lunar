@@ -324,6 +324,7 @@ export function createMockAppConfig(
     auth: { enabled: false },
     toolExtensions: { services: {} },
     targetServerAttributes: {},
+    skills: { enabled: [] },
     ...overrides,
   };
 }
