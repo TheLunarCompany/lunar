@@ -151,9 +151,10 @@ describe("CapabilitiesCatalog", () => {
     expect(
       screen.getByText("Capabilities", { selector: "p" }),
     ).toBeInTheDocument();
+    // No top-level "Add Custom Tool" button; custom tools are created per-item.
     expect(
-      screen.getByRole("button", { name: "Add Custom Tool" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Add Custom Tool" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Create Capability Group" }),
     ).toBeInTheDocument();
@@ -179,10 +180,9 @@ describe("CapabilitiesCatalog", () => {
     expect(screen.getByText("Read a file safely")).toBeInTheDocument();
     expect(screen.getAllByText("READ ONLY").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText("Input fields: 1").length).toBe(2);
-    expect(screen.getAllByLabelText("Messages: 0").length).toBe(3);
-    expect(
-      screen.getAllByLabelText("Resources: 0").length,
-    ).toBeGreaterThanOrEqual(3);
+    // Tool cards no longer render messages/resources metrics.
+    expect(screen.queryByLabelText(/^Messages:/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Resources:/)).not.toBeInTheDocument();
     expect(screen.getByText("CUSTOM")).toBeInTheDocument();
     expect(screen.getByLabelText("Custom capability icon")).toBeInTheDocument();
 
@@ -353,23 +353,7 @@ describe("CapabilitiesCatalog", () => {
     expect(catalogState.selectGroup).not.toHaveBeenCalled();
   });
 
-  it("expands provider sections when entering add custom tool or create group mode", () => {
-    Object.assign(catalogState, {
-      expandedProviders: new Set(["filesystem"]),
-      selectedGroupName: "File tools",
-      selectedGroup: group,
-    });
-
-    render(<CapabilitiesCatalog />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Add Custom Tool" }));
-    expect(catalogState.expandProviderSections).toHaveBeenCalledTimes(1);
-    expect(catalogState.clearProviderExpansion).not.toHaveBeenCalled();
-    expect(catalogState.selectGroup).toHaveBeenCalledWith(null);
-    expect(catalogState.toggleProviderExpansion).not.toHaveBeenCalled();
-
-    cleanup();
-    vi.clearAllMocks();
+  it("expands provider sections when entering create group mode", () => {
     Object.assign(catalogState, {
       selectedGroupName: "File tools",
       selectedGroup: group,
@@ -419,19 +403,6 @@ describe("CapabilitiesCatalog", () => {
   });
 
   it("collapses provider sections when canceling selection mode", () => {
-    render(<CapabilitiesCatalog />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Add Custom Tool" }));
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(catalogState.clearProviderExpansion).toHaveBeenCalledTimes(1);
-    expect(catalogState.setSelectedCapabilityKeys).toHaveBeenCalledWith(
-      new Set(),
-    );
-
-    cleanup();
-    vi.clearAllMocks();
-
     render(<CapabilitiesCatalog />);
     fireEvent.click(
       screen.getByRole("button", { name: "Create Capability Group" }),

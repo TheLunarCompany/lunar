@@ -5,23 +5,19 @@ import type { CapabilityGroup, CapabilitySelectionKey } from "./types";
 type CapabilitySelectionPanelProps = {
   selectedCapabilityKeys: Set<CapabilitySelectionKey>;
   editingGroup?: CapabilityGroup | null;
-  isAddCustomToolMode?: boolean;
   isSaving?: boolean;
   onSaveGroupChanges: () => void;
   onClearSelection: () => void;
   onCreateGroup: () => void;
-  onCustomizeSelectedItem?: () => void;
 };
 
 export function CapabilitySelectionPanel({
   selectedCapabilityKeys,
   editingGroup = null,
-  isAddCustomToolMode = false,
   isSaving = false,
   onSaveGroupChanges,
   onClearSelection,
   onCreateGroup,
-  onCustomizeSelectedItem,
 }: CapabilitySelectionPanelProps) {
   if (selectedCapabilityKeys.size === 0) {
     return null;
@@ -40,15 +36,7 @@ export function CapabilitySelectionPanel({
         </div>
 
         <div className="flex items-center gap-2">
-          {isAddCustomToolMode ? (
-            <Button
-              onClick={onCustomizeSelectedItem}
-              disabled={!onCustomizeSelectedItem}
-            >
-              <Plus className="size-4" />
-              Customize
-            </Button>
-          ) : editingGroup ? (
+          {editingGroup ? (
             <Button onClick={onSaveGroupChanges} disabled={isSaving}>
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>

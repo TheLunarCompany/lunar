@@ -21,9 +21,7 @@ type CapabilityPromptCardProps = {
   className?: string;
   metricCounts?: CapabilityPromptCardMetricCounts;
   isSelectionMode?: boolean;
-  isAddCustomToolMode?: boolean;
   isSelected?: boolean;
-  selectionLocked?: boolean;
   onToggleSelection?: () => void;
   onShowDetails?: (item: CapabilityItem) => void;
   onCustomizeItem?: (item: CapabilityItem) => void;
@@ -55,9 +53,7 @@ export function CapabilityPromptCard({
   className,
   metricCounts,
   isSelectionMode = false,
-  isAddCustomToolMode = false,
   isSelected = false,
-  selectionLocked = false,
   onToggleSelection,
   onShowDetails,
   onEditItem,
@@ -65,12 +61,8 @@ export function CapabilityPromptCard({
   showActions = true,
 }: CapabilityPromptCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isOriginalTool = !item.isCustom;
-  const isSelectable =
-    isSelectionMode &&
-    (!isAddCustomToolMode || isOriginalTool) &&
-    (!selectionLocked || isSelected);
-  const opensDetails = !isSelectionMode && !selectionLocked && !!onShowDetails;
+  const isSelectable = isSelectionMode;
+  const opensDetails = !isSelectionMode && !!onShowDetails;
   const description = item.description || "No description available";
   const inputFieldsCount =
     metricCounts?.inputFields ?? getInputFieldCount(item);
@@ -83,9 +75,7 @@ export function CapabilityPromptCard({
       return;
     }
 
-    if (!selectionLocked) {
-      onShowDetails?.(item);
-    }
+    onShowDetails?.(item);
   };
 
   return (
@@ -98,7 +88,6 @@ export function CapabilityPromptCard({
         isSelectionMode && isSelected
           ? "border-primary shadow-md shadow-primary/30"
           : "",
-        selectionLocked && !isSelected ? "cursor-not-allowed opacity-60" : "",
         className,
       )}
       data-capability-item-name={item.name}
@@ -122,7 +111,21 @@ export function CapabilityPromptCard({
         {isSelectionMode && (
           <CapabilitySelectionIndicator isSelected={isSelected} />
         )}
-        <CapabilityItemCard.TitleBadge variant="success" icon={<PromptIcon />}>
+        <CapabilityItemCard.TitleBadge
+          variant="success"
+          icon={
+            item.iconUrl ? (
+              <img
+                src={item.iconUrl}
+                alt=""
+                aria-hidden="true"
+                className="size-4 object-contain"
+              />
+            ) : (
+              <PromptIcon />
+            )
+          }
+        >
           {item.name}
         </CapabilityItemCard.TitleBadge>
         {!isSelectionMode && showActions && (
@@ -185,7 +188,7 @@ export function CapabilityPromptCard({
           />
         </div>
       )}
-      <CapabilityItemCard.Divider />
+      <CapabilityItemCard.Divider className="mt-auto" />
       <CapabilityItemCard.Metrics>
         <CapabilityItemCard.Metric
           icon={<BracketsCurlyIcon />}

@@ -39,7 +39,7 @@ function CapabilityItemCardRoot({
   return (
     <Card
       className={cn(
-        "relative flex max-w-full flex-col gap-4 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-4 py-4 text-[var(--text-colours-color-text-primary)] shadow-none ring-0",
+        "relative flex max-w-full flex-col gap-3 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-3 text-[var(--text-colours-color-text-primary)] shadow-none ring-0",
         className,
       )}
       {...props}

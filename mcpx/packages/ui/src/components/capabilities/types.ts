@@ -19,6 +19,8 @@ export type CapabilityItem = {
   messages?: PromptMessage[];
   annotations?: ToolAnnotations;
   overrideParams?: ToolExtensionParamsRecord;
+  estimatedTokens?: number;
+  iconUrl?: string;
 };
 
 export type CapabilityProvider = {
@@ -31,6 +33,8 @@ export type CapabilityProvider = {
 export type CapabilityGroupProviderSummary = {
   providerName: string;
   itemCount: number;
+  toolCount: number;
+  promptCount: number;
   itemNames: string[];
   selectionKeys: CapabilitySelectionKey[];
   isWildcard?: boolean;

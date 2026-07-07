@@ -4,6 +4,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type {
   CapabilityGroup,
   CapabilityItem,
+  CapabilityKind,
   CapabilityProvider,
 } from "./types";
 import { buildCapabilitySelectionKey } from "./capability-selection-key";
@@ -13,6 +14,8 @@ type ToolGroups = AppConfig["toolGroups"];
 type CurrentServerTool =
   | TargetServer["tools"][number]
   | TargetServer["originalTools"][number];
+// Live tools carry runtime data (estimatedTokens); raw originalTools don't.
+type MaterializedServerTool = TargetServer["tools"][number];
 type CurrentServerPrompt = NonNullable<
   TargetServer["prompts"] | TargetServer["originalPrompts"]
 >[number];
@@ -22,17 +25,24 @@ function compareNames(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
 }
 
+// Use the first icon's src; theme/size variants are ignored.
+function firstIconSrc(icons: unknown): string | undefined {
+  if (!Array.isArray(icons)) return undefined;
+  const first = icons[0] as { src?: unknown } | undefined;
+  return typeof first?.src === "string" ? first.src : undefined;
+}
+
 function getToolDescription(
   description: CurrentServerTool["description"],
 ): string {
   return typeof description === "string" ? description : "";
 }
 
-function getServerTools(server: TargetServer): CurrentServerTool[] {
+function getServerTools(server: TargetServer): MaterializedServerTool[] {
   return server.tools ?? [];
 }
 
-function getOriginalTools(server: TargetServer): CurrentServerTool[] {
+function getOriginalTools(server: TargetServer): Tool[] {
   return server.originalTools ?? [];
 }
 
@@ -127,6 +137,8 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
                 materializedTool?.inputSchema ?? originalTool?.inputSchema,
               annotations:
                 materializedTool?.annotations ?? originalTool?.annotations,
+              estimatedTokens: materializedTool?.estimatedTokens,
+              iconUrl: firstIconSrc(originalTool?.icons),
             };
           });
       });
@@ -134,8 +146,10 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
 
       const originalItems = originalTools
         .filter((tool) => tool?.name && !customItemNames.has(tool.name))
-        .map(
-          (tool): CapabilityItem => ({
+        .map((tool): CapabilityItem => {
+          const materializedTool = serverToolsByName.get(tool.name);
+
+          return {
             id: buildCapabilitySelectionKey(server.name, tool.name),
             kind: "tool",
             name: tool.name,
@@ -143,8 +157,10 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
             providerName: server.name,
             inputSchema: tool.inputSchema,
             annotations: tool.annotations,
-          }),
-        );
+            estimatedTokens: materializedTool?.estimatedTokens,
+            iconUrl: firstIconSrc(tool.icons),
+          };
+        });
       const promptDefinitions =
         originalPrompts.length > 0 ? originalPrompts : serverPrompts;
       const originalPromptItems = promptDefinitions
@@ -162,6 +178,7 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
             providerName: server.name,
             inputSchema: promptArgumentsToInputSchema(prompt.arguments),
             messages: materializedPrompt?.messages,
+            iconUrl: firstIconSrc((prompt as { icons?: unknown }).icons),
           };
         });
 
@@ -180,9 +197,42 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
     .sort((a, b) => compareNames(a.name, b.name));
 }
 
+// Kind comes from the live providers; config `services` only lists names.
+// Unknown names fall back to "tool".
+function buildProviderKindIndex(providers: CapabilityProvider[]): Map<
+  string,
+  {
+    kindByName: Map<string, CapabilityKind>;
+    toolCount: number;
+    promptCount: number;
+  }
+> {
+  return new Map(
+    providers.map((provider) => {
+      const kindByName = new Map<string, CapabilityKind>();
+      let toolCount = 0;
+      let promptCount = 0;
+
+      for (const item of provider.items) {
+        kindByName.set(item.name, item.kind);
+        if (item.kind === "prompt") {
+          promptCount += 1;
+        } else {
+          toolCount += 1;
+        }
+      }
+
+      return [provider.name, { kindByName, toolCount, promptCount }];
+    }),
+  );
+}
+
 export function buildCapabilityGroupsFromCurrentToolGroups(args: {
   toolGroups?: ToolGroups;
+  providers?: CapabilityProvider[];
 }): CapabilityGroup[] {
+  const providerKindIndex = buildProviderKindIndex(args.providers ?? []);
+
   return (args.toolGroups ?? []).map((group, index) => ({
     id: `tool_group_${index}`,
     name: group.name,
@@ -191,10 +241,25 @@ export function buildCapabilityGroupsFromCurrentToolGroups(args: {
     providers: Object.entries(group.services).map(([providerName, items]) => {
       const itemNames = Array.isArray(items) ? items : [];
       const isWildcard = items === "*";
+      const kinds = providerKindIndex.get(providerName);
+
+      let toolCount: number;
+      let promptCount: number;
+      if (isWildcard) {
+        toolCount = kinds?.toolCount ?? 0;
+        promptCount = kinds?.promptCount ?? 0;
+      } else {
+        promptCount = itemNames.filter(
+          (itemName) => kinds?.kindByName.get(itemName) === "prompt",
+        ).length;
+        toolCount = itemNames.length - promptCount;
+      }
 
       return {
         providerName,
         itemCount: itemNames.length,
+        toolCount,
+        promptCount,
         itemNames,
         selectionKeys: itemNames.map((itemName) =>
           buildCapabilitySelectionKey(providerName, itemName),

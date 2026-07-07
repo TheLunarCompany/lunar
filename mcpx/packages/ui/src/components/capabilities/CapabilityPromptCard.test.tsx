@@ -97,29 +97,6 @@ describe("CapabilityPromptCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("does not select custom items while adding a custom tool", () => {
-    const onToggleSelection = vi.fn();
-    const onShowDetails = vi.fn();
-
-    render(
-      <CapabilityPromptCard
-        item={customItem}
-        isSelectionMode
-        isAddCustomToolMode
-        onToggleSelection={onToggleSelection}
-        onShowDetails={onShowDetails}
-      />,
-    );
-
-    const card = screen.getByRole("checkbox", { name: "custom_read_file" });
-
-    fireEvent.click(card);
-    fireEvent.keyDown(card, { key: "Enter" });
-
-    expect(onToggleSelection).not.toHaveBeenCalled();
-    expect(onShowDetails).toHaveBeenCalledTimes(1);
-  });
-
   it("renders catalog-style actions without customize for original prompt items", () => {
     const onShowDetails = vi.fn();
     const onCustomizeItem = vi.fn();

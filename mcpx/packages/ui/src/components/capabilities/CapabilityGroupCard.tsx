@@ -34,7 +34,7 @@ function CapabilityGroupCardRoot({
   return (
     <Card
       className={cn(
-        "relative w-full max-w-[380px] gap-3 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-4 text-[var(--text-colours-color-text-primary)] shadow-none ring-0",
+        "relative w-full max-w-[380px] gap-2 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-3 text-[var(--text-colours-color-text-primary)] shadow-none ring-0",
         className,
       )}
       {...props}
@@ -70,7 +70,7 @@ function CapabilityGroupCardIcon({
     <div
       aria-hidden="true"
       className={cn(
-        "grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--colors-white)]",
+        "grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--colors-white)]",
         className,
       )}
       {...props}

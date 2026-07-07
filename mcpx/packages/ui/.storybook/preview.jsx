@@ -1,5 +1,6 @@
 import { initialize, mswLoader } from "msw-storybook-addon";
 import { http, HttpResponse } from "msw";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@/index.css";
 import "@xyflow/react/dist/style.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,14 +9,20 @@ initialize({
   onUnhandledRequest: "bypass",
 });
 
+const storybookQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
 /** @type { import('@storybook/react-vite').Preview } */
 const preview = {
   loaders: [mswLoader],
   decorators: [
     (Story) => (
-      <TooltipProvider>
-        <Story />
-      </TooltipProvider>
+      <QueryClientProvider client={storybookQueryClient}>
+        <TooltipProvider>
+          <Story />
+        </TooltipProvider>
+      </QueryClientProvider>
     ),
   ],
   parameters: {

@@ -91,17 +91,3 @@ export const CustomTool: Story = {
     },
   },
 };
-
-export const LockedDuringCustomToolSelection: Story = {
-  args: {
-    item: readOnlyItem,
-    metricCounts: {
-      inputFields: 4,
-      messages: 12,
-      resources: 75,
-    },
-    isSelectionMode: true,
-    isAddCustomToolMode: true,
-    selectionLocked: true,
-  },
-};

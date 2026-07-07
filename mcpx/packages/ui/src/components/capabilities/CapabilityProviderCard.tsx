@@ -27,7 +27,6 @@ type CapabilityProviderCardProps = {
   provider: CapabilityProvider;
   isExpanded: boolean;
   isSelectionMode?: boolean;
-  isAddCustomToolMode?: boolean;
   selectedCapabilityKeys?: Set<CapabilitySelectionKey>;
   onProviderClick: (providerName: string) => void;
   onCapabilitySelectionChange?: (
@@ -95,7 +94,6 @@ export function CapabilityProviderCard({
   provider,
   isExpanded,
   isSelectionMode = false,
-  isAddCustomToolMode = false,
   selectedCapabilityKeys = new Set(),
   onProviderClick,
   onCapabilitySelectionChange,
@@ -115,8 +113,6 @@ export function CapabilityProviderCard({
   const renderCapabilityItem = (item: CapabilityItem) => {
     const key = buildCapabilitySelectionKey(provider.name, item.name);
     const isSelected = selectedCapabilityKeys.has(key);
-    const selectionLocked =
-      isAddCustomToolMode && selectedCapabilityKeys.size > 0 && !isSelected;
     const Card =
       item.kind === "prompt" ? CapabilityPromptCard : CapabilityToolCard;
 
@@ -125,9 +121,7 @@ export function CapabilityProviderCard({
         key={item.id}
         item={item}
         isSelectionMode={isSelectionMode}
-        isAddCustomToolMode={isAddCustomToolMode}
         isSelected={isSelected}
-        selectionLocked={selectionLocked}
         onToggleSelection={() =>
           onCapabilitySelectionChange?.(item, provider.name, !isSelected)
         }

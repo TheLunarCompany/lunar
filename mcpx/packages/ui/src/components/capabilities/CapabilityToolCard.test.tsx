@@ -42,11 +42,28 @@ describe("CapabilityToolCard", () => {
     expect(screen.getByText("READ ONLY")).toBeInTheDocument();
     expect(screen.getByText("Read a file")).toBeInTheDocument();
     expect(screen.getByLabelText("Input fields: 2")).toBeInTheDocument();
-    expect(screen.getByLabelText("Messages: 0")).toBeInTheDocument();
-    expect(screen.getByLabelText("Resources: 0")).toBeInTheDocument();
+    // Tools only expose input fields; messages/resources are prompt metrics.
+    expect(screen.queryByLabelText(/^Messages:/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Resources:/)).not.toBeInTheDocument();
+    // No token count on this item, so the tokens metric is hidden.
+    expect(
+      screen.queryByLabelText(/^Estimated tokens:/),
+    ).not.toBeInTheDocument();
     expect(
       container.querySelector('[data-slot="card"] > [data-slot="separator"]'),
     ).toBeInTheDocument();
+  });
+
+  it("shows the estimated tokens metric only when a token count is present", () => {
+    const { rerender } = render(<CapabilityToolCard item={originalItem} />);
+    expect(
+      screen.queryByLabelText(/^Estimated tokens:/),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <CapabilityToolCard item={{ ...originalItem, estimatedTokens: 142 }} />,
+    );
+    expect(screen.getByLabelText("Estimated tokens: 142")).toBeInTheDocument();
   });
 
   it("keeps the status badge in the header and selection indicator on the top right", () => {
@@ -98,29 +115,6 @@ describe("CapabilityToolCard", () => {
     expect(
       screen.queryByRole("button", { name: "Open capability item menu" }),
     ).not.toBeInTheDocument();
-  });
-
-  it("does not select custom items while adding a custom tool", () => {
-    const onToggleSelection = vi.fn();
-    const onShowDetails = vi.fn();
-
-    render(
-      <CapabilityToolCard
-        item={customItem}
-        isSelectionMode
-        isAddCustomToolMode
-        onToggleSelection={onToggleSelection}
-        onShowDetails={onShowDetails}
-      />,
-    );
-
-    const card = screen.getByRole("checkbox", { name: "custom_read_file" });
-
-    fireEvent.click(card);
-    fireEvent.keyDown(card, { key: "Enter" });
-
-    expect(onToggleSelection).not.toHaveBeenCalled();
-    expect(onShowDetails).toHaveBeenCalledTimes(1);
   });
 
   it("renders catalog-style actions for original and custom items", () => {

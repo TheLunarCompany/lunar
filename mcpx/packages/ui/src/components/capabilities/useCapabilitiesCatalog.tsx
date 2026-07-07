@@ -237,8 +237,9 @@ export function useCapabilitiesCatalog() {
     () =>
       buildCapabilityGroupsFromCurrentToolGroups({
         toolGroups: appConfig?.toolGroups,
+        providers,
       }),
-    [appConfig?.toolGroups],
+    [appConfig?.toolGroups, providers],
   );
 
   const selectedGroup = useMemo(

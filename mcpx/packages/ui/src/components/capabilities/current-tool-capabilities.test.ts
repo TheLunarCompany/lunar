@@ -5,7 +5,11 @@ import {
   buildCapabilityGroupsFromCurrentToolGroups,
   buildCapabilityProvidersFromCurrentTools,
 } from "./current-tool-capabilities";
-import type { CapabilityItem, CapabilitySelectionKey } from "./types";
+import type {
+  CapabilityItem,
+  CapabilityProvider,
+  CapabilitySelectionKey,
+} from "./types";
 
 function targetServerTool(
   tool: Omit<TargetServerTool, "usage"> &
@@ -380,12 +384,16 @@ describe("current tool capabilities adapter", () => {
           {
             providerName: "filesystem",
             itemCount: 2,
+            toolCount: 2,
+            promptCount: 0,
             itemNames: ["read_file", "list_files"],
             selectionKeys: ["filesystem:read_file", "filesystem:list_files"],
           },
           {
             providerName: "github",
             itemCount: 1,
+            toolCount: 1,
+            promptCount: 0,
             itemNames: ["list_repos"],
             selectionKeys: ["github:list_repos"],
           },
@@ -411,6 +419,8 @@ describe("current tool capabilities adapter", () => {
       {
         providerName: "filesystem",
         itemCount: 0,
+        toolCount: 0,
+        promptCount: 0,
         itemNames: [],
         selectionKeys: [],
         isWildcard: true,
@@ -418,10 +428,89 @@ describe("current tool capabilities adapter", () => {
       {
         providerName: "github",
         itemCount: 0,
+        toolCount: 0,
+        promptCount: 0,
         itemNames: [],
         selectionKeys: [],
       },
     ]);
+  });
+
+  it("splits group item counts into tools and prompts using provider kinds", () => {
+    const providers: CapabilityProvider[] = [
+      {
+        name: "filesystem",
+        state: { type: "connected" },
+        items: [
+          {
+            id: "filesystem:read_file",
+            kind: "tool",
+            name: "read_file",
+            description: "",
+            providerName: "filesystem",
+          },
+          {
+            id: "filesystem:summarize",
+            kind: "prompt",
+            name: "summarize",
+            description: "",
+            providerName: "filesystem",
+          },
+        ],
+      },
+    ];
+
+    const groups = buildCapabilityGroupsFromCurrentToolGroups({
+      toolGroups: [
+        {
+          name: "Mixed",
+          services: { filesystem: ["read_file", "summarize"] },
+        },
+      ],
+      providers,
+    });
+
+    expect(groups[0]?.providers[0]).toMatchObject({
+      itemCount: 2,
+      toolCount: 1,
+      promptCount: 1,
+    });
+  });
+
+  it("counts wildcard group tools and prompts from provider kinds", () => {
+    const providers: CapabilityProvider[] = [
+      {
+        name: "filesystem",
+        state: { type: "connected" },
+        items: [
+          {
+            id: "filesystem:read_file",
+            kind: "tool",
+            name: "read_file",
+            description: "",
+            providerName: "filesystem",
+          },
+          {
+            id: "filesystem:summarize",
+            kind: "prompt",
+            name: "summarize",
+            description: "",
+            providerName: "filesystem",
+          },
+        ],
+      },
+    ];
+
+    const groups = buildCapabilityGroupsFromCurrentToolGroups({
+      toolGroups: [{ name: "All FS", services: { filesystem: "*" } }],
+      providers,
+    });
+
+    expect(groups[0]?.providers[0]).toMatchObject({
+      isWildcard: true,
+      toolCount: 1,
+      promptCount: 1,
+    });
   });
 
   it("sorts providers and items stably with custom items first", () => {

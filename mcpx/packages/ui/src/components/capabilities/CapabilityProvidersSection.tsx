@@ -22,7 +22,6 @@ type CapabilityProvidersSectionProps = {
   providers: CapabilityProvider[];
   expandedProviders: Set<string>;
   isSelectionMode?: boolean;
-  isAddCustomToolMode?: boolean;
   selectedCapabilityKeys?: Set<CapabilitySelectionKey>;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
@@ -125,7 +124,6 @@ export function CapabilityProvidersSection({
   providers,
   expandedProviders,
   isSelectionMode = false,
-  isAddCustomToolMode = false,
   selectedCapabilityKeys = new Set(),
   searchQuery,
   onSearchQueryChange,
@@ -184,7 +182,6 @@ export function CapabilityProvidersSection({
               provider={provider}
               isExpanded={expandedProviders.has(provider.name)}
               isSelectionMode={isSelectionMode}
-              isAddCustomToolMode={isAddCustomToolMode}
               selectedCapabilityKeys={selectedCapabilityKeys}
               onProviderClick={onProviderClick}
               onCapabilitySelectionChange={onCapabilitySelectionChange}

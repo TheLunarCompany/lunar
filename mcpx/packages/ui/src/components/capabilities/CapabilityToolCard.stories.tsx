@@ -62,8 +62,7 @@ export const OriginalTool: Story = {
     item: readOnlyItem,
     metricCounts: {
       inputFields: 4,
-      messages: 12,
-      resources: 75,
+      tokens: 142,
     },
   },
 };
@@ -73,8 +72,6 @@ export const SelectedForGroup: Story = {
     item: destructiveItem,
     metricCounts: {
       inputFields: 3,
-      messages: 0,
-      resources: 18,
     },
     isSelectionMode: true,
     isSelected: true,
@@ -86,22 +83,6 @@ export const CustomTool: Story = {
     item: customItem,
     metricCounts: {
       inputFields: 6,
-      messages: 4,
-      resources: 21,
     },
-  },
-};
-
-export const LockedDuringCustomToolSelection: Story = {
-  args: {
-    item: readOnlyItem,
-    metricCounts: {
-      inputFields: 4,
-      messages: 12,
-      resources: 75,
-    },
-    isSelectionMode: true,
-    isAddCustomToolMode: true,
-    selectionLocked: true,
   },
 };

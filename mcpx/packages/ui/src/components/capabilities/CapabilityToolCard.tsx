@@ -1,19 +1,18 @@
 import CustomBadge from "@/components/CustomBadge";
 import { cn } from "@/lib/utils";
-import { Check, Eye, Settings, Square, Trash2 } from "lucide-react";
+import { Check, Coins, Eye, Settings, Square, Trash2 } from "lucide-react";
 import { useState } from "react";
 import BracketsCurlyIcon from "./icons/brackets-curly.svg?react";
-import ChatsIcon from "./icons/chats.svg?react";
 import CustomCapabilityBadgeSvg from "./icons/custom-capability-badge.svg?react";
 import GitBranchIcon from "./icons/git-branch-01.svg?react";
-import VinylRecordIcon from "./icons/vinyl-record.svg?react";
 import { CapabilityItemCard } from "./CapabilityItemCard";
 import type { CapabilityItem } from "./types";
 
+// Tools show input fields and, when present, an estimated token count.
+// Messages/resources are prompt-only.
 type CapabilityToolCardMetricCounts = {
   inputFields?: number;
-  messages?: number;
-  resources?: number;
+  tokens?: number;
 };
 
 type CapabilityToolCardProps = {
@@ -21,9 +20,7 @@ type CapabilityToolCardProps = {
   className?: string;
   metricCounts?: CapabilityToolCardMetricCounts;
   isSelectionMode?: boolean;
-  isAddCustomToolMode?: boolean;
   isSelected?: boolean;
-  selectionLocked?: boolean;
   onToggleSelection?: () => void;
   onShowDetails?: (item: CapabilityItem) => void;
   onCustomizeItem?: (item: CapabilityItem) => void;
@@ -71,9 +68,7 @@ export function CapabilityToolCard({
   className,
   metricCounts,
   isSelectionMode = false,
-  isAddCustomToolMode = false,
   isSelected = false,
-  selectionLocked = false,
   onToggleSelection,
   onShowDetails,
   onCustomizeItem,
@@ -82,17 +77,12 @@ export function CapabilityToolCard({
   showActions = true,
 }: CapabilityToolCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isOriginalTool = !item.isCustom;
-  const isSelectable =
-    isSelectionMode &&
-    (!isAddCustomToolMode || isOriginalTool) &&
-    (!selectionLocked || isSelected);
+  const isSelectable = isSelectionMode;
   const description = item.description || "No description available";
   const annotationLabel = getAnnotationLabel(item);
   const inputFieldsCount =
     metricCounts?.inputFields ?? getInputFieldCount(item);
-  const messagesCount = metricCounts?.messages ?? 0;
-  const resourcesCount = metricCounts?.resources ?? 0;
+  const tokensCount = metricCounts?.tokens ?? item.estimatedTokens;
 
   const handleCardClick = () => {
     if (isSelectable) {
@@ -100,22 +90,19 @@ export function CapabilityToolCard({
       return;
     }
 
-    if (!selectionLocked) {
-      onShowDetails?.(item);
-    }
+    onShowDetails?.(item);
   };
 
   return (
     <CapabilityItemCard
       className={cn(
         "transition-all",
-        isSelectable || (!selectionLocked && onShowDetails)
+        isSelectable || onShowDetails
           ? "cursor-pointer hover:border-primary hover:shadow-md hover:shadow-primary/30"
           : "",
         isSelectionMode && isSelected
           ? "border-primary shadow-md shadow-primary/30"
           : "",
-        selectionLocked && !isSelected ? "cursor-not-allowed opacity-60" : "",
         className,
       )}
       data-capability-item-name={item.name}
@@ -137,7 +124,18 @@ export function CapabilityToolCard({
           <CapabilitySelectionIndicator isSelected={isSelected} />
         )}
         <CapabilityItemCard.TitleBadge
-          icon={<GitBranchIcon aria-label="Capability type icon" />}
+          icon={
+            item.iconUrl ? (
+              <img
+                src={item.iconUrl}
+                alt=""
+                aria-hidden="true"
+                className="size-4 object-contain"
+              />
+            ) : (
+              <GitBranchIcon aria-label="Capability type icon" />
+            )
+          }
         >
           {item.name}
         </CapabilityItemCard.TitleBadge>
@@ -213,23 +211,20 @@ export function CapabilityToolCard({
           />
         </div>
       )}
-      <CapabilityItemCard.Divider />
+      <CapabilityItemCard.Divider className="mt-auto" />
       <CapabilityItemCard.Metrics>
         <CapabilityItemCard.Metric
           icon={<BracketsCurlyIcon />}
           value={inputFieldsCount}
           label="Input fields"
         />
-        <CapabilityItemCard.Metric
-          icon={<ChatsIcon />}
-          value={messagesCount}
-          label="Messages"
-        />
-        <CapabilityItemCard.Metric
-          icon={<VinylRecordIcon className="rotate-90" />}
-          value={resourcesCount}
-          label="Resources"
-        />
+        {tokensCount !== undefined && (
+          <CapabilityItemCard.Metric
+            icon={<Coins />}
+            value={tokensCount}
+            label="Estimated tokens"
+          />
+        )}
       </CapabilityItemCard.Metrics>
     </CapabilityItemCard>
   );

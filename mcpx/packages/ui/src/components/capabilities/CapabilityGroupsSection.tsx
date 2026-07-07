@@ -24,19 +24,20 @@ type CapabilityGroupsSectionProps = {
 
 function totalTools(group: CapabilityGroup): number {
   return group.providers.reduce(
-    (total, provider) => total + provider.itemCount,
+    (total, provider) => total + provider.toolCount,
+    0,
+  );
+}
+
+function totalPrompts(group: CapabilityGroup): number {
+  return group.providers.reduce(
+    (total, provider) => total + provider.promptCount,
     0,
   );
 }
 
 function hasWildcardProvider(group: CapabilityGroup): boolean {
   return group.providers.some((provider) => provider.isWildcard);
-}
-
-function toolCountLabel(group: CapabilityGroup): string {
-  return hasWildcardProvider(group)
-    ? "All tools"
-    : `${totalTools(group)} in group`;
 }
 
 export function CapabilityGroupsSection({
@@ -73,8 +74,8 @@ export function CapabilityGroupsSection({
   }
 
   return (
-    <section className="mb-12 rounded-lg border border-[var(--colors-gray-200)] bg-white p-6 shadow-xs">
-      <p className="mb-4 text-base font-semibold text-[var(--colors-gray-900)]">
+    <section className="mb-8 rounded-lg border border-[var(--colors-gray-200)] bg-white p-4 shadow-xs">
+      <p className="mb-3 text-sm font-semibold text-[var(--colors-gray-900)]">
         Capabilities Groups
       </p>
 
@@ -111,17 +112,16 @@ export function CapabilityGroupsSection({
           </Button>
         )}
 
-        <div className="grid grid-cols-1 gap-4 p-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 p-1 sm:grid-cols-2 lg:grid-cols-4">
           {visibleGroups.map((group) => {
             const isSelected = selectedGroupName === group.name;
             const providerCount = group.providers.length;
-            const countLabel = toolCountLabel(group);
 
             return (
               <CapabilityGroupCard
                 key={group.id}
                 className={cn(
-                  "min-h-[156px] max-w-none transition-all",
+                  "max-w-none transition-all",
                   isSelected
                     ? "border-primary shadow-md shadow-primary/20 ring-2 ring-primary/15"
                     : "hover:border-primary/60 hover:shadow-md",
@@ -129,7 +129,7 @@ export function CapabilityGroupsSection({
               >
                 <button
                   type="button"
-                  className="flex min-h-[124px] w-full flex-1 cursor-pointer flex-col gap-3 pr-8 text-left outline-none"
+                  className="flex w-full flex-1 cursor-pointer flex-col gap-2 pr-8 text-left outline-none"
                   aria-label={`Open ${group.name}`}
                   onClick={() => onGroupClick(group)}
                   onKeyDown={(event) => {
@@ -164,14 +164,18 @@ export function CapabilityGroupsSection({
                   <CapabilityGroupCard.Metrics>
                     {hasWildcardProvider(group) ? (
                       <span className="text-[11px] font-semibold leading-none text-[var(--text-colours-color-text-primary)]">
-                        {countLabel}
+                        All tools
                       </span>
                     ) : (
-                      <CapabilityGroupCard.ToolsMetric
-                        value={totalTools(group)}
-                      />
+                      <>
+                        <CapabilityGroupCard.ToolsMetric
+                          value={totalTools(group)}
+                        />
+                        <CapabilityGroupCard.PromptsMetric
+                          value={totalPrompts(group)}
+                        />
+                      </>
                     )}
-                    <CapabilityGroupCard.PromptsMetric value={0} />
                     <CapabilityGroupCard.ResourcesMetric value={0} />
                   </CapabilityGroupCard.Metrics>
                 </button>
