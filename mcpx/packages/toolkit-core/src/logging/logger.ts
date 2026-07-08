@@ -29,7 +29,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 // Collapses "Authorization", "api-key", "API_KEY" to one form for matching.
-function normalizeKey(key: string): string {
+export function normalizeKey(key: string): string {
   return key.toLowerCase().replace(/[-_]/g, "");
 }
 
@@ -65,7 +65,10 @@ export const DEFAULT_REDACT_KEYS: ReadonlySet<string> = new Set(
 const REDACT_KEY_SUBSTRINGS = ["password", "secret"].map(normalizeKey);
 const REDACT_KEY_SUFFIXES = ["token", "apikey"].map(normalizeKey);
 
-function isSensitiveKey(
+// Shared matcher: an exact key in `normalizedKeys`, or one carrying a sensitive
+// stem (password/secret substring, token/apikey suffix). Reused by the audit
+// log's sanitizer so the two can't drift on what counts as a secret.
+export function isSensitiveKey(
   key: string,
   normalizedKeys: ReadonlySet<string>,
 ): boolean {
