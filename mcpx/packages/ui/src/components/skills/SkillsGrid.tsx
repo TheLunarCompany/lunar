@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
+import { Sort } from "@/components/Sort";
 import { SearchInput } from "@/components/ui/search-input";
 import { toast } from "@/components/ui/use-toast";
 import { useDeleteSkill, useSkills } from "@/data/skills";
+import { buildSkillProviderNameResolver } from "@/mapping/skills";
 import { routes } from "@/routes";
+import { useSocketStore } from "@/store";
 import { Plus, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useMemo } from "react";
@@ -10,12 +13,31 @@ import { useNavigate } from "react-router-dom";
 import { SkillCard } from "./SkillCard";
 import * as SkillPage from "./SkillPage";
 
+const SORT_ORDERS = {
+  asc: "asc",
+  desc: "desc",
+} as const;
+
+type SortOrder = (typeof SORT_ORDERS)[keyof typeof SORT_ORDERS];
+
+const SORT_OPTIONS: Array<{
+  label: string;
+  value: SortOrder;
+}> = [
+  { label: "A to Z", value: SORT_ORDERS.asc },
+  { label: "Z to A", value: SORT_ORDERS.desc },
+];
+
 export function SkillsGrid() {
   const navigate = useNavigate();
   const skills = useSkills();
   const deleteSkill = useDeleteSkill();
+  const systemState = useSocketStore((s) => s.systemState);
 
   const [query, setQuery] = useQueryState("q", { defaultValue: "" });
+  const [sortOrder, setSortOrder] = useQueryState("sort", {
+    defaultValue: SORT_ORDERS.asc,
+  });
 
   const all = useMemo(() => skills.data ?? [], [skills.data]);
 
@@ -29,8 +51,28 @@ export function SkillsGrid() {
           skill.description.toLowerCase().includes(normalized);
         return matchesSearch;
       })
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-  }, [all, query]);
+      .sort((a, b) => {
+        const direction = sortOrder === SORT_ORDERS.desc ? -1 : 1;
+        return (
+          direction *
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+        );
+      });
+  }, [all, query, sortOrder]);
+
+  const resolveProviderNames = useMemo(
+    () => buildSkillProviderNameResolver(systemState),
+    [systemState],
+  );
+
+  const visibleCards = useMemo(
+    () =>
+      visible.map((skill) => ({
+        skill,
+        providers: resolveProviderNames(skill.capabilityGroup),
+      })),
+    [resolveProviderNames, visible],
+  );
 
   const isFiltered = query.trim().length > 0;
 
@@ -57,6 +99,11 @@ export function SkillsGrid() {
         <SkillPage.Header className="mb-5">
           <SkillPage.HeaderText>
             <SkillPage.Title>Skills</SkillPage.Title>
+            <SkillPage.Description>
+              Reusable bundles of a <strong>SKILL.md</strong> guide plus the
+              tools & prompts an agent needs to follow it. Adopt a skill, then
+              apply it to your agents.
+            </SkillPage.Description>
           </SkillPage.HeaderText>
         </SkillPage.Header>
         <SkillPage.Toolbar>
@@ -67,6 +114,12 @@ export function SkillsGrid() {
             placeholder="Search..."
             wrapperClassName="w-full sm:w-[280px]"
             className="h-9 rounded-lg border-[var(--structure-color-border-primary)] bg-background"
+          />
+          <Sort
+            title="Sort"
+            options={SORT_OPTIONS}
+            selected={sortOrder as SortOrder}
+            onChange={setSortOrder}
           />
           {/* <SkillsFacetedFilter
             title="Type"
@@ -125,10 +178,11 @@ export function SkillsGrid() {
             <SkillPage.Message title="No skills match your filters." />
           ) : (
             <div className="grid grid-cols-1 content-start gap-4 pb-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {visible.map((skill) => (
+              {visibleCards.map(({ skill, providers }) => (
                 <SkillCard
                   key={skill.id}
                   skill={skill}
+                  providers={providers}
                   onDelete={handleDelete}
                 />
               ))}

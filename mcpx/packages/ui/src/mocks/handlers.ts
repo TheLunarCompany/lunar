@@ -59,13 +59,19 @@ type EnrichedCatalogItem = {
   approvedPrompts: Array<{ promptName: string }>;
 };
 
-const PLAYWRIGHT_CATALOG_ITEM_ID = "018f6f21-668f-7357-b1e5-7b3ba814d195";
-const GITHUB_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000010";
-const SLACK_CATALOG_ITEM_ID = "018f6f21-5f3e-7b40-a84d-c276df5b9d91";
-const GOOGLE_DRIVE_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000011";
-const POSTGRES_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000012";
-const DATADOG_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000013";
+// These IDs intentionally match the seeded mock `systemState.targetServers`
+// (see mocks/tools-page/seed-state.ts) so the Skills cards' "MCP Servers"
+// badges resolve to real, connected server names in local mock mode.
+const GITHUB_CATALOG_ITEM_ID = "0192f1c6-3a44-7c1d-aa10-d0b3f4d3e7b1";
+const LINEAR_CATALOG_ITEM_ID = "0192f1c6-9b22-7d52-89aa-b76c4d6e8ef1";
+const SLACK_CATALOG_ITEM_ID = "0192f1c6-51ac-7d52-89aa-b76c4d6e8ef1";
+const CALCULATOR_CATALOG_ITEM_ID = "0192f1c6-ca1c-7d52-89aa-b76c4d6e8ef1";
+const BROKEN_SERVER_CATALOG_ITEM_ID = "0192f1c6-b20c-7d52-89aa-b76c4d6e8ef1";
 const FILESYSTEM_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000014";
+// Servers with no seeded target server: these badges won't resolve in mock mode
+// (they're intentionally dropped by resolveSkillProviderNames).
+const PLAYWRIGHT_CATALOG_ITEM_ID = "018f6f21-668f-7357-b1e5-7b3ba814d195";
+const GOOGLE_DRIVE_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000011";
 const STDIO_MCP_SERVERS_NOT_ALLOWED_RESPONSE = {
   message:
     "This organization does not allow STDIO MCP servers. Contact your administrator for access.",
@@ -108,6 +114,11 @@ const initialPersonalSkills: Skill[] = parseMockSkills([
           tools: ["pull_request_read"],
           prompts: [],
         },
+        {
+          catalogItemId: LINEAR_CATALOG_ITEM_ID,
+          tools: ["list_issues"],
+          prompts: [],
+        },
       ],
     },
   },
@@ -136,6 +147,11 @@ const initialPersonalSkills: Skill[] = parseMockSkills([
         {
           catalogItemId: SLACK_CATALOG_ITEM_ID,
           tools: ["post_message"],
+          prompts: [],
+        },
+        {
+          catalogItemId: CALCULATOR_CATALOG_ITEM_ID,
+          tools: ["evaluate"],
           prompts: [],
         },
       ],
@@ -247,20 +263,29 @@ const initialPersonalSkills: Skill[] = parseMockSkills([
     capabilityGroup: {
       name: "Full stack",
       items: [
-        { catalogItemId: PLAYWRIGHT_CATALOG_ITEM_ID, tools: "*", prompts: [] },
-        {
-          catalogItemId: POSTGRES_CATALOG_ITEM_ID,
-          tools: ["query"],
-          prompts: [],
-        },
-        {
-          catalogItemId: DATADOG_CATALOG_ITEM_ID,
-          tools: ["logs_read", "metrics_read"],
-          prompts: [],
-        },
         {
           catalogItemId: GITHUB_CATALOG_ITEM_ID,
           tools: ["code_search"],
+          prompts: [],
+        },
+        {
+          catalogItemId: LINEAR_CATALOG_ITEM_ID,
+          tools: ["list_issues"],
+          prompts: [],
+        },
+        {
+          catalogItemId: SLACK_CATALOG_ITEM_ID,
+          tools: ["search_messages"],
+          prompts: [],
+        },
+        {
+          catalogItemId: CALCULATOR_CATALOG_ITEM_ID,
+          tools: ["evaluate"],
+          prompts: [],
+        },
+        {
+          catalogItemId: BROKEN_SERVER_CATALOG_ITEM_ID,
+          tools: ["health_check"],
           prompts: [],
         },
         { catalogItemId: FILESYSTEM_CATALOG_ITEM_ID, tools: "*", prompts: [] },

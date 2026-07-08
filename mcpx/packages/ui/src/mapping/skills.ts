@@ -13,6 +13,49 @@ export type SkillToolGroupOption = {
   disabledReason?: string;
 };
 
+// Skills store their capability group by `catalogItemId`, while the UI shows
+// server names/icons. Resolve each item's catalog id back to the currently
+// connected target server's name. Ids that don't map to a connected server are
+// dropped (there's no name/icon to show). Order is preserved and de-duped.
+export function buildSkillProviderNameResolver(
+  systemState: SystemState | null | undefined,
+): (capabilityGroup?: SkillCapabilityGroup) => string[] {
+  const nameByCatalogItemId = new Map<string, string>();
+  for (const server of systemState?.targetServers ?? []) {
+    if (server.catalogItemId) {
+      nameByCatalogItemId.set(server.catalogItemId, server.name);
+    }
+  }
+
+  return (capabilityGroup) => {
+    const items = capabilityGroup?.items ?? [];
+    if (items.length === 0) {
+      return [];
+    }
+
+    const names: string[] = [];
+    const seen = new Set<string>();
+    for (const item of items) {
+      const name = nameByCatalogItemId.get(item.catalogItemId);
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        names.push(name);
+      }
+    }
+    return names;
+  };
+}
+
+export function resolveSkillProviderNames({
+  capabilityGroup,
+  systemState,
+}: {
+  capabilityGroup?: SkillCapabilityGroup;
+  systemState: SystemState | null | undefined;
+}): string[] {
+  return buildSkillProviderNameResolver(systemState)(capabilityGroup);
+}
+
 export function buildSkillToolGroupOptions({
   appConfig,
   systemState,

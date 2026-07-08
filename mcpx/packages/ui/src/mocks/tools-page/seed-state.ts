@@ -695,6 +695,45 @@ const mockSystemState: SystemState = {
       prompts: [],
       originalPrompts: [],
     },
+    {
+      _type: "stdio",
+      name: "filesystem",
+      catalogItemId: "0190a000-0000-7000-8000-000000000014",
+      state: { type: "connected" },
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      usage: { callCount: 0 },
+      tools: [
+        {
+          name: "read_file",
+          description: "Read a file from the local filesystem",
+          inputSchema: { type: "object", properties: {} },
+          parameters: [],
+          usage: { callCount: 0 },
+        },
+        {
+          name: "write_file",
+          description: "Write a file to the local filesystem",
+          inputSchema: { type: "object", properties: {} },
+          parameters: [],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalTools: [
+        {
+          name: "read_file",
+          description: "Read a file from the local filesystem",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "write_file",
+          description: "Write a file to the local filesystem",
+          inputSchema: { type: "object", properties: {} },
+        },
+      ],
+      prompts: [],
+      originalPrompts: [],
+    },
   ],
   connectedClients: [
     {

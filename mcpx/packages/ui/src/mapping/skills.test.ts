@@ -1,6 +1,9 @@
 import type { AppConfig, SystemState } from "@mcpx/shared-model";
 import { describe, expect, it } from "vitest";
-import { buildSkillToolGroupOptions } from "./skills";
+import {
+  buildSkillToolGroupOptions,
+  resolveSkillProviderNames,
+} from "./skills";
 
 describe("buildSkillToolGroupOptions", () => {
   it("maps config tool groups to skill tool groups with catalog item IDs", () => {
@@ -72,6 +75,55 @@ describe("buildSkillToolGroupOptions", () => {
         disabledReason: "Missing catalog item ID for local.",
       },
     ]);
+  });
+});
+
+describe("resolveSkillProviderNames", () => {
+  it("resolves catalog item ids to connected server names, de-duped and ordered", () => {
+    const names = resolveSkillProviderNames({
+      capabilityGroup: {
+        name: "Repository",
+        items: [
+          { catalogItemId: "cat-github", tools: ["read"], prompts: [] },
+          { catalogItemId: "cat-linear", tools: "*", prompts: [] },
+          { catalogItemId: "cat-github", tools: ["write"], prompts: [] },
+        ],
+      },
+      systemState: systemStateWithTargetServers([
+        targetServer("github", "cat-github"),
+        targetServer("linear", "cat-linear"),
+      ]),
+    });
+
+    expect(names).toEqual(["github", "linear"]);
+  });
+
+  it("drops catalog item ids with no matching connected server", () => {
+    const names = resolveSkillProviderNames({
+      capabilityGroup: {
+        name: "Repository",
+        items: [
+          { catalogItemId: "cat-github", tools: ["read"], prompts: [] },
+          { catalogItemId: "cat-missing", tools: ["read"], prompts: [] },
+        ],
+      },
+      systemState: systemStateWithTargetServers([
+        targetServer("github", "cat-github"),
+      ]),
+    });
+
+    expect(names).toEqual(["github"]);
+  });
+
+  it("returns an empty list when the skill has no capability group", () => {
+    expect(
+      resolveSkillProviderNames({
+        capabilityGroup: undefined,
+        systemState: systemStateWithTargetServers([
+          targetServer("github", "cat-github"),
+        ]),
+      }),
+    ).toEqual([]);
   });
 });
 

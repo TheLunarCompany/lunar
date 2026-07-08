@@ -32,7 +32,14 @@ describe("seedToolsPageMockState", () => {
     );
     expect(
       state.systemState?.targetServers.map((server) => server.name),
-    ).toEqual(["github", "linear", "calculator", "broken-server", "slack"]);
+    ).toEqual([
+      "github",
+      "linear",
+      "calculator",
+      "broken-server",
+      "slack",
+      "filesystem",
+    ]);
 
     const githubServer = state.systemState?.targetServers.find(
       (server) => server.name === "github",

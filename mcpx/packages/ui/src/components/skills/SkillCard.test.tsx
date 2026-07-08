@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { SkillCard } from "./SkillCard";
@@ -16,14 +17,30 @@ const skill = {
   body: "# Review",
   exposeAsPrompt: true,
   author: { setupOwnerId: "o", displayName: "Amir" },
+  capabilityGroup: {
+    name: "filesystem",
+    items: [
+      {
+        catalogItemId: "filesystem",
+        tools: ["read_file", "write_file"],
+        prompts: ["summarize_file"],
+      },
+    ],
+  },
   updatedAt: new Date("2026-06-29T10:00:00.000Z"),
 } as const;
 
-function renderCard(onDelete = vi.fn()) {
+function renderCard(onDelete = vi.fn(), providers: string[] = []) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
   render(
-    <MemoryRouter>
-      <SkillCard skill={skill} onDelete={onDelete} />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <SkillCard skill={skill} onDelete={onDelete} providers={providers} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -147,5 +164,61 @@ describe("SkillCard", () => {
     expect(
       screen.queryByRole("button", { name: "Delete review-pull-requests" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("does not render the author as a card subtitle", () => {
+    renderCard();
+
+    expect(screen.queryByText("Amir")).not.toBeInTheDocument();
+  });
+
+  it("does not render prompt or resource badges in the footer", () => {
+    renderCard();
+
+    expect(screen.queryByText("Slash command")).not.toBeInTheDocument();
+    expect(screen.queryByText("Resource only")).not.toBeInTheDocument();
+  });
+
+  it("renders an MCP servers section with one badge per provider", () => {
+    renderCard(vi.fn(), ["github", "linear"]);
+
+    expect(screen.getByText("MCP Servers")).toBeInTheDocument();
+    expect(screen.getByText("github")).toBeInTheDocument();
+    expect(screen.getByText("linear")).toBeInTheDocument();
+  });
+
+  it("renders skill metrics for tools and prompts, without resources yet", () => {
+    renderCard();
+
+    expect(screen.getByLabelText("Tools: 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Prompts: 1")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Resources:/)).not.toBeInTheDocument();
+  });
+
+  it("renders only five MCP server badges plus hidden-count text", () => {
+    renderCard(vi.fn(), [
+      "github",
+      "linear",
+      "slack",
+      "calculator",
+      "filesystem",
+      "datadog",
+      "postgres",
+    ]);
+
+    expect(screen.getByText("github")).toBeInTheDocument();
+    expect(screen.getByText("linear")).toBeInTheDocument();
+    expect(screen.getByText("slack")).toBeInTheDocument();
+    expect(screen.getByText("calculator")).toBeInTheDocument();
+    expect(screen.getByText("filesystem")).toBeInTheDocument();
+    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.queryByText("datadog")).not.toBeInTheDocument();
+    expect(screen.queryByText("postgres")).not.toBeInTheDocument();
+  });
+
+  it("omits the MCP servers section when there are no providers", () => {
+    renderCard();
+
+    expect(screen.queryByText("MCP Servers")).not.toBeInTheDocument();
   });
 });
