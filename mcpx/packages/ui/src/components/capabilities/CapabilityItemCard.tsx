@@ -15,16 +15,21 @@ import { MoreVertical } from "lucide-react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 const titleBadgeVariants = cva(
-  "flex h-7 min-w-0 max-w-full items-center gap-2 rounded px-1.5 py-1 text-sm font-medium leading-[1.34] tracking-[0] text-[var(--text-colours-color-text-primary)] [&_svg]:size-4 [&_svg]:shrink-0",
+  "flex min-w-0 max-w-full items-center rounded font-medium leading-[1.34] tracking-[0] text-[var(--text-colours-color-text-primary)] [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         interactive: "bg-[var(--colors-primary-100)]",
         success: "bg-[var(--colors-success-100)]",
       },
+      size: {
+        md: "h-7 gap-2 px-1.5 py-1 text-sm [&_svg]:size-4",
+        sm: "h-5 gap-1 px-1 py-0.5 text-[11px] [&_svg]:size-3",
+      },
     },
     defaultVariants: {
       variant: "interactive",
+      size: "md",
     },
   },
 );
@@ -39,7 +44,7 @@ function CapabilityItemCardRoot({
   return (
     <Card
       className={cn(
-        "relative flex max-w-full flex-col gap-3 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-3 text-[var(--text-colours-color-text-primary)] shadow-none ring-0",
+        "relative flex w-[376px] max-w-full flex-col gap-3 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-3 text-[var(--text-colours-color-text-primary)] shadow-none ring-0",
         className,
       )}
       {...props}
@@ -69,13 +74,17 @@ function CapabilityItemCardTitleBadge({
   children,
   icon,
   variant,
+  size,
   ...props
 }: ComponentPropsWithoutRef<"div"> &
   VariantProps<typeof titleBadgeVariants> & {
     icon?: ReactNode;
   }) {
   return (
-    <div className={cn(titleBadgeVariants({ variant }), className)} {...props}>
+    <div
+      className={cn(titleBadgeVariants({ variant, size }), className)}
+      {...props}
+    >
       {icon}
       <span className="min-w-0 truncate">{children}</span>
     </div>

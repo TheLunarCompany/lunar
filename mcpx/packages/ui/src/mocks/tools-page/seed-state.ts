@@ -624,8 +624,44 @@ const mockSystemState: SystemState = {
           inputSchema: { type: "object", properties: {} },
         },
       ],
-      prompts: [],
-      originalPrompts: [],
+      prompts: [
+        {
+          name: "calculation_summary",
+          description:
+            "Explain a calculation result with assumptions and a short confidence note",
+          arguments: [
+            {
+              name: "expression",
+              description: "The expression or formula that was evaluated",
+              required: true,
+            },
+          ],
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Summarize the calculation for {{expression}}. Include the result, assumptions, and any edge cases that could change the answer.",
+              },
+            },
+          ],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalPrompts: [
+        {
+          name: "calculation_summary",
+          description:
+            "Explain a calculation result with assumptions and a short confidence note",
+          arguments: [
+            {
+              name: "expression",
+              description: "The expression or formula that was evaluated",
+              required: true,
+            },
+          ],
+        },
+      ],
     },
     {
       _type: "sse",
@@ -653,8 +689,44 @@ const mockSystemState: SystemState = {
           inputSchema: { type: "object", properties: {} },
         },
       ],
-      prompts: [],
-      originalPrompts: [],
+      prompts: [
+        {
+          name: "diagnostic_summary",
+          description:
+            "Draft a short diagnostic summary when an MCP server is unhealthy",
+          arguments: [
+            {
+              name: "error",
+              description: "The connection or health-check error",
+              required: true,
+            },
+          ],
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Write a diagnostic summary for this MCP server error: {{error}}. Include likely cause, owner handoff, and one next check.",
+              },
+            },
+          ],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalPrompts: [
+        {
+          name: "diagnostic_summary",
+          description:
+            "Draft a short diagnostic summary when an MCP server is unhealthy",
+          arguments: [
+            {
+              name: "error",
+              description: "The connection or health-check error",
+              required: true,
+            },
+          ],
+        },
+      ],
     },
     {
       _type: "streamable-http",
@@ -692,8 +764,54 @@ const mockSystemState: SystemState = {
           inputSchema: { type: "object", properties: {} },
         },
       ],
-      prompts: [],
-      originalPrompts: [],
+      prompts: [
+        {
+          name: "incident_channel_update",
+          description:
+            "Compose a concise incident or rollout update for a Slack channel",
+          arguments: [
+            {
+              name: "channel",
+              description: "Slack channel name or ID",
+              required: true,
+            },
+            {
+              name: "status",
+              description: "Current incident or rollout status",
+              required: true,
+            },
+          ],
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Draft a Slack update for {{channel}}. Status: {{status}}. Keep it concise, include impact, current action, and next update time.",
+              },
+            },
+          ],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalPrompts: [
+        {
+          name: "incident_channel_update",
+          description:
+            "Compose a concise incident or rollout update for a Slack channel",
+          arguments: [
+            {
+              name: "channel",
+              description: "Slack channel name or ID",
+              required: true,
+            },
+            {
+              name: "status",
+              description: "Current incident or rollout status",
+              required: true,
+            },
+          ],
+        },
+      ],
     },
     {
       _type: "stdio",
@@ -731,8 +849,44 @@ const mockSystemState: SystemState = {
           inputSchema: { type: "object", properties: {} },
         },
       ],
-      prompts: [],
-      originalPrompts: [],
+      prompts: [
+        {
+          name: "workspace_file_brief",
+          description:
+            "Summarize important local files and suggest next files to inspect",
+          arguments: [
+            {
+              name: "path",
+              description: "Workspace path or directory to summarize",
+              required: true,
+            },
+          ],
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Create a brief for {{path}}. Summarize important files, ownership clues, and the next three files to inspect.",
+              },
+            },
+          ],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalPrompts: [
+        {
+          name: "workspace_file_brief",
+          description:
+            "Summarize important local files and suggest next files to inspect",
+          arguments: [
+            {
+              name: "path",
+              description: "Workspace path or directory to summarize",
+              required: true,
+            },
+          ],
+        },
+      ],
     },
   ],
   connectedClients: [

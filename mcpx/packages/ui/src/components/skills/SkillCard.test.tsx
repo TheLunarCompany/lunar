@@ -45,7 +45,7 @@ function renderCard(onDelete = vi.fn(), providers: string[] = []) {
 }
 
 describe("SkillCard", () => {
-  it("navigates to the editor when the card is clicked", () => {
+  it("navigates to the detail page when the card is clicked", () => {
     navigate.mockClear();
     renderCard();
     fireEvent.click(screen.getByText("review-pull-requests"));
@@ -64,7 +64,7 @@ describe("SkillCard", () => {
     );
     fireEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
     expect(navigate).toHaveBeenCalledWith(
-      "/skills/0190a000-0000-7000-8000-000000000001",
+      "/skills/0190a000-0000-7000-8000-000000000001/edit",
     );
   });
 
@@ -216,9 +216,10 @@ describe("SkillCard", () => {
     expect(screen.queryByText("postgres")).not.toBeInTheDocument();
   });
 
-  it("omits the MCP servers section when there are no providers", () => {
+  it("renders an MCP servers empty state when there are no providers", () => {
     renderCard();
 
-    expect(screen.queryByText("MCP Servers")).not.toBeInTheDocument();
+    expect(screen.getByText("MCP Servers")).toBeInTheDocument();
+    expect(screen.getByText("No capabilities linked yet")).toBeInTheDocument();
   });
 });

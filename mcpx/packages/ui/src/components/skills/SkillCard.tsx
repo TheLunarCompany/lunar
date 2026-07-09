@@ -40,6 +40,12 @@ import { useNavigate } from "react-router-dom";
 import { SkillCardMetrics } from "./SkillCardMetrics";
 
 const MAX_VISIBLE_PROVIDER_BADGES = 5;
+const skillUpdatedAtFormatter = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
 
 type SkillCardProps = {
   skill: Skill;
@@ -58,6 +64,7 @@ export function SkillCard({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const detailHref = routes.skillDetail.replace(":id", skill.id);
   const editHref = routes.skillEditor.replace(":id", skill.id);
   const visibleProviders = providers.slice(0, MAX_VISIBLE_PROVIDER_BADGES);
   const hiddenProvidersCount = Math.max(
@@ -81,7 +88,7 @@ export function SkillCard({
       <Card
         role="article"
         size="sm"
-        onClick={() => navigate(editHref)}
+        onClick={() => navigate(detailHref)}
         className={cn(
           "group relative flex min-h-[150px] cursor-pointer flex-col gap-0 rounded-xl border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-4 shadow-sm ring-0 transition hover:-translate-y-px hover:border-primary/40 hover:shadow-lg",
           className,
@@ -201,7 +208,7 @@ export function SkillCard({
           />
           <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-colours-color-text-tertiary)]">
             <Clock className="size-3" />
-            {formatUpdatedAt(skill.updatedAt)}
+            {skillUpdatedAtFormatter.format(skill.updatedAt)}
           </span>
         </div>
       </Card>
@@ -274,13 +281,4 @@ function getCapabilitySelectionTotal(
     }
     return total + selection.length;
   }, 0);
-}
-
-function formatUpdatedAt(date: Date) {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
 }

@@ -82,7 +82,7 @@ describe("SkillEditor", () => {
     expect(screen.getByLabelText("Markdown body")).toHaveValue("# Imported");
   });
 
-  it("renders the edit form prefilled on /skills/:id", () => {
+  it("renders the edit form prefilled on /skills/:id/edit", () => {
     vi.mocked(useSkill).mockReturnValue({
       data: {
         id: "0190a000-0000-7000-8000-000000000001",
@@ -99,10 +99,10 @@ describe("SkillEditor", () => {
 
     render(
       <MemoryRouter
-        initialEntries={["/skills/0190a000-0000-7000-8000-000000000001"]}
+        initialEntries={["/skills/0190a000-0000-7000-8000-000000000001/edit"]}
       >
         <Routes>
-          <Route path="/skills/:id" element={<SkillEditor />} />
+          <Route path="/skills/:id/edit" element={<SkillEditor />} />
         </Routes>
       </MemoryRouter>,
     );

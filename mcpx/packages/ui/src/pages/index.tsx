@@ -9,6 +9,7 @@ import Catalog from "@/pages/Catalog";
 import SavedSetups from "@/pages/SavedSetups";
 import Skills from "@/pages/Skills";
 import SkillCreateStart from "@/pages/SkillCreateStart";
+import SkillDetail from "@/pages/SkillDetail";
 import SkillEditor from "@/pages/SkillEditor";
 import NotFound from "@/pages/NotFound";
 import Capabilities from "@/pages/Capabilities";
@@ -80,6 +81,7 @@ export default function Pages() {
                     path={routes.skillNewBlank}
                     element={<SkillEditor />}
                   />
+                  <Route path={routes.skillDetail} element={<SkillDetail />} />
                   <Route path={routes.skillEditor} element={<SkillEditor />} />
                 </>
               ) : null}

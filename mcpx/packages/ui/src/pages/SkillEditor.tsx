@@ -50,6 +50,8 @@ export default function SkillEditor() {
 
   const status =
     createSkill.isPending || updateSkill.isPending ? "submitting" : "idle";
+  const backHref =
+    isEdit && id ? routes.skillDetail.replace(":id", id) : routes.skills;
 
   return (
     <SkillPage.Root>
@@ -70,10 +72,10 @@ export default function SkillEditor() {
               type="button"
               variant="outline"
               className="h-9 self-start rounded-lg px-3"
-              onClick={() => navigate(routes.skills)}
+              onClick={() => navigate(backHref)}
             >
               <ArrowLeft />
-              Back to skills
+              {isEdit ? "Back to skill" : "Back to skills"}
             </Button>
           </SkillPage.Actions>
         </SkillPage.Header>

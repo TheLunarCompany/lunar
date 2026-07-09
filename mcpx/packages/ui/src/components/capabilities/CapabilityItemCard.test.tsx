@@ -152,6 +152,18 @@ describe("CapabilityItemCard", () => {
     ).toContain("--colors-success-100");
   });
 
+  it("supports a compact title badge size", () => {
+    render(
+      <CapabilityItemCard.TitleBadge size="sm">
+        Compact tool
+      </CapabilityItemCard.TitleBadge>,
+    );
+
+    expect(screen.getByText("Compact tool").parentElement?.className).toContain(
+      "h-5",
+    );
+  });
+
   it("lets a long title badge shrink beside a status badge", () => {
     const { container } = render(
       <CapabilityItemCard>
