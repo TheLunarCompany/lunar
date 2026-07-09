@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    /* Strict Type-Checking Options */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowSyntheticDefaultImports": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "alwaysStrict": true,
+    "strictPropertyInitialization": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@mcpx/shared-model/*": ["./packages/shared-model/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "it/**/*.ts"],
+  "exclude": ["node_modules", "/lunar-interceptor.ts"],
+  "references": [
+    {
+      "path": "../shared-model/tsconfig.build.json"
+    },
+    {
+      "path": "../toolkit-core"
+    },
+    {
+      "path": "../webapp-protocol"
+    }
+  ]
+}
