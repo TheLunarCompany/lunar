@@ -3,7 +3,6 @@ import {
   createRoutesFromElements,
   Route,
 } from "react-router-dom";
-import AccessControls from "@/pages/AccessControls";
 import AuditLog from "@/pages/AuditLog";
 import Dashboard from "@/pages/Dashboard";
 import Tools from "@/pages/Tools";
@@ -35,7 +34,6 @@ export function createAppRoutes() {
       <Route element={<AuthenticatedLayoutRoute />}>
         <Route path={routes.root} element={<Dashboard />} />
         <Route path={routes.dashboard} element={<Dashboard />} />
-        <Route path={routes.accessControls} element={<AccessControls />} />
         <Route path={routes.capabilities} element={<Capabilities />} />
         <Route path={routes.mcpServers} element={<McpServers />} />
         {isSkillsPageEnabled() ? (

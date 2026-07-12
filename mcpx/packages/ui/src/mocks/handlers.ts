@@ -1140,12 +1140,4 @@ export const handlers = [
       message: `Target server ${String(params.name)} deactivated successfully`,
     });
   }),
-
-  http.patch("*/app-config", () => {
-    return HttpResponse.json({
-      yaml: "",
-      version: 1,
-      lastModified: "2026-05-11T08:00:00.000Z",
-    });
-  }),
 ];

@@ -1,5 +1,4 @@
 import {
-  applyParsedAppConfigRequestSchema,
   auditLogsQuerySchema,
   CatalogMCPServerItem,
   CreateServerFromCatalogRequest,
@@ -22,7 +21,6 @@ import { env } from "../env.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
-  InvalidConfigError,
   NotAllowedError,
   NotFoundError,
 } from "../errors.js";
@@ -107,44 +105,6 @@ export function buildControlPlaneRouter(
   router.get("/app-config", authGuard, async (_req, res) => {
     const payload = services.controlPlane.getAppConfig();
     res.status(200).json(payload);
-  });
-
-  router.patch("/app-config", authGuard, async (req, res) => {
-    const parsed = applyParsedAppConfigRequestSchema.safeParse(req.body);
-
-    if (!parsed.success) {
-      handleInvalidRequestSchema(req.url, res, parsed.error, req.body, logger);
-      return;
-    }
-
-    const payload = parsed.data;
-    try {
-      const response = await services.controlPlane.patchAppConfig(payload);
-      res.status(200).json(response);
-      return;
-    } catch (e) {
-      if (e instanceof ZodError) {
-        handleInvalidRequestSchema(req.url, res, e, req.body, logger);
-        return;
-      }
-      if (e instanceof InvalidConfigError) {
-        logger.error("Invalid config in PATCH /app-config request", {
-          payload,
-          error: loggableError(e),
-        });
-        res.status(400).json({
-          message: "Invalid config",
-          error: loggableError(e).errorMessage,
-        });
-        return;
-      }
-      const error = loggableError(e);
-      logger.error("Error in PATCH /app-config request", { payload, error });
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: error.errorMessage });
-      return;
-    }
   });
 
   router.post("/target-server", authGuard, async (req, res) => {

@@ -1,39 +1,30 @@
-import { parse } from "yaml";
 import { getTestHarness, stdioTargetServers } from "./utils.js";
 
 const MCPX_BASE_URL = "http://localhost:9000";
 
-async function patchAppConfig(config: unknown): Promise<void> {
-  await fetch(`${MCPX_BASE_URL}/app-config`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(config),
-  });
-}
-
 describe("Target Server Activation", () => {
   const harness = getTestHarness({ targetServers: [] });
-  let initialConfig: { yaml: string; version: number; lastModified: string };
+
+  // Reset attributes between tests (PATCH /app-config is gone; use the config service).
+  async function clearTargetServerAttributes(): Promise<void> {
+    const { config } = harness.services;
+    await config.withLock(async () => {
+      await config.updateConfig({
+        ...config.getConfig(),
+        targetServerAttributes: {},
+      });
+    });
+  }
 
   beforeAll(async () => {
     await harness.initialize("SSE");
-
-    const response = await fetch(`${MCPX_BASE_URL}/app-config`);
-    initialConfig = await response.json();
   });
 
   beforeEach(async () => {
-    const config = parse(initialConfig.yaml);
-    await patchAppConfig({
-      ...config,
-      targetServerAttributes: {},
-    });
+    await clearTargetServerAttributes();
   });
 
   afterAll(async () => {
-    const config = parse(initialConfig.yaml);
-    await patchAppConfig(config);
-
     await harness.shutdown();
   });
 

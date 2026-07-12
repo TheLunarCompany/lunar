@@ -18,8 +18,6 @@ import type {
   UpdateTargetServerRequest,
   RawCreateTargetServerRequest,
   RawUpdateTargetServerRequest,
-  ApplyParsedAppConfigRequest,
-  SerializedAppConfig,
   AuditLogEntry,
   AuditLogEventType,
   Skill,
@@ -245,19 +243,6 @@ class ApiClient {
       throw result.error;
     }
     return result.data;
-  }
-
-  // ==================== APP CONFIG ====================
-
-  async patchAppConfig(
-    config: ApplyParsedAppConfigRequest,
-  ): Promise<SerializedAppConfig> {
-    return this.requestWithBody(
-      "/app-config",
-      "PATCH",
-      config,
-      z.custom<SerializedAppConfig>(), // TODO: replace with validation RND-404
-    );
   }
 
   // ==================== TOOL GROUPS ====================

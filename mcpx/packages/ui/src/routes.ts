@@ -1,7 +1,6 @@
 export const routes = {
   root: "/",
   dashboard: "/dashboard",
-  accessControls: "/access-controls",
   capabilities: "/capabilities",
   mcpServers: "/mcp-servers",
   skills: "/skills",
