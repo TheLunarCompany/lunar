@@ -28,6 +28,7 @@ export type {
 export type {
   UsageStatsTargetServer,
   UsageStatsTargetServerInput,
+  UsageStatsPromptMessage,
 } from "./webapp-bound/usage-stats.js";
 export type {
   CatalogItemWire,

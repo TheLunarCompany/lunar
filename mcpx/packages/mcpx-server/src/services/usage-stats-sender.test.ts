@@ -385,6 +385,67 @@ describe("buildUsageStatsPayload", () => {
     ...overrides,
   });
 
+  describe("prompt message stripping", () => {
+    it("caps text, drops media data, keeps resource text", () => {
+      const longText = "x".repeat(25_000);
+      const state = createBaseState();
+      state.targetServers = [
+        createStdioServer({
+          name: "s",
+          prompts: [
+            {
+              name: "p",
+              usage: { callCount: 0 },
+              messages: [
+                { role: "user", content: { type: "text", text: longText } },
+                {
+                  role: "user",
+                  content: {
+                    type: "image",
+                    data: "AAAA",
+                    mimeType: "image/png",
+                  },
+                },
+                {
+                  role: "user",
+                  content: {
+                    type: "resource",
+                    resource: {
+                      uri: "file://x",
+                      mimeType: "text/plain",
+                      text: "keep me",
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      ];
+
+      const payload = buildUsageStatsPayload(state);
+      const messages = payload.targetServers[0]?.prompts?.["p"]?.messages ?? [];
+
+      // Text is truncated below the original length.
+      expect(messages[0]?.content.type).toBe("text");
+      expect(messages[0]?.content.text?.endsWith("… (truncated)")).toBe(true);
+      expect(messages[0]?.content.text?.length ?? 0).toBeLessThan(
+        longText.length,
+      );
+      // Image: metadata only, base64 data dropped.
+      expect(messages[1]?.content).toEqual({
+        type: "image",
+        mimeType: "image/png",
+      });
+      // Resource: embedded text kept, binary/uri dropped.
+      expect(messages[2]?.content).toEqual({
+        type: "resource",
+        text: "keep me",
+        mimeType: "text/plain",
+      });
+    });
+  });
+
   describe("connecting state", () => {
     it("excludes servers in connecting state from payload", () => {
       const state = createBaseState();

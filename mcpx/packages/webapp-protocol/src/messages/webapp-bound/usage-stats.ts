@@ -31,6 +31,18 @@ export const toolSchema = z.object({
   }),
 });
 
+// Prompt-template message. Media `data` is stripped before emit, so only
+// text/mimeType survive. `role` is lenient (not an enum): one nonconformant
+// message must not fail-validate the whole usage-stats payload.
+export const promptMessageSchema = z.object({
+  role: z.string(),
+  content: z.object({
+    type: z.string(),
+    text: z.string().optional(),
+    mimeType: z.string().optional(),
+  }),
+});
+
 export const promptSchema = z.object({
   description: z.string().optional(),
   arguments: z
@@ -42,6 +54,8 @@ export const promptSchema = z.object({
       }),
     )
     .optional(),
+  // Optional: older gateways and prompt-less servers omit it.
+  messages: z.array(promptMessageSchema).optional(),
   usage: z.object({
     callCount: z.number().int().nonnegative(),
     lastCalledAt: z.string().pipe(z.coerce.date()).optional(),
@@ -88,3 +102,4 @@ export const usageStatsPayloadSchema = z.object({
 
 export type UsageStatsTargetServer = z.infer<typeof targetSever>;
 export type UsageStatsTargetServerInput = z.input<typeof targetSever>;
+export type UsageStatsPromptMessage = z.input<typeof promptMessageSchema>;
