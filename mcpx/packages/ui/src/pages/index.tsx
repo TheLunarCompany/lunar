@@ -11,6 +11,7 @@ import Skills from "@/pages/Skills";
 import SkillCreateStart from "@/pages/SkillCreateStart";
 import SkillDetail from "@/pages/SkillDetail";
 import SkillEditor from "@/pages/SkillEditor";
+import McpServers from "@/pages/McpServers";
 import NotFound from "@/pages/NotFound";
 import Capabilities from "@/pages/Capabilities";
 import { LoginRoute, LogoutRoute } from "@/pages/Login";
@@ -66,6 +67,7 @@ export default function Pages() {
                 element={<AccessControls />}
               />
               <Route path={routes.capabilities} element={<Capabilities />} />
+              <Route path={routes.mcpServers} element={<McpServers />} />
               {isSkillsPageEnabled() ? (
                 <>
                   <Route path={routes.skills} element={<Skills />} />

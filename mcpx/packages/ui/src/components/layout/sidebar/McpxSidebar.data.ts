@@ -4,17 +4,23 @@ import {
   Library,
   FileText,
   ScrollText,
+  Server,
   SlidersHorizontal,
   Zap,
 } from "lucide-react";
 import {
   isCapabilitiesEnabled,
   isSkillsPageEnabled,
+  isUiSidebarRestructureEnabled,
 } from "@/config/runtime-config";
 import { routes } from "@/routes";
 import type { McpxSidebarSection } from "./McpxSidebar";
 
 export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
+  if (isUiSidebarRestructureEnabled()) {
+    return getRestructuredMcpxSidebarSections();
+  }
+
   const workspaceItems: McpxSidebarSection["items"] = [
     {
       id: "dashboard",
@@ -62,6 +68,65 @@ export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
     {
       title: "Workspace",
       items: workspaceItems,
+    },
+  ];
+}
+
+function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
+  const workspaceItems: McpxSidebarSection["items"] = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: Gauge,
+      url: routes.dashboard,
+    },
+    {
+      id: "mcp-servers",
+      label: "MCP Servers",
+      icon: Server,
+      url: routes.mcpServers,
+    },
+  ];
+
+  if (isSkillsPageEnabled()) {
+    workspaceItems.push({
+      id: "skills",
+      label: "Skills",
+      icon: FileText,
+      url: routes.skills,
+    });
+  }
+
+  workspaceItems.push(
+    {
+      id: "saved-setups",
+      label: "Saved Setups",
+      icon: SlidersHorizontal,
+      url: routes.savedSetups,
+    },
+    {
+      id: "audit-log",
+      label: "Audit Log",
+      icon: ScrollText,
+      url: routes.auditLog,
+    },
+  );
+
+  return [
+    {
+      title: "Workspace",
+      items: workspaceItems,
+    },
+    {
+      title: "Catalogs",
+      items: [
+        {
+          id: "mcp-registry",
+          label: "MCP Registry",
+          icon: Library,
+          url: routes.catalog,
+        },
+      ],
     },
   ];
 }

@@ -4,6 +4,7 @@ import type {
   ElementType,
   ReactNode,
 } from "react";
+import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import { cva } from "class-variance-authority";
 import McpxLogo from "@/components/dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
@@ -17,6 +18,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
@@ -146,20 +148,25 @@ export function McpxSidebar({
         </SidebarHeader>
         <SidebarContent className="gap-5 pt-2">
           {sections.map((section) => (
-            <SidebarGroup key={section.title} className="px-4 py-0">
-              <SidebarGroupLabel className="h-auto rounded-lg p-2 text-[13px] font-semibold uppercase leading-none tracking-[0] text-white/65">
-                {section.title}
-              </SidebarGroupLabel>
-              <SidebarMenu className="gap-1">
-                {section.items.map((item) => (
-                  <McpxSidebarMenuItem
-                    key={item.id}
-                    item={item}
-                    isActive={item.id === activeItemId}
-                  />
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
+            <Fragment key={section.title}>
+              {section.title === "Catalogs" && (
+                <SidebarSeparator className="mx-auto w-[calc(100%-2rem)] bg-white/20" />
+              )}
+              <SidebarGroup className="px-4 py-0">
+                <SidebarGroupLabel className="h-auto rounded-lg p-2 text-[13px] font-semibold uppercase leading-none tracking-[0] text-white/65">
+                  {section.title}
+                </SidebarGroupLabel>
+                <SidebarMenu className="gap-1">
+                  {section.items.map((item) => (
+                    <McpxSidebarMenuItem
+                      key={item.id}
+                      item={item}
+                      isActive={item.id === activeItemId}
+                    />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            </Fragment>
           ))}
         </SidebarContent>
         <SidebarFooter className="px-4 pb-4">{children}</SidebarFooter>

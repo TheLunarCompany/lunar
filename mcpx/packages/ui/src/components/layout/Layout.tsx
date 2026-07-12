@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/useAuth";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { useModalsStore, useSocketStore } from "@/store";
 import { SystemState } from "@mcpx/shared-model";
+import { isUiSidebarRestructureEnabled } from "@/config/runtime-config";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -88,7 +89,8 @@ export const Layout: FC<LayoutProps> = ({
   // }, [systemState]);
   const pathToId: Record<string, string> = {
     "/dashboard": "dashboard",
-    "/catalog": "catalog",
+    "/catalog": isUiSidebarRestructureEnabled() ? "mcp-registry" : "catalog",
+    "/mcp-servers": "mcp-servers",
     "/tools": "tools",
     "/capabilities": "capabilities",
     "/skills": "skills",

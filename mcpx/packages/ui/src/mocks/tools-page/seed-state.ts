@@ -77,6 +77,75 @@ const mockSystemState: SystemState = {
             lastCalledAt: date("2026-05-11T13:13:11.000Z"),
           },
         },
+        {
+          name: "generate_pull_request_review_summary_with_extremely_long_repository_context_and_release_notes",
+          description:
+            "Generate a comprehensive pull request review summary that includes repository context, changed files, impacted services, deployment notes, reviewer guidance, rollout risks, and follow-up action items for a large multi-package change. This description is intentionally long so UI cards can be checked for wrapping, truncation, tooltip behavior, and drawer readability.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: {
+                type: "string",
+                description:
+                  "GitHub organization or user that owns the repository.",
+              },
+              repo: {
+                type: "string",
+                description:
+                  "Repository name that contains the pull request to summarize.",
+              },
+              pullNumber: {
+                type: "number",
+                description:
+                  "Pull request number whose diff and metadata should be analyzed.",
+              },
+              includeRiskAssessment: {
+                type: "boolean",
+                description:
+                  "Whether to include a detailed risk assessment for deployment and rollback planning.",
+              },
+              audience: {
+                type: "string",
+                description:
+                  "Target audience for the summary, such as reviewers, release managers, or customer support.",
+              },
+            },
+            required: ["owner", "repo", "pullNumber", "audience"],
+          },
+          parameters: [
+            {
+              name: "owner",
+              description:
+                "GitHub organization or user that owns the repository.",
+            },
+            {
+              name: "repo",
+              description:
+                "Repository name that contains the pull request to summarize.",
+            },
+            {
+              name: "pullNumber",
+              description:
+                "Pull request number whose diff and metadata should be analyzed.",
+            },
+            {
+              name: "includeRiskAssessment",
+              description:
+                "Include deployment, rollback, and compatibility risk notes.",
+            },
+            {
+              name: "audience",
+              description:
+                "Target audience for the summary, such as reviewers or release managers.",
+            },
+          ],
+          estimatedTokens: 324,
+          annotations: { readOnlyHint: true, idempotentHint: true },
+          usage: {
+            callCount: 1,
+            lastCalledAt: date("2026-05-11T13:08:22.000Z"),
+          },
+        },
       ],
       originalTools: [
         {
@@ -104,6 +173,43 @@ const mockSystemState: SystemState = {
             },
             required: ["owner", "repo"],
           },
+        },
+        {
+          name: "generate_pull_request_review_summary_with_extremely_long_repository_context_and_release_notes",
+          description:
+            "Generate a comprehensive pull request review summary that includes repository context, changed files, impacted services, deployment notes, reviewer guidance, rollout risks, and follow-up action items for a large multi-package change. This description is intentionally long so UI cards can be checked for wrapping, truncation, tooltip behavior, and drawer readability.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: {
+                type: "string",
+                description:
+                  "GitHub organization or user that owns the repository.",
+              },
+              repo: {
+                type: "string",
+                description:
+                  "Repository name that contains the pull request to summarize.",
+              },
+              pullNumber: {
+                type: "number",
+                description:
+                  "Pull request number whose diff and metadata should be analyzed.",
+              },
+              includeRiskAssessment: {
+                type: "boolean",
+                description:
+                  "Whether to include a detailed risk assessment for deployment and rollback planning.",
+              },
+              audience: {
+                type: "string",
+                description:
+                  "Target audience for the summary, such as reviewers, release managers, or customer support.",
+              },
+            },
+            required: ["owner", "repo", "pullNumber", "audience"],
+          },
+          annotations: { readOnlyHint: true, idempotentHint: true },
         },
         {
           name: "delete_repo",
@@ -225,6 +331,49 @@ const mockSystemState: SystemState = {
             },
           ],
         },
+        {
+          name: "release_notes_and_customer_impact_brief_with_extra_long_prompt_title",
+          description:
+            "Generate a release-notes-ready customer impact brief for a complex GitHub pull request, including user-facing changes, operational risks, documentation notes, support-team talking points, and suggested rollout messaging. This prompt description is intentionally long to exercise prompt card truncation and details drawer readability.",
+          arguments: [
+            {
+              name: "repo",
+              description: "Repository that contains the pull request.",
+              required: true,
+            },
+            {
+              name: "pullNumber",
+              description: "Pull request number to summarize.",
+              required: true,
+            },
+            {
+              name: "audience",
+              description:
+                "Target audience for the brief, such as customers, support, sales, or internal engineering.",
+              required: false,
+            },
+          ],
+          usage: {
+            callCount: 3,
+            lastCalledAt: date("2026-05-11T13:07:44.000Z"),
+          },
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Create a release-notes-ready impact brief for {repo}#{pullNumber}. Tailor the language for {audience} when provided.",
+              },
+            },
+            {
+              role: "assistant",
+              content: {
+                type: "text",
+                text: "I will summarize the user-facing changes, operational risks, documentation needs, and support talking points in a concise release-note format.",
+              },
+            },
+          ],
+        },
       ],
       originalPrompts: [
         {
@@ -261,6 +410,29 @@ const mockSystemState: SystemState = {
             {
               name: "reviewFocus",
               description: "Area reviewers should focus on",
+              required: false,
+            },
+          ],
+        },
+        {
+          name: "release_notes_and_customer_impact_brief_with_extra_long_prompt_title",
+          description:
+            "Generate a release-notes-ready customer impact brief for a complex GitHub pull request, including user-facing changes, operational risks, documentation notes, support-team talking points, and suggested rollout messaging. This prompt description is intentionally long to exercise prompt card truncation and details drawer readability.",
+          arguments: [
+            {
+              name: "repo",
+              description: "Repository that contains the pull request.",
+              required: true,
+            },
+            {
+              name: "pullNumber",
+              description: "Pull request number to summarize.",
+              required: true,
+            },
+            {
+              name: "audience",
+              description:
+                "Target audience for the brief, such as customers, support, sales, or internal engineering.",
               required: false,
             },
           ],

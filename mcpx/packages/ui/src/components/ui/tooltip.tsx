@@ -5,6 +5,8 @@ import { Tooltip as TooltipPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 
+const TOOLTIP_HOVER_DELAY_MS = 350;
+
 function TooltipProvider({
   delayDuration = 0,
   ...props
@@ -54,4 +56,10 @@ function TooltipContent({
   );
 }
 
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };
+export {
+  TOOLTIP_HOVER_DELAY_MS,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+};

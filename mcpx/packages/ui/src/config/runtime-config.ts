@@ -15,6 +15,7 @@ export interface RuntimeConfig {
   VITE_ENABLE_DYNAMIC_CAPABILITIES: string;
   VITE_ADD_SERVER_CHECKBOX: string;
   VITE_SHOW_SKILLS_PAGE: string;
+  VITE_UI_SIDEBAR_RESTRUCTURE: string;
 }
 
 let cachedConfig: RuntimeConfig | null = null;
@@ -81,6 +82,8 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         VITE_ADD_SERVER_CHECKBOX:
           import.meta.env.VITE_ADD_SERVER_CHECKBOX || undefined,
         VITE_SHOW_SKILLS_PAGE: import.meta.env.VITE_SHOW_SKILLS_PAGE || "false",
+        VITE_UI_SIDEBAR_RESTRUCTURE:
+          import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
       };
 
       cachedConfig = fallbackConfig;
@@ -119,6 +122,8 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_ADD_SERVER_CHECKBOX:
       import.meta.env.VITE_ADD_SERVER_CHECKBOX || undefined,
     VITE_SHOW_SKILLS_PAGE: import.meta.env.VITE_SHOW_SKILLS_PAGE || "false",
+    VITE_UI_SIDEBAR_RESTRUCTURE:
+      import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
   };
 }
 
@@ -170,4 +175,9 @@ export function isDynamicCapabilitiesEnabled(): boolean {
 export function isSkillsPageEnabled(): boolean {
   const config = getRuntimeConfigSync();
   return config.VITE_SHOW_SKILLS_PAGE === "true";
+}
+
+export function isUiSidebarRestructureEnabled(): boolean {
+  const config = getRuntimeConfigSync();
+  return config.VITE_UI_SIDEBAR_RESTRUCTURE === "true";
 }
