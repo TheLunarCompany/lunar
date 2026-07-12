@@ -51,12 +51,6 @@ export const createTargetServerSchema = targetServerSchema.and(
   z.object({ name: z.string() }),
 );
 
-// TODO (RND-837): only used by the dead ws-ui update handler; remove after rollout.
-export const updateTargetServerPayloadSchema = z.object({
-  name: z.string(),
-  server: targetServerSchema,
-});
-
 export const targetServerConfigSchema = z.object({
   mcpServers: z.record(z.string(), targetServerSchema).optional().default({}),
 });

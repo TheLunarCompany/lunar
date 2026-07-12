@@ -2,8 +2,6 @@ import {
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
   WS_CONNECTION_ERROR,
-  applyParsedAppConfigRequestSchema,
-  createTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { UIConnection } from "../services/connections.js";
 import { Server as HTTPServer } from "http";
@@ -16,8 +14,6 @@ import { env } from "../env.js";
 import { checkHubConnection } from "./hub-connection-guard.js";
 import { ConfigSnapshot } from "../config.js";
 import { stringify } from "yaml";
-import z from "zod/v4";
-import { updateTargetServerPayloadSchema } from "../model/target-servers.js";
 
 export function bindUIWebsocket(
   server: HTTPServer,
@@ -135,139 +131,6 @@ async function handleWsEvent(
         logger.debug("Fetching current system state");
         const systemState = services.controlPlane.getSystemState();
         socket.emit(UI_ClientBoundMessage.SystemState, systemState);
-        break;
-      }
-      // TODO (RND-837): UI writes moved to REST; remove these dead handlers after rollout.
-      case UI_ServerBoundMessage.PatchAppConfig: {
-        logger.debug("Patching app config");
-        try {
-          // Validate and parse the raw YAML payload
-          const parseResult =
-            applyParsedAppConfigRequestSchema.safeParse(payload);
-          if (!parseResult.success) {
-            logger.error("Invalid raw app config request", {
-              error: parseResult.error,
-              payload: payload,
-            });
-            socket.emit(UI_ClientBoundMessage.PatchAppConfigFailed, {
-              error: `Invalid request format: ${parseResult.error.message}`,
-            });
-            break;
-          }
-
-          // The schema already parsed the YAML, so we can use it directly
-          const parsedConfig = parseResult.data;
-          await services.controlPlane.patchAppConfig(parsedConfig);
-
-          // Send back the updated config
-          const updatedConfig = services.controlPlane.getAppConfig();
-          socket.emit(UI_ClientBoundMessage.AppConfig, updatedConfig);
-        } catch (e) {
-          const error = loggableError(e);
-          logger.error("Failed to patch app config", {
-            error,
-            payload: payload,
-          });
-          socket.emit(UI_ClientBoundMessage.PatchAppConfigFailed, {
-            error: error.errorMessage,
-          });
-        }
-        break;
-      }
-      case UI_ServerBoundMessage.AddTargetServer: {
-        // Payload may include optional catalogItemId, but shouldn't since catalog server are added using REST endpoint
-        logger.debug("Adding target server");
-        const parseResult = createTargetServerRequestSchema.safeParse(payload);
-        if (!parseResult.success) {
-          logger.error("Invalid target server payload", {
-            error: parseResult.error,
-            payload,
-          });
-          socket.emit(UI_ClientBoundMessage.AddTargetServerFailed, {
-            error: "Invalid server configuration",
-          });
-          break;
-        }
-        const targetServerPayload = parseResult.data;
-        try {
-          const result =
-            await services.controlPlane.addTargetServer(targetServerPayload);
-          socket.emit(UI_ClientBoundMessage.TargetServerAdded, result);
-          // System state will be automatically broadcast via subscription
-        } catch (e) {
-          const error = loggableError(e);
-          logger.error("Failed to add target server", {
-            error,
-            payload: targetServerPayload,
-          });
-          socket.emit(UI_ClientBoundMessage.AddTargetServerFailed, {
-            error: error.errorMessage,
-          });
-        }
-        break;
-      }
-      case UI_ServerBoundMessage.RemoveTargetServer: {
-        logger.debug("Removing target server");
-        const removeParsed = z.object({ name: z.string() }).safeParse(payload);
-        if (!removeParsed.success) {
-          logger.error("Invalid remove target server payload", {
-            error: removeParsed.error,
-            payload,
-          });
-          socket.emit(UI_ClientBoundMessage.RemoveTargetServerFailed, {
-            error: "Invalid request format",
-          });
-          break;
-        }
-        const removePayload = removeParsed.data;
-        try {
-          await services.controlPlane.removeTargetServer(removePayload.name);
-          socket.emit(UI_ClientBoundMessage.TargetServerRemoved, removePayload);
-          // System state will be automatically broadcast via subscription
-        } catch (e) {
-          const error = loggableError(e);
-          logger.error("Failed to remove target server", {
-            error,
-            payload: removePayload,
-          });
-          socket.emit(UI_ClientBoundMessage.RemoveTargetServerFailed, {
-            error: error.errorMessage,
-          });
-        }
-        break;
-      }
-      case UI_ServerBoundMessage.UpdateTargetServer: {
-        logger.debug("Updating target server");
-        const parseResult = updateTargetServerPayloadSchema.safeParse(payload);
-        if (!parseResult.success) {
-          logger.error("Invalid target server payload", {
-            error: parseResult.error,
-            payload,
-          });
-          socket.emit(UI_ClientBoundMessage.UpdateTargetServerFailed, {
-            error: "Invalid server configuration",
-          });
-          break;
-        }
-        const { name: serverName, server: serverConfig } = parseResult.data;
-        try {
-          const result = await services.controlPlane.updateTargetServer({
-            ...serverConfig,
-            name: serverName,
-          });
-          socket.emit(UI_ClientBoundMessage.TargetServerUpdated, result);
-          // System state will be automatically broadcast via subscription
-        } catch (e) {
-          const error = loggableError(e);
-          logger.error("Failed to update target server", {
-            error,
-            serverName,
-            serverConfig,
-          });
-          socket.emit(UI_ClientBoundMessage.UpdateTargetServerFailed, {
-            error: error.errorMessage,
-          });
-        }
         break;
       }
       default: {
