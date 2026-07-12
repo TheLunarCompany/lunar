@@ -137,7 +137,7 @@ export function CapabilityProviderCard({
     items: CapabilityItem[],
     emptyMessage: string,
   ) => (
-    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4 p-4">
       {items.length === 0 ? (
         <div className="col-span-full py-8 text-center text-sm text-[var(--colors-gray-500)]">
           {emptyMessage}
