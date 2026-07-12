@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { socketStore } from "@/store";
+import type { Skill } from "@mcpx/shared-model";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SkillCard } from "./SkillCard";
 
 const navigate = vi.fn();
@@ -10,7 +12,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
   return { ...actual, useNavigate: () => navigate };
 });
 
-const skill = {
+const skill: Skill = {
   id: "0190a000-0000-7000-8000-000000000001",
   name: "review-pull-requests",
   description: "Review repository changes.",
@@ -28,9 +30,13 @@ const skill = {
     ],
   },
   updatedAt: new Date("2026-06-29T10:00:00.000Z"),
-} as const;
+};
 
-function renderCard(onDelete = vi.fn(), providers: string[] = []) {
+function renderCard(
+  onDelete = vi.fn(),
+  providers: string[] = [],
+  counts = { toolsCount: 2, promptsCount: 1 },
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -38,13 +44,27 @@ function renderCard(onDelete = vi.fn(), providers: string[] = []) {
   render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <SkillCard skill={skill} onDelete={onDelete} providers={providers} />
+        <SkillCard
+          skill={skill}
+          onDelete={onDelete}
+          providers={providers}
+          toolsCount={counts.toolsCount}
+          promptsCount={counts.promptsCount}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 describe("SkillCard", () => {
+  beforeEach(() => {
+    socketStore.setState({
+      appConfig: null,
+      serializedAppConfig: null,
+      systemState: null,
+    });
+  });
+
   it("navigates to the detail page when the card is clicked", () => {
     navigate.mockClear();
     renderCard();
@@ -166,10 +186,10 @@ describe("SkillCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("does not render the author as a card subtitle", () => {
+  it("renders the author as a card subtitle", () => {
     renderCard();
 
-    expect(screen.queryByText("Amir")).not.toBeInTheDocument();
+    expect(screen.getByText("by Amir")).toBeInTheDocument();
   });
 
   it("does not render prompt or resource badges in the footer", () => {
@@ -185,6 +205,13 @@ describe("SkillCard", () => {
     expect(screen.getByText("MCP Servers")).toBeInTheDocument();
     expect(screen.getByText("github")).toBeInTheDocument();
     expect(screen.getByText("linear")).toBeInTheDocument();
+  });
+
+  it("does not render tool counts inside MCP server badges", () => {
+    renderCard(vi.fn(), ["github"]);
+
+    expect(screen.getByText("github")).toBeInTheDocument();
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 
   it("renders skill metrics for tools and prompts, without resources yet", () => {
@@ -211,8 +238,55 @@ describe("SkillCard", () => {
     expect(screen.getByText("slack")).toBeInTheDocument();
     expect(screen.getByText("calculator")).toBeInTheDocument();
     expect(screen.getByText("filesystem")).toBeInTheDocument();
-    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.getByText("+2")).toHaveClass("shrink-0");
     expect(screen.queryByText("datadog")).not.toBeInTheDocument();
+    expect(screen.queryByText("postgres")).not.toBeInTheDocument();
+  });
+
+  it("keeps missing or inactive MCP server badges visible past the active badge limit", () => {
+    socketStore.setState({
+      systemState: {
+        targetServers: [
+          targetServer("github"),
+          targetServer("linear"),
+          targetServer("slack"),
+          targetServer("calculator"),
+          targetServer("filesystem"),
+          targetServer("datadog"),
+          targetServer("postgres"),
+        ],
+        connectedClients: [],
+        connectedClientClusters: [],
+        usage: { callCount: 0 },
+        lastUpdatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+      appConfig: {
+        permissions: {
+          default: { _type: "default-block", allow: [] },
+          consumers: {},
+          clientNames: {},
+        },
+        toolGroups: [],
+        auth: { enabled: false },
+        toolExtensions: { services: {} },
+        targetServerAttributes: { datadog: { inactive: true } },
+        skills: { enabled: [] },
+        staticOauth: undefined,
+      },
+    });
+
+    renderCard(vi.fn(), [
+      "github",
+      "linear",
+      "slack",
+      "calculator",
+      "filesystem",
+      "datadog",
+      "postgres",
+    ]);
+
+    expect(screen.getByText("datadog")).toBeInTheDocument();
+    expect(screen.getByText("+1")).toBeInTheDocument();
     expect(screen.queryByText("postgres")).not.toBeInTheDocument();
   });
 
@@ -223,3 +297,15 @@ describe("SkillCard", () => {
     expect(screen.getByText("No capabilities linked yet")).toBeInTheDocument();
   });
 });
+
+function targetServer(name: string) {
+  return {
+    _type: "stdio" as const,
+    name,
+    command: "npx",
+    state: { type: "connected" as const },
+    tools: [],
+    originalTools: [],
+    usage: { callCount: 0 },
+  };
+}

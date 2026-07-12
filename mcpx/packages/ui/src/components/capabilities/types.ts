@@ -11,6 +11,7 @@ export type CapabilityItem = {
   id: string;
   kind: CapabilityKind;
   name: string;
+  selectionName?: string;
   description: string;
   providerName: string;
   isCustom?: boolean;
@@ -19,12 +20,14 @@ export type CapabilityItem = {
   messages?: PromptMessage[];
   annotations?: ToolAnnotations;
   overrideParams?: ToolExtensionParamsRecord;
+  unavailableReason?: string;
   estimatedTokens?: number;
   iconUrl?: string;
 };
 
 export type CapabilityProvider = {
   name: string;
+  catalogItemId?: string;
   state?: TargetServerState;
   icon?: string;
   items: CapabilityItem[];

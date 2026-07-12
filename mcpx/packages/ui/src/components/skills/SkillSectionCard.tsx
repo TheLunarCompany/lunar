@@ -6,6 +6,7 @@ type SkillSectionCardProps = React.ComponentProps<"section"> & {
   description?: React.ReactNode;
   actions?: React.ReactNode;
   contentClassName?: string;
+  headerClassName?: string;
 };
 
 export function SkillSectionCard({
@@ -16,6 +17,7 @@ export function SkillSectionCard({
   children,
   className,
   contentClassName,
+  headerClassName,
   ...props
 }: SkillSectionCardProps) {
   return (
@@ -26,7 +28,12 @@ export function SkillSectionCard({
       )}
       {...props}
     >
-      <div className="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--colors-gray-200)] bg-[var(--colors-gray-100)] px-4 py-3">
+      <div
+        className={cn(
+          "flex min-h-14 items-center justify-between gap-3 border-b border-[var(--colors-gray-200)] bg-[var(--colors-gray-100)] px-4 py-3",
+          headerClassName,
+        )}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 text-primary">{icon}</span>
           <h2 className="shrink-0 text-sm font-semibold text-[var(--text-colours-color-text-primary)]">

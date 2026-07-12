@@ -3,6 +3,7 @@ import { getTestHarness, TestHarness } from "./utils.js";
 
 const MCPX_PORT = 19000;
 const MCPX_BASE_URL = `http://localhost:${MCPX_PORT}`;
+const HUB_PORT = 19001;
 const seedSkill: Skill = {
   id: "0190a000-0000-7000-8000-000000000001",
   name: "review-pull-requests",
@@ -15,15 +16,20 @@ const seedSkill: Skill = {
   },
   updatedAt: new Date("2026-06-29T10:00:00.000Z"),
 };
+const catalogItemId = "0190a000-0000-7000-8000-000000000010";
 
 describe("Skills endpoints", () => {
   let harness: TestHarness;
 
   beforeEach(async () => {
-    harness = getTestHarness({ targetServers: [], mcpxPort: MCPX_PORT });
+    harness = getTestHarness({
+      targetServers: [],
+      mcpxPort: MCPX_PORT,
+      hubPort: HUB_PORT,
+    });
     await harness.initialize("StreamableHTTP");
     harness.services.skills.store.applyPersonalSkills({ skills: [seedSkill] });
-  });
+  }, 15_000);
 
   afterEach(async () => {
     await harness.shutdown();
@@ -83,6 +89,29 @@ describe("Skills endpoints", () => {
 
     const created = harness.services.skills.store.getById(body.id);
     expect(created).toMatchObject({ id: body.id, name: "write-release-notes" });
+  });
+
+  it("creates a skill with an empty body", async () => {
+    const response = await fetch(`${MCPX_BASE_URL}/skills`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "empty-body",
+        description: "Create a skill before writing instructions.",
+        body: "",
+        exposeAsPrompt: true,
+      }),
+    });
+
+    expect(response.status).toBe(201);
+
+    const body = await response.json();
+    expect(body).toMatchObject({
+      name: "empty-body",
+      description: "Create a skill before writing instructions.",
+      body: "",
+      exposeAsPrompt: true,
+    });
   });
 
   it("rejects invalid create requests", async () => {
@@ -173,6 +202,236 @@ describe("Skills endpoints", () => {
     await expect(response.json()).resolves.toMatchObject({
       message: "Invalid request schema",
     });
+  });
+
+  it("updates only details while preserving existing capabilities", async () => {
+    const created = await createSkill({
+      capabilityGroup: {
+        name: "Legacy name",
+        items: [
+          {
+            catalogItemId,
+            tools: ["get_pull_request"],
+            prompts: ["review_diff"],
+          },
+        ],
+      },
+    });
+
+    const response = await fetch(
+      `${MCPX_BASE_URL}/skills/${created.id}/details`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "temporary-skill-updated",
+          description: "Updated details without touching capabilities.",
+          body: "# Temporary skill updated",
+          exposeAsPrompt: false,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      id: created.id,
+      name: "temporary-skill-updated",
+      description: "Updated details without touching capabilities.",
+      body: "# Temporary skill updated",
+      exposeAsPrompt: false,
+      capabilityGroup: {
+        name: "Legacy name",
+        items: [
+          {
+            catalogItemId,
+            tools: ["get_pull_request"],
+            prompts: ["review_diff"],
+          },
+        ],
+      },
+    });
+    expect(harness.services.skills.store.getById(created.id)).toMatchObject({
+      name: "temporary-skill-updated",
+      capabilityGroup: created.capabilityGroup,
+    });
+  });
+
+  it("returns 404 when updating details for a missing skill", async () => {
+    const response = await fetch(
+      `${MCPX_BASE_URL}/skills/0190a000-0000-7000-8000-000000000099/details`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "missing-skill",
+          description: "Updated description.",
+          body: "# Missing skill",
+          exposeAsPrompt: true,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it("updates only capabilities for an existing personal skill", async () => {
+    const created = await createSkill();
+
+    const response = await fetch(
+      `${MCPX_BASE_URL}/skills/${created.id}/capabilities`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          capabilityGroup: {
+            name: "Ignored legacy name",
+            items: [
+              {
+                catalogItemId,
+                tools: ["get_pull_request"],
+                prompts: ["review_diff"],
+              },
+            ],
+          },
+        }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      id: created.id,
+      name: created.name,
+      description: created.description,
+      body: created.body,
+      exposeAsPrompt: created.exposeAsPrompt,
+      capabilityGroup: {
+        items: [
+          {
+            catalogItemId,
+            tools: ["get_pull_request"],
+            prompts: ["review_diff"],
+          },
+        ],
+      },
+    });
+    expect(
+      harness.services.skills.store.getById(created.id)?.capabilityGroup,
+    ).toEqual({
+      items: [
+        {
+          catalogItemId,
+          tools: ["get_pull_request"],
+          prompts: ["review_diff"],
+        },
+      ],
+    });
+  });
+
+  it("removes capabilities when capability items are empty", async () => {
+    const created = await createSkill({
+      capabilityGroup: {
+        name: "Legacy name",
+        items: [
+          {
+            catalogItemId,
+            tools: ["get_pull_request"],
+            prompts: [],
+          },
+        ],
+      },
+    });
+
+    const response = await fetch(
+      `${MCPX_BASE_URL}/skills/${created.id}/capabilities`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ capabilityGroup: { items: [] } }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Skill;
+    expect(body.capabilityGroup).toBeUndefined();
+    expect(
+      harness.services.skills.store.getById(created.id)?.capabilityGroup,
+    ).toBeUndefined();
+  });
+
+  it("preserves capabilities when capabilityGroup is omitted", async () => {
+    const created = await createSkill({
+      capabilityGroup: {
+        name: "Legacy name",
+        items: [
+          {
+            catalogItemId,
+            tools: ["get_pull_request"],
+            prompts: [],
+          },
+        ],
+      },
+    });
+
+    const response = await fetch(
+      `${MCPX_BASE_URL}/skills/${created.id}/capabilities`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      capabilityGroup: created.capabilityGroup,
+    });
+    expect(
+      harness.services.skills.store.getById(created.id)?.capabilityGroup,
+    ).toEqual(created.capabilityGroup);
+  });
+
+  it("removes capabilities when capabilityGroup is null", async () => {
+    const created = await createSkill({
+      capabilityGroup: {
+        name: "Legacy name",
+        items: [
+          {
+            catalogItemId,
+            tools: ["get_pull_request"],
+            prompts: [],
+          },
+        ],
+      },
+    });
+
+    const response = await fetch(
+      `${MCPX_BASE_URL}/skills/${created.id}/capabilities`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ capabilityGroup: null }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Skill;
+    expect(body.capabilityGroup).toBeUndefined();
+    expect(
+      harness.services.skills.store.getById(created.id)?.capabilityGroup,
+    ).toBeUndefined();
+  });
+
+  it("returns 404 when updating capabilities for a missing skill", async () => {
+    const response = await fetch(
+      `${MCPX_BASE_URL}/skills/0190a000-0000-7000-8000-000000000099/capabilities`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ capabilityGroup: { items: [] } }),
+      },
+    );
+
+    expect(response.status).toBe(404);
   });
 
   describe("skill enablement", () => {
@@ -320,7 +579,7 @@ describe("Skills endpoints", () => {
     return `${MCPX_BASE_URL}/skills/${skillId}/enabled/${kind}/${encodeURIComponent(value)}`;
   }
 
-  async function createSkill(): Promise<Skill> {
+  async function createSkill(overrides: Partial<Skill> = {}): Promise<Skill> {
     const response = await fetch(`${MCPX_BASE_URL}/skills`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -329,6 +588,7 @@ describe("Skills endpoints", () => {
         description: "Temporary skill for route testing.",
         body: "# Temporary skill",
         exposeAsPrompt: true,
+        ...overrides,
       }),
     });
     expect(response.status).toBe(201);

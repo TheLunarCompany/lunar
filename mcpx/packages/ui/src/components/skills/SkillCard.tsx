@@ -1,5 +1,4 @@
 import { LetterAvatar } from "@/components/LetterAvatar";
-import { McpServerBadge, McpServerBadges } from "@/components/McpServerBadge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -26,6 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { routes } from "@/routes";
+import { useSocketStore, type SocketStore } from "@/store";
 import type { Skill } from "@mcpx/shared-model";
 import {
   Clock,
@@ -36,8 +36,13 @@ import {
   Unplug,
 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { generatePath, useNavigate } from "react-router-dom";
 import { SkillCardMetrics } from "./SkillCardMetrics";
+import {
+  SkillMoreProviders,
+  SkillProviderBadge,
+  SkillProviderBadges,
+} from "./SkillProviderBadge";
 
 const MAX_VISIBLE_PROVIDER_BADGES = 5;
 const skillUpdatedAtFormatter = new Intl.DateTimeFormat(undefined, {
@@ -51,6 +56,8 @@ type SkillCardProps = {
   skill: Skill;
   onDelete: (id: string) => void;
   providers?: string[];
+  toolsCount: number;
+  promptsCount: number;
   className?: string;
 };
 
@@ -58,26 +65,30 @@ export function SkillCard({
   skill,
   onDelete,
   providers = [],
+  toolsCount,
+  promptsCount,
   className,
 }: SkillCardProps) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { systemState, appConfig } = useSocketStore((s) => ({
+    systemState: s.systemState,
+    appConfig: s.appConfig,
+  }));
 
-  const detailHref = routes.skillDetail.replace(":id", skill.id);
-  const editHref = routes.skillEditor.replace(":id", skill.id);
-  const visibleProviders = providers.slice(0, MAX_VISIBLE_PROVIDER_BADGES);
-  const hiddenProvidersCount = Math.max(
-    providers.length - MAX_VISIBLE_PROVIDER_BADGES,
-    0,
-  );
-  const toolsCount = getCapabilitySelectionTotal(
-    skill.capabilityGroup?.items.map((item) => item.tools),
-  );
-  const promptsCount = getCapabilitySelectionTotal(
-    skill.capabilityGroup?.items.map((item) => item.prompts),
-  );
-
+  const detailHref = generatePath(routes.skillDetail, { id: skill.id });
+  const editHref = generatePath(routes.skillEditor, { id: skill.id });
+  const providerBadges = providers.map((name) => ({
+    name,
+    isMissingOrInactive: isProviderMissingOrInactive({
+      providerName: name,
+      systemState,
+      appConfig,
+    }),
+  }));
+  const visibleProviderBadges = getVisibleProviderBadges(providerBadges);
+  const hiddenProvidersCount = providers.length - visibleProviderBadges.length;
   function handleDownload(event: Event) {
     event.stopPropagation();
     downloadSkillMarkdown(skill);
@@ -137,7 +148,7 @@ export function SkillCard({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <TooltipProvider>
+        <TooltipProvider delayDuration={500}>
           {/* Top: icon + name */}
           <div className="flex items-center gap-3 pr-12">
             <LetterAvatar name={skill.name} />
@@ -151,25 +162,28 @@ export function SkillCard({
                 <TooltipContent
                   side="top"
                   sideOffset={4}
-                  className="z-[9999] max-w-sm whitespace-normal"
+                  className="max-w-sm whitespace-normal"
                 >
                   {skill.name}
                 </TooltipContent>
               </Tooltip>
+              <p className="mt-0.5 truncate text-[12px] leading-4 text-[var(--text-colours-color-text-tertiary)]">
+                by {skill.author.displayName}
+              </p>
             </div>
           </div>
 
           {/* Description */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <p className="line-clamp-2 min-h-[40px] text-[13px] text-[var(--text-colours-color-text-secondary)]">
+              <p className="line-clamp-2 min-h-[40px] text-sm text-[var(--text-colours-color-text-secondary)]">
                 {skill.description}
               </p>
             </TooltipTrigger>
             <TooltipContent
               side="top"
               sideOffset={4}
-              className="z-[9999] max-w-sm whitespace-normal"
+              className="max-w-sm whitespace-normal"
             >
               {skill.description}
             </TooltipContent>
@@ -177,21 +191,28 @@ export function SkillCard({
         </TooltipProvider>
 
         {/* MCP servers */}
-        <div className="h-[74px] overflow-hidden">
-          <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--text-colours-color-text-tertiary)]">
+        <div className="h-[86px] overflow-hidden">
+          <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--colors-gray-600)]">
             MCP Servers
           </p>
           {providers.length > 0 ? (
-            <McpServerBadges>
-              {visibleProviders.map((name) => (
-                <McpServerBadge key={name} name={name} />
-              ))}
+            <div className="flex min-w-0 items-start gap-1.5">
+              <SkillProviderBadges className="min-w-0 flex-1">
+                {visibleProviderBadges.map(({ name, isMissingOrInactive }) => (
+                  <SkillProviderBadge
+                    key={name}
+                    name={name}
+                    isMissingOrInactive={isMissingOrInactive}
+                  />
+                ))}
+              </SkillProviderBadges>
               {hiddenProvidersCount > 0 ? (
-                <span className="text-[11px] font-normal leading-[1.4] text-[var(--text-colours-color-text-primary)]">
-                  +{hiddenProvidersCount}
-                </span>
+                <SkillMoreProviders
+                  count={hiddenProvidersCount}
+                  className="shrink-0"
+                />
               ) : null}
-            </McpServerBadges>
+            </div>
           ) : (
             <div className="flex items-center gap-1.5 text-[12px] text-[var(--colors-gray-500)]">
               <Unplug className="size-3.5" />
@@ -242,6 +263,43 @@ export function SkillCard({
   );
 }
 
+function isProviderMissingOrInactive({
+  providerName,
+  systemState,
+  appConfig,
+}: {
+  providerName: string;
+  systemState: SocketStore["systemState"];
+  appConfig: SocketStore["appConfig"];
+}) {
+  const isMissing = systemState
+    ? !systemState.targetServers?.some((server) => server.name === providerName)
+    : false;
+  const isInactive =
+    appConfig?.targetServerAttributes?.[providerName]?.inactive === true;
+
+  return isMissing || isInactive;
+}
+
+function getVisibleProviderBadges(
+  providers: Array<{ name: string; isMissingOrInactive: boolean }>,
+) {
+  let visibleActiveCount = 0;
+
+  return providers.filter((provider) => {
+    if (provider.isMissingOrInactive) {
+      return true;
+    }
+
+    if (visibleActiveCount < MAX_VISIBLE_PROVIDER_BADGES) {
+      visibleActiveCount += 1;
+      return true;
+    }
+
+    return false;
+  });
+}
+
 function downloadSkillMarkdown(skill: Skill) {
   const blob = new Blob([formatSkillMarkdown(skill)], {
     type: "text/markdown;charset=utf-8",
@@ -270,15 +328,4 @@ function formatSkillMarkdown(skill: Skill) {
 
 function formatYamlString(value: string) {
   return JSON.stringify(value);
-}
-
-function getCapabilitySelectionTotal(
-  selections: Array<string[] | "*"> | undefined,
-) {
-  return (selections ?? []).reduce((total, selection) => {
-    if (selection === "*") {
-      return total;
-    }
-    return total + selection.length;
-  }, 0);
 }

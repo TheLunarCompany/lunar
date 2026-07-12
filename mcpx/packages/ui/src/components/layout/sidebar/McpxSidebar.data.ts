@@ -3,6 +3,7 @@ import {
   Hammer,
   Library,
   FileText,
+  Sparkles,
   ScrollText,
   Server,
   SlidersHorizontal,
@@ -45,7 +46,7 @@ export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
     workspaceItems.push({
       id: "skills",
       label: "Skills",
-      icon: FileText,
+      icon: Sparkles,
       url: routes.skills,
     });
   }

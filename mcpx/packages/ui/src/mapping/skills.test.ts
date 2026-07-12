@@ -1,82 +1,10 @@
-import type { AppConfig, SystemState } from "@mcpx/shared-model";
+import type { SystemState } from "@mcpx/shared-model";
+import type { CatalogMCPServerConfigByNameList } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { describe, expect, it } from "vitest";
 import {
-  buildSkillToolGroupOptions,
+  buildSkillCardCapabilitySummaryResolver,
   resolveSkillProviderNames,
 } from "./skills";
-
-describe("buildSkillToolGroupOptions", () => {
-  it("maps config tool groups to skill tool groups with catalog item IDs", () => {
-    const options = buildSkillToolGroupOptions({
-      appConfig: appConfigWithToolGroups([
-        {
-          name: "Repository tools",
-          description: "GitHub access",
-          services: {
-            github: ["pull_request_read", "issues_read"],
-            filesystem: "*",
-          },
-        },
-      ]),
-      systemState: systemStateWithTargetServers([
-        targetServer("github", "0190a000-0000-7000-8000-000000000010"),
-        targetServer("filesystem", "0190a000-0000-7000-8000-000000000011", [
-          "read",
-          "write",
-        ]),
-      ]),
-    });
-
-    expect(options).toEqual([
-      {
-        id: "Repository tools",
-        name: "Repository tools",
-        description: "GitHub access",
-        capabilityGroup: {
-          name: "Repository tools",
-          items: [
-            {
-              catalogItemId: "0190a000-0000-7000-8000-000000000010",
-              tools: ["pull_request_read", "issues_read"],
-              prompts: [],
-            },
-            {
-              catalogItemId: "0190a000-0000-7000-8000-000000000011",
-              tools: "*",
-              prompts: [],
-            },
-          ],
-        },
-        providers: [
-          { providerName: "github", itemCount: 2 },
-          { providerName: "filesystem", itemCount: 2 },
-        ],
-      },
-    ]);
-  });
-
-  it("marks a config tool group unavailable when a server has no catalog item ID", () => {
-    const options = buildSkillToolGroupOptions({
-      appConfig: appConfigWithToolGroups([
-        {
-          name: "Local tools",
-          services: {
-            local: "*",
-          },
-        },
-      ]),
-      systemState: systemStateWithTargetServers([targetServer("local")]),
-    });
-
-    expect(options).toEqual([
-      {
-        id: "Local tools",
-        name: "Local tools",
-        disabledReason: "Missing catalog item ID for local.",
-      },
-    ]);
-  });
-});
 
 describe("resolveSkillProviderNames", () => {
   it("resolves catalog item ids to connected server names, de-duped and ordered", () => {
@@ -115,6 +43,25 @@ describe("resolveSkillProviderNames", () => {
     expect(names).toEqual(["github"]);
   });
 
+  it("resolves missing connected servers from catalog items", () => {
+    const names = resolveSkillProviderNames({
+      capabilityGroup: {
+        name: "Disconnected",
+        items: [
+          { catalogItemId: "cat-time", tools: ["convert_time"], prompts: [] },
+          { catalogItemId: "cat-coda", tools: ["list_documents"], prompts: [] },
+        ],
+      },
+      systemState: systemStateWithTargetServers([]),
+      catalogItems: [
+        catalogItem("cat-time", "time", "Time"),
+        catalogItem("cat-coda", "coda", "Coda"),
+      ],
+    });
+
+    expect(names).toEqual(["time", "coda"]);
+  });
+
   it("returns an empty list when the skill has no capability group", () => {
     expect(
       resolveSkillProviderNames({
@@ -127,22 +74,61 @@ describe("resolveSkillProviderNames", () => {
   });
 });
 
-function appConfigWithToolGroups(
-  toolGroups: AppConfig["toolGroups"],
-): AppConfig {
-  return {
-    permissions: {
-      default: { _type: "default-block", allow: [] },
-      consumers: {},
-      clientNames: {},
-    },
-    toolGroups,
-    auth: { enabled: false },
-    toolExtensions: { services: {} },
-    targetServerAttributes: {},
-    staticOauth: undefined,
-  };
-}
+describe("buildSkillCardCapabilitySummaryResolver", () => {
+  it("counts wildcard tool and prompt selections from the matching target server", () => {
+    const summarize = buildSkillCardCapabilitySummaryResolver(
+      systemStateWithTargetServers([
+        targetServer(
+          "filesystem",
+          "cat-filesystem",
+          ["read_file", "write_file"],
+          ["summarize_file"],
+        ),
+      ]),
+    );
+
+    expect(
+      summarize({
+        name: "Filesystem",
+        items: [
+          {
+            catalogItemId: "cat-filesystem",
+            tools: "*",
+            prompts: "*",
+          },
+        ],
+      }),
+    ).toEqual({
+      providers: ["filesystem"],
+      toolsCount: 2,
+      promptsCount: 1,
+    });
+  });
+
+  it("keeps providers visible from catalog items when target servers are disconnected", () => {
+    const summarize = buildSkillCardCapabilitySummaryResolver(
+      systemStateWithTargetServers([]),
+      [catalogItem("cat-time", "time", "Time")],
+    );
+
+    expect(
+      summarize({
+        name: "Disconnected",
+        items: [
+          {
+            catalogItemId: "cat-time",
+            tools: ["convert_time"],
+            prompts: [],
+          },
+        ],
+      }),
+    ).toEqual({
+      providers: ["time"],
+      toolsCount: 1,
+      promptsCount: 0,
+    });
+  });
+});
 
 function systemStateWithTargetServers(
   targetServers: SystemState["targetServers"],
@@ -160,6 +146,7 @@ function targetServer(
   name: string,
   catalogItemId?: string,
   tools: string[] = [],
+  prompts: string[] = [],
 ): SystemState["targetServers"][number] {
   return {
     _type: "stdio",
@@ -173,6 +160,26 @@ function targetServer(
       inputSchema: { type: "object" },
     })),
     originalTools: [],
+    prompts: prompts.map((promptName) => ({
+      name: promptName,
+      usage: { callCount: 0 },
+      messages: [],
+    })),
+    originalPrompts: [],
     usage: { callCount: 0 },
+  };
+}
+
+function catalogItem(
+  id: string,
+  name: string,
+  displayName?: string,
+): CatalogMCPServerConfigByNameList[number] {
+  return {
+    id,
+    name,
+    displayName: displayName ?? name,
+    description: undefined,
+    config: { [name]: { type: "stdio", command: "npx", args: [] } },
   };
 }

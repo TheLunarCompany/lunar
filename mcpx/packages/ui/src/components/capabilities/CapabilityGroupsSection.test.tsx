@@ -1,8 +1,25 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as renderWithTestingLibrary,
+  screen,
+} from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CapabilityGroupsSection } from "./CapabilityGroupsSection";
 import type { CapabilityGroup } from "./types";
+
+function render(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return renderWithTestingLibrary(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 function makeGroup(index: number): CapabilityGroup {
   return {
@@ -14,6 +31,8 @@ function makeGroup(index: number): CapabilityGroup {
       {
         providerName: "filesystem",
         itemCount: 1,
+        toolCount: 1,
+        promptCount: 0,
         itemNames: [`tool_${index}`],
         selectionKeys: [`filesystem:tool_${index}`],
       },
@@ -93,6 +112,8 @@ describe("CapabilityGroupsSection", () => {
         {
           providerName: "filesystem",
           itemCount: 3,
+          toolCount: 3,
+          promptCount: 0,
           itemNames: ["read", "write", "delete"],
           selectionKeys: [
             "filesystem:read",
@@ -154,6 +175,8 @@ describe("CapabilityGroupsSection", () => {
               {
                 providerName: "filesystem",
                 itemCount: 0,
+                toolCount: 0,
+                promptCount: 0,
                 itemNames: [],
                 selectionKeys: [],
                 isWildcard: true,

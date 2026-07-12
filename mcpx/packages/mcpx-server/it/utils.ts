@@ -328,6 +328,7 @@ interface TestHarnessProps {
   targetServers?: TargetServer[];
   catalogItems?: CatalogMCPServerItem[];
   mcpxPort?: number;
+  hubPort?: number;
 }
 function defaultTestHarnessProps(): Required<TestHarnessProps> {
   return {
@@ -338,6 +339,7 @@ function defaultTestHarnessProps(): Required<TestHarnessProps> {
     targetServers: stdioTargetServers,
     catalogItems: stdioCatalogItems,
     mcpxPort: MCPX_PORT,
+    hubPort: 0,
   };
 }
 export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
@@ -350,6 +352,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     targetServers,
     catalogItems,
     mcpxPort,
+    hubPort: requestedHubPort,
   } = {
     ...defaultTestHarnessProps(),
     ...props,
@@ -357,7 +360,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   const testLogger = getTestLogger();
 
   // Assign unique Hub port for this test harness
-  const hubPort = nextHubPort++;
+  const hubPort = requestedHubPort || nextHubPort++;
 
   const meterProvider = new MeterProvider();
   const services = new Services(config, meterProvider, testLogger, {

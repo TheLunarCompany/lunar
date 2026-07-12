@@ -40,6 +40,46 @@ describe("mcpx API errors", () => {
     });
   });
 
+  it("accepts skill responses with an empty markdown body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              id: "0190a000-0000-7000-8000-000000000001",
+              name: "empty-body",
+              description: "Created before instructions are written.",
+              body: "",
+              exposeAsPrompt: true,
+              author: {
+                setupOwnerId: "owner-1",
+                displayName: "Amir",
+              },
+              updatedAt: "2026-07-09T18:00:00.000Z",
+            }),
+            {
+              status: 201,
+              statusText: "Created",
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+      ),
+    );
+
+    await expect(
+      apiClient.createSkill({
+        name: "empty-body",
+        description: "Created before instructions are written.",
+        body: "",
+        exposeAsPrompt: true,
+      }),
+    ).resolves.toMatchObject({
+      name: "empty-body",
+      body: "",
+    });
+  });
+
   it("uses the server message for add-server failures", () => {
     const serverResponse = {
       message: "Server supplied add-server error",

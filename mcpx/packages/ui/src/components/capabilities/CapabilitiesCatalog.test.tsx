@@ -1,10 +1,12 @@
 import {
   cleanup,
   fireEvent,
-  render,
+  render as renderWithTestingLibrary,
   screen,
   waitFor,
 } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CapabilitiesCatalog } from "./CapabilitiesCatalog";
@@ -57,6 +59,16 @@ const catalogState = vi.hoisted(() => ({
 vi.mock("./useCapabilitiesCatalog", () => ({
   useCapabilitiesCatalog: () => catalogState,
 }));
+
+function render(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return renderWithTestingLibrary(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 const provider: CapabilityProvider = {
   name: "filesystem",
@@ -119,6 +131,8 @@ const group: CapabilityGroup = {
     {
       providerName: "filesystem",
       itemCount: 2,
+      toolCount: 2,
+      promptCount: 0,
       itemNames: ["safe_read", "delete_file"],
       selectionKeys: ["filesystem:safe_read", "filesystem:delete_file"],
     },
@@ -173,16 +187,13 @@ describe("CapabilitiesCatalog", () => {
     expect(
       screen.getByText("Connected").closest("[data-slot='badge']"),
     ).toHaveClass("bg-(--color-bg-success)");
-    expect(
-      screen.getByRole("img", { name: "filesystem fallback logo" }),
-    ).toBeInTheDocument();
     expect(screen.getByText("safe_read")).toBeInTheDocument();
     expect(screen.getByText("Read a file safely")).toBeInTheDocument();
     expect(screen.getAllByText("READ ONLY").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText("Input fields: 1").length).toBe(2);
-    // Tool cards no longer render messages/resources metrics.
+    // Tool cards no longer render messages metrics.
     expect(screen.queryByLabelText(/^Messages:/)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/^Resources:/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Resources: 0")).toBeInTheDocument();
     expect(screen.getByText("CUSTOM")).toBeInTheDocument();
     expect(screen.getByLabelText("Custom capability icon")).toBeInTheDocument();
 

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SkillForm } from "./SkillForm";
@@ -7,18 +13,15 @@ vi.mock("@/hooks/useDomainIcon", () => ({
   useDomainIcon: () => undefined,
 }));
 
-const githubCatalogItemId = "0190a000-0000-7000-8000-000000000010";
-const linearCatalogItemId = "0190a000-0000-7000-8000-000000000011";
-
 describe("SkillForm", () => {
   it("submits a draft built from the fields", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<SkillForm submitLabel="Create skill" onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText("Name"), {
+    fireEvent.change(screen.getByLabelText("Skill name"), {
       target: { value: "my-skill" },
     });
-    fireEvent.change(screen.getByLabelText("Description"), {
+    fireEvent.change(screen.getByLabelText("Short description"), {
       target: { value: "Does a thing" },
     });
     fireEvent.change(screen.getByLabelText("Markdown body"), {
@@ -40,10 +43,10 @@ describe("SkillForm", () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<SkillForm submitLabel="Create skill" onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText("Name"), {
+    fireEvent.change(screen.getByLabelText("Skill name"), {
       target: { value: "my-skill" },
     });
-    fireEvent.change(screen.getByLabelText("Description"), {
+    fireEvent.change(screen.getByLabelText("Short description"), {
       target: { value: "Does a thing" },
     });
     fireEvent.change(screen.getByLabelText("Markdown body"), {
@@ -68,6 +71,43 @@ describe("SkillForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create skill" }));
 
     expect(await screen.findByText("Name is required.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Markdown body")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submits when the markdown body is empty", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<SkillForm submitLabel="Create skill" onSubmit={onSubmit} />);
+
+    fireEvent.change(screen.getByLabelText("Skill name"), {
+      target: { value: "empty-body" },
+    });
+    fireEvent.change(screen.getByLabelText("Short description"), {
+      target: { value: "Creates a skill without instructions yet." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create skill" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith({
+      name: "empty-body",
+      description: "Creates a skill without instructions yet.",
+      body: "",
+      exposeAsPrompt: true,
+    });
+  });
+
+  it("focuses the first invalid field after validation fails", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<SkillForm submitLabel="Create skill" onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole("button", { name: "Create skill" }));
+
+    expect(await screen.findByText("Name is required.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Skill name")).toHaveFocus();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -75,10 +115,10 @@ describe("SkillForm", () => {
     const onSubmit = vi.fn();
     render(<SkillForm submitLabel="Create skill" onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText("Name"), {
+    fireEvent.change(screen.getByLabelText("Skill name"), {
       target: { value: "Invalid name" },
     });
-    fireEvent.change(screen.getByLabelText("Description"), {
+    fireEvent.change(screen.getByLabelText("Short description"), {
       target: { value: "a".repeat(1025) },
     });
     fireEvent.change(screen.getByLabelText("Markdown body"), {
@@ -86,11 +126,11 @@ describe("SkillForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Create skill" }));
 
-    expect(
-      await screen.findByText(
-        "Name must use lowercase letters, numbers, and hyphens only, and must not start or end with a hyphen or contain consecutive hyphens. Examples: pdf-processing, data-analysis, code-review.",
-      ),
-    ).toBeInTheDocument();
+    const nameError = await screen.findByText(
+      "Name must use lowercase letters, numbers, and hyphens only, and must not start or end with a hyphen or contain consecutive hyphens. Examples: pdf-processing, data-analysis, code-review.",
+    );
+    expect(nameError).toBeInTheDocument();
+    expect(nameError).toHaveClass("text-destructive");
     expect(
       screen.getByText("Description must be 1024 characters or fewer."),
     ).toBeInTheDocument();
@@ -101,10 +141,10 @@ describe("SkillForm", () => {
     const onSubmit = vi.fn();
     render(<SkillForm submitLabel="Create skill" onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText("Name"), {
+    fireEvent.change(screen.getByLabelText("Skill name"), {
       target: { value: "name name" },
     });
-    fireEvent.change(screen.getByLabelText("Description"), {
+    fireEvent.change(screen.getByLabelText("Short description"), {
       target: { value: "Describes when to use the skill." },
     });
     fireEvent.change(screen.getByLabelText("Markdown body"), {
@@ -134,12 +174,53 @@ describe("SkillForm", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Name")).toHaveValue("existing");
-    expect(screen.getByLabelText("Description")).toHaveValue("Existing desc");
+    expect(screen.getByLabelText("Skill name")).toHaveValue("existing");
+    expect(screen.getByLabelText("Short description")).toHaveValue(
+      "Existing desc",
+    );
     expect(screen.getByLabelText("Markdown body")).toHaveValue("# Existing");
     expect(
       screen.getByRole("switch", { name: "Expose as prompt" }),
     ).toBeChecked();
+  });
+
+  it("wraps skill metadata fields in one section", () => {
+    render(<SkillForm submitLabel="Create skill" onSubmit={vi.fn()} />);
+
+    const detailsSection = screen.getByRole("region", {
+      name: "Skill details",
+    });
+
+    expect(
+      within(detailsSection).getByLabelText("Skill name"),
+    ).toBeInTheDocument();
+    expect(
+      within(detailsSection).getByLabelText("Short description"),
+    ).toBeInTheDocument();
+    expect(
+      within(detailsSection).getByRole("switch", { name: "Expose as prompt" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the Markdown body inside the SKILL.md section card", () => {
+    render(<SkillForm submitLabel="Create skill" onSubmit={vi.fn()} />);
+
+    expect(
+      screen.getByRole("heading", { name: "SKILL.md" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("single markdown file")).toBeInTheDocument();
+    expect(
+      screen.getByRole("tablist", { name: "Markdown body mode" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Preview",
+      "Raw",
+    ]);
+    expect(screen.getByRole("tab", { name: "Raw" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByLabelText("Markdown body")).toBeInTheDocument();
   });
 
   it("preserves resource-only defaultValues for editing", async () => {
@@ -210,11 +291,13 @@ describe("SkillForm", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("does not render the tool group JSON field", () => {
+  it("does not render tool group controls and ignores existing capabilityGroup values", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
       <SkillForm
         submitLabel="Save changes"
-        onSubmit={vi.fn()}
+        onSubmit={onSubmit}
         defaultValues={{
           name: "existing",
           description: "Existing desc",
@@ -224,7 +307,7 @@ describe("SkillForm", () => {
             name: "Repo",
             items: [
               {
-                catalogItemId: githubCatalogItemId,
+                catalogItemId: "0190a000-0000-7000-8000-000000000010",
                 tools: "*",
                 prompts: [],
               },
@@ -234,291 +317,19 @@ describe("SkillForm", () => {
       />,
     );
 
+    expect(
+      screen.queryByRole("combobox", { name: "Tool group" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Tool group JSON")).not.toBeInTheDocument();
-  });
 
-  it("submits the selected tool group option", async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(
-      <SkillForm
-        submitLabel="Create skill"
-        onSubmit={onSubmit}
-        toolGroupOptions={[
-          {
-            id: "repo",
-            name: "Repository tools",
-            description: "GitHub access",
-            capabilityGroup: {
-              name: "Repository tools",
-              items: [
-                {
-                  catalogItemId: githubCatalogItemId,
-                  tools: ["pull_request_read"],
-                  prompts: [],
-                },
-              ],
-            },
-          },
-        ]}
-      />,
-    );
-
-    fireEvent.change(screen.getByLabelText("Name"), {
-      target: { value: "review-pull-requests" },
-    });
-    fireEvent.change(screen.getByLabelText("Description"), {
-      target: { value: "Reviews pull request changes" },
-    });
-    fireEvent.change(screen.getByLabelText("Markdown body"), {
-      target: { value: "# Review" },
-    });
-
-    await user.click(screen.getByRole("combobox", { name: "Tool group" }));
-    await user.click(screen.getByRole("option", { name: /Repository tools/i }));
-    await user.click(screen.getByRole("button", { name: "Create skill" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith({
-      name: "review-pull-requests",
-      description: "Reviews pull request changes",
-      body: "# Review",
+      name: "existing",
+      description: "Existing desc",
+      body: "# Existing",
       exposeAsPrompt: true,
-      capabilityGroup: {
-        name: "Repository tools",
-        items: [
-          {
-            catalogItemId: githubCatalogItemId,
-            tools: ["pull_request_read"],
-            prompts: [],
-          },
-        ],
-      },
     });
-  });
-
-  it("filters tool group options while typing in the combobox", async () => {
-    const user = userEvent.setup();
-    render(
-      <SkillForm
-        submitLabel="Create skill"
-        onSubmit={vi.fn()}
-        toolGroupOptions={[
-          {
-            id: "github",
-            name: "GitHub Triage",
-            capabilityGroup: {
-              name: "GitHub Triage",
-              items: [
-                {
-                  catalogItemId: githubCatalogItemId,
-                  tools: "*",
-                  prompts: [],
-                },
-              ],
-            },
-          },
-          {
-            id: "linear",
-            name: "Linear Reporting",
-            capabilityGroup: {
-              name: "Linear Reporting",
-              items: [
-                {
-                  catalogItemId: linearCatalogItemId,
-                  tools: "*",
-                  prompts: [],
-                },
-              ],
-            },
-          },
-        ]}
-      />,
-    );
-
-    const combobox = screen.getByRole("combobox", { name: "Tool group" });
-    await user.click(combobox);
-    await user.type(combobox, "git");
-
-    expect(
-      screen.getByRole("option", { name: /GitHub Triage/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: /Linear Reporting/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("filters tool group options by provider names", async () => {
-    const user = userEvent.setup();
-    render(
-      <SkillForm
-        submitLabel="Create skill"
-        onSubmit={vi.fn()}
-        toolGroupOptions={[
-          {
-            id: "triage",
-            name: "Triage",
-            capabilityGroup: {
-              name: "Triage",
-              items: [
-                {
-                  catalogItemId: githubCatalogItemId,
-                  tools: "*",
-                  prompts: [],
-                },
-              ],
-            },
-            providers: [{ providerName: "github", itemCount: 4 }],
-          },
-          {
-            id: "reporting",
-            name: "Reporting",
-            capabilityGroup: {
-              name: "Reporting",
-              items: [
-                {
-                  catalogItemId: linearCatalogItemId,
-                  tools: "*",
-                  prompts: [],
-                },
-              ],
-            },
-            providers: [{ providerName: "linear", itemCount: 8 }],
-          },
-        ]}
-      />,
-    );
-
-    const combobox = screen.getByRole("combobox", { name: "Tool group" });
-    await user.click(combobox);
-    await user.type(combobox, "github");
-
-    expect(screen.getByRole("option", { name: /Triage/i })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: /Reporting/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows provider badges inside tool group dropdown options", async () => {
-    const user = userEvent.setup();
-    render(
-      <SkillForm
-        submitLabel="Create skill"
-        onSubmit={vi.fn()}
-        toolGroupOptions={[
-          {
-            id: "triage",
-            name: "Triage",
-            capabilityGroup: {
-              name: "Triage",
-              items: [
-                {
-                  catalogItemId: githubCatalogItemId,
-                  tools: "*",
-                  prompts: [],
-                },
-              ],
-            },
-            providers: [{ providerName: "github", itemCount: 4 }],
-          },
-        ]}
-      />,
-    );
-
-    await user.click(screen.getByRole("combobox", { name: "Tool group" }));
-
-    expect(screen.getByRole("option", { name: /github/i })).toBeInTheDocument();
-    expect(screen.getByText("4")).toBeInTheDocument();
-  });
-
-  it("opens the tool group dropdown on focus without showing a no-group option", () => {
-    render(
-      <SkillForm
-        submitLabel="Create skill"
-        onSubmit={vi.fn()}
-        toolGroupOptions={[
-          {
-            id: "triage",
-            name: "Triage",
-            capabilityGroup: {
-              name: "Triage",
-              items: [
-                {
-                  catalogItemId: githubCatalogItemId,
-                  tools: "*",
-                  prompts: [],
-                },
-              ],
-            },
-          },
-        ]}
-      />,
-    );
-
-    fireEvent.focus(screen.getByRole("combobox", { name: "Tool group" }));
-
-    expect(screen.getByRole("option", { name: "Triage" })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: "No tool group" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows provider badges for the selected tool group", () => {
-    render(
-      <SkillForm
-        submitLabel="Create skill"
-        onSubmit={vi.fn()}
-        defaultValues={{
-          name: "review-pull-requests",
-          description: "Reviews pull request changes",
-          body: "# Review",
-          exposeAsPrompt: true,
-          capabilityGroup: {
-            name: "Repository tools",
-            items: [
-              {
-                catalogItemId: githubCatalogItemId,
-                tools: ["pull_request_read", "issues_read"],
-                prompts: [],
-              },
-              {
-                catalogItemId: linearCatalogItemId,
-                tools: "*",
-                prompts: [],
-              },
-            ],
-          },
-        }}
-        toolGroupOptions={[
-          {
-            id: "repo",
-            name: "Repository tools",
-            capabilityGroup: {
-              name: "Repository tools",
-              items: [
-                {
-                  catalogItemId: githubCatalogItemId,
-                  tools: ["pull_request_read", "issues_read"],
-                  prompts: [],
-                },
-                {
-                  catalogItemId: linearCatalogItemId,
-                  tools: "*",
-                  prompts: [],
-                },
-              ],
-            },
-            providers: [
-              { providerName: "github", itemCount: 2 },
-              { providerName: "linear", itemCount: 8 },
-            ],
-          },
-        ]}
-      />,
-    );
-
-    expect(screen.getByText("github")).toBeInTheDocument();
-    expect(screen.getByText("linear")).toBeInTheDocument();
-    expect(screen.getByText("8")).toBeInTheDocument();
   });
 });

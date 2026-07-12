@@ -43,7 +43,7 @@ export function Container({
       className={cn(
         "mx-auto flex w-full flex-col",
         size === "full" && "container min-h-0 flex-1",
-        size === "wide" && "max-w-4xl gap-6",
+        size === "wide" && "max-w-6xl gap-6",
         size === "form" && "max-w-3xl gap-6",
         className,
       )}
@@ -82,6 +82,22 @@ export function HeaderText({
     <div
       data-slot="skill-page-header-text"
       className={cn("max-w-3xl", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function Breadcrumbs({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="skill-page-breadcrumbs"
+      className={cn("mb-2", className)}
       {...props}
     >
       {children}

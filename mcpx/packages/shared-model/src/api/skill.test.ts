@@ -1,6 +1,7 @@
 import {
   skillCatalogResponseSchema,
   skillDraftSchema,
+  updateSkillCapabilitiesRequestSchema,
   upsertSkillRequestSchema,
 } from "./skill.js";
 
@@ -63,6 +64,18 @@ describe("skill API schemas", () => {
     });
   });
 
+  it("accepts an empty skill body", () => {
+    const result = upsertSkillRequestSchema.safeParse({
+      name: "empty-body",
+      description: "Create a skill before writing instructions.",
+      body: "",
+      exposeAsPrompt: true,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.body).toBe("");
+  });
+
   it("defaults exposeAsPrompt on skill drafts", () => {
     const result = skillDraftSchema.safeParse({
       name: "write-release-notes",
@@ -72,6 +85,15 @@ describe("skill API schemas", () => {
 
     expect(result.success).toBe(true);
     expect(result.data?.exposeAsPrompt).toBe(true);
+  });
+
+  it("accepts null to explicitly clear skill capabilities", () => {
+    const result = updateSkillCapabilitiesRequestSchema.safeParse({
+      capabilityGroup: null,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.capabilityGroup).toBeNull();
   });
 
   it("rejects invalid tool group payloads", () => {

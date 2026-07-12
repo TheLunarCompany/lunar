@@ -2,8 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Sort } from "@/components/Sort";
 import { SearchInput } from "@/components/ui/search-input";
 import { toast } from "@/components/ui/use-toast";
+import { useGetMCPServers } from "@/data/catalog-servers";
 import { useDeleteSkill, useSkills } from "@/data/skills";
-import { buildSkillProviderNameResolver } from "@/mapping/skills";
+import { buildSkillCardCapabilitySummaryResolver } from "@/mapping/skills";
 import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
 import { Plus, X } from "lucide-react";
@@ -13,30 +14,35 @@ import { useNavigate } from "react-router-dom";
 import { SkillCard } from "./SkillCard";
 import * as SkillPage from "./SkillPage";
 
-const SORT_ORDERS = {
-  asc: "asc",
-  desc: "desc",
+const SORT_VALUES = {
+  updatedAsc: "updated-asc",
+  updatedDesc: "updated-desc",
+  nameAsc: "name-asc",
+  nameDesc: "name-desc",
 } as const;
 
-type SortOrder = (typeof SORT_ORDERS)[keyof typeof SORT_ORDERS];
+type SortValue = (typeof SORT_VALUES)[keyof typeof SORT_VALUES];
 
 const SORT_OPTIONS: Array<{
   label: string;
-  value: SortOrder;
+  value: SortValue;
 }> = [
-  { label: "A to Z", value: SORT_ORDERS.asc },
-  { label: "Z to A", value: SORT_ORDERS.desc },
+  { label: "Oldest updated", value: SORT_VALUES.updatedAsc },
+  { label: "Newest updated", value: SORT_VALUES.updatedDesc },
+  { label: "A to Z", value: SORT_VALUES.nameAsc },
+  { label: "Z to A", value: SORT_VALUES.nameDesc },
 ];
 
 export function SkillsGrid() {
   const navigate = useNavigate();
   const skills = useSkills();
+  const catalogServers = useGetMCPServers();
   const deleteSkill = useDeleteSkill();
   const systemState = useSocketStore((s) => s.systemState);
 
   const [query, setQuery] = useQueryState("q", { defaultValue: "" });
-  const [sortOrder, setSortOrder] = useQueryState("sort", {
-    defaultValue: SORT_ORDERS.asc,
+  const [sortValue, setSortValue] = useQueryState("sort", {
+    defaultValue: SORT_VALUES.updatedAsc,
   });
 
   const all = useMemo(() => skills.data ?? [], [skills.data]);
@@ -52,26 +58,41 @@ export function SkillsGrid() {
         return matchesSearch;
       })
       .sort((a, b) => {
-        const direction = sortOrder === SORT_ORDERS.desc ? -1 : 1;
-        return (
-          direction *
-          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-        );
-      });
-  }, [all, query, sortOrder]);
+        const nameComparison = a.name.localeCompare(b.name, undefined, {
+          sensitivity: "base",
+        });
 
-  const resolveProviderNames = useMemo(
-    () => buildSkillProviderNameResolver(systemState),
-    [systemState],
+        switch (sortValue) {
+          case SORT_VALUES.nameAsc:
+            return nameComparison;
+          case SORT_VALUES.nameDesc:
+            return -nameComparison;
+          case SORT_VALUES.updatedDesc:
+            return (
+              b.updatedAt.getTime() - a.updatedAt.getTime() || nameComparison
+            );
+          case SORT_VALUES.updatedAsc:
+          default:
+            return (
+              a.updatedAt.getTime() - b.updatedAt.getTime() || nameComparison
+            );
+        }
+      });
+  }, [all, query, sortValue]);
+
+  const summarizeSkillCapabilities = useMemo(
+    () =>
+      buildSkillCardCapabilitySummaryResolver(systemState, catalogServers.data),
+    [catalogServers.data, systemState],
   );
 
   const visibleCards = useMemo(
     () =>
       visible.map((skill) => ({
         skill,
-        providers: resolveProviderNames(skill.capabilityGroup),
+        capabilitySummary: summarizeSkillCapabilities(skill.capabilityGroup),
       })),
-    [resolveProviderNames, visible],
+    [summarizeSkillCapabilities, visible],
   );
 
   const isFiltered = query.trim().length > 0;
@@ -118,8 +139,8 @@ export function SkillsGrid() {
           <Sort
             title="Sort"
             options={SORT_OPTIONS}
-            selected={sortOrder as SortOrder}
-            onChange={setSortOrder}
+            selected={sortValue as SortValue}
+            onChange={setSortValue}
           />
           {/* <SkillsFacetedFilter
             title="Type"
@@ -178,11 +199,13 @@ export function SkillsGrid() {
             <SkillPage.Message title="No skills match your filters." />
           ) : (
             <div className="grid grid-cols-1 content-start gap-4 pb-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleCards.map(({ skill, providers }) => (
+              {visibleCards.map(({ skill, capabilitySummary }) => (
                 <SkillCard
                   key={skill.id}
                   skill={skill}
-                  providers={providers}
+                  providers={capabilitySummary.providers}
+                  toolsCount={capabilitySummary.toolsCount}
+                  promptsCount={capabilitySummary.promptsCount}
                   onDelete={handleDelete}
                 />
               ))}

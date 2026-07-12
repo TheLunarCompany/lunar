@@ -1,8 +1,25 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as renderWithTestingLibrary,
+  screen,
+} from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CapabilityGroupSheet } from "./CapabilityGroupSheet";
 import type { CapabilityGroup, CapabilityProvider } from "./types";
+
+function render(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return renderWithTestingLibrary(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 const group: CapabilityGroup = {
   id: "tool_group_0",
@@ -13,6 +30,8 @@ const group: CapabilityGroup = {
     {
       providerName: "filesystem",
       itemCount: 2,
+      toolCount: 1,
+      promptCount: 1,
       itemNames: ["read_file", "summarize_prompt"],
       selectionKeys: ["filesystem:read_file", "filesystem:summarize_prompt"],
     },
@@ -206,6 +225,8 @@ describe("CapabilityGroupSheet", () => {
             {
               providerName: "github",
               itemCount: 1,
+              toolCount: 1,
+              promptCount: 0,
               itemNames: ["list_repos"],
               selectionKeys: ["github:list_repos"],
             },

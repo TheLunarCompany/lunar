@@ -1,6 +1,8 @@
 import { apiClient } from "@/lib/api";
-import type { SkillDraft } from "@mcpx/shared-model";
+import type { SkillCapabilityGroup, SkillDraft } from "@mcpx/shared-model";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+export type SkillDetailsDraft = Omit<SkillDraft, "capabilityGroup">;
 
 export const skillsQueryKey = {
   all: ["skills"] as const,
@@ -33,12 +35,30 @@ export function useCreateSkill() {
   });
 }
 
-export function useUpdateSkill() {
+export function useUpdateSkillDetails() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, draft }: { id: string; draft: SkillDraft }) =>
-      apiClient.updateSkill(id, draft),
+    mutationFn: ({ id, draft }: { id: string; draft: SkillDetailsDraft }) =>
+      apiClient.updateSkillDetails(id, draft),
+    onSuccess: (_skill, { id }) => {
+      queryClient.invalidateQueries({ queryKey: skillsQueryKey.all });
+      queryClient.invalidateQueries({ queryKey: skillsQueryKey.detail(id) });
+    },
+  });
+}
+
+export function useUpdateSkillCapabilities() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      capabilityGroup,
+    }: {
+      id: string;
+      capabilityGroup: SkillCapabilityGroup | null | undefined;
+    }) => apiClient.updateSkillCapabilities(id, capabilityGroup),
     onSuccess: (_skill, { id }) => {
       queryClient.invalidateQueries({ queryKey: skillsQueryKey.all });
       queryClient.invalidateQueries({ queryKey: skillsQueryKey.detail(id) });

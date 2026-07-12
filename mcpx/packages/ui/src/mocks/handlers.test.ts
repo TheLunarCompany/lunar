@@ -187,7 +187,14 @@ describe("MSW handlers", () => {
     const response = await fetch("http://localhost:9000/skills");
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
+    const body = (await response.json()) as {
+      skills: Array<{
+        name: string;
+        body: string;
+        capabilityGroup?: { items: unknown[] };
+      }>;
+    };
+    expect(body).toEqual({
       skills: expect.arrayContaining([
         expect.objectContaining({
           name: "review-pull-requests",
@@ -195,6 +202,10 @@ describe("MSW handlers", () => {
         }),
       ]),
     });
+    expect(
+      body.skills.find((skill) => skill.name === "full-stack-debugging-copilot")
+        ?.capabilityGroup?.items,
+    ).toHaveLength(7);
   });
 
   it("warns and skips invalid mock skill records instead of throwing", () => {

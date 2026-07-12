@@ -3,6 +3,7 @@
   /* Component colors - Base */
   --component-colours-color-fg-accent-primary: #fa0396;
   --component-colours-color-bg-neutral: #69609f33;
+  --component-colours-color-bg-neutral-hover: #69609f4d;
   --component-colours-color-fg-accent-secondary: #19fdf7;
   --component-colours-color-bg-accent-primary: #fa03961a;
   --component-colours-color-bg-accent-secondary: #19fdf70d;

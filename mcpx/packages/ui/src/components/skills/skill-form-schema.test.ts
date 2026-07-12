@@ -1,4 +1,3 @@
-import type { SkillDraft } from "@mcpx/shared-model";
 import { describe, expect, it } from "vitest";
 import {
   draftToFormValues,
@@ -23,12 +22,20 @@ const validValues = {
     "Reviews pull requests and explains when changes need follow-up.",
   body: "# Review PRs",
   exposeAsPrompt: true,
-  toolGroupJson: "",
 };
 
 describe("skillFormSchema", () => {
   it("accepts a lowercase hyphenated name and non-empty description", () => {
     expect(skillFormSchema.safeParse(validValues).success).toBe(true);
+  });
+
+  it("accepts an empty markdown body", () => {
+    expect(
+      skillFormSchema.safeParse({
+        ...validValues,
+        body: "",
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects names longer than 64 characters", () => {
@@ -78,13 +85,12 @@ describe("skillFormSchema", () => {
 });
 
 describe("formValuesToDraft", () => {
-  it("trims name/description/body, sets exposeAsPrompt:true, omits capabilityGroup when toolGroupJson is empty", () => {
+  it("trims name/description/body, sets exposeAsPrompt:true, and omits capabilityGroup", () => {
     const draft = formValuesToDraft({
       name: "  My skill  ",
       description: "  Does a thing  ",
       body: "  # Body  ",
       exposeAsPrompt: true,
-      toolGroupJson: "",
     });
     expect(draft.name).toBe("My skill");
     expect(draft.description).toBe("Does a thing");
@@ -99,32 +105,9 @@ describe("formValuesToDraft", () => {
       description: "Does a thing",
       body: "# Body",
       exposeAsPrompt: false,
-      toolGroupJson: "",
     });
 
     expect(draft.exposeAsPrompt).toBe(false);
-  });
-
-  it("omits capabilityGroup when toolGroupJson is whitespace-only", () => {
-    const draft = formValuesToDraft({
-      name: "x",
-      description: "y",
-      body: "z",
-      exposeAsPrompt: true,
-      toolGroupJson: "   \n  ",
-    });
-    expect(draft.capabilityGroup).toBeUndefined();
-  });
-
-  it("parses a valid toolGroupJson string into the capabilityGroup object", () => {
-    const draft = formValuesToDraft({
-      name: "My skill",
-      description: "Does a thing",
-      body: "# Body",
-      exposeAsPrompt: true,
-      toolGroupJson: JSON.stringify(toolGroup),
-    });
-    expect(draft.capabilityGroup).toEqual(toolGroup);
   });
 });
 
@@ -135,21 +118,22 @@ describe("draftToFormValues", () => {
     expect(values.description).toBe("");
     expect(values.body).toBe("");
     expect(values.exposeAsPrompt).toBe(true);
-    expect(values.toolGroupJson).toBe("");
   });
 
-  it("serializes an existing capabilityGroup to a non-empty JSON string that parses back to the same object", () => {
-    const draft: SkillDraft = {
+  it("ignores an existing capabilityGroup", () => {
+    const values = draftToFormValues({
       name: "My skill",
       description: "Does a thing",
       body: "# Body",
       exposeAsPrompt: true,
       capabilityGroup: toolGroup,
-    };
-    const values = draftToFormValues(draft);
+    });
+
+    expect(values.name).toBe("My skill");
+    expect(values.description).toBe("Does a thing");
+    expect(values.body).toBe("# Body");
     expect(values.exposeAsPrompt).toBe(true);
-    expect(values.toolGroupJson).not.toBe("");
-    expect(JSON.parse(values.toolGroupJson)).toEqual(toolGroup);
+    expect("toolGroupJson" in values).toBe(false);
   });
 
   it("preserves exposeAsPrompt:false from existing drafts", () => {
@@ -163,16 +147,20 @@ describe("draftToFormValues", () => {
     expect(values.exposeAsPrompt).toBe(false);
   });
 
-  it("round-trip: draftToFormValues then formValuesToDraft returns a draft deep-equal to the original", () => {
-    const original: SkillDraft = {
+  it("round-trip: draftToFormValues then formValuesToDraft returns only core skill fields", () => {
+    const values = draftToFormValues({
       name: "My skill",
       description: "Does a thing",
       body: "# Body",
       exposeAsPrompt: true,
       capabilityGroup: toolGroup,
-    };
-    const values = draftToFormValues(original);
+    });
     const roundTripped = formValuesToDraft(values);
-    expect(roundTripped).toEqual(original);
+    expect(roundTripped).toEqual({
+      name: "My skill",
+      description: "Does a thing",
+      body: "# Body",
+      exposeAsPrompt: true,
+    });
   });
 });

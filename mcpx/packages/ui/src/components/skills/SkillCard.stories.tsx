@@ -30,7 +30,12 @@ const baseSkill = {
 } as const;
 
 export const Default: Story = {
-  args: { skill: baseSkill, onDelete: () => {} },
+  args: {
+    skill: baseSkill,
+    onDelete: () => {},
+    toolsCount: 2,
+    promptsCount: 1,
+  },
 };
 
 export const WithToolGroup: Story = {
@@ -49,5 +54,7 @@ export const WithToolGroup: Story = {
       },
     },
     onDelete: () => {},
+    toolsCount: 12,
+    promptsCount: 3,
   },
 };

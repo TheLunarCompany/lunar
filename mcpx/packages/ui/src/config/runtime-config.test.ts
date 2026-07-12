@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 describe("runtime config feature helpers", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     vi.resetModules();
     vi.unstubAllEnvs();
   });

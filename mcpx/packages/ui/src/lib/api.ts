@@ -23,6 +23,7 @@ import type {
   AuditLogEntry,
   AuditLogEventType,
   Skill,
+  SkillCapabilityGroup,
   SkillDraft,
 } from "@mcpx/shared-model";
 import {
@@ -54,6 +55,8 @@ import {
   CatalogMCPServerConfigByNameList,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 
+type SkillDetailsDraft = Omit<SkillDraft, "capabilityGroup">;
+
 export class ApiError extends Error {
   status: number;
   responseData: unknown;
@@ -68,6 +71,14 @@ export class ApiError extends Error {
 
 const apiErrorResponseSchema = z.object({
   message: z.string(),
+});
+
+const apiSkillSchema = skillSchema.extend({
+  body: z.string().trim(),
+});
+
+const apiSkillCatalogResponseSchema = skillCatalogResponseSchema.extend({
+  skills: z.array(apiSkillSchema),
 });
 
 async function getApiError(response: Response): Promise<ApiError> {
@@ -682,25 +693,40 @@ class ApiClient {
   async getSkills(): Promise<Skill[]> {
     const { skills } = await this.request(
       "/skills",
-      skillCatalogResponseSchema,
+      apiSkillCatalogResponseSchema,
     );
     return skills;
   }
 
   async getSkill(id: string): Promise<Skill> {
-    return this.request(`/skills/${encodeURIComponent(id)}`, skillSchema);
+    return this.request(`/skills/${encodeURIComponent(id)}`, apiSkillSchema);
   }
 
   async createSkill(draft: SkillDraft): Promise<Skill> {
-    return this.requestWithBody("/skills", "POST", draft, skillSchema);
+    return this.requestWithBody("/skills", "POST", draft, apiSkillSchema);
   }
 
-  async updateSkill(id: string, draft: SkillDraft): Promise<Skill> {
+  async updateSkillDetails(
+    id: string,
+    draft: SkillDetailsDraft,
+  ): Promise<Skill> {
     return this.requestWithBody(
-      `/skills/${encodeURIComponent(id)}`,
+      `/skills/${encodeURIComponent(id)}/details`,
       "PUT",
       draft,
-      skillSchema,
+      apiSkillSchema,
+    );
+  }
+
+  async updateSkillCapabilities(
+    id: string,
+    capabilityGroup: SkillCapabilityGroup | null | undefined,
+  ): Promise<Skill> {
+    return this.requestWithBody(
+      `/skills/${encodeURIComponent(id)}/capabilities`,
+      "PUT",
+      capabilityGroup === undefined ? {} : { capabilityGroup },
+      apiSkillSchema,
     );
   }
 

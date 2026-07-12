@@ -1,16 +1,10 @@
-import type {
-  AppConfig,
-  SkillCapabilityGroup,
-  SystemState,
-} from "@mcpx/shared-model";
+import type { SkillCapabilityGroup, SystemState } from "@mcpx/shared-model";
+import type { CatalogMCPServerConfigByNameList } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 
-export type SkillToolGroupOption = {
-  id: string;
-  name: string;
-  description?: string;
-  capabilityGroup?: SkillCapabilityGroup;
-  providers?: Array<{ providerName: string; itemCount: number }>;
-  disabledReason?: string;
+export type SkillCardCapabilitySummary = {
+  providers: string[];
+  toolsCount: number;
+  promptsCount: number;
 };
 
 // Skills store their capability group by `catalogItemId`, while the UI shows
@@ -19,96 +13,84 @@ export type SkillToolGroupOption = {
 // dropped (there's no name/icon to show). Order is preserved and de-duped.
 export function buildSkillProviderNameResolver(
   systemState: SystemState | null | undefined,
+  catalogItems?: CatalogMCPServerConfigByNameList,
 ): (capabilityGroup?: SkillCapabilityGroup) => string[] {
-  const nameByCatalogItemId = new Map<string, string>();
-  for (const server of systemState?.targetServers ?? []) {
-    if (server.catalogItemId) {
-      nameByCatalogItemId.set(server.catalogItemId, server.name);
-    }
-  }
-
-  return (capabilityGroup) => {
-    const items = capabilityGroup?.items ?? [];
-    if (items.length === 0) {
-      return [];
-    }
-
-    const names: string[] = [];
-    const seen = new Set<string>();
-    for (const item of items) {
-      const name = nameByCatalogItemId.get(item.catalogItemId);
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        names.push(name);
-      }
-    }
-    return names;
-  };
+  const summarize = buildSkillCardCapabilitySummaryResolver(
+    systemState,
+    catalogItems,
+  );
+  return (capabilityGroup) => summarize(capabilityGroup).providers;
 }
 
 export function resolveSkillProviderNames({
   capabilityGroup,
   systemState,
+  catalogItems,
 }: {
   capabilityGroup?: SkillCapabilityGroup;
   systemState: SystemState | null | undefined;
+  catalogItems?: CatalogMCPServerConfigByNameList;
 }): string[] {
-  return buildSkillProviderNameResolver(systemState)(capabilityGroup);
+  return buildSkillProviderNameResolver(
+    systemState,
+    catalogItems,
+  )(capabilityGroup);
 }
 
-export function buildSkillToolGroupOptions({
-  appConfig,
-  systemState,
-}: {
-  appConfig: AppConfig | null | undefined;
-  systemState: SystemState | null | undefined;
-}): SkillToolGroupOption[] {
-  const serversByName = new Map(
-    (systemState?.targetServers ?? []).map((server) => [server.name, server]),
+export function buildSkillCardCapabilitySummaryResolver(
+  systemState: SystemState | null | undefined,
+  catalogItems?: CatalogMCPServerConfigByNameList,
+): (capabilityGroup?: SkillCapabilityGroup) => SkillCardCapabilitySummary {
+  const serverByCatalogItemId = new Map(
+    (systemState?.targetServers ?? [])
+      .filter((server) => server.catalogItemId)
+      .map((server) => [server.catalogItemId, server]),
+  );
+  const catalogItemById = new Map(
+    (catalogItems ?? []).map((item) => [item.id, item]),
   );
 
-  return (appConfig?.toolGroups ?? []).map((group) => {
-    const missingCatalogServers = Object.keys(group.services).filter(
-      (serverName) => !serversByName.get(serverName)?.catalogItemId,
-    );
+  return (capabilityGroup) => {
+    const summary: SkillCardCapabilitySummary = {
+      providers: [],
+      toolsCount: 0,
+      promptsCount: 0,
+    };
+    const seenProviderNames = new Set<string>();
 
-    if (missingCatalogServers.length > 0) {
-      return {
-        id: group.name,
-        name: group.name,
-        ...(group.description ? { description: group.description } : {}),
-        disabledReason: `Missing catalog item ID for ${missingCatalogServers.join(", ")}.`,
-      };
-    }
-
-    const items = Object.entries(group.services).map(([serverName, tools]) => {
-      const catalogItemId = serversByName.get(serverName)?.catalogItemId;
-      if (!catalogItemId) {
-        throw new Error(`Missing catalog item ID for ${serverName}.`);
+    for (const item of capabilityGroup?.items ?? []) {
+      const server = serverByCatalogItemId.get(item.catalogItemId);
+      const providerName =
+        server?.name ??
+        getCatalogItemLabel(catalogItemById.get(item.catalogItemId));
+      if (providerName && !seenProviderNames.has(providerName)) {
+        seenProviderNames.add(providerName);
+        summary.providers.push(providerName);
       }
 
-      return {
-        catalogItemId,
-        tools,
-        prompts: [] as string[],
-      };
-    });
+      summary.toolsCount += countCapabilitySelection(
+        item.tools,
+        server?.tools.length ?? 0,
+      );
+      summary.promptsCount += countCapabilitySelection(
+        item.prompts,
+        server?.prompts?.length ?? 0,
+      );
+    }
 
-    return {
-      id: group.name,
-      name: group.name,
-      ...(group.description ? { description: group.description } : {}),
-      capabilityGroup: {
-        name: group.name,
-        items,
-      },
-      providers: Object.entries(group.services).map(([serverName, tools]) => ({
-        providerName: serverName,
-        itemCount:
-          tools === "*"
-            ? (serversByName.get(serverName)?.tools.length ?? 0)
-            : tools.length,
-      })),
-    };
-  });
+    return summary;
+  };
+}
+
+function getCatalogItemLabel(
+  item: CatalogMCPServerConfigByNameList[number] | undefined,
+) {
+  return item?.name || item?.displayName;
+}
+
+function countCapabilitySelection(
+  selection: string[] | "*",
+  wildcardCount: number,
+) {
+  return selection === "*" ? wildcardCount : selection.length;
 }

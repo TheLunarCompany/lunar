@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -30,15 +30,41 @@ describe("SkillCreateStart", () => {
     expect(
       screen.getByRole("heading", { name: "Add a new skill" }),
     ).toBeInTheDocument();
+    const breadcrumbs = screen.getByRole("navigation", {
+      name: "Breadcrumb",
+    });
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    expect(
+      screen.queryByRole("link", { name: /^Back to / }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(breadcrumbs).getByRole("link", { name: "Skills" }),
+    ).toHaveAttribute("href", "/skills");
+    expect(within(breadcrumbs).getByText("Add new")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Back to skills" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Drag and drop your skill here/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("max 10 MB")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Write a SKILL.md manifest from scratch in the editor, including name, description, and instructions.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /Import from GitHub/i }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /Start from blank/i }),
-    ).toHaveAttribute("href", "/skills/new/blank");
+    const blankLink = screen.getByRole("link", { name: /Start from blank/i });
+    expect(blankLink).toHaveAttribute("href", "/skills/new/blank");
+    expect(blankLink).toHaveClass("flex-col", "items-center", "text-center");
   });
 
   it("opens the file picker when upload is clicked", () => {

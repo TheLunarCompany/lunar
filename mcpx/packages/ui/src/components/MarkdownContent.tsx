@@ -59,20 +59,12 @@ const defaultComponents: Components = {
   strong: ({ node: _node, ...props }) => (
     <strong className="font-semibold" {...props} />
   ),
-  code: ({ node: _node, ...props }) => {
-    const inline = (props as { inline?: boolean }).inline;
-    return inline ? (
-      <code
-        className="px-1.5 py-0.5 rounded bg-muted text-foreground font-mono text-xs"
-        {...props}
-      />
-    ) : (
-      <code
-        className="block p-3 rounded bg-muted text-foreground font-mono text-xs overflow-x-auto"
-        {...props}
-      />
-    );
-  },
+  code: ({ node: _node, ...props }) => (
+    <code
+      className="px-1.5 py-0.5 rounded bg-muted text-foreground font-mono text-xs"
+      {...props}
+    />
+  ),
   pre: ({ node: _node, ...props }) => (
     <pre
       className="p-3 rounded bg-muted overflow-x-auto my-2 text-sm"

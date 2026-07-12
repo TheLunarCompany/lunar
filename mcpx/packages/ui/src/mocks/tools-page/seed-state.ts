@@ -1060,6 +1060,33 @@ const mockSystemState: SystemState = {
         },
       ],
     },
+    {
+      _type: "stdio",
+      name: "context7",
+      catalogItemId: "018f6f21-7117-70f2-beba-20a9339c4222",
+      state: { type: "connected" },
+      command: "npx",
+      args: ["-y", "@upstash/context7-mcp"],
+      usage: { callCount: 0 },
+      tools: [
+        {
+          name: "get-library-docs",
+          description: "Fetch documentation for a Context7 library.",
+          inputSchema: { type: "object", properties: {} },
+          parameters: [],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalTools: [
+        {
+          name: "get-library-docs",
+          description: "Fetch documentation for a Context7 library.",
+          inputSchema: { type: "object", properties: {} },
+        },
+      ],
+      prompts: [],
+      originalPrompts: [],
+    },
   ],
   connectedClients: [
     {

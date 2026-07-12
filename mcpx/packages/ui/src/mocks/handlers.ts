@@ -68,8 +68,9 @@ const SLACK_CATALOG_ITEM_ID = "0192f1c6-51ac-7d52-89aa-b76c4d6e8ef1";
 const CALCULATOR_CATALOG_ITEM_ID = "0192f1c6-ca1c-7d52-89aa-b76c4d6e8ef1";
 const BROKEN_SERVER_CATALOG_ITEM_ID = "0192f1c6-b20c-7d52-89aa-b76c4d6e8ef1";
 const FILESYSTEM_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000014";
+const CONTEXT7_CATALOG_ITEM_ID = "018f6f21-7117-70f2-beba-20a9339c4222";
 // Servers with no seeded target server: these badges won't resolve in mock mode
-// (they're intentionally dropped by resolveSkillProviderNames).
+// without catalog fallback data.
 const PLAYWRIGHT_CATALOG_ITEM_ID = "018f6f21-668f-7357-b1e5-7b3ba814d195";
 const GOOGLE_DRIVE_CATALOG_ITEM_ID = "0190a000-0000-7000-8000-000000000011";
 const STDIO_MCP_SERVERS_NOT_ALLOWED_RESPONSE = {
@@ -389,6 +390,12 @@ const initialPersonalSkills: Skill[] = parseMockSkills([
           catalogItemId: FILESYSTEM_CATALOG_ITEM_ID,
           tools: ["read_file", "write_file"],
           prompts: ["workspace_file_brief", "changed_files_summary"],
+        },
+        { catalogItemId: FILESYSTEM_CATALOG_ITEM_ID, tools: "*", prompts: [] },
+        {
+          catalogItemId: CONTEXT7_CATALOG_ITEM_ID,
+          tools: ["get-library-docs"],
+          prompts: [],
         },
       ],
     },
@@ -842,6 +849,32 @@ export const handlers = [
     return HttpResponse.json(skill, { status: 201 });
   }),
 
+  http.put("*/skills/:id/details", async ({ params, request }) => {
+    const id = String(params.id);
+    const existingSkill = personalSkills.find((skill) => skill.id === id);
+
+    if (!existingSkill) {
+      return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
+    }
+
+    const draft = (await request.json()) as SkillDraft;
+    const skill: Skill = {
+      ...existingSkill,
+      ...draft,
+      ...(existingSkill.capabilityGroup
+        ? { capabilityGroup: existingSkill.capabilityGroup }
+        : {}),
+      id,
+      updatedAt: new Date("2026-06-29T11:30:00.000Z"),
+    };
+
+    personalSkills = personalSkills.map((item) =>
+      item.id === id ? skill : item,
+    );
+
+    return HttpResponse.json(skill);
+  }),
+
   http.put("*/skills/:id", async ({ params, request }) => {
     const id = String(params.id);
     const existingSkill = personalSkills.find((skill) => skill.id === id);
@@ -854,6 +887,37 @@ export const handlers = [
     const skill: Skill = {
       ...existingSkill,
       ...draft,
+      id,
+      updatedAt: new Date("2026-06-29T11:30:00.000Z"),
+    };
+
+    personalSkills = personalSkills.map((item) =>
+      item.id === id ? skill : item,
+    );
+
+    return HttpResponse.json(skill);
+  }),
+
+  http.put("*/skills/:id/capabilities", async ({ params, request }) => {
+    const id = String(params.id);
+    const existingSkill = personalSkills.find((skill) => skill.id === id);
+
+    if (!existingSkill) {
+      return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
+    }
+
+    const body = (await request.json()) as {
+      capabilityGroup?: Skill["capabilityGroup"] | null;
+    };
+    const { capabilityGroup: _previous, ...skillDetails } = existingSkill;
+    const nextCapabilityGroup = body.capabilityGroup;
+    const skill: Skill = {
+      ...skillDetails,
+      ...(nextCapabilityGroup === undefined
+        ? { capabilityGroup: existingSkill.capabilityGroup }
+        : nextCapabilityGroup?.items.length
+          ? { capabilityGroup: { items: nextCapabilityGroup.items } }
+          : {}),
       id,
       updatedAt: new Date("2026-06-29T11:30:00.000Z"),
     };

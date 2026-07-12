@@ -14,6 +14,7 @@ import { OboActorGuard } from "@/components/OboActorGuard";
 import { useIdentityLiveSync } from "@/data/identity";
 import { useAuth } from "@/contexts/useAuth";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
+import { routes } from "@/routes";
 import { useModalsStore, useSocketStore } from "@/store";
 import { SystemState } from "@mcpx/shared-model";
 import { isUiSidebarRestructureEnabled } from "@/config/runtime-config";
@@ -87,17 +88,7 @@ export const Layout: FC<LayoutProps> = ({
   //     setShowMcpRemoteWarning(true);
   //   }
   // }, [systemState]);
-  const pathToId: Record<string, string> = {
-    "/dashboard": "dashboard",
-    "/catalog": isUiSidebarRestructureEnabled() ? "mcp-registry" : "catalog",
-    "/mcp-servers": "mcp-servers",
-    "/tools": "tools",
-    "/capabilities": "capabilities",
-    "/skills": "skills",
-    "/saved-setups": "saved-setups",
-    "/audit-log": "audit-log",
-  };
-  const activeItemId = pathToId[location.pathname] ?? "dashboard";
+  const activeItemId = getActiveSidebarItemId(location.pathname);
 
   const systemStateError = getConfigurationError(systemState);
   return systemStateError ? (
@@ -176,3 +167,25 @@ export const Layout: FC<LayoutProps> = ({
     </>
   );
 };
+
+function getActiveSidebarItemId(pathname: string) {
+  const sidebarRouteMatches: Array<{ path: string; id: string }> = [
+    { path: routes.dashboard, id: "dashboard" },
+    {
+      path: routes.catalog,
+      id: isUiSidebarRestructureEnabled() ? "mcp-registry" : "catalog",
+    },
+    { path: routes.mcpServers, id: "mcp-servers" },
+    { path: routes.tools, id: "tools" },
+    { path: routes.capabilities, id: "capabilities" },
+    { path: routes.skills, id: "skills" },
+    { path: routes.savedSetups, id: "saved-setups" },
+    { path: routes.auditLog, id: "audit-log" },
+  ];
+
+  return (
+    sidebarRouteMatches.find(
+      (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
+    )?.id ?? "dashboard"
+  );
+}

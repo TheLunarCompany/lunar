@@ -148,6 +148,20 @@
   --input: oklch(0.922 0 0);
   --ring: var(--lunar-purple-oklch);
   --radius: 0.625rem;
+  --radix-accordion-content-height: 0px;
+  --radix-popper-transform-origin: center;
+
+  /* Skill avatars: varied hues cooled and muted to harmonize with Lunar purple. */
+  --skill-avatar-bg-periwinkle: #4f6fdb;
+  --skill-avatar-bg-emerald: #168a73;
+  --skill-avatar-bg-lunar: #5147e4;
+  --skill-avatar-bg-orchid: #a23bb8;
+  --skill-avatar-bg-indigo: #4338ca;
+  --skill-avatar-bg-raspberry: #bf3f72;
+  --skill-avatar-bg-gold: #a86b00;
+  --skill-avatar-bg-teal: #0f7f8c;
+  --skill-avatar-bg-coral: #c65a3a;
+  --skill-avatar-bg-azure: #2f74bf;
 
   /* Chart colors (unchanged) */
   --chart-1: oklch(0.87 0 0);

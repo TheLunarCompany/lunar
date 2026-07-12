@@ -1,31 +1,17 @@
 import { MarkdownContent } from "@/components/MarkdownContent";
-import { CapabilityGroupCard } from "@/components/capabilities/CapabilityGroupCard";
 import { Button } from "@/components/ui/button";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  useComboboxAnchor,
-} from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { SkillToolGroupOption } from "@/mapping/skills";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  skillCapabilityGroupSchema,
-  type SkillDraft,
-} from "@mcpx/shared-model";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-// import { SkillToolGroupField } from "./SkillToolGroupField";
+import type { SkillDraft } from "@mcpx/shared-model";
+import { Code2, Eye, FileText, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { SkillSectionCard } from "./SkillSectionCard";
 import {
   draftToFormValues,
   formValuesToDraft,
@@ -34,33 +20,46 @@ import {
 } from "./skill-form-schema";
 
 type SkillFormProps = {
+  id?: string;
   defaultValues?: SkillDraft;
   submitLabel: string;
+  showTopSubmit?: boolean;
   status?: "idle" | "submitting";
   onSubmit: (draft: SkillDraft) => Promise<void> | void;
-  toolGroupOptions?: SkillToolGroupOption[];
+  onDirtyChange?: (isDirty: boolean) => void;
   className?: string;
 };
 
-type ToolGroupComboboxOption = SkillToolGroupOption;
-
 export function SkillForm({
+  id,
   defaultValues,
   submitLabel,
+  showTopSubmit = false,
   status = "idle",
   onSubmit,
-  toolGroupOptions = [],
+  onDirtyChange,
   className,
 }: SkillFormProps) {
   const [bodyMode, setBodyMode] = useState<"raw" | "preview">("raw");
+  const formDefaultValues = draftToFormValues(defaultValues);
   const {
     handleSubmit,
     control,
-    formState: { errors },
+    register,
+    formState: { errors, isDirty },
   } = useForm<SkillFormValues>({
     resolver: zodResolver(skillFormSchema),
-    defaultValues: draftToFormValues(defaultValues),
+    defaultValues: formDefaultValues,
   });
+  const bodyValue = useWatch({
+    control,
+    name: "body",
+    defaultValue: formDefaultValues.body,
+  });
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const isSubmitting = status === "submitting";
 
@@ -74,367 +73,133 @@ export function SkillForm({
 
   return (
     <form
+      id={id}
       onSubmit={submit}
       className={cn("flex h-full min-h-0 flex-col", className)}
     >
-      <div className="min-h-0 flex-1 space-y-4 overflow-auto p-5">
-        <div className="space-y-2">
-          <Label htmlFor="skill-name">Name</Label>
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => {
-              const { ref: _ref, ...inputProps } = field;
-              return (
-                <Input
-                  id="skill-name"
-                  aria-invalid={Boolean(errors.name)}
-                  className="bg-[var(--structure-color-bg-container)]"
-                  {...inputProps}
-                />
-              );
-            }}
-          />
-          {errors.name ? <ErrorText>{errors.name.message}</ErrorText> : null}
+      {showTopSubmit ? (
+        <div className="flex shrink-0 justify-end pb-3">
+          <SubmitButton isSubmitting={isSubmitting} label={submitLabel} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="skill-description">Description</Label>
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => {
-              const { ref: _ref, ...textareaProps } = field;
-              return (
-                <Textarea
-                  id="skill-description"
-                  aria-invalid={Boolean(errors.description)}
-                  className="min-h-20 resize-y bg-[var(--structure-color-bg-container)]"
-                  {...textareaProps}
-                />
-              );
-            }}
-          />
-          {errors.description ? (
-            <ErrorText>{errors.description.message}</ErrorText>
-          ) : null}
-        </div>
-        <Controller
-          name="exposeAsPrompt"
-          control={control}
-          render={({ field }) => (
-            <div className="flex items-center justify-between gap-4 rounded-md border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] px-3 py-2">
-              <Label htmlFor="skill-expose-as-prompt">Expose as prompt</Label>
-              <Switch
-                id="skill-expose-as-prompt"
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              />
-            </div>
-          )}
-        />
-        {toolGroupOptions.length > 0 ? (
+      ) : null}
+      <div className="min-h-0 flex-1 space-y-4 overflow-auto">
+        <section
+          aria-label="Skill details"
+          className="space-y-5 rounded-xl border border-[var(--colors-purple-200)] bg-[var(--colors-white)] p-5 shadow-none"
+        >
           <div className="space-y-2">
-            <Label htmlFor="skill-tool-group">Tool group</Label>
-            <Controller
-              name="toolGroupJson"
-              control={control}
-              render={({ field }) => {
-                const selectedOption = getSelectedToolGroupOption(
-                  toolGroupOptions,
-                  field.value,
-                );
-
-                return (
-                  <ToolGroupCombobox
-                    options={toolGroupOptions}
-                    selectedOption={selectedOption}
-                    onChange={(option) => {
-                      if (!option?.capabilityGroup) {
-                        field.onChange("");
-                        return;
-                      }
-                      field.onChange(
-                        JSON.stringify(option.capabilityGroup, null, 2),
-                      );
-                    }}
-                  >
-                    <ToolGroupHelpText
-                      selectedOption={selectedOption}
-                      options={toolGroupOptions}
-                    />
-                    <SelectedToolGroupProviders option={selectedOption} />
-                  </ToolGroupCombobox>
-                );
-              }}
+            <Label htmlFor="skill-name">Skill name</Label>
+            <Input
+              id="skill-name"
+              aria-invalid={Boolean(errors.name)}
+              className="bg-[var(--structure-color-bg-app)]"
+              {...register("name")}
             />
-            {errors.toolGroupJson ? (
-              <ErrorText>{errors.toolGroupJson.message}</ErrorText>
+            {errors.name ? <ErrorText>{errors.name.message}</ErrorText> : null}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="skill-description">Short description</Label>
+            <Textarea
+              id="skill-description"
+              aria-invalid={Boolean(errors.description)}
+              className="min-h-20 resize-y bg-[var(--structure-color-bg-app)]"
+              {...register("description")}
+            />
+            {errors.description ? (
+              <ErrorText>{errors.description.message}</ErrorText>
             ) : null}
           </div>
-        ) : null}
-        <div className="space-y-2">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <Label htmlFor="skill-body">Markdown body</Label>
-            <Tabs
-              value={bodyMode}
-              onValueChange={(value) =>
-                setBodyMode(value === "preview" ? "preview" : "raw")
-              }
-            >
-              <TabsList aria-label="Markdown body mode">
-                <TabsTrigger value="raw">Raw</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
           <Controller
-            name="body"
+            name="exposeAsPrompt"
             control={control}
-            render={({ field }) => {
-              const { ref: _ref, ...textareaProps } = field;
-              return (
-                <>
-                  {bodyMode === "raw" ? (
-                    <Textarea
-                      id="skill-body"
-                      aria-invalid={Boolean(errors.body)}
-                      className="min-h-56 resize-y bg-[var(--structure-color-bg-container)] font-mono text-sm"
-                      {...textareaProps}
-                    />
-                  ) : (
-                    <div className="min-h-56 rounded-md border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-3">
-                      {field.value.trim() ? (
-                        <MarkdownContent content={field.value} />
-                      ) : (
-                        <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
-                          Nothing to preview.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            }}
+            render={({ field }) => (
+              <div className="flex items-center justify-between gap-4 rounded-md border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-app)] px-3 py-2">
+                <Label htmlFor="skill-expose-as-prompt">Expose as prompt</Label>
+                <Switch
+                  id="skill-expose-as-prompt"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </div>
+            )}
           />
+        </section>
+        <div className="space-y-2">
+          <SkillSectionCard
+            icon={<FileText className="size-4" />}
+            title="SKILL.md"
+            description="single markdown file"
+            actions={
+              <Tabs
+                value={bodyMode}
+                onValueChange={(value) =>
+                  setBodyMode(value === "preview" ? "preview" : "raw")
+                }
+              >
+                <TabsList aria-label="Markdown body mode">
+                  <TabsTrigger value="preview">
+                    <Eye className="size-4" aria-hidden="true" />
+                    Preview
+                  </TabsTrigger>
+                  <TabsTrigger value="raw">
+                    <Code2 className="size-4" aria-hidden="true" />
+                    Raw
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            }
+            className="rounded-xl border-[var(--colors-purple-200)] bg-[var(--colors-white)] shadow-none"
+            headerClassName="min-h-[72px] bg-[var(--colors-gray-50)] px-6 py-4"
+            contentClassName={bodyMode === "raw" ? undefined : "p-7"}
+          >
+            {bodyMode === "raw" ? (
+              <Textarea
+                id="skill-body"
+                aria-label="Markdown body"
+                aria-invalid={Boolean(errors.body)}
+                className="min-h-[640px] resize-y rounded-none border-0 bg-[var(--colors-white)] p-7 font-mono text-base leading-8 shadow-none focus-visible:ring-0 aria-invalid:!border-0 aria-invalid:!ring-0 dark:aria-invalid:!border-0 dark:aria-invalid:!ring-0"
+                {...register("body")}
+              />
+            ) : (
+              <>
+                {bodyValue.trim() ? (
+                  <MarkdownContent
+                    content={bodyValue}
+                    className="text-[var(--text-colours-color-text-primary)] [&_h1]:!text-base [&_h1]:!leading-6 [&_h2]:!text-sm [&_h2]:!leading-5 [&_h3]:!text-sm [&_h3]:!leading-5"
+                  />
+                ) : (
+                  <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
+                    Nothing to preview.
+                  </p>
+                )}
+              </>
+            )}
+          </SkillSectionCard>
           {errors.body ? <ErrorText>{errors.body.message}</ErrorText> : null}
         </div>
-        {/* <Controller
-          name="toolGroupJson"
-          control={control}
-          render={({ field }) => (
-            <SkillToolGroupField
-              value={field.value}
-              onChange={field.onChange}
-              error={errors.toolGroupJson?.message}
-            />
-          )}
-        /> */}
       </div>
       <div className="flex shrink-0 justify-end px-5 py-4">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? <Loader2 className="animate-spin" /> : null}
-          {submitLabel}
-        </Button>
+        <SubmitButton isSubmitting={isSubmitting} label={submitLabel} />
       </div>
     </form>
   );
 }
 
-function getSelectedToolGroupOption(
-  options: SkillToolGroupOption[],
-  value: string,
-) {
-  const parsed = parseToolGroupJson(value);
-  if (!parsed) return null;
-
-  return (
-    options.find(
-      (option) =>
-        option.capabilityGroup &&
-        JSON.stringify(option.capabilityGroup) === JSON.stringify(parsed),
-    ) ?? null
-  );
-}
-
-function parseToolGroupJson(value: string) {
-  if (!value.trim()) return null;
-  try {
-    const parsed = skillCapabilityGroupSchema.safeParse(JSON.parse(value));
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
-}
-
-function ToolGroupCombobox({
-  options,
-  selectedOption,
-  onChange,
-  children,
+function SubmitButton({
+  isSubmitting,
+  label,
 }: {
-  options: SkillToolGroupOption[];
-  selectedOption: SkillToolGroupOption | null;
-  onChange: (option: ToolGroupComboboxOption | null) => void;
-  children: React.ReactNode;
+  isSubmitting: boolean;
+  label: string;
 }) {
-  const anchorRef = useComboboxAnchor();
-  const [inputValue, setInputValue] = useState(selectedOption?.name ?? "");
-  const [isOpen, setIsOpen] = useState(false);
-  const comboboxOptions: ToolGroupComboboxOption[] = options;
-
   return (
-    <Combobox
-      items={comboboxOptions}
-      value={selectedOption}
-      inputValue={inputValue}
-      open={isOpen}
-      openOnInputClick
-      itemToStringLabel={getToolGroupComboboxLabel}
-      isItemEqualToValue={(item, value) => item.id === value.id}
-      onOpenChange={setIsOpen}
-      onInputValueChange={(nextValue) => {
-        setInputValue(nextValue);
-        if (nextValue === "") {
-          onChange(null);
-        }
-      }}
-      onValueChange={(option) => {
-        if (!option || Array.isArray(option)) return;
-        const nextOption = option as ToolGroupComboboxOption;
-        setInputValue(nextOption.name);
-        onChange(nextOption);
-      }}
-    >
-      <div ref={anchorRef} className="w-full">
-        <ComboboxInput
-          id="skill-tool-group"
-          aria-label="Tool group"
-          placeholder="Search by tool group name or MCP server (e.g. figma, linear)"
-          className="w-full bg-[var(--structure-color-bg-container)]"
-          showClear={inputValue !== ""}
-          onFocus={() => setIsOpen(true)}
-          onClick={() => setIsOpen(true)}
-        />
-      </div>
-      <ComboboxContent anchor={anchorRef} initialFocus={false}>
-        <ComboboxEmpty>No tool groups found.</ComboboxEmpty>
-        <ComboboxList>
-          {(option) => (
-            <ComboboxItem
-              key={(option as ToolGroupComboboxOption).id}
-              value={option}
-              disabled={Boolean(
-                (option as ToolGroupComboboxOption).disabledReason,
-              )}
-              onMouseDown={(event) => {
-                event.preventDefault();
-              }}
-            >
-              <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="truncate font-medium">
-                  {(option as ToolGroupComboboxOption).name}
-                </span>
-                <ToolGroupOptionProviders
-                  option={option as ToolGroupComboboxOption}
-                />
-                {(option as ToolGroupComboboxOption).disabledReason ? (
-                  <span className="truncate text-xs text-[var(--text-colours-color-text-secondary)]">
-                    {(option as ToolGroupComboboxOption).disabledReason}
-                  </span>
-                ) : null}
-              </span>
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-      {children}
-    </Combobox>
-  );
-}
-
-function getToolGroupComboboxLabel(option: ToolGroupComboboxOption) {
-  const providerNames =
-    option.providers?.map((provider) => provider.providerName).join(" ") ?? "";
-
-  return [option.name, providerNames].filter(Boolean).join(" ");
-}
-
-function ToolGroupOptionProviders({
-  option,
-}: {
-  option: ToolGroupComboboxOption;
-}) {
-  if (!option.providers?.length) return null;
-
-  return (
-    <span className="flex flex-wrap gap-1">
-      {option.providers.map((provider) => (
-        <CapabilityGroupCard.ProviderBadge
-          key={provider.providerName}
-          name={provider.providerName}
-          toolsNumber={provider.itemCount}
-        />
-      ))}
-    </span>
-  );
-}
-
-function ToolGroupHelpText({
-  selectedOption,
-  options,
-}: {
-  selectedOption: SkillToolGroupOption | null;
-  options: SkillToolGroupOption[];
-}) {
-  const unavailableCount = options.filter(
-    (option) => !option.capabilityGroup,
-  ).length;
-
-  if (selectedOption?.description) {
-    return (
-      <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
-        {selectedOption.description}
-      </p>
-    );
-  }
-
-  if (unavailableCount > 0) {
-    return (
-      <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
-        {unavailableCount} tool group
-        {unavailableCount === 1 ? "" : "s"} cannot be used because catalog item
-        IDs are missing.
-      </p>
-    );
-  }
-
-  return null;
-}
-
-function SelectedToolGroupProviders({
-  option,
-}: {
-  option: SkillToolGroupOption | null;
-}) {
-  if (!option?.providers?.length) return null;
-
-  return (
-    <CapabilityGroupCard.Providers className="mt-2">
-      {option.providers.map((provider) => (
-        <CapabilityGroupCard.ProviderBadge
-          key={provider.providerName}
-          name={provider.providerName}
-          toolsNumber={provider.itemCount}
-        />
-      ))}
-    </CapabilityGroupCard.Providers>
+    <Button type="submit" disabled={isSubmitting}>
+      {isSubmitting ? <Loader2 className="animate-spin" /> : null}
+      {label}
+    </Button>
   );
 }
 
 function ErrorText({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-sm text-[var(--component-colours-color-fg-danger-primary)]">
-      {children}
-    </p>
-  );
+  return <p className="text-sm text-destructive">{children}</p>;
 }

@@ -174,11 +174,13 @@ function CapabilityGroupCardProviders({
 
 function CapabilityGroupCardProviderBadge({
   name,
-  toolsNumber = 0,
+  toolsNumber,
+  isMissingOrInactive = false,
   className,
 }: {
   name: string;
   toolsNumber?: number;
+  isMissingOrInactive?: boolean;
   className?: string;
 }) {
   const domainIconUrl = useDomainIcon(name);
@@ -187,7 +189,10 @@ function CapabilityGroupCardProviderBadge({
     <Badge
       variant="outline"
       className={cn(
-        "flex h-6 items-center gap-1 rounded-[4px] border border-[var(--colors-gray-200)] bg-[var(--colors-white)] px-1 py-0 text-[11px] font-normal leading-[15px] text-[var(--colors-gray-600)]",
+        "flex h-6 items-center gap-1 rounded-[4px] border px-1 py-0 text-[11px] font-normal leading-[15px]",
+        isMissingOrInactive
+          ? "border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] text-[var(--colors-warning-700)]"
+          : "border-[var(--colors-gray-200)] bg-[var(--colors-white)] text-[var(--colors-gray-600)]",
         className,
       )}
     >
@@ -195,12 +200,14 @@ function CapabilityGroupCardProviderBadge({
         <img src={domainIconUrl} alt="" aria-hidden="true" className="size-4" />
       )}
       <span className="capitalize">{name}</span>
-      <Badge
-        variant="outline"
-        className="h-auto rounded-[16px] border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] px-[6px] py-0 text-xs font-normal leading-[18px] text-[var(--colors-gray-600)]"
-      >
-        {toolsNumber}
-      </Badge>
+      {toolsNumber != null ? (
+        <Badge
+          variant="outline"
+          className="h-auto rounded-[16px] border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] px-[6px] py-0 text-xs font-normal leading-[18px] text-[var(--colors-gray-600)]"
+        >
+          {toolsNumber}
+        </Badge>
+      ) : null}
     </Badge>
   );
 }

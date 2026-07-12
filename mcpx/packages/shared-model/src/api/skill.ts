@@ -42,7 +42,7 @@ export const skillDraftSchema = z.object({
   // name/description caps mirror the agentskills.io SKILL.md spec.
   name: z.string().trim().min(1).max(64).regex(skillNameSlugRegex),
   description: z.string().trim().min(1).max(1024),
-  body: z.string().trim().min(1),
+  body: z.string().trim(),
   // Also project the Prompt / `/slash` face, not just the skill:// Resource.
   exposeAsPrompt: z.boolean().default(true),
   capabilityGroup: skillCapabilityGroupSchema.optional(),
@@ -64,6 +64,20 @@ export type SkillCatalogResponse = z.infer<typeof skillCatalogResponseSchema>;
 
 export const upsertSkillRequestSchema = skillDraftSchema;
 export type UpsertSkillRequest = z.input<typeof upsertSkillRequestSchema>;
+
+export const updateSkillDetailsRequestSchema = skillDraftSchema.omit({
+  capabilityGroup: true,
+});
+export type UpdateSkillDetailsRequest = z.input<
+  typeof updateSkillDetailsRequestSchema
+>;
+
+export const updateSkillCapabilitiesRequestSchema = z.object({
+  capabilityGroup: skillCapabilityGroupSchema.nullable().optional(),
+});
+export type UpdateSkillCapabilitiesRequest = z.input<
+  typeof updateSkillCapabilitiesRequestSchema
+>;
 
 export const enabledSkillsResponseSchema = z.object({
   enabled: z.array(enabledSkillsSchema),

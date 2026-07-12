@@ -9,7 +9,8 @@ import {
   useDeleteSkill,
   useSkill,
   useSkills,
-  useUpdateSkill,
+  useUpdateSkillDetails,
+  useUpdateSkillCapabilities,
 } from "./skills";
 
 vi.mock("@/lib/api", () => ({
@@ -17,7 +18,8 @@ vi.mock("@/lib/api", () => ({
     getSkills: vi.fn(),
     getSkill: vi.fn(),
     createSkill: vi.fn(),
-    updateSkill: vi.fn(),
+    updateSkillDetails: vi.fn(),
+    updateSkillCapabilities: vi.fn(),
     deleteSkill: vi.fn(),
   },
 }));
@@ -88,10 +90,10 @@ describe("skills data hooks", () => {
     });
   });
 
-  it("invalidates skills and detail after update succeeds", async () => {
-    vi.mocked(apiClient.updateSkill).mockResolvedValue(skill);
+  it("invalidates skills and detail after details update succeeds", async () => {
+    vi.mocked(apiClient.updateSkillDetails).mockResolvedValue(skill);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
-    const { result } = renderHook(() => useUpdateSkill(), { wrapper });
+    const { result } = renderHook(() => useUpdateSkillDetails(), { wrapper });
 
     await result.current.mutateAsync({
       id: skill.id,
@@ -103,11 +105,48 @@ describe("skills data hooks", () => {
       },
     });
 
-    expect(apiClient.updateSkill).toHaveBeenCalledWith(skill.id, {
+    expect(apiClient.updateSkillDetails).toHaveBeenCalledWith(skill.id, {
       name: "review-pull-requests",
       description: "Review repository changes with the local project rules.",
       body: "# Review pull requests",
       exposeAsPrompt: true,
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: skillsQueryKey.all,
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: skillsQueryKey.detail(skill.id),
+    });
+  });
+
+  it("invalidates skills and detail after capabilities update succeeds", async () => {
+    vi.mocked(apiClient.updateSkillCapabilities).mockResolvedValue(skill);
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useUpdateSkillCapabilities(), {
+      wrapper,
+    });
+
+    await result.current.mutateAsync({
+      id: skill.id,
+      capabilityGroup: {
+        items: [
+          {
+            catalogItemId: "0190a000-0000-7000-8000-000000000010",
+            tools: ["get_pull_request"],
+            prompts: ["review_diff"],
+          },
+        ],
+      },
+    });
+
+    expect(apiClient.updateSkillCapabilities).toHaveBeenCalledWith(skill.id, {
+      items: [
+        {
+          catalogItemId: "0190a000-0000-7000-8000-000000000010",
+          tools: ["get_pull_request"],
+          prompts: ["review_diff"],
+        },
+      ],
     });
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: skillsQueryKey.all,

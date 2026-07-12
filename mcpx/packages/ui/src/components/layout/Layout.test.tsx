@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -116,5 +116,30 @@ describe("Layout", () => {
     expect(wrapper).toBeInTheDocument();
     expect(sidebar).toBeInTheDocument();
     expect(main).toHaveTextContent("Page content");
+  });
+
+  it("keeps the Skills nav item active on nested skill routes", () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/skills/019f460d-e12d-7be3-92d0-b5893aae6027/capabilities",
+        ]}
+      >
+        <TooltipProvider>
+          <Layout>
+            <div>Page content</div>
+          </Layout>
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "Skills" })).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "data-active",
+      "false",
+    );
   });
 });

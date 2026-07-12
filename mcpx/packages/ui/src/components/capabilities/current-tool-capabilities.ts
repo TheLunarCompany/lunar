@@ -184,6 +184,7 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
 
       return {
         name: server.name,
+        catalogItemId: server.catalogItemId,
         state: server.state,
         icon: server.icon,
         items: [

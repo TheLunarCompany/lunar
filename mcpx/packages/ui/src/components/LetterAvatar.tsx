@@ -1,19 +1,20 @@
 import { cn } from "@/lib/utils";
+import { Sparkles } from "lucide-react";
 
 const colorAssignments = new Map<string, string>();
 const usedColors = new Set<string>();
 
 const availableColors = [
-  "bg-blue-500",
-  "bg-green-500",
-  "bg-purple-500",
-  "bg-pink-500",
-  "bg-indigo-500",
-  "bg-red-500",
-  "bg-yellow-500",
-  "bg-teal-500",
-  "bg-orange-500",
-  "bg-cyan-500",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-periwinkle)_0%,color-mix(in_srgb,var(--skill-avatar-bg-periwinkle)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-emerald)_0%,color-mix(in_srgb,var(--skill-avatar-bg-emerald)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-lunar)_0%,color-mix(in_srgb,var(--skill-avatar-bg-lunar)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-orchid)_0%,color-mix(in_srgb,var(--skill-avatar-bg-orchid)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-indigo)_0%,color-mix(in_srgb,var(--skill-avatar-bg-indigo)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-raspberry)_0%,color-mix(in_srgb,var(--skill-avatar-bg-raspberry)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-gold)_0%,color-mix(in_srgb,var(--skill-avatar-bg-gold)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-teal)_0%,color-mix(in_srgb,var(--skill-avatar-bg-teal)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-coral)_0%,color-mix(in_srgb,var(--skill-avatar-bg-coral)_82%,white)_100%)]",
+  "bg-[linear-gradient(135deg,var(--skill-avatar-bg-azure)_0%,color-mix(in_srgb,var(--skill-avatar-bg-azure)_82%,white)_100%)]",
 ] as const;
 
 type LetterAvatarProps = {
@@ -31,14 +32,18 @@ export function LetterAvatar({ name, className }: LetterAvatarProps) {
         className,
       )}
     >
-      {getAvatarInitials(name)}
+      {/* {getAvatarInitials(name)} */}
+      <Sparkles
+        className="size-5 text-white drop-shadow-sm"
+        strokeWidth={2.2}
+      />
     </div>
   );
 }
 
-function getAvatarInitials(name: string): string {
-  return name.substring(0, 2).toUpperCase();
-}
+// function getAvatarInitials(name: string): string {
+//   return name.substring(0, 2).toUpperCase();
+// }
 
 function getAvatarBackgroundColor(name: string): string {
   if (colorAssignments.has(name)) {

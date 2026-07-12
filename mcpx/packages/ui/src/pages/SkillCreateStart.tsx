@@ -1,10 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { SkillPage } from "@/components/skills";
+import { SkillBreadcrumbTrail, SkillPage } from "@/components/skills";
+import { getSkillBreadcrumbs } from "@/components/skills/skill-breadcrumbs";
 import { toast } from "@/components/ui/use-toast";
 import { parseSkillMarkdown } from "@/lib/skill-markdown";
 import { routes } from "@/routes";
 import type { SkillDraft } from "@mcpx/shared-model";
-import { ArrowLeft, FileText, FileUp } from "lucide-react";
+import { FileText, FileUp } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -82,23 +82,18 @@ export default function SkillCreateStart() {
       <SkillPage.Container size="wide">
         <SkillPage.Header>
           <SkillPage.HeaderText>
+            <SkillPage.Breadcrumbs>
+              <SkillBreadcrumbTrail
+                items={getSkillBreadcrumbs({ current: "Add new" })}
+                showBackButton={false}
+              />
+            </SkillPage.Breadcrumbs>
             <SkillPage.Title>Add a new skill</SkillPage.Title>
             <SkillPage.Description>
               Upload a skill file from your computer, or start from a blank
               SKILL.md template.
             </SkillPage.Description>
           </SkillPage.HeaderText>
-          <SkillPage.Actions>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 self-start rounded-lg px-3"
-              onClick={() => navigate(routes.skills)}
-            >
-              <ArrowLeft />
-              Back to skills
-            </Button>
-          </SkillPage.Actions>
         </SkillPage.Header>
 
         <SkillPage.Content className="flex flex-col gap-6">
@@ -146,7 +141,6 @@ export default function SkillCreateStart() {
             </span>
             <span className="mt-5 flex flex-wrap justify-center gap-2">
               <UploadPill>SKILL.md</UploadPill>
-              <UploadPill>max 10 MB</UploadPill>
             </span>
           </button>
 
@@ -160,7 +154,7 @@ export default function SkillCreateStart() {
             to={routes.skillNewBlank}
             icon={FileText}
             title="Start from blank"
-            description="Write a SKILL.md manifest from scratch in the editor, including name, description, instructions, and files."
+            description="Write a SKILL.md manifest from scratch in the editor, including name, description, and instructions."
           />
         </SkillPage.Content>
       </SkillPage.Container>
@@ -169,7 +163,7 @@ export default function SkillCreateStart() {
 }
 
 const choiceCardClassName =
-  "grid min-h-[116px] w-full grid-cols-[56px_minmax(0,1fr)] gap-4 rounded-xl border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-4 text-left no-underline shadow-sm transition hover:-translate-y-px hover:border-primary/40 hover:shadow-md";
+  "flex min-h-[160px] w-full flex-col items-center justify-center gap-3 rounded-xl border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-6 text-center no-underline shadow-sm transition hover:-translate-y-px hover:border-primary/40 hover:shadow-md";
 
 function CreateChoiceLink({
   to,

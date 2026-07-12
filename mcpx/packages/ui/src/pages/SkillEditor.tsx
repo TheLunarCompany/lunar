@@ -1,42 +1,70 @@
-import { SkillForm, SkillPage } from "@/components/skills";
+import { buildCapabilityProvidersFromCurrentTools } from "@/components/capabilities/current-tool-capabilities";
+import { SkillFileStructureCard } from "@/components/skills/SkillFileStructureCard";
+import { SkillLinkedCapabilitiesCard } from "@/components/skills/SkillLinkedCapabilitiesCard";
+import {
+  SkillBreadcrumbTrail,
+  SkillForm,
+  SkillPage,
+} from "@/components/skills";
+import { getSkillBreadcrumbs } from "@/components/skills/skill-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { useCreateSkill, useSkill, useUpdateSkill } from "@/data/skills";
-import { buildSkillToolGroupOptions } from "@/mapping/skills";
+import { useCreateSkill, useSkill, useUpdateSkillDetails } from "@/data/skills";
+import { useGetMCPServers } from "@/data/catalog-servers";
+import { useUnsavedChangesPrompt } from "@/hooks/useUnsavedChangesPrompt";
 import { routes } from "@/routes";
-import { useSocketStore } from "@/store";
 import { skillDraftSchema, type SkillDraft } from "@mcpx/shared-model";
-import { ArrowLeft } from "lucide-react";
-import { useMemo } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  addUnavailableSavedSkillCapabilities,
+  buildLinkedCapabilityProviders,
+  deriveSkillCapabilitySelectionState,
+} from "@/mapping/skill-capabilities";
+import { useMemo, useState } from "react";
+import {
+  generatePath,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
+import { useSocketStore } from "@/store";
 
 export default function SkillEditor() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const location = useLocation();
-  const uploadedDraft = getUploadedDraft(location.state);
+  const uploadedDraft = useMemo(
+    () => getUploadedDraft(location.state),
+    [location.state],
+  );
+
+  const skillQuery = useSkill(id ?? "");
+  const catalogServersQuery = useGetMCPServers();
+  const createSkill = useCreateSkill();
+  const updateSkillDetails = useUpdateSkillDetails();
   const { appConfig, systemState } = useSocketStore((state) => ({
     appConfig: state.appConfig,
     systemState: state.systemState,
   }));
-
-  const skillQuery = useSkill(id ?? "");
-  const createSkill = useCreateSkill();
-  const updateSkill = useUpdateSkill();
-  const toolGroupOptions = useMemo(
-    () => buildSkillToolGroupOptions({ appConfig, systemState }),
-    [appConfig, systemState],
-  );
+  const sourceDraft = isEdit ? skillQuery.data : uploadedDraft;
+  const [isDetailsDirty, setIsDetailsDirty] = useState(false);
+  const { allowNextNavigation } = useUnsavedChangesPrompt(isDetailsDirty);
 
   async function handleSubmit(draft: SkillDraft) {
     try {
       if (isEdit && id) {
-        await updateSkill.mutateAsync({ id, draft });
+        await updateSkillDetails.mutateAsync({ id, draft });
+        allowNextNavigation();
+        navigate(routes.skills);
       } else {
-        await createSkill.mutateAsync(draft);
+        const createdSkill = await createSkill.mutateAsync(draft);
+        toast({
+          title: "Skill created",
+          description: "Skill details are ready.",
+        });
+        allowNextNavigation();
+        navigate(generatePath(routes.skillDetail, { id: createdSkill.id }));
       }
-      navigate(routes.skills);
     } catch (error) {
       toast({
         title: isEdit ? "Failed to update skill" : "Failed to create skill",
@@ -49,15 +77,74 @@ export default function SkillEditor() {
   }
 
   const status =
-    createSkill.isPending || updateSkill.isPending ? "submitting" : "idle";
-  const backHref =
-    isEdit && id ? routes.skillDetail.replace(":id", id) : routes.skills;
+    createSkill.isPending || updateSkillDetails.isPending
+      ? "submitting"
+      : "idle";
+  const submitLabel = isEdit ? "Save changes" : "Create skill";
+  const targetServers = useMemo(
+    () => systemState?.targetServers ?? [],
+    [systemState?.targetServers],
+  );
+  const capabilityProviders = useMemo(
+    () =>
+      buildCapabilityProvidersFromCurrentTools({
+        targetServers,
+        toolExtensionsServices: appConfig?.toolExtensions?.services,
+      }),
+    [appConfig?.toolExtensions?.services, targetServers],
+  );
+  const selectableCapabilityProviders = useMemo(
+    () =>
+      addUnavailableSavedSkillCapabilities({
+        capabilityGroup: skillQuery.data?.capabilityGroup,
+        targetServers,
+        providers: capabilityProviders,
+        catalogItems: catalogServersQuery.data,
+      }),
+    [
+      capabilityProviders,
+      catalogServersQuery.data,
+      skillQuery.data?.capabilityGroup,
+      targetServers,
+    ],
+  );
+  const linkedCapabilityProviders = useMemo(() => {
+    const { selectedKeys } = deriveSkillCapabilitySelectionState({
+      capabilityGroup: skillQuery.data?.capabilityGroup,
+      providers: selectableCapabilityProviders,
+    });
+
+    return buildLinkedCapabilityProviders({
+      providers: selectableCapabilityProviders,
+      selectedKeys,
+    });
+  }, [selectableCapabilityProviders, skillQuery.data?.capabilityGroup]);
+
+  function navigateToCapabilities(providerName?: string) {
+    if (!id) {
+      return;
+    }
+
+    const path = generatePath(routes.skillCapabilities, { id });
+    navigate(
+      providerName ? `${path}?mcp=${encodeURIComponent(providerName)}` : path,
+    );
+  }
 
   return (
     <SkillPage.Root>
-      <SkillPage.Container size="form">
+      <SkillPage.Container size={"wide"}>
         <SkillPage.Header>
           <SkillPage.HeaderText>
+            <SkillPage.Breadcrumbs>
+              <SkillBreadcrumbTrail
+                items={getSkillBreadcrumbs({
+                  id,
+                  skillName: skillQuery.data?.name,
+                  current: isEdit ? "Edit" : "Add new",
+                })}
+              />
+            </SkillPage.Breadcrumbs>
             <SkillPage.Title>
               {isEdit ? "Edit skill" : "Add a new skill"}
             </SkillPage.Title>
@@ -67,17 +154,17 @@ export default function SkillEditor() {
                 : "Save a personal Markdown skill."}
             </SkillPage.Description>
           </SkillPage.HeaderText>
-          <SkillPage.Actions>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 self-start rounded-lg px-3"
-              onClick={() => navigate(backHref)}
-            >
-              <ArrowLeft />
-              {isEdit ? "Back to skill" : "Back to skills"}
-            </Button>
-          </SkillPage.Actions>
+          {isEdit ? (
+            <SkillPage.Actions>
+              <Button
+                type="submit"
+                form="skill-details-form"
+                disabled={status === "submitting" || !isDetailsDirty}
+              >
+                {submitLabel}
+              </Button>
+            </SkillPage.Actions>
+          ) : null}
         </SkillPage.Header>
 
         {isEdit && skillQuery.isLoading ? (
@@ -93,14 +180,37 @@ export default function SkillEditor() {
             </Button>
           </EditorMessage>
         ) : (
-          <SkillForm
-            key={skillQuery.data?.id ?? uploadedDraft?.body ?? "new"}
-            submitLabel={isEdit ? "Save changes" : "Create skill"}
-            status={status}
-            defaultValues={isEdit ? skillQuery.data : uploadedDraft}
-            toolGroupOptions={toolGroupOptions}
-            onSubmit={handleSubmit}
-          />
+          <div className="flex flex-col gap-4">
+            <div
+              className={
+                isEdit && skillQuery.data
+                  ? "grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]"
+                  : undefined
+              }
+            >
+              {isEdit && skillQuery.data ? (
+                <div className="flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start">
+                  <SkillFileStructureCard skillName={skillQuery.data.name} />
+                  <SkillLinkedCapabilitiesCard
+                    providers={linkedCapabilityProviders}
+                    onProviderClick={(provider) =>
+                      navigateToCapabilities(provider.name)
+                    }
+                    onLinkCapabilities={() => navigateToCapabilities()}
+                  />
+                </div>
+              ) : null}
+              <SkillForm
+                key={skillQuery.data?.id ?? uploadedDraft?.body ?? "new"}
+                id="skill-details-form"
+                submitLabel={submitLabel}
+                status={status}
+                defaultValues={sourceDraft}
+                onSubmit={handleSubmit}
+                onDirtyChange={setIsDetailsDirty}
+              />
+            </div>
+          </div>
         )}
       </SkillPage.Container>
     </SkillPage.Root>

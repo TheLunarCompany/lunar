@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
-type BreadcrumbItem = {
+export type BreadcrumbItem = {
   label: React.ReactNode;
   to?: string;
 };
@@ -16,7 +16,7 @@ export function Breadcrumbs({ items, className, ...props }: BreadcrumbsProps) {
     <nav
       aria-label="Breadcrumb"
       className={cn(
-        "flex min-w-0 items-center text-xs font-medium text-[var(--text-colours-color-text-tertiary)]",
+        "flex min-w-0 items-center text-sm font-medium text-[var(--text-colours-color-text-tertiary)]",
         className,
       )}
       {...props}
