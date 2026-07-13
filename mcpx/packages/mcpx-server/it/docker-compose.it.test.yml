@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   oauth-mock:
-    image: node:22-alpine
+    image: node:22.22.3-alpine3.22
     working_dir: /app
     volumes:
       # Mount the built OAuth server from testkit-mcp-server

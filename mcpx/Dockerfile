@@ -12,7 +12,7 @@
 #     docker build -t mcpx --target mcpx -f ./Dockerfile ./mcpx
 #     docker run --rm -p 9000:9000 -p 5173:5173 -p 3000:3000 mcpx
 
-FROM node:22.22.0-alpine3.22 AS base
+FROM node:22.22.3-alpine3.22 AS base
 
 ENV HOME=/lunar
 
@@ -52,7 +52,7 @@ RUN ARCH=$(uname -m) && \
 WORKDIR ${HOME}
 RUN npm run install:ui && npm run build:ui
 
-FROM node:22.22.0-alpine3.22 AS mcpx-ui
+FROM node:22.22.3-alpine3.22 AS mcpx-ui
 ARG UI_PORT
 
 ENV LOG_LEVEL="info"
