@@ -34,13 +34,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SearchInput } from "@/components/ui/search-input";
-import { toast } from "@/components/ui/use-toast";
+import { toast, useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
   McpServerPromptCard,
   McpServerToolCard,
 } from "@/components/mcp-servers/McpServerCapabilityCards";
 import { CapabilityItemDetailsDialog } from "@/components/capabilities/CapabilityItemDetailsDialog";
+import { AuthenticationDialog } from "@/components/dashboard/AuthenticationDialog";
+import { AuthenticationRequiredCard } from "@/components/dashboard/ServerStateCards";
 import HammerIcon from "@/components/capabilities/icons/hammer.svg?react";
 import PromptIcon from "@/components/capabilities/icons/prompt.svg?react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,6 +54,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useInitiateServerAuth } from "@/data/server-auth";
 import { routes } from "@/routes";
 import { Link } from "react-router-dom";
 import { useSocketStore } from "@/store";
@@ -660,81 +663,166 @@ function McpServerRow({
               transition: `opacity ${durationMs}ms ease-out, transform ${durationMs}ms ease-out`,
             }}
           >
-            <Tabs defaultValue="tools" className="gap-0">
-              <div className="border-b px-4 pt-3">
-                <TabsList variant="line" className="gap-3">
-                  <TabsTrigger value="tools" className="px-0">
-                    Tools
-                    <TabCount value={tools.length} />
-                  </TabsTrigger>
-                  <TabsTrigger value="prompts" className="px-0">
-                    Prompts
-                    <TabCount value={prompts.length} />
-                  </TabsTrigger>
-                  <TooltipProvider delayDuration={TOOLTIP_HOVER_DELAY_MS}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex cursor-not-allowed">
-                          <TabsTrigger
-                            value="resources"
-                            disabled
-                            className="pointer-events-none px-0"
-                          >
-                            Resources
-                          </TabsTrigger>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent sideOffset={8}>
-                        Coming soon
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </TabsList>
+            {server.state.type === "pending-auth" ? (
+              <div className="p-4">
+                <McpServerAuthenticationCard server={server} />
               </div>
-
-              <TabsContent value="tools" className="mt-0">
-                <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {tools.length > 0 ? (
-                    tools.map((tool) => (
-                      <McpServerToolCard
-                        key={tool.id}
-                        item={tool}
-                        className="w-full"
-                        onShowDetails={onShowDetails}
-                        onCustomizeItem={onCustomizeItem}
-                        onEditItem={onEditItem}
-                        onDeleteItem={onDeleteItem}
-                      />
-                    ))
-                  ) : (
-                    <EmptyTabMessage>No tools available</EmptyTabMessage>
-                  )}
+            ) : (
+              <Tabs defaultValue="tools" className="gap-0">
+                <div className="border-b px-4 pt-3">
+                  <TabsList variant="line" className="gap-3">
+                    <TabsTrigger value="tools" className="px-0">
+                      Tools
+                      <TabCount value={tools.length} />
+                    </TabsTrigger>
+                    <TabsTrigger value="prompts" className="px-0">
+                      Prompts
+                      <TabCount value={prompts.length} />
+                    </TabsTrigger>
+                    <TooltipProvider delayDuration={TOOLTIP_HOVER_DELAY_MS}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex cursor-not-allowed">
+                            <TabsTrigger
+                              value="resources"
+                              disabled
+                              className="pointer-events-none px-0"
+                            >
+                              Resources
+                            </TabsTrigger>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent sideOffset={8}>
+                          Coming soon
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TabsList>
                 </div>
-              </TabsContent>
 
-              <TabsContent value="prompts" className="mt-0">
-                <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {prompts.length > 0 ? (
-                    prompts.map((prompt) => (
-                      <McpServerPromptCard
-                        key={prompt.id}
-                        item={prompt}
-                        className="w-full"
-                        onShowDetails={onShowDetails}
-                        onEditItem={onEditItem}
-                        onDeleteItem={onDeleteItem}
-                      />
-                    ))
-                  ) : (
-                    <EmptyTabMessage>No prompts available</EmptyTabMessage>
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
+                <TabsContent value="tools" className="mt-0">
+                  <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {tools.length > 0 ? (
+                      tools.map((tool) => (
+                        <McpServerToolCard
+                          key={tool.id}
+                          item={tool}
+                          className="w-full"
+                          onShowDetails={onShowDetails}
+                          onCustomizeItem={onCustomizeItem}
+                          onEditItem={onEditItem}
+                          onDeleteItem={onDeleteItem}
+                        />
+                      ))
+                    ) : (
+                      <EmptyTabMessage>No tools available</EmptyTabMessage>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="prompts" className="mt-0">
+                  <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {prompts.length > 0 ? (
+                      prompts.map((prompt) => (
+                        <McpServerPromptCard
+                          key={prompt.id}
+                          item={prompt}
+                          className="w-full"
+                          onShowDetails={onShowDetails}
+                          onEditItem={onEditItem}
+                          onDeleteItem={onDeleteItem}
+                        />
+                      ))
+                    ) : (
+                      <EmptyTabMessage>No prompts available</EmptyTabMessage>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function McpServerAuthenticationCard({ server }: { server: TargetServer }) {
+  const { mutate: initiateServerAuth } = useInitiateServerAuth();
+  const { toast: showToast, dismiss } = useToast();
+  const [authWindow, setAuthWindow] = useState<Window | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [userCode, setUserCode] = useState<string | null>(null);
+
+  function handleAuthenticate() {
+    setIsAuthenticating(true);
+    initiateServerAuth(
+      { serverName: server.name },
+      {
+        onSuccess: ({ authorizationUrl, userCode: nextUserCode }) => {
+          if (authorizationUrl) {
+            const url = new URL(authorizationUrl).toString();
+            const newAuthWindow = window.open(
+              url,
+              "mcpx-auth-popup",
+              "width=600,height=700,popup=true",
+            );
+
+            if (newAuthWindow) {
+              newAuthWindow.focus();
+              setAuthWindow(newAuthWindow);
+            } else {
+              setIsAuthenticating(false);
+              showToast({
+                title: "Authentication Error",
+                description:
+                  "Failed to open authentication window. Please check your popup blocker settings.",
+                variant: "destructive",
+              });
+            }
+          } else {
+            setIsAuthenticating(false);
+            showToast({
+              title: "Authentication Error",
+              description: "No authorization URL received from server.",
+              variant: "destructive",
+            });
+          }
+
+          if (nextUserCode) {
+            dismiss();
+            setUserCode(nextUserCode);
+          }
+        },
+        onError: (error) => {
+          setIsAuthenticating(false);
+          showToast({
+            title: "Authentication Failed",
+            description: `Failed to initiate authentication: ${error.message}`,
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  }
+
+  return (
+    <>
+      <AuthenticationRequiredCard
+        authWindow={authWindow}
+        isAuthenticating={isAuthenticating}
+        onAuthenticate={handleAuthenticate}
+        setAuthWindow={setAuthWindow}
+        setIsAuthenticating={setIsAuthenticating}
+        setUserCode={setUserCode}
+        userCode={userCode}
+      />
+      <AuthenticationDialog
+        userCode={userCode}
+        serverStatus={getMcpServerStatusFromTargetServer(server)}
+        onClose={() => setUserCode(null)}
+      />
+    </>
   );
 }
 
