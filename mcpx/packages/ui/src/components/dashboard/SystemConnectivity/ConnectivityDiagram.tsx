@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
 import { Agent, McpServer } from "@/types";
 import { serversEqual } from "@/utils/server-comparison";
-import { Controls, Node, Panel, ReactFlow, useReactFlow } from "@xyflow/react";
+import {
+  Controls,
+  Node,
+  Panel,
+  ReactFlow,
+  useNodesInitialized,
+  useReactFlow,
+} from "@xyflow/react";
 
 import { Plus, ServerIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
@@ -37,13 +44,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-/** Fits view once on initial load so nodes appear centered from the start; does not resize on add/remove node. */
+/** Fits view once after React Flow measures its initial nodes; does not resize on add/remove node. */
 const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
   const { fitView } = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
   const hasInitializedRef = useRef(false);
 
   useEffect(() => {
-    if (nodes.length > 0 && !hasInitializedRef.current) {
+    if (nodesInitialized && nodes.length > 0 && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
 
       const screenWidth = window.innerWidth;
@@ -74,7 +82,8 @@ const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
         maxZoom = Math.max(maxZoom - 0.1, 0.3);
       }
 
-      // Fit immediately with no animation so nodes start centered from the beginning
+      // The measured-node effect re-lays out the graph in this render. Waiting
+      // for the next frame makes fitView use those final positions and sizes.
       requestAnimationFrame(() => {
         fitView({
           padding: 0.2,
@@ -83,7 +92,7 @@ const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
         });
       });
     }
-  }, [nodes.length, fitView]);
+  }, [nodes.length, nodesInitialized, fitView]);
 
   return null;
 };

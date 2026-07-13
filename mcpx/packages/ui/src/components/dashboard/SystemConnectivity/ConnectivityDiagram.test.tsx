@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectivityDiagram } from "./ConnectivityDiagram";
 
 const useReactFlowDataCalls: unknown[] = [];
+const fitView = vi.fn();
+let nodesInitialized = true;
 
 vi.mock("@xyflow/react", () => ({
   Controls: () => <div data-testid="controls" />,
@@ -15,7 +17,8 @@ vi.mock("@xyflow/react", () => ({
   ReactFlow: ({ children }: { children: ReactNode }) => (
     <div data-testid="react-flow">{children}</div>
   ),
-  useReactFlow: () => ({ fitView: vi.fn() }),
+  useNodesInitialized: () => nodesInitialized,
+  useReactFlow: () => ({ fitView }),
 }));
 
 vi.mock("./MiniMap", () => ({
@@ -127,6 +130,12 @@ function renderDiagram(isEditingSpaceOnBehalf: boolean) {
 describe("ConnectivityDiagram", () => {
   beforeEach(() => {
     useReactFlowDataCalls.length = 0;
+    fitView.mockClear();
+    nodesInitialized = true;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
   });
 
   it("hides Add Agent and keeps Add Server in hosted mode", () => {
@@ -151,5 +160,32 @@ describe("ConnectivityDiagram", () => {
     expect(
       screen.getByRole("button", { name: /add server/i }),
     ).toBeInTheDocument();
+  });
+
+  it("fits the initial graph after its nodes are measured", () => {
+    nodesInitialized = false;
+    const view = renderDiagram(false);
+
+    expect(fitView).not.toHaveBeenCalled();
+
+    nodesInitialized = true;
+    view.rerender(
+      <MemoryRouter>
+        <ConnectivityDiagram
+          agents={[]}
+          isEditingSpaceOnBehalf={false}
+          mcpServersData={[]}
+          mcpxStatus="running"
+          version="1.2.4"
+        />
+      </MemoryRouter>,
+    );
+
+    expect(fitView).toHaveBeenCalledTimes(1);
+    expect(fitView).toHaveBeenCalledWith({
+      duration: 0,
+      maxZoom: expect.any(Number),
+      padding: 0.2,
+    });
   });
 });
