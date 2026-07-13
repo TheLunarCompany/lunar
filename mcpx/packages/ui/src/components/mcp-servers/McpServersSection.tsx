@@ -1,4 +1,4 @@
-import { ChevronRight, ListFilter } from "lucide-react";
+import { ChevronRight, ListFilter, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import type {
@@ -24,7 +24,7 @@ import { ServerStatusBadge } from "@/components/dashboard/ServerStatusBadge";
 import { getMcpServerStatusFromTargetServer } from "@/components/dashboard/helpers";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { useServerInactive } from "@/hooks/useServerInactive";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -44,6 +44,7 @@ import { CapabilityItemDetailsDialog } from "@/components/capabilities/Capabilit
 import HammerIcon from "@/components/capabilities/icons/hammer.svg?react";
 import PromptIcon from "@/components/capabilities/icons/prompt.svg?react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ServerIconSvg from "@/icons/server_icon.svg?react";
 import {
   TOOLTIP_HOVER_DELAY_MS,
   Tooltip,
@@ -51,11 +52,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { routes } from "@/routes";
+import { Link } from "react-router-dom";
 import { useSocketStore } from "@/store";
 
 type McpServersSectionProps = {
   servers: TargetServer[];
 };
+
+const ZERO_STATE_ICON_WIDTH = 126;
+const ZERO_STATE_ICON_HEIGHT = 200;
 
 const annotationFilterOptions: {
   value: CapabilityAnnotationFilterValue;
@@ -218,7 +224,7 @@ function matchesAnnotationFilter(
     items: provider.items.filter((item) => {
       const annotations = item.annotations;
       if (!annotations) {
-        return filters.includes("write");
+        return false;
       }
 
       return filters.some((filter) => {
@@ -399,61 +405,68 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
         MCP Servers
       </h1>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <SearchInput
-            placeholder="Search tools, prompts and resources"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            wrapperClassName="w-[320px] max-w-full"
-            className="rounded-lg"
-          />
-          <AnnotationFilterDropdown
-            value={annotationFilter}
-            onChange={setAnnotationFilter}
-          />
-        </div>
-        {/* TODO: Add Server action will be implemented in the next step. */}
-        {/* <Button>
-          <Plus className="size-4" />
-          Add Server
-        </Button> */}
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-xs">
-        <h2 className="mb-5 text-base font-semibold text-[#20222A]">
-          MCP Servers Catalog
-        </h2>
-
-        {visibleProviders.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
-            No tools available.
+      {servers.length === 0 ? (
+        <McpServersZeroState />
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <SearchInput
+                placeholder="Search tools, prompts and resources"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                wrapperClassName="w-[320px] max-w-full"
+                className="rounded-lg"
+              />
+              <AnnotationFilterDropdown
+                value={annotationFilter}
+                onChange={setAnnotationFilter}
+              />
+            </div>
+            <Button asChild>
+              <Link to={routes.mcpServerAdd}>
+                <Plus className="size-4" />
+                Add Server
+              </Link>
+            </Button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {visibleProviders.map((provider) => {
-              const server = serversByName.get(provider.name);
-              if (!server) {
-                return null;
-              }
 
-              return (
-                <McpServerRow
-                  key={server.name}
-                  server={server}
-                  items={provider.items}
-                  isExpanded={expandedServers.has(server.name)}
-                  onClick={() => handleServerClick(server.name)}
-                  onShowDetails={setSelectedItem}
-                  onCustomizeItem={setCustomDialogItem}
-                  onEditItem={setCustomDialogItem}
-                  onDeleteItem={(item) => void handleDeleteCustomItem(item)}
-                />
-              );
-            })}
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-xs">
+            <h2 className="mb-5 text-base font-semibold text-[#20222A]">
+              MCP Servers Catalog
+            </h2>
+
+            {visibleProviders.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+                No tools available.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {visibleProviders.map((provider) => {
+                  const server = serversByName.get(provider.name);
+                  if (!server) {
+                    return null;
+                  }
+
+                  return (
+                    <McpServerRow
+                      key={server.name}
+                      server={server}
+                      items={provider.items}
+                      isExpanded={expandedServers.has(server.name)}
+                      onClick={() => handleServerClick(server.name)}
+                      onShowDetails={setSelectedItem}
+                      onCustomizeItem={setCustomDialogItem}
+                      onEditItem={setCustomDialogItem}
+                      onDeleteItem={(item) => void handleDeleteCustomItem(item)}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       <CapabilityItemDetailsDialog
         isOpen={selectedItem !== null}
@@ -496,6 +509,27 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
         onSubmitCustomCapabilityTool={handleSubmitCustomTool}
       />
     </>
+  );
+}
+
+function McpServersZeroState() {
+  return (
+    <div className="flex flex-1 items-center justify-center pb-20">
+      <div className="w-full rounded-lg border border-border bg-card p-12">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <ServerIconSvg
+            width={ZERO_STATE_ICON_WIDTH}
+            height={ZERO_STATE_ICON_HEIGHT}
+          />
+          <h2 className="text-xl font-semibold text-foreground">
+            No Servers Found
+          </h2>
+          <Button asChild>
+            <Link to={routes.mcpServerAdd}>Add Server</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 

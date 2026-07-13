@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Layout } from "./Layout";
+import { routes } from "@/routes";
 
 vi.mock("@/data/identity", () => ({
   useIdentity: () => ({ data: undefined }),
@@ -52,6 +53,12 @@ vi.mock("@/contexts/useAuth", () => ({
 
 vi.mock("@/hooks/useMcpxConnection", () => ({
   useMcpxConnection: vi.fn(),
+}));
+
+vi.mock("@/config/runtime-config", () => ({
+  getRuntimeConfigSync: () => ({}),
+  isSkillsPageEnabled: () => true,
+  isUiSidebarRestructureEnabled: () => true,
 }));
 
 vi.mock("@/store", () => ({
@@ -134,6 +141,27 @@ describe("Layout", () => {
     );
 
     expect(screen.getByRole("link", { name: "Skills" })).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "data-active",
+      "false",
+    );
+  });
+
+  it("keeps the MCP Servers nav item active on the add-server route", () => {
+    render(
+      <MemoryRouter initialEntries={[routes.mcpServerAdd]}>
+        <TooltipProvider>
+          <Layout>
+            <div>Page content</div>
+          </Layout>
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "MCP Servers" })).toHaveAttribute(
       "data-active",
       "true",
     );

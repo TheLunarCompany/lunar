@@ -512,6 +512,74 @@ export const catalogMcpServers: CatalogMCPServerList = [
       url: "https://linear.example.com/sse",
     },
   },
+  {
+    id: "0190a000-0000-7000-8000-000000000020",
+    name: "enterprise-knowledge-graph-orchestration-platform",
+    displayName:
+      "Enterprise Knowledge Graph Orchestration Platform With Extremely Long Display Name",
+    description:
+      "MCP server for indexing internal knowledge bases, enriching entities, resolving ownership metadata, and orchestrating graph-aware retrieval workflows across many connected enterprise systems.",
+    link: "https://github.com/example/enterprise-knowledge-graph-orchestration-platform",
+    iconPath: "/icons/context7.png",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@example/enterprise-knowledge-graph-mcp"],
+      env: {
+        KNOWLEDGE_GRAPH_API_KEY: { kind: "required", isSecret: true },
+        KNOWLEDGE_GRAPH_TENANT_ID: { kind: "required", isSecret: false },
+        ENTITY_RESOLUTION_MODEL: { kind: "optional", isSecret: false },
+      },
+    },
+  },
+  {
+    id: "0190a000-0000-7000-8000-000000000021",
+    name: "repository-intelligence",
+    displayName: "Repository Intelligence",
+    description:
+      "MCP server with an intentionally long description used to validate catalog card wrapping, truncation, and spacing. It scans repositories, indexes code ownership, maps dependency boundaries, summarizes pull request history, detects recurring review themes, correlates incidents with changed files, recommends onboarding paths for new engineers, and exposes tools for answering questions about unfamiliar codebases without forcing the user to manually inspect every folder, package, and build script first.",
+    doc: "https://docs.example.com/repository-intelligence",
+    iconPath: "/icons/github.png",
+    config: {
+      type: "stdio",
+      command: "uvx",
+      args: ["repository-intelligence-mcp"],
+      env: {
+        GITHUB_TOKEN: { kind: "required", isSecret: true },
+        GITHUB_ORG: { kind: "required", isSecret: false },
+      },
+    },
+  },
+  {
+    id: "0190a000-0000-7000-8000-000000000022",
+    name: "analytics-warehouse",
+    displayName: "Analytics Warehouse",
+    description:
+      "MCP server for querying and profiling warehouse data across staging, production, and sandbox datasets.",
+    link: "https://github.com/example/analytics-warehouse-mcp",
+    doc: "https://docs.example.com/analytics-warehouse-mcp",
+    iconPath: "/icons/google-drive.png",
+    config: {
+      type: "stdio",
+      command: "docker",
+      args: ["run", "-i", "--rm", "example/analytics-warehouse-mcp"],
+      env: {
+        WAREHOUSE_HOST: { kind: "required", isSecret: false },
+        WAREHOUSE_PORT: { kind: "optional", isSecret: false },
+        WAREHOUSE_DATABASE: { kind: "required", isSecret: false },
+        WAREHOUSE_SCHEMA: { kind: "optional", isSecret: false },
+        WAREHOUSE_USER: { kind: "required", isSecret: false },
+        WAREHOUSE_PASSWORD: { kind: "required", isSecret: true },
+        WAREHOUSE_ROLE: { kind: "optional", isSecret: false },
+        WAREHOUSE_HTTP_PATH: { kind: "optional", isSecret: false },
+        WAREHOUSE_CATALOG: { kind: "optional", isSecret: false },
+        WAREHOUSE_QUERY_TIMEOUT_SECONDS: {
+          kind: "optional",
+          isSecret: false,
+        },
+      },
+    },
+  },
 ];
 
 const initialApprovedCapabilities: Record<

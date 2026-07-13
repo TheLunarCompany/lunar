@@ -15,6 +15,7 @@ import SkillCapabilitiesEditor from "@/pages/SkillCapabilitiesEditor";
 import SkillAgentsEditor from "@/pages/SkillAgentsEditor";
 import SkillDetail from "@/pages/SkillDetail";
 import SkillEditor from "@/pages/SkillEditor";
+import McpServerAdd from "@/pages/McpServerAdd";
 import NotFound from "@/pages/NotFound";
 import Capabilities from "@/pages/Capabilities";
 import { LoginRoute, LogoutRoute } from "@/pages/Login";
@@ -37,6 +38,7 @@ export function createAppRoutes() {
         <Route path={routes.dashboard} element={<Dashboard />} />
         <Route path={routes.capabilities} element={<Capabilities />} />
         <Route path={routes.mcpServers} element={<McpServers />} />
+        <Route path={routes.mcpServerAdd} element={<McpServerAdd />} />
         {isSkillsPageEnabled() ? (
           <>
             <Route path={routes.skills} element={<Skills />} />

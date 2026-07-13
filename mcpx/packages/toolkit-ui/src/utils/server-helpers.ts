@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import {
   inferServerTypeFromUrl,
+  isRemoteUrlValid,
   isValidJson,
   mcpJsonSchema,
   parseServerPayload,
@@ -9,6 +10,7 @@ import {
 } from "./mcpJson";
 import {
   AllowedCommands,
+  CatalogConfig,
   TargetServerRequest,
   catalogMCPServerSchema,
   catalogConfigSchema,
@@ -58,6 +60,14 @@ type TabValue = (typeof TABS)[keyof typeof TABS];
  */
 export function normalizeServerName(name: string): string {
   return name.toLowerCase().trim();
+}
+
+export function isRemoteUrlNeedEdit(config: CatalogConfig): boolean {
+  if (config.type === "stdio") {
+    return false;
+  }
+
+  return !isRemoteUrlValid(config.url);
 }
 
 export function getReservedServersNames(

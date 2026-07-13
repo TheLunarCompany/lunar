@@ -7,8 +7,10 @@ import GitHubLogo from "./icons/GitHubLogo.svg?react";
 import GitHubLogoSolid from "./icons/GitHubLogoSolid.svg?react";
 import { ServerStatusBadge } from "./ServerStatusBadge";
 import { ServerCatalogBadges } from "./ServerCatalogBadges";
-import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
-import { CatalogMCPServerConfigByNameItem } from "@mcpx/toolkit-ui/src/utils/server-helpers";
+import {
+  CatalogMCPServerConfigByNameItem,
+  isRemoteUrlNeedEdit,
+} from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { CatalogConfig, EnvValue } from "@mcpx/shared-model";
 import { useToast } from "@/components/ui/use-toast";
 import { convertRequirementsToValues } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
@@ -38,13 +40,6 @@ function initializeEnvVarKeys(config: CatalogConfig): string[] {
     keys.push("URL");
   }
   return keys;
-}
-
-function isRemoteUrlNeedEdit(config: CatalogConfig): boolean {
-  if (config.type !== "stdio") {
-    return !isRemoteUrlValid(config.url);
-  }
-  return false; // if not remote, no url to edit
 }
 
 export const ServerCard = ({

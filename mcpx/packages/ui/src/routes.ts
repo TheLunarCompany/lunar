@@ -3,6 +3,7 @@ export const routes = {
   dashboard: "/dashboard",
   capabilities: "/capabilities",
   mcpServers: "/mcp-servers",
+  mcpServerAdd: "/mcp-servers/add",
   skills: "/skills",
   skillNew: "/skills/new",
   skillNewUpload: "/skills/new/upload",
