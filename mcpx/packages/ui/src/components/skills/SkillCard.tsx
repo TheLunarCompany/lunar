@@ -101,7 +101,7 @@ export function SkillCard({
         size="sm"
         onClick={() => navigate(detailHref)}
         className={cn(
-          "group relative flex min-h-[150px] cursor-pointer flex-col gap-0 rounded-xl border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-4 shadow-sm ring-0 transition hover:-translate-y-px hover:border-primary/40 hover:shadow-lg",
+          "group relative flex min-h-40 cursor-pointer flex-col gap-0 rounded-xl border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-4 shadow-sm ring-0 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
           className,
         )}
       >
@@ -150,12 +150,12 @@ export function SkillCard({
 
         <TooltipProvider delayDuration={500}>
           {/* Top: icon + name */}
-          <div className="flex items-center gap-3 pr-12">
+          <div className="flex items-center gap-3 pr-10">
             <LetterAvatar name={skill.name} />
             <div className="min-w-0 flex-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <h3 className="truncate text-[14.5px] font-semibold leading-tight tracking-[-0.01em] text-[var(--text-colours-color-text-primary)]">
+                  <h3 className="truncate text-sm font-semibold leading-5 text-[var(--text-colours-color-text-primary)]">
                     {skill.name}
                   </h3>
                 </TooltipTrigger>
@@ -196,23 +196,21 @@ export function SkillCard({
             MCP Servers
           </p>
           {providers.length > 0 ? (
-            <div className="flex min-w-0 items-start gap-1.5">
-              <SkillProviderBadges className="min-w-0 flex-1">
-                {visibleProviderBadges.map(({ name, isMissingOrInactive }) => (
-                  <SkillProviderBadge
-                    key={name}
-                    name={name}
-                    isMissingOrInactive={isMissingOrInactive}
-                  />
-                ))}
-              </SkillProviderBadges>
+            <SkillProviderBadges className="min-w-0">
+              {visibleProviderBadges.map(({ name, isMissingOrInactive }) => (
+                <SkillProviderBadge
+                  key={name}
+                  name={name}
+                  isMissingOrInactive={isMissingOrInactive}
+                />
+              ))}
               {hiddenProvidersCount > 0 ? (
                 <SkillMoreProviders
                   count={hiddenProvidersCount}
                   className="shrink-0"
                 />
               ) : null}
-            </div>
+            </SkillProviderBadges>
           ) : (
             <div className="flex items-center gap-1.5 text-[12px] text-[var(--colors-gray-500)]">
               <Unplug className="size-3.5" />

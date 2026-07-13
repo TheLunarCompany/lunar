@@ -239,6 +239,8 @@ describe("SkillCard", () => {
     expect(screen.getByText("calculator")).toBeInTheDocument();
     expect(screen.getByText("filesystem")).toBeInTheDocument();
     expect(screen.getByText("+2")).toHaveClass("shrink-0");
+    expect(screen.getByText("+2")).toHaveClass("rounded");
+    expect(screen.getByText("+2").closest("div.flex.flex-wrap")).not.toBeNull();
     expect(screen.queryByText("datadog")).not.toBeInTheDocument();
     expect(screen.queryByText("postgres")).not.toBeInTheDocument();
   });

@@ -8,7 +8,12 @@ import {
 } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useCreateSkill, useSkill, useUpdateSkillDetails } from "@/data/skills";
+import {
+  useCreateSkill,
+  useEnabledSkills,
+  useSkill,
+  useUpdateSkillDetails,
+} from "@/data/skills";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { toast } from "@/components/ui/use-toast";
 import SkillEditor from "./SkillEditor";
@@ -23,6 +28,7 @@ const mockSocket = vi.hoisted(() => ({
 vi.mock("@/data/skills", () => ({
   useSkill: vi.fn(),
   useCreateSkill: vi.fn(),
+  useEnabledSkills: vi.fn(),
   useUpdateSkillDetails: vi.fn(),
 }));
 vi.mock("@/components/ui/use-toast", () => ({ toast: vi.fn() }));
@@ -44,6 +50,11 @@ describe("SkillEditor", () => {
     vi.mocked(useUpdateSkillDetails).mockReturnValue(idleMutation as never);
     vi.mocked(useSkill).mockReturnValue({
       data: undefined,
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(useEnabledSkills).mockReturnValue({
+      data: [],
       isLoading: false,
       isError: false,
     } as never);
@@ -215,6 +226,34 @@ describe("SkillEditor", () => {
     expect(within(fileStructureCard).getByText("SKILL.md")).toBeInTheDocument();
   });
 
+  it("renders applied agents and navigates to their manager from the edit view", async () => {
+    const user = userEvent.setup();
+    const skill = existingSkill();
+    const subject = { kind: "clientName" as const, value: "cursor" };
+    vi.mocked(useSkill).mockReturnValue({
+      data: skill,
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(useEnabledSkills).mockReturnValue({
+      data: [{ subject, skillIds: [skill.id] }],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    renderEditorRoute(`/skills/${skill.id}/edit`);
+
+    const appliedAgents = screen.getByTestId("applied-agents");
+    expect(within(appliedAgents).getByText("cursor")).toBeInTheDocument();
+    await user.click(
+      within(appliedAgents).getByRole("button", {
+        name: "Manage agents",
+      }),
+    );
+
+    expect(await screen.findByText("Agents editor")).toBeInTheDocument();
+  });
+
   it("saves only skill details when an existing skill has capabilities", async () => {
     const user = userEvent.setup();
     const updateMutation = { mutateAsync: vi.fn(), isPending: false };
@@ -372,6 +411,10 @@ function renderEditorRoute(
       {
         path: "/skills/:id/capabilities",
         element: <CapabilitiesRoute />,
+      },
+      {
+        path: "/skills/:id/agents",
+        element: <div>Agents editor</div>,
       },
       { path: "/skills", element: <div>Skills list</div> },
     ],

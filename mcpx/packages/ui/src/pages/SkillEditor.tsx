@@ -2,6 +2,7 @@ import { buildCapabilityProvidersFromCurrentTools } from "@/components/capabilit
 import { SkillFileStructureCard } from "@/components/skills/SkillFileStructureCard";
 import { SkillLinkedCapabilitiesCard } from "@/components/skills/SkillLinkedCapabilitiesCard";
 import {
+  SkillAppliedAgentsCard,
   SkillBreadcrumbTrail,
   SkillForm,
   SkillPage,
@@ -9,7 +10,12 @@ import {
 import { getSkillBreadcrumbs } from "@/components/skills/skill-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { useCreateSkill, useSkill, useUpdateSkillDetails } from "@/data/skills";
+import {
+  useCreateSkill,
+  useEnabledSkills,
+  useSkill,
+  useUpdateSkillDetails,
+} from "@/data/skills";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useUnsavedChangesPrompt } from "@/hooks/useUnsavedChangesPrompt";
 import { routes } from "@/routes";
@@ -19,6 +25,7 @@ import {
   buildLinkedCapabilityProviders,
   deriveSkillCapabilitySelectionState,
 } from "@/mapping/skill-capabilities";
+import { buildSkillAgentSelection } from "@/mapping/skill-agents";
 import { useMemo, useState } from "react";
 import {
   generatePath,
@@ -39,6 +46,7 @@ export default function SkillEditor() {
   );
 
   const skillQuery = useSkill(id ?? "");
+  const enabledSkillsQuery = useEnabledSkills();
   const catalogServersQuery = useGetMCPServers();
   const createSkill = useCreateSkill();
   const updateSkillDetails = useUpdateSkillDetails();
@@ -119,6 +127,19 @@ export default function SkillEditor() {
       selectedKeys,
     });
   }, [selectableCapabilityProviders, skillQuery.data?.capabilityGroup]);
+  const skillAgentSelection = useMemo(
+    () =>
+      buildSkillAgentSelection({
+        clusters: systemState?.connectedClientClusters ?? [],
+        enabled: enabledSkillsQuery.data ?? [],
+        skillId: skillQuery.data?.id ?? "",
+      }),
+    [
+      enabledSkillsQuery.data,
+      skillQuery.data?.id,
+      systemState?.connectedClientClusters,
+    ],
+  );
 
   function navigateToCapabilities(providerName?: string) {
     if (!id) {
@@ -197,6 +218,19 @@ export default function SkillEditor() {
                       navigateToCapabilities(provider.name)
                     }
                     onLinkCapabilities={() => navigateToCapabilities()}
+                  />
+                  <SkillAppliedAgentsCard
+                    options={skillAgentSelection.options}
+                    appliedSubjects={skillAgentSelection.selected}
+                    loading={enabledSkillsQuery.isLoading}
+                    error={enabledSkillsQuery.isError}
+                    onManageAgents={() =>
+                      navigate(
+                        generatePath(routes.skillAgents, {
+                          id: skillQuery.data.id,
+                        }),
+                      )
+                    }
                   />
                 </div>
               ) : null}

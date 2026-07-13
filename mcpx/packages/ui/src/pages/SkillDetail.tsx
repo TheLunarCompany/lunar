@@ -1,6 +1,7 @@
 import {
   MarkdownEditor,
   SkillBreadcrumbTrail,
+  SkillAppliedAgentsSummary,
   SkillIdentity,
   SkillLinkedCapabilities,
   SkillPage,
@@ -18,10 +19,12 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
-import { useDeleteSkill, useSkill } from "@/data/skills";
+import { useDeleteSkill, useEnabledSkills, useSkill } from "@/data/skills";
+import { useGetMCPServers } from "@/data/catalog-servers";
+import { buildSkillAgentSelection } from "@/mapping/skill-agents";
 import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import {
   generatePath,
@@ -35,11 +38,22 @@ export default function SkillDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const skillQuery = useSkill(id ?? "");
+  const catalogServersQuery = useGetMCPServers();
   const deleteSkill = useDeleteSkill();
+  const enabledSkillsQuery = useEnabledSkills();
   const systemState = useSocketStore((state) => state.systemState);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const skill = skillQuery.data;
+  const skillAgentSelection = useMemo(
+    () =>
+      buildSkillAgentSelection({
+        clusters: systemState?.connectedClientClusters ?? [],
+        enabled: enabledSkillsQuery.data ?? [],
+        skillId: skill?.id ?? "",
+      }),
+    [enabledSkillsQuery.data, skill?.id, systemState?.connectedClientClusters],
+  );
 
   useEffect(() => {
     if (!skill || !location.hash) {
@@ -142,6 +156,9 @@ export default function SkillDetail() {
                 <TabsTrigger value="mcp-capabilities" className="px-4">
                   MCP capabilities
                 </TabsTrigger>
+                <TabsTrigger value="applied-agents" className="px-4">
+                  Applied to agents
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="skill" className="mt-0">
                 <MarkdownEditor
@@ -158,11 +175,23 @@ export default function SkillDetail() {
                   id="linked-mcp-capabilities"
                   capabilityGroup={skill.capabilityGroup}
                   systemState={systemState}
+                  catalogItems={catalogServersQuery.data}
                   showEmptyState
                   onEdit={() =>
                     navigate(
                       generatePath(routes.skillCapabilities, { id: skill.id }),
                     )
+                  }
+                />
+              </TabsContent>
+              <TabsContent value="applied-agents" className="mt-0">
+                <SkillAppliedAgentsSummary
+                  options={skillAgentSelection.options}
+                  appliedSubjects={skillAgentSelection.selected}
+                  loading={enabledSkillsQuery.isLoading}
+                  error={enabledSkillsQuery.isError}
+                  onEdit={() =>
+                    navigate(generatePath(routes.skillAgents, { id: skill.id }))
                   }
                 />
               </TabsContent>

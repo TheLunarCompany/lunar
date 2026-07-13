@@ -23,6 +23,8 @@ import type {
   Skill,
   SkillCapabilityGroup,
   SkillDraft,
+  EnabledSkills,
+  ScopeSubject,
 } from "@mcpx/shared-model";
 import {
   singleToolGroupSchema,
@@ -40,6 +42,7 @@ import {
   auditLogsResponseSchema,
   skillCatalogResponseSchema,
   skillSchema,
+  enabledSkillsResponseSchema,
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getAdminWebserverURL, getMcpxServerURL } from "@/config/api-config";
@@ -722,6 +725,38 @@ class ApiClient {
         method: "DELETE",
         credentials: "include",
       },
+    );
+
+    if (!response.ok) {
+      throw await getApiError(response);
+    }
+  }
+
+  async getEnabledSkills(): Promise<EnabledSkills[]> {
+    const { enabled } = await this.request(
+      "/skills/enabled",
+      enabledSkillsResponseSchema,
+    );
+    return enabled;
+  }
+
+  async enableSkill(id: string, subject: ScopeSubject): Promise<void> {
+    return this.updateSkillEnablement(id, subject, "PUT");
+  }
+
+  async disableSkill(id: string, subject: ScopeSubject): Promise<void> {
+    return this.updateSkillEnablement(id, subject, "DELETE");
+  }
+
+  private async updateSkillEnablement(
+    id: string,
+    subject: ScopeSubject,
+    method: "PUT" | "DELETE",
+  ): Promise<void> {
+    const pathSegments = ["skills", id, "enabled", subject.kind, subject.value];
+    const response = await fetch(
+      `${this.baseUrl}/${pathSegments.map(encodeURIComponent).join("/")}`,
+      { method, credentials: "include" },
     );
 
     if (!response.ok) {

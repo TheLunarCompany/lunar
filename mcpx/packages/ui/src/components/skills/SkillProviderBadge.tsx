@@ -61,7 +61,7 @@ export function SkillMoreProviders({
     <Badge
       variant="outline"
       className={cn(
-        "h-auto min-w-0 rounded-md border-[var(--colors-gray-100)] bg-[var(--structure-color-bg-app)] px-2 py-1.5 text-[12px] font-normal text-[var(--text-colours-color-text-secondary)]",
+        "h-auto min-w-0 rounded border-[var(--colors-gray-100)] bg-[var(--structure-color-bg-app)] px-2 py-1.5 text-[12px] font-normal text-[var(--text-colours-color-text-secondary)]",
         className,
       )}
     >

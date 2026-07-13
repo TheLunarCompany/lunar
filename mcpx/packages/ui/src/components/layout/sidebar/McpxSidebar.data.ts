@@ -2,7 +2,6 @@ import {
   Gauge,
   Hammer,
   Library,
-  FileText,
   Sparkles,
   ScrollText,
   Server,
@@ -93,7 +92,7 @@ function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
     workspaceItems.push({
       id: "skills",
       label: "Skills",
-      icon: FileText,
+      icon: Sparkles,
       url: routes.skills,
     });
   }

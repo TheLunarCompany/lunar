@@ -2,27 +2,38 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { apiClient } from "@/lib/api";
+import { ApiError, apiClient } from "@/lib/api";
+import type { ScopeSubject } from "@mcpx/shared-model";
 import {
   skillsQueryKey,
   useCreateSkill,
   useDeleteSkill,
+  useEnabledSkills,
   useSkill,
   useSkills,
+  useUpdateSkillEnablement,
   useUpdateSkillDetails,
   useUpdateSkillCapabilities,
 } from "./skills";
 
-vi.mock("@/lib/api", () => ({
-  apiClient: {
-    getSkills: vi.fn(),
-    getSkill: vi.fn(),
-    createSkill: vi.fn(),
-    updateSkillDetails: vi.fn(),
-    updateSkillCapabilities: vi.fn(),
-    deleteSkill: vi.fn(),
-  },
-}));
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api")>();
+
+  return {
+    ...actual,
+    apiClient: {
+      getSkills: vi.fn(),
+      getSkill: vi.fn(),
+      createSkill: vi.fn(),
+      updateSkillDetails: vi.fn(),
+      updateSkillCapabilities: vi.fn(),
+      deleteSkill: vi.fn(),
+      getEnabledSkills: vi.fn(),
+      enableSkill: vi.fn(),
+      disableSkill: vi.fn(),
+    },
+  };
+});
 
 const skill = {
   id: "0190a000-0000-7000-8000-000000000001",
@@ -70,6 +81,227 @@ describe("skills data hooks", () => {
 
     expect(apiClient.getSkill).toHaveBeenCalledWith(skill.id);
     expect(result.current.data).toEqual(skill);
+  });
+
+  it("loads enabled skills", async () => {
+    const enabled = [
+      {
+        subject: { kind: "consumerTag" as const, value: "reviewers" },
+        skillIds: [skill.id],
+      },
+    ];
+    vi.mocked(apiClient.getEnabledSkills).mockResolvedValue(enabled);
+
+    const { result } = renderHook(() => useEnabledSkills(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(apiClient.getEnabledSkills).toHaveBeenCalledOnce();
+    expect(result.current.data).toEqual(enabled);
+  });
+
+  it("does not write when skill enablement is unchanged", async () => {
+    const reviewers: ScopeSubject = {
+      kind: "consumerTag",
+      value: "reviewers",
+    };
+    const { result } = renderHook(() => useUpdateSkillEnablement(), {
+      wrapper,
+    });
+
+    await result.current.mutateAsync({
+      skillId: skill.id,
+      previous: [reviewers],
+      next: [reviewers],
+    });
+
+    expect(apiClient.enableSkill).not.toHaveBeenCalled();
+    expect(apiClient.disableSkill).not.toHaveBeenCalled();
+  });
+
+  it("enables only added subjects", async () => {
+    const reviewers: ScopeSubject = {
+      kind: "consumerTag",
+      value: "reviewers",
+    };
+    vi.mocked(apiClient.enableSkill).mockResolvedValue(undefined);
+    const { result } = renderHook(() => useUpdateSkillEnablement(), {
+      wrapper,
+    });
+
+    await result.current.mutateAsync({
+      skillId: skill.id,
+      previous: [],
+      next: [reviewers],
+    });
+
+    expect(apiClient.enableSkill).toHaveBeenCalledWith(skill.id, reviewers);
+    expect(apiClient.disableSkill).not.toHaveBeenCalled();
+  });
+
+  it("disables only removed subjects", async () => {
+    const reviewers: ScopeSubject = {
+      kind: "consumerTag",
+      value: "reviewers",
+    };
+    vi.mocked(apiClient.disableSkill).mockResolvedValue(undefined);
+    const { result } = renderHook(() => useUpdateSkillEnablement(), {
+      wrapper,
+    });
+
+    await result.current.mutateAsync({
+      skillId: skill.id,
+      previous: [reviewers],
+      next: [],
+    });
+
+    expect(apiClient.disableSkill).toHaveBeenCalledWith(skill.id, reviewers);
+    expect(apiClient.enableSkill).not.toHaveBeenCalled();
+  });
+
+  it("applies added and removed subjects together", async () => {
+    const previous: ScopeSubject = {
+      kind: "consumerTag",
+      value: "old-reviewers",
+    };
+    const next: ScopeSubject = { kind: "clientName", value: "new-agent" };
+    vi.mocked(apiClient.enableSkill).mockResolvedValue(undefined);
+    vi.mocked(apiClient.disableSkill).mockResolvedValue(undefined);
+    const { result } = renderHook(() => useUpdateSkillEnablement(), {
+      wrapper,
+    });
+
+    await result.current.mutateAsync({
+      skillId: skill.id,
+      previous: [previous],
+      next: [next],
+    });
+
+    expect(apiClient.enableSkill).toHaveBeenCalledWith(skill.id, next);
+    expect(apiClient.disableSkill).toHaveBeenCalledWith(skill.id, previous);
+  });
+
+  it("awaits enabled-skill invalidation after a successful update", async () => {
+    vi.mocked(apiClient.enableSkill).mockResolvedValue(undefined);
+    const invalidation = deferred<void>();
+    const invalidateQueries = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockReturnValue(invalidation.promise);
+    const { result } = renderHook(() => useUpdateSkillEnablement(), {
+      wrapper,
+    });
+    let settled = false;
+
+    const mutation = result.current
+      .mutateAsync({
+        skillId: skill.id,
+        previous: [],
+        next: [{ kind: "clientName", value: "review-agent" }],
+      })
+      .then(() => {
+        settled = true;
+      });
+
+    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledOnce());
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: skillsQueryKey.enabled,
+    });
+    expect(settled).toBe(false);
+
+    invalidation.resolve();
+    await mutation;
+    expect(settled).toBe(true);
+  });
+
+  it("preserves one ApiError after every write settles and invalidates", async () => {
+    const enablement = deferred<void>();
+    const disablement = deferred<void>();
+    const invalidation = deferred<void>();
+    const enableError = new ApiError("Skill enablement denied", 403, {
+      message: "Skill enablement denied",
+    });
+    vi.mocked(apiClient.enableSkill).mockReturnValue(enablement.promise);
+    vi.mocked(apiClient.disableSkill).mockReturnValue(disablement.promise);
+    const invalidateQueries = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockReturnValue(invalidation.promise);
+    const { result } = renderHook(() => useUpdateSkillEnablement(), {
+      wrapper,
+    });
+
+    let settled = false;
+    const mutation = result.current.mutateAsync({
+      skillId: skill.id,
+      previous: [{ kind: "consumerTag", value: "old-reviewers" }],
+      next: [{ kind: "clientName", value: "new-agent" }],
+    });
+    void mutation.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+
+    await waitFor(() => {
+      expect(apiClient.enableSkill).toHaveBeenCalledOnce();
+      expect(apiClient.disableSkill).toHaveBeenCalledOnce();
+    });
+    enablement.reject(enableError);
+    await Promise.resolve();
+    expect(invalidateQueries).not.toHaveBeenCalled();
+
+    disablement.resolve();
+    await waitFor(() => expect(invalidateQueries).toHaveBeenCalledOnce());
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: skillsQueryKey.enabled,
+    });
+    expect(settled).toBe(false);
+
+    invalidation.resolve();
+    await expect(mutation).rejects.toBe(enableError);
+  });
+
+  it("aggregates multiple normalized failures after every write settles", async () => {
+    const enablement = deferred<void>();
+    const disablement = deferred<void>();
+    const enableError = new ApiError("Skill enablement denied", 403, {
+      message: "Skill enablement denied",
+    });
+    vi.mocked(apiClient.enableSkill).mockReturnValue(enablement.promise);
+    vi.mocked(apiClient.disableSkill).mockReturnValue(disablement.promise);
+    vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue(undefined);
+    const { result } = renderHook(() => useUpdateSkillEnablement(), {
+      wrapper,
+    });
+    let settled = false;
+
+    const mutation = result.current.mutateAsync({
+      skillId: skill.id,
+      previous: [{ kind: "consumerTag", value: "old-reviewers" }],
+      next: [{ kind: "clientName", value: "new-agent" }],
+    });
+    const rejection = mutation.catch((reason: unknown) => {
+      settled = true;
+      return reason;
+    });
+
+    enablement.reject(enableError);
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    disablement.reject("disable failed");
+    const error = await rejection;
+
+    expect(error).toBeInstanceOf(AggregateError);
+    expect(error).toMatchObject({
+      message: "Failed to update skill enablement",
+      errors: [enableError, expect.any(Error)],
+    });
+    expect((error as AggregateError).errors[1]).toMatchObject({
+      message: "disable failed",
+    });
   });
 
   it("invalidates skills after create succeeds", async () => {
@@ -175,3 +407,14 @@ describe("skills data hooks", () => {
     );
   }
 });
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return { promise, resolve, reject };
+}

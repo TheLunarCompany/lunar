@@ -9,14 +9,17 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useDeleteSkill, useSkill } from "@/data/skills";
+import { useGetMCPServers } from "@/data/catalog-servers";
+import { useDeleteSkill, useEnabledSkills, useSkill } from "@/data/skills";
 import { toast } from "@/components/ui/use-toast";
 import SkillDetail from "./SkillDetail";
 
 vi.mock("@/data/skills", () => ({
   useSkill: vi.fn(),
   useDeleteSkill: vi.fn(),
+  useEnabledSkills: vi.fn(),
 }));
+vi.mock("@/data/catalog-servers", () => ({ useGetMCPServers: vi.fn() }));
 vi.mock("@/components/ui/use-toast", () => ({ toast: vi.fn() }));
 
 const idleMutation = { mutateAsync: vi.fn(), isPending: false };
@@ -25,6 +28,16 @@ describe("SkillDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useDeleteSkill).mockReturnValue(idleMutation as never);
+    vi.mocked(useEnabledSkills).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(useGetMCPServers).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    } as never);
     vi.mocked(useSkill).mockReturnValue({
       data: {
         id: "0190a000-0000-7000-8000-000000000001",
@@ -53,6 +66,10 @@ describe("SkillDetail", () => {
             <Route
               path="/skills/:id/capabilities"
               element={<div>Capabilities editor route</div>}
+            />
+            <Route
+              path="/skills/:id/agents"
+              element={<div>Skill agents editor route</div>}
             />
           </Routes>
         </MemoryRouter>
@@ -106,12 +123,8 @@ describe("SkillDetail", () => {
       "page",
     );
     expect(
-      screen.getByRole("heading", { name: "Skills", level: 1 }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("heading", { name: "existing", level: 2 }),
     ).toBeInTheDocument();
-    expect(screen.getByText("EX")).toBeInTheDocument();
     expect(screen.getByText("Existing description")).toBeInTheDocument();
     expect(screen.getByText("Maintained by")).toBeInTheDocument();
     expect(screen.getByText("Amir")).toBeInTheDocument();
@@ -128,6 +141,9 @@ describe("SkillDetail", () => {
       screen.getByRole("tab", { name: "MCP capabilities" }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole("tab", { name: "Applied to agents" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("heading", {
         name: "Existing instructions",
         level: 1,
@@ -139,8 +155,42 @@ describe("SkillDetail", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders Applied to agents read-only and navigates to its editor", async () => {
+    const user = userEvent.setup();
+    const skillId = "0190a000-0000-7000-8000-000000000001";
+    const subject = { kind: "consumerTag" as const, value: "engineering" };
+    vi.mocked(useEnabledSkills).mockReturnValue({
+      data: [{ subject, skillIds: [skillId] }],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    renderSkillDetail(`/skills/${skillId}`);
+    await user.click(screen.getByRole("tab", { name: "Applied to agents" }));
+
+    expect(screen.getByText("engineering")).toBeInTheDocument();
+    expect(screen.getByText("Not currently connected")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByText("Skill agents editor route")).toBeInTheDocument();
+  });
+
   it("shows linked MCP capabilities in the MCP capabilities tab", async () => {
     const user = userEvent.setup();
+    vi.mocked(useGetMCPServers).mockReturnValue({
+      data: [
+        {
+          id: "0190a000-0000-7000-8000-000000000010",
+          name: "browser",
+          displayName: "Browser",
+          description: undefined,
+          config: {},
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as never);
     vi.mocked(useSkill).mockReturnValue({
       data: {
         id: "0190a000-0000-7000-8000-000000000001",
@@ -170,7 +220,7 @@ describe("SkillDetail", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Linked MCP capabilities")).toBeInTheDocument();
-      expect(screen.getByText("Unavailable MCP server")).toBeInTheDocument();
+      expect(screen.getByText("Browser")).toBeInTheDocument();
     });
   });
 

@@ -168,24 +168,29 @@ export const Layout: FC<LayoutProps> = ({
   );
 };
 
-function getActiveSidebarItemId(pathname: string) {
-  const sidebarRouteMatches: Array<{ path: string; id: string }> = [
-    { path: routes.dashboard, id: "dashboard" },
-    {
-      path: routes.catalog,
-      id: isUiSidebarRestructureEnabled() ? "mcp-registry" : "catalog",
-    },
-    { path: routes.mcpServers, id: "mcp-servers" },
-    { path: routes.tools, id: "tools" },
-    { path: routes.capabilities, id: "capabilities" },
-    { path: routes.skills, id: "skills" },
-    { path: routes.savedSetups, id: "saved-setups" },
-    { path: routes.auditLog, id: "audit-log" },
-  ];
+const sidebarRouteMatches: Array<{ path: string; id: string }> = [
+  { path: routes.dashboard, id: "dashboard" },
+  { path: routes.catalog, id: "catalog" },
+  { path: routes.mcpServers, id: "mcp-servers" },
+  { path: routes.tools, id: "tools" },
+  { path: routes.capabilities, id: "capabilities" },
+  { path: routes.skills, id: "skills" },
+  { path: routes.savedSetups, id: "saved-setups" },
+  { path: routes.auditLog, id: "audit-log" },
+];
 
-  return (
-    sidebarRouteMatches.find(
-      (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
-    )?.id ?? "dashboard"
+function getActiveSidebarItemId(pathname: string) {
+  const matchedItem = sidebarRouteMatches.find(
+    (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
   );
+
+  if (!matchedItem) {
+    return "dashboard";
+  }
+
+  if (matchedItem.id === "catalog" && isUiSidebarRestructureEnabled()) {
+    return "mcp-registry";
+  }
+
+  return matchedItem.id;
 }

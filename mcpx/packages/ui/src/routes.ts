@@ -10,6 +10,7 @@ export const routes = {
   skillDetail: "/skills/:id",
   skillEditor: "/skills/:id/edit",
   skillCapabilities: "/skills/:id/capabilities",
+  skillAgents: "/skills/:id/agents",
   tools: "/tools",
   catalog: "/catalog",
   savedSetups: "/saved-setups",

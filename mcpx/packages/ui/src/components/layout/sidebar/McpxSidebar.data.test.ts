@@ -104,6 +104,24 @@ describe("getDefaultMcpxSidebarSections", () => {
     });
   });
 
+  it("uses the Sparkles icon for Skills in the restructured sections", async () => {
+    vi.doMock("@/config/runtime-config", () => ({
+      isCapabilitiesEnabled: () => false,
+      isSkillsPageEnabled: () => true,
+      isUiSidebarRestructureEnabled: () => true,
+    }));
+    const { getDefaultMcpxSidebarSections } = await import(
+      "./McpxSidebar.data"
+    );
+    const { Sparkles } = await import("lucide-react");
+
+    const skillsItem = getDefaultMcpxSidebarSections()
+      .flatMap((section) => section.items)
+      .find((item) => item.id === "skills");
+
+    expect(skillsItem?.icon).toBe(Sparkles);
+  });
+
   it("points MCP Registry to the existing catalog route", async () => {
     vi.doMock("@/config/runtime-config", () => ({
       isCapabilitiesEnabled: () => false,

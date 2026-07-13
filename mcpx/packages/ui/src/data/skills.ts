@@ -1,5 +1,10 @@
 import { apiClient } from "@/lib/api";
-import type { SkillCapabilityGroup, SkillDraft } from "@mcpx/shared-model";
+import { diffScopeSubjects } from "@/mapping/skill-agents";
+import type {
+  ScopeSubject,
+  SkillCapabilityGroup,
+  SkillDraft,
+} from "@mcpx/shared-model";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type SkillDetailsDraft = Omit<SkillDraft, "capabilityGroup">;
@@ -7,6 +12,7 @@ export type SkillDetailsDraft = Omit<SkillDraft, "capabilityGroup">;
 export const skillsQueryKey = {
   all: ["skills"] as const,
   detail: (id: string) => ["skills", id] as const,
+  enabled: ["skills", "enabled"] as const,
 };
 
 export function useSkills() {
@@ -21,6 +27,54 @@ export function useSkill(id: string) {
     queryKey: skillsQueryKey.detail(id),
     queryFn: () => apiClient.getSkill(id),
     enabled: id.length > 0,
+  });
+}
+
+export function useEnabledSkills() {
+  return useQuery({
+    queryKey: skillsQueryKey.enabled,
+    queryFn: () => apiClient.getEnabledSkills(),
+  });
+}
+
+export function useUpdateSkillEnablement() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      skillId,
+      previous,
+      next,
+    }: {
+      skillId: string;
+      previous: ScopeSubject[];
+      next: ScopeSubject[];
+    }) => {
+      const { added, removed } = diffScopeSubjects({ previous, next });
+      const results = await Promise.allSettled([
+        ...added.map((subject) => apiClient.enableSkill(skillId, subject)),
+        ...removed.map((subject) => apiClient.disableSkill(skillId, subject)),
+      ]);
+
+      const errors = results.flatMap((result) =>
+        result.status === "rejected"
+          ? [
+              result.reason instanceof Error
+                ? result.reason
+                : new Error(String(result.reason)),
+            ]
+          : [],
+      );
+
+      if (errors.length === 1) {
+        throw errors[0];
+      }
+      if (errors.length > 1) {
+        throw new AggregateError(errors, "Failed to update skill enablement");
+      }
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: skillsQueryKey.enabled }),
   });
 }
 

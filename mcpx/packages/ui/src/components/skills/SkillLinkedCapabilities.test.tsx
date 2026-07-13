@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { SkillCapabilityGroup, SystemState } from "@mcpx/shared-model";
+import type { CatalogMCPServerConfigByNameList } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { describe, expect, it, vi } from "vitest";
 import { SkillLinkedCapabilities } from "./SkillLinkedCapabilities";
 
@@ -36,6 +37,16 @@ const systemState = {
     },
   ],
 } as SystemState;
+
+const catalogItems: CatalogMCPServerConfigByNameList = [
+  {
+    id: "0190a000-0000-7000-8000-000000000099",
+    name: "coda",
+    displayName: "Coda",
+    description: undefined,
+    config: {},
+  },
+];
 
 function renderWithQueryClient(ui: React.ReactNode) {
   const queryClient = new QueryClient({
@@ -98,6 +109,71 @@ describe("SkillLinkedCapabilities", () => {
     expect(screen.queryByText("*")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Tools: 0")).toBeInTheDocument();
     expect(screen.getByLabelText("Prompts: 0")).toBeInTheDocument();
+  });
+
+  it("uses the catalog server name for saved capabilities when the MCP server is unavailable", () => {
+    renderWithQueryClient(
+      <SkillLinkedCapabilities
+        capabilityGroup={{
+          items: [
+            {
+              catalogItemId: "0190a000-0000-7000-8000-000000000099",
+              tools: ["archived_tool"],
+              prompts: ["archived_prompt"],
+            },
+          ],
+        }}
+        systemState={{ ...systemState, targetServers: [] }}
+        catalogItems={catalogItems}
+      />,
+    );
+
+    expect(screen.getByText("Coda")).toBeInTheDocument();
+    expect(screen.getByText("2 unavailable")).toBeInTheDocument();
+    expect(screen.getByText("archived_tool")).toBeInTheDocument();
+    expect(screen.getByText("archived_prompt")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Saved on this skill but unavailable because this MCP server is not connected.",
+      ),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Tools: 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Prompts: 1")).toBeInTheDocument();
+  });
+
+  it("uses warning colors for unavailable servers and capabilities", () => {
+    renderWithQueryClient(
+      <SkillLinkedCapabilities
+        capabilityGroup={{
+          items: [
+            {
+              catalogItemId: "0190a000-0000-7000-8000-000000000099",
+              tools: ["archived_tool"],
+              prompts: ["archived_prompt"],
+            },
+          ],
+        }}
+        systemState={{ ...systemState, targetServers: [] }}
+      />,
+    );
+
+    expect(
+      screen.getByText("Unavailable MCP server").parentElement,
+    ).toHaveClass(
+      "border-[var(--colors-warning-300)]",
+      "bg-[var(--colors-warning-50)]",
+      "text-[var(--colors-warning-700)]",
+    );
+    expect(screen.getByText("archived_tool").parentElement).toHaveClass(
+      "border-[var(--colors-warning-300)]",
+      "bg-[var(--colors-warning-50)]",
+      "text-[var(--colors-warning-700)]",
+    );
+    expect(screen.getByText("archived_prompt").parentElement).toHaveClass(
+      "border-[var(--colors-warning-300)]",
+      "bg-[var(--colors-warning-50)]",
+      "text-[var(--colors-warning-700)]",
+    );
   });
 
   it("renders nothing without linked capabilities", () => {

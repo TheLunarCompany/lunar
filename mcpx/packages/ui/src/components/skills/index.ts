@@ -12,6 +12,19 @@ import {
 
 export { MarkdownEditor } from "./MarkdownEditor";
 export { SkillAnchorNavigation } from "./SkillAnchorNavigation";
+export {
+  SkillAppliedAgents,
+  type SkillAppliedAgentsProps,
+} from "./SkillAppliedAgents";
+export {
+  SkillAppliedAgentsSummary,
+  type SkillAppliedAgentsSummaryProps,
+} from "./SkillAppliedAgentsSummary";
+export {
+  SkillAppliedAgentsCard,
+  type SkillAppliedAgentsCardProps,
+} from "./SkillAppliedAgentsCard";
+export { SkillAgentIcon } from "./SkillAgentIcon";
 export { SkillBreadcrumbTrail } from "./SkillBreadcrumbTrail";
 export { SkillCard } from "./SkillCard";
 export { SkillCapabilityPicker } from "./SkillCapabilityPicker";

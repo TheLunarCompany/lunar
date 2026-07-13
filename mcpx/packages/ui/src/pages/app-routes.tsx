@@ -7,13 +7,14 @@ import AuditLog from "@/pages/AuditLog";
 import Dashboard from "@/pages/Dashboard";
 import Tools from "@/pages/Tools";
 import Catalog from "@/pages/Catalog";
+import McpServers from "@/pages/McpServers";
 import SavedSetups from "@/pages/SavedSetups";
 import Skills from "@/pages/Skills";
 import SkillCreateStart from "@/pages/SkillCreateStart";
 import SkillCapabilitiesEditor from "@/pages/SkillCapabilitiesEditor";
+import SkillAgentsEditor from "@/pages/SkillAgentsEditor";
 import SkillDetail from "@/pages/SkillDetail";
 import SkillEditor from "@/pages/SkillEditor";
-import McpServers from "@/pages/McpServers";
 import NotFound from "@/pages/NotFound";
 import Capabilities from "@/pages/Capabilities";
 import { LoginRoute, LogoutRoute } from "@/pages/Login";
@@ -48,6 +49,7 @@ export function createAppRoutes() {
               path={routes.skillCapabilities}
               element={<SkillCapabilitiesEditor />}
             />
+            <Route path={routes.skillAgents} element={<SkillAgentsEditor />} />
           </>
         ) : null}
         <Route path={routes.tools} element={<Tools />} />
