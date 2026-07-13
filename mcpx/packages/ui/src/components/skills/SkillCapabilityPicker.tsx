@@ -188,7 +188,7 @@ export function SkillCapabilityPicker({
   }
 
   return (
-    <div className="space-y-3 py-1">
+    <div className="min-w-0 space-y-3 py-1">
       <div className="flex flex-col gap-2 sm:flex-row">
         <ProviderFilterMultiSelect
           providers={providers}
@@ -258,7 +258,7 @@ export function SkillCapabilityPicker({
                     }
                   />
                 ) : (
-                  <div className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50">
+                  <div className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50">
                     <ProviderSelectionCheckbox
                       providerName={provider.name}
                       checked={providerSelectionState}
@@ -418,7 +418,7 @@ function ProviderHeader({
   onToggleSelection: () => void;
 }) {
   return (
-    <div className="flex w-full items-center gap-3 px-3 py-3 text-left">
+    <div className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left">
       <ProviderSelectionCheckbox
         providerName={providerName}
         checked={selectionState}
@@ -481,9 +481,11 @@ function ProviderHeaderContent({
           aria-hidden="true"
         />
       )}
-      <ProviderIcon name={providerName} />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-        {providerName}
+      <span className="flex min-w-0 flex-1 items-center gap-3">
+        <ProviderIcon name={providerName} />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+          {providerName}
+        </span>
       </span>
       <span className="shrink-0 text-xs text-muted-foreground">
         {selectedCount} of {itemCount} selected

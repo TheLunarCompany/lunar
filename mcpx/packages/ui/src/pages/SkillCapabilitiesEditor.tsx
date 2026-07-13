@@ -216,13 +216,13 @@ export default function SkillCapabilitiesEditor() {
             </Button>
           </EditorMessage>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
             <form
               id="skill-capabilities-form"
               onSubmit={submit}
-              className="flex min-h-0 flex-1 flex-col"
+              className="flex min-h-0 min-w-0 flex-1 flex-col"
             >
-              <section className="min-h-0 flex-1 overflow-auto pb-5">
+              <section className="min-h-0 min-w-0 flex-1 overflow-auto pb-5">
                 <SkillCapabilitiesSelectionContent
                   control={control}
                   setValue={setValue}
@@ -236,7 +236,7 @@ export default function SkillCapabilitiesEditor() {
                   }
                 />
               </section>
-              <div className="flex shrink-0 justify-end gap-2 px-5 py-4">
+              <div className="flex shrink-0 justify-end gap-2 px-0 py-4 sm:px-5">
                 <SaveCapabilitiesButton
                   isSubmitting={isSubmitting}
                   disabled={!isDirty}
@@ -323,7 +323,7 @@ function SkillCapabilitiesSelectionContent({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="grid min-w-0 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
       <div className="flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start">
         <SkillLinkedCapabilitiesCard
           providers={linkedProviders}

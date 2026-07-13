@@ -95,8 +95,11 @@ export function SkillIdentityTitle({
   );
 }
 
-export function SkillIdentityActions(props: React.ComponentProps<"div">) {
-  return <div {...props} />;
+export function SkillIdentityActions({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return <div className={cn("ml-auto shrink-0", className)} {...props} />;
 }
 
 export function SkillIdentityDescription({

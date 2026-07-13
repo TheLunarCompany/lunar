@@ -144,7 +144,7 @@ export default function SkillDetail() {
                 <SkillIdentity.UpdatedAt />
               </SkillIdentity.Meta>
             </SkillIdentity.Root>
-            <Tabs defaultValue="skill" className="gap-4">
+            <Tabs defaultValue="skill" className="min-w-0 gap-4">
               <TabsList
                 variant="line"
                 aria-label="Skill detail sections"
@@ -204,7 +204,7 @@ export default function SkillDetail() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete skill</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="break-words">
               This permanently deletes {skill?.name ?? "this skill"}.
             </DialogDescription>
           </DialogHeader>

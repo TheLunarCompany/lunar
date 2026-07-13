@@ -44,7 +44,7 @@ export function MarkdownEditor({
         ) : null
       }
       className={className}
-      contentClassName={isEditing ? undefined : "p-7"}
+      contentClassName={isEditing ? undefined : "p-4 sm:p-7"}
       {...props}
     >
       {isEditing ? (
@@ -53,7 +53,7 @@ export function MarkdownEditor({
           aria-label="Markdown body"
           value={value}
           onChange={(event) => onChange?.(event.target.value)}
-          className="min-h-[420px] resize-y rounded-none border-0 bg-[var(--colors-gray-50)] p-7 font-mono text-sm shadow-none focus-visible:ring-0"
+          className="min-h-[420px] resize-y rounded-none border-0 bg-[var(--colors-gray-50)] p-4 font-mono text-sm shadow-none focus-visible:ring-0 sm:p-7"
         />
       ) : (
         <>

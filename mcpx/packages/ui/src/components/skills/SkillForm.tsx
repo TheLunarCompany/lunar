@@ -85,7 +85,7 @@ export function SkillForm({
       <div className="min-h-0 flex-1 space-y-4 overflow-auto">
         <section
           aria-label="Skill details"
-          className="space-y-5 rounded-xl border border-[var(--colors-purple-200)] bg-[var(--colors-white)] p-5 shadow-none"
+          className="space-y-5 rounded-xl border border-[var(--colors-purple-200)] bg-[var(--colors-white)] p-4 shadow-none sm:p-5"
         >
           <div className="space-y-2">
             <Label htmlFor="skill-name">Skill name</Label>
@@ -149,15 +149,15 @@ export function SkillForm({
               </Tabs>
             }
             className="rounded-xl border-[var(--colors-purple-200)] bg-[var(--colors-white)] shadow-none"
-            headerClassName="min-h-[72px] bg-[var(--colors-gray-50)] px-6 py-4"
-            contentClassName={bodyMode === "raw" ? undefined : "p-7"}
+            headerClassName="min-h-[72px] bg-[var(--colors-gray-50)] px-4 py-4 sm:px-6"
+            contentClassName={bodyMode === "raw" ? undefined : "p-4 sm:p-7"}
           >
             {bodyMode === "raw" ? (
               <Textarea
                 id="skill-body"
                 aria-label="Markdown body"
                 aria-invalid={Boolean(errors.body)}
-                className="min-h-[640px] resize-y rounded-none border-0 bg-[var(--colors-white)] p-7 font-mono text-base leading-8 shadow-none focus-visible:ring-0 aria-invalid:!border-0 aria-invalid:!ring-0 dark:aria-invalid:!border-0 dark:aria-invalid:!ring-0"
+                className="min-h-[420px] resize-y rounded-none border-0 bg-[var(--colors-white)] p-4 font-mono text-sm leading-7 shadow-none focus-visible:ring-0 aria-invalid:!border-0 aria-invalid:!ring-0 sm:min-h-[640px] sm:p-7 sm:text-base sm:leading-8 dark:aria-invalid:!border-0 dark:aria-invalid:!ring-0"
                 {...register("body")}
               />
             ) : (
@@ -178,7 +178,7 @@ export function SkillForm({
           {errors.body ? <ErrorText>{errors.body.message}</ErrorText> : null}
         </div>
       </div>
-      <div className="flex shrink-0 justify-end px-5 py-4">
+      <div className="flex shrink-0 justify-end px-0 py-4 sm:px-5">
         <SubmitButton isSubmitting={isSubmitting} label={submitLabel} />
       </div>
     </form>

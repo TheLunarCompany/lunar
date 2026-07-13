@@ -220,12 +220,12 @@ export function SkillCard({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-[var(--structure-color-border-primary)] pt-3">
+        <div className="flex min-w-0 items-center justify-between gap-3 border-t border-[var(--structure-color-border-primary)] pt-3">
           <SkillCardMetrics
             toolsCount={toolsCount}
             promptsCount={promptsCount}
           />
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-colours-color-text-tertiary)]">
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--text-colours-color-text-tertiary)]">
             <Clock className="size-3" />
             {skillUpdatedAtFormatter.format(skill.updatedAt)}
           </span>
@@ -236,7 +236,7 @@ export function SkillCard({
         <DialogContent onClick={(event) => event.stopPropagation()}>
           <DialogHeader>
             <DialogTitle>Delete skill</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="break-words">
               This permanently deletes {skill.name}.
             </DialogDescription>
           </DialogHeader>

@@ -15,7 +15,7 @@ export function Root({
       data-slot="skill-page-root"
       data-overflow={overflow}
       className={cn(
-        "relative flex min-h-0 flex-1 flex-col bg-[var(--structure-color-bg-app)] p-6",
+        "relative flex min-h-0 flex-1 flex-col bg-[var(--structure-color-bg-app)] p-4 sm:p-6",
         overflow === "hidden" ? "overflow-hidden" : "overflow-auto",
         className,
       )}
@@ -63,7 +63,7 @@ export function Header({
     <div
       data-slot="skill-page-header"
       className={cn(
-        "flex shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+        "flex min-w-0 shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
         className,
       )}
       {...props}
@@ -81,7 +81,7 @@ export function HeaderText({
   return (
     <div
       data-slot="skill-page-header-text"
-      className={cn("max-w-3xl", className)}
+      className={cn("min-w-0 max-w-3xl", className)}
       {...props}
     >
       {children}
@@ -151,7 +151,10 @@ export function Actions({
   return (
     <div
       data-slot="skill-page-actions"
-      className={cn("flex shrink-0 items-center gap-2", className)}
+      className={cn(
+        "flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end",
+        className,
+      )}
       {...props}
     >
       {children}

@@ -38,8 +38,8 @@ describe("SkillCreateStart", () => {
       "/",
     );
     expect(
-      screen.queryByRole("link", { name: /^Back to / }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("link", { name: "Back to Skills" }),
+    ).toHaveAttribute("href", "/skills");
     expect(
       within(breadcrumbs).getByRole("link", { name: "Skills" }),
     ).toHaveAttribute("href", "/skills");
@@ -47,9 +47,6 @@ describe("SkillCreateStart", () => {
       "aria-current",
       "page",
     );
-    expect(
-      screen.queryByRole("button", { name: "Back to skills" }),
-    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Drag and drop your skill here/i }),
     ).toBeInTheDocument();

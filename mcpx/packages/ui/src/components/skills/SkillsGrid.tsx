@@ -133,7 +133,7 @@ export function SkillsGrid() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search..."
-            wrapperClassName="w-full sm:w-[280px]"
+            wrapperClassName="w-full sm:w-40 md:w-48 lg:w-[280px]"
             className="h-9 rounded-lg border-[var(--structure-color-border-primary)] bg-background"
           />
           <Sort
@@ -169,7 +169,7 @@ export function SkillsGrid() {
           )}
           <Button
             type="button"
-            className="sm:ml-auto"
+            className="w-full sm:ml-auto sm:w-auto"
             onClick={() => navigate(routes.skillNew)}
           >
             <Plus />
@@ -177,7 +177,7 @@ export function SkillsGrid() {
           </Button>
         </SkillPage.Toolbar>
 
-        <SkillPage.Content className="min-h-0 flex-1 overflow-y-auto pt-2">
+        <SkillPage.Content className="min-h-0 min-w-0 flex-1 overflow-y-auto pt-2">
           {skills.isLoading ? (
             <SkillPage.Message title="Loading skills..." />
           ) : skills.isError ? (
@@ -198,7 +198,7 @@ export function SkillsGrid() {
           ) : visible.length === 0 ? (
             <SkillPage.Message title="No skills match your filters." />
           ) : (
-            <div className="grid grid-cols-1 content-start gap-4 pb-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid min-w-0 grid-cols-1 content-start gap-4 pb-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visibleCards.map(({ skill, capabilitySummary }) => (
                 <SkillCard
                   key={skill.id}

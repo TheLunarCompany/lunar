@@ -85,7 +85,6 @@ export default function SkillCreateStart() {
             <SkillPage.Breadcrumbs>
               <SkillBreadcrumbTrail
                 items={getSkillBreadcrumbs({ current: "Add new" })}
-                showBackButton={false}
               />
             </SkillPage.Breadcrumbs>
             <SkillPage.Title>Add a new skill</SkillPage.Title>

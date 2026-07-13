@@ -201,11 +201,11 @@ export default function SkillEditor() {
             </Button>
           </EditorMessage>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex min-w-0 flex-col gap-4">
             <div
               className={
                 isEdit && skillQuery.data
-                  ? "grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]"
+                  ? "grid min-w-0 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]"
                   : undefined
               }
             >

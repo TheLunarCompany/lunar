@@ -36,7 +36,7 @@ export function SkillsHeader({
   return (
     <SkillPage.Header
       className={cn(
-        "-mx-6 -mt-6 w-auto border-b border-[var(--structure-color-border-primary)] bg-[var(--colors-gray-50)] px-6 py-3",
+        "w-full border-b border-[var(--structure-color-border-primary)] bg-[var(--colors-gray-50)] px-4 py-3 sm:px-6",
         className,
       )}
       {...props}
