@@ -151,12 +151,20 @@ export default function McpServerAdd() {
         );
       })
       .sort((a, b) => {
+        const aIsInstalled =
+          addedItemIds.has(a.id) || addedServerNames.has(a.name.toLowerCase());
+        const bIsInstalled =
+          addedItemIds.has(b.id) || addedServerNames.has(b.name.toLowerCase());
+        if (aIsInstalled !== bIsInstalled) {
+          return aIsInstalled ? 1 : -1;
+        }
+
         const comparison = (a.displayName || a.name).localeCompare(
           b.displayName || b.name,
         );
         return sortOrder === "asc" ? comparison : -comparison;
       });
-  }, [catalogServers, searchQuery, sortOrder]);
+  }, [addedItemIds, addedServerNames, catalogServers, searchQuery, sortOrder]);
 
   const visibleSelectableServers = filteredCatalogServers.filter(
     (server) =>
@@ -205,6 +213,7 @@ export default function McpServerAdd() {
     if (selectedServers.length === 0) return;
 
     setIsAdding(true);
+    navigate(routes.mcpServers);
     const addedIds: string[] = [];
     const failedServers: Array<{ name: string; error: string }> = [];
     const existingServers = targetServers.map((server) => ({
@@ -249,7 +258,6 @@ export default function McpServerAdd() {
         variant: "server-info",
         position: "bottom-left",
       });
-      navigate(routes.mcpServers);
       return;
     }
 
