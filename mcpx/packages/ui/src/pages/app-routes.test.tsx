@@ -11,6 +11,7 @@ vi.mock("@/pages/AuditLog", () => ({ default: () => null }));
 vi.mock("@/pages/Dashboard", () => ({ default: () => null }));
 vi.mock("@/pages/Tools", () => ({ default: () => null }));
 vi.mock("@/pages/Catalog", () => ({ default: () => null }));
+vi.mock("@/pages/McpRegistry", () => ({ default: () => null }));
 vi.mock("@/pages/SavedSetups", () => ({ default: () => null }));
 vi.mock("@/pages/Skills", () => ({ default: () => null }));
 vi.mock("@/pages/SkillCreateStart", () => ({ default: () => null }));
@@ -36,6 +37,18 @@ describe("createAppRoutes", () => {
 
     expect(
       matches?.some((match) => match.route.path === routes.mcpServerAdd),
+    ).toBe(true);
+  });
+
+  it("registers the MCP Registry separately from Catalog", () => {
+    const registryMatches = matchRoutes(createAppRoutes(), routes.mcpRegistry);
+    const catalogMatches = matchRoutes(createAppRoutes(), routes.catalog);
+
+    expect(
+      registryMatches?.some((match) => match.route.path === routes.mcpRegistry),
+    ).toBe(true);
+    expect(
+      catalogMatches?.some((match) => match.route.path === routes.catalog),
     ).toBe(true);
   });
 });

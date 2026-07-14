@@ -17,7 +17,6 @@ import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { routes } from "@/routes";
 import { useModalsStore, useSocketStore } from "@/store";
 import { SystemState } from "@mcpx/shared-model";
-import { isUiSidebarRestructureEnabled } from "@/config/runtime-config";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -171,6 +170,7 @@ export const Layout: FC<LayoutProps> = ({
 const sidebarRouteMatches: Array<{ path: string; id: string }> = [
   { path: routes.dashboard, id: "dashboard" },
   { path: routes.catalog, id: "catalog" },
+  { path: routes.mcpRegistry, id: "mcp-registry" },
   { path: routes.mcpServers, id: "mcp-servers" },
   { path: routes.tools, id: "tools" },
   { path: routes.capabilities, id: "capabilities" },
@@ -186,10 +186,6 @@ function getActiveSidebarItemId(pathname: string) {
 
   if (!matchedItem) {
     return "dashboard";
-  }
-
-  if (matchedItem.id === "catalog" && isUiSidebarRestructureEnabled()) {
-    return "mcp-registry";
   }
 
   return matchedItem.id;

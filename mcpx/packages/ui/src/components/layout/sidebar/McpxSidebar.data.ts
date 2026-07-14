@@ -124,7 +124,7 @@ function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
           id: "mcp-registry",
           label: "MCP Registry",
           icon: Library,
-          url: routes.catalog,
+          url: routes.mcpRegistry,
         },
       ],
     },

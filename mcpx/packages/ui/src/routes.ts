@@ -14,6 +14,7 @@ export const routes = {
   skillAgents: "/skills/:id/agents",
   tools: "/tools",
   catalog: "/catalog",
+  mcpRegistry: "/mcp-registry",
   savedSetups: "/saved-setups",
   auditLog: "/audit-log",
   login: "/login",

@@ -7,6 +7,7 @@ import AuditLog from "@/pages/AuditLog";
 import Dashboard from "@/pages/Dashboard";
 import Tools from "@/pages/Tools";
 import Catalog from "@/pages/Catalog";
+import McpRegistry from "@/pages/McpRegistry";
 import McpServers from "@/pages/McpServers";
 import SavedSetups from "@/pages/SavedSetups";
 import Skills from "@/pages/Skills";
@@ -56,6 +57,7 @@ export function createAppRoutes() {
         ) : null}
         <Route path={routes.tools} element={<Tools />} />
         <Route path={routes.catalog} element={<Catalog />} />
+        <Route path={routes.mcpRegistry} element={<McpRegistry />} />
         <Route path={routes.savedSetups} element={<SavedSetups />} />
         <Route path={routes.auditLog} element={<AuditLog />} />
         <Route path={routes.login} element={<LoginRoute />} />
