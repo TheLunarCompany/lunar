@@ -6,10 +6,11 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Skills from "./Skills";
 import { useGetMCPServers } from "@/data/catalog-servers";
-import { useDeleteSkill, useSkills } from "@/data/skills";
+import { useDeleteSkill, useEnabledSkills, useSkills } from "@/data/skills";
 
 vi.mock("@/data/skills", () => ({
   useSkills: vi.fn(),
+  useEnabledSkills: vi.fn(),
   useDeleteSkill: vi.fn(),
 }));
 vi.mock("@/data/catalog-servers", () => ({
@@ -66,6 +67,11 @@ describe("Skills page", () => {
     vi.mocked(useDeleteSkill).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
+    } as never);
+    vi.mocked(useEnabledSkills).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
     } as never);
     vi.mocked(useGetMCPServers).mockReturnValue({
       data: [],

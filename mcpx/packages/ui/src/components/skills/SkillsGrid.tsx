@@ -3,7 +3,8 @@ import { Sort } from "@/components/Sort";
 import { SearchInput } from "@/components/ui/search-input";
 import { toast } from "@/components/ui/use-toast";
 import { useGetMCPServers } from "@/data/catalog-servers";
-import { useDeleteSkill, useSkills } from "@/data/skills";
+import { useDeleteSkill, useEnabledSkills, useSkills } from "@/data/skills";
+import { buildSkillAgentSelection } from "@/mapping/skill-agents";
 import { buildSkillCardCapabilitySummaryResolver } from "@/mapping/skills";
 import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
@@ -36,6 +37,7 @@ const SORT_OPTIONS: Array<{
 export function SkillsGrid() {
   const navigate = useNavigate();
   const skills = useSkills();
+  const enabledSkills = useEnabledSkills();
   const catalogServers = useGetMCPServers();
   const deleteSkill = useDeleteSkill();
   const systemState = useSocketStore((s) => s.systemState);
@@ -91,8 +93,13 @@ export function SkillsGrid() {
       visible.map((skill) => ({
         skill,
         capabilitySummary: summarizeSkillCapabilities(skill.capabilityGroup),
+        agents: buildSkillAgentSelection({
+          clusters: systemState?.connectedClientClusters ?? [],
+          enabled: enabledSkills.data ?? [],
+          skillId: skill.id,
+        }).selected.map((subject) => subject.value),
       })),
-    [summarizeSkillCapabilities, visible],
+    [enabledSkills.data, summarizeSkillCapabilities, systemState, visible],
   );
 
   const isFiltered = query.trim().length > 0;
@@ -199,11 +206,12 @@ export function SkillsGrid() {
             <SkillPage.Message title="No skills match your filters." />
           ) : (
             <div className="grid min-w-0 grid-cols-1 content-start gap-4 pb-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleCards.map(({ skill, capabilitySummary }) => (
+              {visibleCards.map(({ skill, capabilitySummary, agents }) => (
                 <SkillCard
                   key={skill.id}
                   skill={skill}
                   providers={capabilitySummary.providers}
+                  agents={agents}
                   toolsCount={capabilitySummary.toolsCount}
                   promptsCount={capabilitySummary.promptsCount}
                   onDelete={handleDelete}

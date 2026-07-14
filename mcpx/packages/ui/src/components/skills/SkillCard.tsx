@@ -1,4 +1,5 @@
 import { LetterAvatar } from "@/components/LetterAvatar";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -38,6 +39,7 @@ import {
 import { useState } from "react";
 import { generatePath, useNavigate } from "react-router-dom";
 import { SkillCardMetrics } from "./SkillCardMetrics";
+import { SkillAgentIcon } from "./SkillAgentIcon";
 import {
   SkillMoreProviders,
   SkillProviderBadge,
@@ -56,6 +58,7 @@ type SkillCardProps = {
   skill: Skill;
   onDelete: (id: string) => void;
   providers?: string[];
+  agents?: string[];
   toolsCount: number;
   promptsCount: number;
   className?: string;
@@ -65,6 +68,7 @@ export function SkillCard({
   skill,
   onDelete,
   providers = [],
+  agents = [],
   toolsCount,
   promptsCount,
   className,
@@ -89,6 +93,8 @@ export function SkillCard({
   }));
   const visibleProviderBadges = getVisibleProviderBadges(providerBadges);
   const hiddenProvidersCount = providers.length - visibleProviderBadges.length;
+  const visibleAgentBadges = agents.slice(0, MAX_VISIBLE_PROVIDER_BADGES);
+  const hiddenAgentsCount = agents.length - visibleAgentBadges.length;
   function handleDownload(event: Event) {
     event.stopPropagation();
     downloadSkillMarkdown(skill);
@@ -191,32 +197,66 @@ export function SkillCard({
         </TooltipProvider>
 
         {/* MCP servers */}
-        <div className="h-[86px] overflow-hidden">
-          <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--colors-gray-600)]">
-            MCP Servers
-          </p>
-          {providers.length > 0 ? (
-            <SkillProviderBadges className="min-w-0">
-              {visibleProviderBadges.map(({ name, isMissingOrInactive }) => (
-                <SkillProviderBadge
-                  key={name}
-                  name={name}
-                  isMissingOrInactive={isMissingOrInactive}
-                />
-              ))}
-              {hiddenProvidersCount > 0 ? (
-                <SkillMoreProviders
-                  count={hiddenProvidersCount}
-                  className="shrink-0"
-                />
-              ) : null}
-            </SkillProviderBadges>
-          ) : (
-            <div className="flex items-center gap-1.5 text-[12px] text-[var(--colors-gray-500)]">
-              <Unplug className="size-3.5" />
-              No capabilities linked yet
-            </div>
-          )}
+        <div className="h-[154px] overflow-hidden">
+          <div>
+            <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--colors-gray-600)]">
+              MCP Servers
+            </p>
+            {providers.length > 0 ? (
+              <SkillProviderBadges className="min-w-0">
+                {visibleProviderBadges.map(({ name, isMissingOrInactive }) => (
+                  <SkillProviderBadge
+                    key={name}
+                    name={name}
+                    isMissingOrInactive={isMissingOrInactive}
+                  />
+                ))}
+                {hiddenProvidersCount > 0 ? (
+                  <SkillMoreProviders
+                    count={hiddenProvidersCount}
+                    className="shrink-0"
+                  />
+                ) : null}
+              </SkillProviderBadges>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[12px] text-[var(--colors-gray-500)]">
+                <Unplug className="size-3.5" />
+                No capabilities linked yet
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--colors-gray-600)]">
+              Applied to agents
+            </p>
+            {agents.length > 0 ? (
+              <SkillProviderBadges className="min-w-0">
+                {visibleAgentBadges.map((name) => (
+                  <Badge
+                    key={name}
+                    variant="outline"
+                    className="flex h-auto min-w-0 items-center gap-1.5 rounded border-[var(--colors-gray-100)] bg-[var(--structure-color-bg-app)] px-2 py-1.5 text-[12px] font-normal leading-none text-[var(--text-colours-color-text-primary)]"
+                  >
+                    <SkillAgentIcon name={name} className="size-4" />
+                    <span className="min-w-0 truncate">{name}</span>
+                  </Badge>
+                ))}
+                {hiddenAgentsCount > 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="h-auto min-w-0 shrink-0 rounded border-[var(--colors-gray-100)] bg-[var(--structure-color-bg-app)] px-2 py-1.5 text-[12px] font-normal text-[var(--text-colours-color-text-secondary)]"
+                  >
+                    +{hiddenAgentsCount}
+                  </Badge>
+                ) : null}
+              </SkillProviderBadges>
+            ) : (
+              <div className="text-[12px] text-[var(--colors-gray-500)]">
+                No agents applied yet
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}

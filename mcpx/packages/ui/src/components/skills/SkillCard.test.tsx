@@ -36,6 +36,7 @@ function renderCard(
   onDelete = vi.fn(),
   providers: string[] = [],
   counts = { toolsCount: 2, promptsCount: 1 },
+  agents: string[] = [],
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -48,6 +49,7 @@ function renderCard(
           skill={skill}
           onDelete={onDelete}
           providers={providers}
+          agents={agents}
           toolsCount={counts.toolsCount}
           promptsCount={counts.promptsCount}
         />
@@ -207,6 +209,14 @@ describe("SkillCard", () => {
     expect(screen.getByText("linear")).toBeInTheDocument();
   });
 
+  it("renders an applied agents section with one badge per agent", () => {
+    renderCard(vi.fn(), [], undefined, ["Engineering", "Legacy client"]);
+
+    expect(screen.getByText("Applied to agents")).toBeInTheDocument();
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+    expect(screen.getByText("Legacy client")).toBeInTheDocument();
+  });
+
   it("does not render tool counts inside MCP server badges", () => {
     renderCard(vi.fn(), ["github"]);
 
@@ -243,6 +253,27 @@ describe("SkillCard", () => {
     expect(screen.getByText("+2").closest("div.flex.flex-wrap")).not.toBeNull();
     expect(screen.queryByText("datadog")).not.toBeInTheDocument();
     expect(screen.queryByText("postgres")).not.toBeInTheDocument();
+  });
+
+  it("renders only five applied agent badges plus hidden-count text", () => {
+    renderCard(vi.fn(), [], undefined, [
+      "Engineering",
+      "Design",
+      "Finance",
+      "Marketing",
+      "Operations",
+      "Support",
+      "Sales",
+    ]);
+
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+    expect(screen.getByText("Design")).toBeInTheDocument();
+    expect(screen.getByText("Finance")).toBeInTheDocument();
+    expect(screen.getByText("Marketing")).toBeInTheDocument();
+    expect(screen.getByText("Operations")).toBeInTheDocument();
+    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.queryByText("Support")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sales")).not.toBeInTheDocument();
   });
 
   it("keeps missing or inactive MCP server badges visible past the active badge limit", () => {
@@ -297,6 +328,13 @@ describe("SkillCard", () => {
 
     expect(screen.getByText("MCP Servers")).toBeInTheDocument();
     expect(screen.getByText("No capabilities linked yet")).toBeInTheDocument();
+  });
+
+  it("renders an applied agents empty state when there are no agents", () => {
+    renderCard();
+
+    expect(screen.getByText("Applied to agents")).toBeInTheDocument();
+    expect(screen.getByText("No agents applied yet")).toBeInTheDocument();
   });
 });
 
