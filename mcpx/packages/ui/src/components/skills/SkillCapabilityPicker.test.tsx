@@ -272,6 +272,66 @@ describe("SkillCapabilityPicker", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("collapses provider content while MCP server filters are applied", async () => {
+    const user = userEvent.setup();
+    renderPicker({ providerFilters: ["github"] });
+
+    const providerToggle = screen.getByRole("button", {
+      name: /github 0 of 6 selected/i,
+    });
+    expect(providerToggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("search_repositories")).toBeVisible();
+
+    await user.click(providerToggle);
+
+    expect(providerToggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("search_repositories")).not.toBeInTheDocument();
+  });
+
+  it("collapses provider content while searching", async () => {
+    const user = userEvent.setup();
+    renderPicker();
+
+    await user.type(
+      screen.getByRole("searchbox", {
+        name: "Search MCP tools and prompts",
+      }),
+      "github",
+    );
+
+    const providerToggle = screen.getByRole("button", {
+      name: /github 0 of 6 selected/i,
+    });
+    expect(providerToggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(providerToggle);
+
+    expect(providerToggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("search_repositories")).not.toBeInTheDocument();
+  });
+
+  it("re-expands collapsed provider content when the search criteria changes", async () => {
+    const user = userEvent.setup();
+    renderPicker();
+    const search = screen.getByRole("searchbox", {
+      name: "Search MCP tools and prompts",
+    });
+
+    await user.type(search, "github");
+    await user.click(
+      screen.getByRole("button", { name: /github 0 of 6 selected/i }),
+    );
+    expect(screen.queryByText("search_repositories")).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "delete_repository");
+
+    expect(screen.getByText("delete_repository")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /github 0 of 6 selected/i }),
+    ).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("expands a provider when selected keys gain that provider after mount", () => {
     const { rerender } = renderPicker();
 
@@ -479,7 +539,7 @@ describe("SkillCapabilityPicker", () => {
     expect(screen.queryByText("delete_repository")).not.toBeInTheDocument();
   });
 
-  it("filters providers from a searchable MCP server multi-select combobox", async () => {
+  it("filters providers from an MCP server multi-select dropdown", async () => {
     const user = userEvent.setup();
     const onProviderFiltersChange = vi.fn();
     const { rerender } = renderPicker({
@@ -487,16 +547,13 @@ describe("SkillCapabilityPicker", () => {
       onProviderFiltersChange,
     });
 
-    const filterCombobox = screen.getByRole("combobox", {
-      name: "Filter MCP servers",
-    });
-    await user.click(filterCombobox);
-    await user.type(filterCombobox, "play");
+    await user.click(
+      screen.getByRole("button", { name: "Filter MCP servers" }),
+    );
 
-    expect(
-      screen.queryByRole("option", { name: "github" }),
-    ).not.toBeInTheDocument();
-    await user.click(screen.getByRole("option", { name: "playwright" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "playwright" }),
+    );
 
     expect(onProviderFiltersChange).toHaveBeenLastCalledWith(["playwright"]);
 
@@ -510,18 +567,15 @@ describe("SkillCapabilityPicker", () => {
       />,
     );
 
-    const updatedFilterCombobox = screen.getByRole("combobox", {
-      name: "Filter MCP servers",
-    });
-    await user.click(updatedFilterCombobox);
-    await user.clear(updatedFilterCombobox);
-    await user.type(updatedFilterCombobox, "git");
-    await user.click(screen.getByRole("option", { name: "github" }));
+    // The menu stays open across selections, so github is toggled directly.
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "github" }));
 
     expect(onProviderFiltersChange).toHaveBeenLastCalledWith([
       "github",
       "playwright",
     ]);
+
+    await user.keyboard("{Escape}");
 
     rerender(
       <SkillCapabilityPicker
@@ -553,11 +607,13 @@ describe("SkillCapabilityPicker", () => {
     });
 
     await user.click(
-      screen.getByRole("combobox", { name: "Filter MCP servers" }),
+      screen.getByRole("button", { name: "Filter MCP servers" }),
     );
 
-    const githubOption = screen.getByRole("option", { name: "github" });
-    const playwrightOption = screen.getByRole("option", {
+    const githubOption = screen.getByRole("menuitemcheckbox", {
+      name: "github",
+    });
+    const playwrightOption = screen.getByRole("menuitemcheckbox", {
       name: "playwright",
     });
 

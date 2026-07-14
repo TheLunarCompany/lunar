@@ -1,13 +1,6 @@
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { MultiSelectFilterDropdown } from "@/components/ui/multi-select-filter-dropdown";
 import { ListFilter } from "lucide-react";
 import {
   ProviderCard,
@@ -88,79 +81,42 @@ function AnnotationFilterDropdown({
   value: AnnotationFilterValue[];
   onChange: (v: AnnotationFilterValue[]) => void;
 }) {
-  const selectedValues = new Set(value);
   const selectedCount = value.length;
   const isAll = selectedCount === 0;
 
-  const toggleValue = (nextValue: AnnotationFilterValue, checked: boolean) => {
-    const nextSelection = new Set(selectedValues);
-
-    if (checked) {
-      nextSelection.add(nextValue);
-    } else {
-      nextSelection.delete(nextValue);
-    }
-
-    onChange([...nextSelection]);
-  };
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={buttonVariants({
-          variant: "ghost",
-          size: "sm",
-          className: "cursor-pointer",
-        })}
-      >
-        <ListFilter className="h-4 w-4 mr-2" />
-        Filter
-        {!isAll && (
-          <span className="ml-1.5 text-xs text-[#7D7B98]">
-            ({selectedCount})
-          </span>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className={cn(
-          "z-50 min-w-[12rem] overflow-hidden rounded-md border border-gray-200 bg-white p-2 shadow-lg",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        )}
-        align="start"
-        sideOffset={4}
-      >
-        <DropdownMenuGroup>
-          <DropdownMenuCheckboxItem
-            checked={isAll}
-            className="rounded-sm px-3 py-2 text-sm focus:bg-gray-50"
-            onCheckedChange={() => onChange([])}
-          >
-            <span className="text-gray-700">All</span>
-          </DropdownMenuCheckboxItem>
-        </DropdownMenuGroup>
-
-        <DropdownMenuSeparator className="my-1 h-px bg-gray-200" />
-
-        <DropdownMenuGroup>
-          {ANNOTATION_FILTER_OPTIONS.map(({ value: optValue, label, dot }) => {
-            const checked = selectedValues.has(optValue);
-            return (
-              <DropdownMenuCheckboxItem
-                key={optValue}
-                checked={checked}
-                className="rounded-sm px-3 py-2 text-sm focus:bg-gray-50"
-                onCheckedChange={(nextChecked) =>
-                  toggleValue(optValue, nextChecked === true)
-                }
-              >
-                <span className={cn("size-1.5 rounded-full", dot)} />
-                <span className="text-gray-700">{label}</span>
-              </DropdownMenuCheckboxItem>
-            );
-          })}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <MultiSelectFilterDropdown
+      options={ANNOTATION_FILTER_OPTIONS}
+      getOptionValue={(option) => option.value}
+      renderOption={(option) => (
+        <>
+          <span className={cn("size-1.5 rounded-full", option.dot)} />
+          {option.label}
+        </>
+      )}
+      selectedValues={value}
+      onSelectedValuesChange={(values) =>
+        onChange(values as AnnotationFilterValue[])
+      }
+      allLabel="All"
+      contentClassName="min-w-48 p-2"
+      triggerClassName={buttonVariants({
+        variant: "ghost",
+        size: "sm",
+        className: "cursor-pointer",
+      })}
+      triggerContent={
+        <>
+          <ListFilter className="mr-2 size-4" />
+          Filter
+          {!isAll && (
+            <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+              ({selectedCount})
+            </span>
+          )}
+        </>
+      }
+    />
   );
 }
 

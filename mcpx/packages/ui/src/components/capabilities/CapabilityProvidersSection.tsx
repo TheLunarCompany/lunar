@@ -1,12 +1,5 @@
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { MultiSelectFilterDropdown } from "@/components/ui/multi-select-filter-dropdown";
 import { SearchInput } from "@/components/ui/search-input";
 import { cn } from "@/lib/utils";
 import { ListFilter, Plus } from "lucide-react";
@@ -57,66 +50,42 @@ function AnnotationFilterDropdown({
   value: CapabilityAnnotationFilterValue[];
   onChange: (filter: CapabilityAnnotationFilterValue[]) => void;
 }) {
-  const selectedValues = new Set(value);
   const selectedCount = value.length;
   const isAll = selectedCount === 0;
 
-  function toggleValue(
-    nextValue: CapabilityAnnotationFilterValue,
-    checked: boolean,
-  ) {
-    const nextSelection = new Set(selectedValues);
-    if (checked) {
-      nextSelection.add(nextValue);
-    } else {
-      nextSelection.delete(nextValue);
-    }
-    onChange([...nextSelection]);
-  }
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={buttonVariants({
-          variant: "ghost",
-          size: "sm",
-          className: "cursor-pointer",
-        })}
-      >
-        <ListFilter className="mr-2 size-4" />
-        Filter Tools
-        {!isAll && (
-          <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
-            ({selectedCount})
-          </span>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-48 p-2">
-        <DropdownMenuGroup>
-          <DropdownMenuCheckboxItem
-            checked={isAll}
-            onCheckedChange={() => onChange([])}
-          >
-            All
-          </DropdownMenuCheckboxItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          {annotationFilterOptions.map((option) => (
-            <DropdownMenuCheckboxItem
-              key={option.value}
-              checked={selectedValues.has(option.value)}
-              onCheckedChange={(checked) =>
-                toggleValue(option.value, checked === true)
-              }
-            >
-              <span className={cn("size-1.5 rounded-full", option.dot)} />
-              {option.label}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <MultiSelectFilterDropdown
+      options={annotationFilterOptions}
+      getOptionValue={(option) => option.value}
+      renderOption={(option) => (
+        <>
+          <span className={cn("size-1.5 rounded-full", option.dot)} />
+          {option.label}
+        </>
+      )}
+      selectedValues={value}
+      onSelectedValuesChange={(values) =>
+        onChange(values as CapabilityAnnotationFilterValue[])
+      }
+      allLabel="All"
+      contentClassName="min-w-48 p-2"
+      triggerClassName={buttonVariants({
+        variant: "ghost",
+        size: "sm",
+        className: "cursor-pointer",
+      })}
+      triggerContent={
+        <>
+          <ListFilter className="mr-2 size-4" />
+          Filter Tools
+          {!isAll && (
+            <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+              ({selectedCount})
+            </span>
+          )}
+        </>
+      }
+    />
   );
 }
 

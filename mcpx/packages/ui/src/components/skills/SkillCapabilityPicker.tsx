@@ -1,35 +1,24 @@
 import * as React from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ListFilter } from "lucide-react";
 
-import type {
-  CapabilityItem,
-  CapabilityProvider,
-} from "@/components/capabilities/types";
+import type { CapabilityProvider } from "@/components/capabilities/types";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Combobox,
-  ComboboxChip,
-  ComboboxChips,
-  ComboboxChipsInput,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxValue,
-  useComboboxAnchor,
-} from "@/components/ui/combobox";
+import { MultiSelectFilterDropdown } from "@/components/ui/multi-select-filter-dropdown";
 import { SearchInput } from "@/components/ui/search-input";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { cn } from "@/lib/utils";
-import {
-  buildSkillCapabilitySelectionKey,
-  getCapabilityItemSelectionName,
-  getCapabilityProviderSelectionId,
-  type SkillCapabilityKind,
-  type SkillCapabilitySelectionKey,
+import type {
+  SkillCapabilityKind,
+  SkillCapabilitySelectionKey,
 } from "@/mapping/skill-capabilities";
+
+import type {
+  CapabilityItemRow,
+  CapabilityProviderRow,
+} from "./skill-capability-picker-view-model";
+import { useSkillCapabilityPicker } from "./useSkillCapabilityPicker";
 
 export type SkillCapabilityPickerProps = {
   providers: CapabilityProvider[];
@@ -44,148 +33,40 @@ export type SkillCapabilityPickerProps = {
   ) => void;
 };
 
-type VisibleProvider = {
-  provider: CapabilityProvider;
-  items: CapabilityItem[];
-};
+type ToggleItem = (
+  selectionKey: SkillCapabilitySelectionKey,
+  isDisabled: boolean,
+) => void;
 
 const sectionLabels: Record<SkillCapabilityKind, string> = {
   tool: "TOOLS",
   prompt: "PROMPTS",
 };
 
-const collapsedDescriptionLength = 250;
-
 export function SkillCapabilityPicker({
   providers,
   selectedKeys,
-  unavailableProviderNames = new Set(),
-  unavailableProviderDescriptions = new Map(),
-  providerFilters = [],
+  unavailableProviderNames,
+  unavailableProviderDescriptions,
+  providerFilters,
   onProviderFiltersChange,
   onSelectedKeysChange,
 }: SkillCapabilityPickerProps) {
-  const [query, setQuery] = React.useState("");
-  const [expandedProviderNames, setExpandedProviderNames] = React.useState<
-    Set<string>
-  >(() => buildInitiallyExpandedProviderNames(providers, selectedKeys));
-  const selectedProviderNamesRef = React.useRef(
-    buildSelectedProviderNames(providers, selectedKeys),
-  );
-
-  const normalizedQuery = query.trim().toLowerCase();
-  const isSearching = normalizedQuery.length > 0;
-  const selectedProviderNames = React.useMemo(
-    () => new Set(providerFilters),
-    [providerFilters],
-  );
-  const providerFilteredProviders = React.useMemo(
-    () =>
-      providerFilters.length > 0
-        ? providers.filter((provider) =>
-            selectedProviderNames.has(provider.name),
-          )
-        : providers,
-    [providerFilters.length, providers, selectedProviderNames],
-  );
-  const visibleProviders = React.useMemo(
-    () => filterProviders(providerFilteredProviders, normalizedQuery),
-    [providerFilteredProviders, normalizedQuery],
-  );
-  const isFilteringProvider = providerFilters.length > 0;
-
-  React.useEffect(() => {
-    const nextSelectedProviderNames = buildSelectedProviderNames(
-      providers,
-      selectedKeys,
-    );
-    const newlySelectedProviderNames = [...nextSelectedProviderNames].filter(
-      (providerName) => !selectedProviderNamesRef.current.has(providerName),
-    );
-
-    selectedProviderNamesRef.current = nextSelectedProviderNames;
-
-    if (newlySelectedProviderNames.length === 0) {
-      return;
-    }
-
-    setExpandedProviderNames((current) => {
-      const next = new Set(current);
-      for (const providerName of newlySelectedProviderNames) {
-        next.add(providerName);
-      }
-      return next;
-    });
-  }, [providers, selectedKeys]);
-
-  function toggleProvider(providerName: string) {
-    setExpandedProviderNames((current) => {
-      const next = new Set(current);
-      if (next.has(providerName)) {
-        next.delete(providerName);
-      } else {
-        next.add(providerName);
-      }
-      return next;
-    });
-  }
-
-  function toggleSelection(
-    provider: CapabilityProvider,
-    kind: SkillCapabilityKind,
-    item: CapabilityItem,
-    isUnavailable: boolean,
-  ) {
-    if (isUnavailable) {
-      return;
-    }
-
-    const changedKey = buildSkillCapabilitySelectionKey(
-      getCapabilityProviderSelectionId(provider),
-      kind,
-      getCapabilityItemSelectionName(item),
-    );
-    const nextSelectedKeys = new Set(selectedKeys);
-
-    if (nextSelectedKeys.has(changedKey)) {
-      nextSelectedKeys.delete(changedKey);
-    } else {
-      nextSelectedKeys.add(changedKey);
-    }
-
-    onSelectedKeysChange(nextSelectedKeys, changedKey);
-  }
-
-  function toggleProviderSelection(
-    provider: CapabilityProvider,
-    isUnavailable: boolean,
-  ) {
-    const providerSelectionKeys = getSelectableProviderSelectionKeys(
-      provider,
-      isUnavailable,
-    );
-    const changedKey = providerSelectionKeys[0];
-
-    if (!changedKey) {
-      return;
-    }
-
-    const providerSelectionState = getProviderSelectionState(
-      providerSelectionKeys,
-      selectedKeys,
-    );
-    const nextSelectedKeys = new Set(selectedKeys);
-
-    for (const selectionKey of providerSelectionKeys) {
-      if (providerSelectionState === true) {
-        nextSelectedKeys.delete(selectionKey);
-      } else {
-        nextSelectedKeys.add(selectionKey);
-      }
-    }
-
-    onSelectedKeysChange(nextSelectedKeys, changedKey);
-  }
+  const {
+    query,
+    setQuery,
+    viewModel,
+    toggleProviderExpanded,
+    toggleItem,
+    toggleProviderSelection,
+  } = useSkillCapabilityPicker({
+    providers,
+    selectedKeys,
+    providerFilters,
+    unavailableProviderNames,
+    unavailableProviderDescriptions,
+    onSelectedKeysChange,
+  });
 
   return (
     <div className="min-w-0 space-y-3 py-1">
@@ -200,120 +81,102 @@ export function SkillCapabilityPicker({
         />
         <ProviderFilterMultiSelect
           providers={providers}
-          selectedProviderNames={providerFilters}
+          selectedProviderNames={providerFilters ?? []}
           onSelectedProviderNamesChange={onProviderFiltersChange}
         />
       </div>
 
-      {providers.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
-          No MCP tools or prompts available.
-        </p>
-      ) : visibleProviders.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+      {viewModel.emptyReason === "no-providers" ? (
+        <PickerEmptyState>No MCP tools or prompts available.</PickerEmptyState>
+      ) : viewModel.emptyReason === "no-matches" ? (
+        <PickerEmptyState>
           No tools or prompts match your search.
-        </p>
+        </PickerEmptyState>
       ) : (
         <div
           data-testid="skill-capability-provider-list"
           className="divide-y divide-border rounded-md border border-border bg-[var(--colors-white)]"
         >
-          {visibleProviders.map(({ provider, items }) => {
-            const isExpanded =
-              isSearching ||
-              isFilteringProvider ||
-              expandedProviderNames.has(provider.name);
-            const isUnavailable = unavailableProviderNames.has(provider.name);
-            const unavailableDescription =
-              unavailableProviderDescriptions.get(provider.name) ??
-              "This server is unavailable for this skill.";
-            const selectedCount = countSelectedProviderItems(
-              provider,
-              selectedKeys,
-            );
-            const providerSelectionKeys = getSelectableProviderSelectionKeys(
-              provider,
-              isUnavailable,
-            );
-            const providerSelectionState = getProviderSelectionState(
-              providerSelectionKeys,
-              selectedKeys,
-            );
-
-            return (
-              <section
-                key={provider.name}
-                data-testid={`skill-capability-provider-${provider.name}`}
-              >
-                {isSearching || isFilteringProvider ? (
-                  <ProviderHeader
-                    providerName={provider.name}
-                    selectedCount={selectedCount}
-                    itemCount={provider.items.length}
-                    isExpanded
-                    selectionState={providerSelectionState}
-                    isSelectionDisabled={providerSelectionKeys.length === 0}
-                    onToggleSelection={() =>
-                      toggleProviderSelection(provider, isUnavailable)
-                    }
-                  />
-                ) : (
-                  <div className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50">
-                    <ProviderSelectionCheckbox
-                      providerName={provider.name}
-                      checked={providerSelectionState}
-                      disabled={providerSelectionKeys.length === 0}
-                      onCheckedChange={() =>
-                        toggleProviderSelection(provider, isUnavailable)
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      aria-expanded={isExpanded}
-                      onClick={() => toggleProvider(provider.name)}
-                    >
-                      <ProviderHeaderContent
-                        providerName={provider.name}
-                        selectedCount={selectedCount}
-                        itemCount={provider.items.length}
-                        isExpanded={isExpanded}
-                      />
-                    </button>
-                  </div>
-                )}
-
-                {isExpanded && (
-                  <div className="space-y-4 px-3 pb-3">
-                    {isUnavailable && (
-                      <p className="rounded-md border border-badge-warning-border bg-badge-warning-bg px-3 py-2 text-sm text-badge-warning-fg">
-                        {unavailableDescription}
-                      </p>
-                    )}
-                    <CapabilityKindSection
-                      kind="tool"
-                      provider={provider}
-                      items={items.filter((item) => item.kind === "tool")}
-                      selectedKeys={selectedKeys}
-                      isUnavailable={isUnavailable}
-                      onToggleSelection={toggleSelection}
-                    />
-                    <CapabilityKindSection
-                      kind="prompt"
-                      provider={provider}
-                      items={items.filter((item) => item.kind === "prompt")}
-                      selectedKeys={selectedKeys}
-                      isUnavailable={isUnavailable}
-                      onToggleSelection={toggleSelection}
-                    />
-                  </div>
-                )}
-              </section>
-            );
-          })}
+          {viewModel.providerRows.map((row) => (
+            <ProviderRow
+              key={row.name}
+              row={row}
+              onToggleExpanded={() => toggleProviderExpanded(row.name)}
+              onToggleProviderSelection={() =>
+                toggleProviderSelection(row.provider, row.isUnavailable)
+              }
+              onToggleItem={toggleItem}
+            />
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+function PickerEmptyState({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
+function ProviderRow({
+  row,
+  onToggleExpanded,
+  onToggleProviderSelection,
+  onToggleItem,
+}: {
+  row: CapabilityProviderRow;
+  onToggleExpanded: () => void;
+  onToggleProviderSelection: () => void;
+  onToggleItem: ToggleItem;
+}) {
+  return (
+    <section data-testid={`skill-capability-provider-${row.name}`}>
+      <div className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50">
+        <ProviderSelectionCheckbox
+          providerName={row.name}
+          checked={row.selectionState}
+          disabled={row.isSelectionDisabled}
+          onCheckedChange={onToggleProviderSelection}
+        />
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-expanded={row.isExpanded}
+          onClick={onToggleExpanded}
+        >
+          <ProviderHeaderContent
+            providerName={row.name}
+            selectedCount={row.selectedCount}
+            itemCount={row.itemCount}
+            isExpanded={row.isExpanded}
+          />
+        </button>
+      </div>
+
+      {row.isExpanded && (
+        <div className="space-y-4 px-3 pb-3">
+          {row.isUnavailable && (
+            <p className="rounded-md border border-badge-warning-border bg-badge-warning-bg px-3 py-2 text-sm text-badge-warning-fg">
+              {row.unavailableDescription}
+            </p>
+          )}
+          <CapabilityKindSection
+            kind="tool"
+            rows={row.toolRows}
+            onToggleItem={onToggleItem}
+          />
+          <CapabilityKindSection
+            kind="prompt"
+            rows={row.promptRows}
+            onToggleItem={onToggleItem}
+          />
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -326,77 +189,40 @@ function ProviderFilterMultiSelect({
   selectedProviderNames: string[];
   onSelectedProviderNamesChange?: (providerNames: string[]) => void;
 }) {
-  const anchorRef = useComboboxAnchor();
-  const providerNames = React.useMemo(
-    () => providers.map((provider) => provider.name),
-    [providers],
-  );
-  const selectedProviderNameSet = React.useMemo(
-    () => new Set(selectedProviderNames),
-    [selectedProviderNames],
-  );
   const disabled = !onSelectedProviderNamesChange || providers.length === 0;
-
-  function handleSelectedProviderNamesChange(nextValue: unknown) {
-    if (!Array.isArray(nextValue)) {
-      return;
-    }
-
-    onSelectedProviderNamesChange?.(
-      providerNames.filter((providerName) => nextValue.includes(providerName)),
-    );
-  }
+  const selectedCount = selectedProviderNames.length;
+  const isAll = selectedCount === 0;
 
   return (
-    <Combobox
-      items={providerNames}
-      multiple
-      value={selectedProviderNames}
-      onValueChange={handleSelectedProviderNamesChange}
-      openOnInputClick
+    <MultiSelectFilterDropdown
+      options={providers}
+      getOptionValue={(provider) => provider.name}
+      renderOption={(provider) => (
+        <ProviderFilterOptionContent providerName={provider.name} />
+      )}
+      selectedValues={selectedProviderNames}
+      onSelectedValuesChange={(names) => onSelectedProviderNamesChange?.(names)}
+      allLabel="All MCP servers"
       disabled={disabled}
-    >
-      <div ref={anchorRef} className="w-full sm:w-64">
-        <ComboboxChips className="min-h-9 w-full flex-nowrap overflow-hidden bg-white ">
-          {selectedProviderNames.length > 0 && (
-            <ComboboxValue>
-              {selectedProviderNames.map((providerName) => (
-                <ComboboxChip key={providerName} className={"bg-white border"}>
-                  {providerName}
-                </ComboboxChip>
-              ))}
-            </ComboboxValue>
-          )}
-          <ComboboxChipsInput
-            aria-label="Filter MCP servers"
-            className={cn(
-              "min-w-0",
-              selectedProviderNames.length === 0 ? "w-full" : "w-16",
+      triggerClassName={buttonVariants({
+        variant: "ghost",
+        size: "sm",
+        className: "cursor-pointer",
+      })}
+      triggerContent={
+        <>
+          <ListFilter className="mr-2 size-4" />
+          <span>
+            Filter MCP servers
+            {!isAll && (
+              <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+                ({selectedCount})
+              </span>
             )}
-            disabled={disabled}
-            placeholder={
-              selectedProviderNames.length === 0
-                ? "All MCP servers"
-                : "Search MCP servers"
-            }
-          />
-        </ComboboxChips>
-      </div>
-      <ComboboxContent anchor={anchorRef} initialFocus={false}>
-        <ComboboxEmpty>No MCP servers found.</ComboboxEmpty>
-        <ComboboxList>
-          {(providerName) => (
-            <ComboboxItem
-              key={providerName}
-              value={providerName}
-              data-checked={selectedProviderNameSet.has(providerName)}
-            >
-              <ProviderFilterOptionContent providerName={providerName} />
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
+          </span>
+        </>
+      }
+    />
   );
 }
 
@@ -434,41 +260,6 @@ function ProviderFilterOptionIcon({ name }: { name: string }) {
     >
       {getProviderInitial(name)}
     </span>
-  );
-}
-
-function ProviderHeader({
-  providerName,
-  selectedCount,
-  itemCount,
-  isExpanded,
-  selectionState,
-  isSelectionDisabled,
-  onToggleSelection,
-}: {
-  providerName: string;
-  selectedCount: number;
-  itemCount: number;
-  isExpanded: boolean;
-  selectionState: boolean | "indeterminate";
-  isSelectionDisabled: boolean;
-  onToggleSelection: () => void;
-}) {
-  return (
-    <div className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left">
-      <ProviderSelectionCheckbox
-        providerName={providerName}
-        checked={selectionState}
-        disabled={isSelectionDisabled}
-        onCheckedChange={onToggleSelection}
-      />
-      <ProviderHeaderContent
-        providerName={providerName}
-        selectedCount={selectedCount}
-        itemCount={itemCount}
-        isExpanded={isExpanded}
-      />
-    </div>
   );
 }
 
@@ -563,30 +354,19 @@ function getProviderInitial(name: string) {
 
 function CapabilityKindSection({
   kind,
-  provider,
-  items,
-  selectedKeys,
-  isUnavailable,
-  onToggleSelection,
+  rows,
+  onToggleItem,
 }: {
   kind: SkillCapabilityKind;
-  provider: CapabilityProvider;
-  items: CapabilityItem[];
-  selectedKeys: Set<SkillCapabilitySelectionKey>;
-  isUnavailable: boolean;
-  onToggleSelection: (
-    provider: CapabilityProvider,
-    kind: SkillCapabilityKind,
-    item: CapabilityItem,
-    isUnavailable: boolean,
-  ) => void;
+  rows: CapabilityItemRow[];
+  onToggleItem: ToggleItem;
 }) {
   const idPrefix = React.useId();
   const [expandedDescriptionKeys, setExpandedDescriptionKeys] = React.useState<
     Set<SkillCapabilitySelectionKey>
   >(new Set());
 
-  if (items.length === 0) {
+  if (rows.length === 0) {
     return null;
   }
 
@@ -608,227 +388,115 @@ function CapabilityKindSection({
         {sectionLabels[kind]}
       </h3>
       <div className="space-y-1">
-        {items.map((item) => {
-          const selectionKey = buildSkillCapabilitySelectionKey(
-            getCapabilityProviderSelectionId(provider),
-            kind,
-            getCapabilityItemSelectionName(item),
-          );
-          const isSelected = selectedKeys.has(selectionKey);
-          const isDescriptionExpanded =
-            expandedDescriptionKeys.has(selectionKey);
-          const shouldClampDescription =
-            Boolean(item.description) &&
-            item.description.length > collapsedDescriptionLength;
-          const hasWarning = isUnavailable || Boolean(item.unavailableReason);
-          const checkboxId = `${idPrefix}-${selectionKey}`;
-          const descriptionId = `${checkboxId}-description`;
-
-          return (
-            <div
-              key={`${kind}:${item.id}`}
-              className={cn(
-                "flex gap-3 rounded-md border border-transparent px-2 py-2 text-sm transition-colors",
-                hasWarning
-                  ? "border-badge-warning-border bg-badge-warning-bg"
-                  : "hover:border-border hover:bg-muted/50",
-              )}
-            >
-              <Checkbox
-                id={checkboxId}
-                checked={isSelected}
-                disabled={isUnavailable}
-                aria-label={`Select ${kind} ${item.name}`}
-                aria-describedby={item.description ? descriptionId : undefined}
-                onCheckedChange={() =>
-                  onToggleSelection(provider, kind, item, isUnavailable)
-                }
-                className="mt-0.5"
-              />
-              <span className="min-w-0 flex-1 space-y-1">
-                <label
-                  htmlFor={checkboxId}
-                  className={cn(
-                    "flex flex-wrap items-center gap-2",
-                    isUnavailable ? "cursor-default" : "cursor-pointer",
-                  )}
-                >
-                  <span className="break-words font-medium text-foreground">
-                    {item.name}
-                  </span>
-                  {item.annotations?.readOnlyHint === true && (
-                    <Badge variant="success" size="sm">
-                      READ ONLY
-                    </Badge>
-                  )}
-                  {item.annotations?.destructiveHint === true && (
-                    <Badge variant="danger" size="sm">
-                      DESTRUCTIVE
-                    </Badge>
-                  )}
-                </label>
-                {item.description && (
-                  <span className="block space-y-1">
-                    <span
-                      id={descriptionId}
-                      className={cn(
-                        "block break-words text-xs text-muted-foreground",
-                        shouldClampDescription &&
-                          !isDescriptionExpanded &&
-                          "line-clamp-3",
-                      )}
-                    >
-                      {item.description}
-                    </span>
-                    {shouldClampDescription && (
-                      <Button
-                        type="button"
-                        variant="link"
-                        size="xs"
-                        className="h-auto p-0 text-xs"
-                        aria-expanded={isDescriptionExpanded}
-                        aria-controls={descriptionId}
-                        onClick={() => toggleDescription(selectionKey)}
-                      >
-                        {isDescriptionExpanded ? "Show less" : "Show more"}
-                        <span className="sr-only">
-                          {" "}
-                          description for {item.name}
-                        </span>
-                      </Button>
-                    )}
-                  </span>
-                )}
-                {item.unavailableReason ? (
-                  <span className="block break-words text-xs text-badge-warning-fg">
-                    {item.unavailableReason}
-                  </span>
-                ) : null}
-              </span>
-            </div>
-          );
-        })}
+        {rows.map((row) => (
+          <CapabilityItemRowView
+            key={`${kind}:${row.item.id}`}
+            row={row}
+            idPrefix={idPrefix}
+            isDescriptionExpanded={expandedDescriptionKeys.has(
+              row.selectionKey,
+            )}
+            onToggleDescription={() => toggleDescription(row.selectionKey)}
+            onToggleItem={() => onToggleItem(row.selectionKey, row.isDisabled)}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-function buildInitiallyExpandedProviderNames(
-  providers: CapabilityProvider[],
-  selectedKeys: Set<SkillCapabilitySelectionKey>,
-): Set<string> {
-  return buildSelectedProviderNames(providers, selectedKeys);
-}
+function CapabilityItemRowView({
+  row,
+  idPrefix,
+  isDescriptionExpanded,
+  onToggleDescription,
+  onToggleItem,
+}: {
+  row: CapabilityItemRow;
+  idPrefix: string;
+  isDescriptionExpanded: boolean;
+  onToggleDescription: () => void;
+  onToggleItem: () => void;
+}) {
+  const { item, kind, selectionKey, isSelected, isDisabled, hasWarning } = row;
+  const checkboxId = `${idPrefix}-${selectionKey}`;
+  const descriptionId = `${checkboxId}-description`;
 
-function buildSelectedProviderNames(
-  providers: CapabilityProvider[],
-  selectedKeys: Set<SkillCapabilitySelectionKey>,
-): Set<string> {
-  return new Set(
-    providers
-      .filter((provider) => providerHasSelectedItems(provider, selectedKeys))
-      .map((provider) => provider.name),
+  return (
+    <div
+      className={cn(
+        "flex gap-3 rounded-md border border-transparent px-2 py-2 text-sm transition-colors",
+        hasWarning
+          ? "border-badge-warning-border bg-badge-warning-bg"
+          : "hover:border-border hover:bg-muted/50",
+      )}
+    >
+      <Checkbox
+        id={checkboxId}
+        checked={isSelected}
+        disabled={isDisabled}
+        aria-label={`Select ${kind} ${item.name}`}
+        aria-describedby={item.description ? descriptionId : undefined}
+        onCheckedChange={onToggleItem}
+        className="mt-0.5"
+      />
+      <span className="min-w-0 flex-1 space-y-1">
+        <label
+          htmlFor={checkboxId}
+          className={cn(
+            "flex flex-wrap items-center gap-2",
+            isDisabled ? "cursor-default" : "cursor-pointer",
+          )}
+        >
+          <span className="break-words font-medium text-foreground">
+            {item.name}
+          </span>
+          {item.annotations?.readOnlyHint === true && (
+            <Badge variant="success" size="sm">
+              READ ONLY
+            </Badge>
+          )}
+          {item.annotations?.destructiveHint === true && (
+            <Badge variant="danger" size="sm">
+              DESTRUCTIVE
+            </Badge>
+          )}
+        </label>
+        {item.description && (
+          <span className="block space-y-1">
+            <span
+              id={descriptionId}
+              className={cn(
+                "block break-words text-xs text-muted-foreground",
+                row.shouldClampDescription &&
+                  !isDescriptionExpanded &&
+                  "line-clamp-3",
+              )}
+            >
+              {item.description}
+            </span>
+            {row.shouldClampDescription && (
+              <Button
+                type="button"
+                variant="link"
+                size="xs"
+                className="h-auto p-0 text-xs"
+                aria-expanded={isDescriptionExpanded}
+                aria-controls={descriptionId}
+                onClick={onToggleDescription}
+              >
+                {isDescriptionExpanded ? "Show less" : "Show more"}
+                <span className="sr-only"> description for {item.name}</span>
+              </Button>
+            )}
+          </span>
+        )}
+        {item.unavailableReason ? (
+          <span className="block break-words text-xs text-badge-warning-fg">
+            {item.unavailableReason}
+          </span>
+        ) : null}
+      </span>
+    </div>
   );
-}
-
-function providerHasSelectedItems(
-  provider: CapabilityProvider,
-  selectedKeys: Set<SkillCapabilitySelectionKey>,
-) {
-  const providerSelectionId = getCapabilityProviderSelectionId(provider);
-
-  return provider.items.some((item) =>
-    selectedKeys.has(
-      buildSkillCapabilitySelectionKey(
-        providerSelectionId,
-        item.kind,
-        getCapabilityItemSelectionName(item),
-      ),
-    ),
-  );
-}
-
-function filterProviders(
-  providers: CapabilityProvider[],
-  normalizedQuery: string,
-): VisibleProvider[] {
-  if (!normalizedQuery) {
-    return providers.map((provider) => ({
-      provider,
-      items: provider.items,
-    }));
-  }
-
-  return providers.flatMap((provider) => {
-    if (matchesText(provider.name, normalizedQuery)) {
-      return [{ provider, items: provider.items }];
-    }
-
-    const matchingItems = provider.items.filter(
-      (item) =>
-        matchesText(item.name, normalizedQuery) ||
-        matchesText(item.description, normalizedQuery),
-    );
-
-    return matchingItems.length > 0 ? [{ provider, items: matchingItems }] : [];
-  });
-}
-
-function countSelectedProviderItems(
-  provider: CapabilityProvider,
-  selectedKeys: Set<SkillCapabilitySelectionKey>,
-): number {
-  const providerSelectionId = getCapabilityProviderSelectionId(provider);
-
-  return provider.items.filter((item) =>
-    selectedKeys.has(
-      buildSkillCapabilitySelectionKey(
-        providerSelectionId,
-        item.kind,
-        getCapabilityItemSelectionName(item),
-      ),
-    ),
-  ).length;
-}
-
-function getSelectableProviderSelectionKeys(
-  provider: CapabilityProvider,
-  isUnavailable: boolean,
-): SkillCapabilitySelectionKey[] {
-  if (isUnavailable) {
-    return [];
-  }
-
-  const providerSelectionId = getCapabilityProviderSelectionId(provider);
-
-  return provider.items.map((item) =>
-    buildSkillCapabilitySelectionKey(
-      providerSelectionId,
-      item.kind,
-      getCapabilityItemSelectionName(item),
-    ),
-  );
-}
-
-function getProviderSelectionState(
-  providerSelectionKeys: SkillCapabilitySelectionKey[],
-  selectedKeys: Set<SkillCapabilitySelectionKey>,
-): boolean | "indeterminate" {
-  const selectedCount = providerSelectionKeys.filter((selectionKey) =>
-    selectedKeys.has(selectionKey),
-  ).length;
-
-  if (selectedCount === 0) {
-    return false;
-  }
-
-  if (selectedCount === providerSelectionKeys.length) {
-    return true;
-  }
-
-  return "indeterminate";
-}
-
-function matchesText(value: string | undefined, normalizedQuery: string) {
-  return value?.toLowerCase().includes(normalizedQuery) ?? false;
 }

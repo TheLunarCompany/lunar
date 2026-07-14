@@ -270,13 +270,12 @@ describe("SkillCapabilitiesEditor", () => {
 
     renderCapabilitiesRoute({ onUrlUpdate, hasMemory: true });
 
-    const providerFilter = screen.getByRole("combobox", {
+    const providerFilter = screen.getByRole("button", {
       name: "Filter MCP servers",
     });
     await user.click(providerFilter);
-    await user.click(screen.getByRole("option", { name: "github" }));
-    await user.click(providerFilter);
-    await user.click(screen.getByRole("option", { name: "linear" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "github" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "linear" }));
 
     const latestUpdate =
       onUrlUpdate.mock.calls[onUrlUpdate.mock.calls.length - 1]?.[0];
