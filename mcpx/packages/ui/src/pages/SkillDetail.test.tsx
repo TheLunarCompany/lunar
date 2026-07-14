@@ -126,7 +126,7 @@ describe("SkillDetail", () => {
       screen.getByRole("heading", { name: "existing", level: 2 }),
     ).toBeInTheDocument();
     expect(screen.getByText("Existing description")).toBeInTheDocument();
-    expect(screen.getByText("Maintained by")).toBeInTheDocument();
+    expect(screen.getByText("by")).toBeInTheDocument();
     expect(screen.getByText("Amir")).toBeInTheDocument();
     expect(screen.queryByText("Overview")).not.toBeInTheDocument();
     expect(screen.queryByText("MCP Servers")).not.toBeInTheDocument();

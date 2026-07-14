@@ -56,7 +56,9 @@ export default function SkillEditor() {
   }));
   const sourceDraft = isEdit ? skillQuery.data : uploadedDraft;
   const [isDetailsDirty, setIsDetailsDirty] = useState(false);
-  const { allowNextNavigation } = useUnsavedChangesPrompt(isDetailsDirty);
+  const hasUploadedDraft = !isEdit && Boolean(uploadedDraft);
+  const hasUnsavedDetails = isDetailsDirty || hasUploadedDraft;
+  const { allowNextNavigation } = useUnsavedChangesPrompt(hasUnsavedDetails);
 
   async function handleSubmit(draft: SkillDraft) {
     try {
@@ -89,6 +91,7 @@ export default function SkillEditor() {
       ? "submitting"
       : "idle";
   const submitLabel = isEdit ? "Save changes" : "Create skill";
+  const submitDisabled = status === "submitting" || !hasUnsavedDetails;
   const targetServers = useMemo(
     () => systemState?.targetServers ?? [],
     [systemState?.targetServers],
@@ -175,17 +178,15 @@ export default function SkillEditor() {
                 : "Save a personal Markdown skill."}
             </SkillPage.Description>
           </SkillPage.HeaderText>
-          {isEdit ? (
-            <SkillPage.Actions>
-              <Button
-                type="submit"
-                form="skill-details-form"
-                disabled={status === "submitting" || !isDetailsDirty}
-              >
-                {submitLabel}
-              </Button>
-            </SkillPage.Actions>
-          ) : null}
+          <SkillPage.Actions>
+            <Button
+              type="submit"
+              form="skill-details-form"
+              disabled={submitDisabled}
+            >
+              {submitLabel}
+            </Button>
+          </SkillPage.Actions>
         </SkillPage.Header>
 
         {isEdit && skillQuery.isLoading ? (
@@ -238,6 +239,7 @@ export default function SkillEditor() {
                 key={skillQuery.data?.id ?? uploadedDraft?.body ?? "new"}
                 id="skill-details-form"
                 submitLabel={submitLabel}
+                submitDisabled={submitDisabled}
                 status={status}
                 defaultValues={sourceDraft}
                 onSubmit={handleSubmit}

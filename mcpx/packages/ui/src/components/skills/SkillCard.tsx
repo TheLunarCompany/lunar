@@ -196,11 +196,11 @@ export function SkillCard({
           </Tooltip>
         </TooltipProvider>
 
-        {/* MCP servers */}
+        {/* MCP capabilities */}
         <div className="h-[154px] overflow-hidden">
           <div>
             <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--colors-gray-600)]">
-              MCP Servers
+              MCP capabilities
             </p>
             {providers.length > 0 ? (
               <SkillProviderBadges className="min-w-0">
@@ -267,7 +267,7 @@ export function SkillCard({
           />
           <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--text-colours-color-text-tertiary)]">
             <Clock className="size-3" />
-            {skillUpdatedAtFormatter.format(skill.updatedAt)}
+            Updated {skillUpdatedAtFormatter.format(skill.updatedAt)}
           </span>
         </div>
       </Card>

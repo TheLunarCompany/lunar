@@ -58,6 +58,8 @@ const githubSelectionKeys = [
 ];
 const longDescription =
   "This tool has a long operational description that explains prerequisites, expected arguments, selection rules, fallback behavior, examples, and edge cases. It is useful when inspecting the tool, but it should not make the entire provider section hard to scan by default.";
+const fittingLongDescription =
+  "Add a manual time entry to a task. You can provide either start plus duration or start plus end. The tool will calculate missing values. Requires task_id, start time, and either duration or end time. Supports description, billable flag, and tags.";
 
 const providers: CapabilityProvider[] = [
   {
@@ -218,6 +220,40 @@ describe("SkillCapabilityPicker", () => {
     expect(description).toHaveClass("line-clamp-3");
     expect(toggle).toHaveTextContent("Show more");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("does not show description toggles for borderline descriptions", () => {
+    const fittingToolKey = buildSkillCapabilitySelectionKey(
+      githubCatalogItemId,
+      "tool",
+      "fitting_long_description_tool",
+    );
+
+    renderPicker({
+      providers: [
+        {
+          name: "github",
+          catalogItemId: githubCatalogItemId,
+          items: [
+            {
+              id: "github:fitting_long_description_tool",
+              kind: "tool",
+              name: "fitting_long_description_tool",
+              description: fittingLongDescription,
+              providerName: "github",
+            },
+          ],
+        },
+      ],
+      selectedKeys: new Set([fittingToolKey]),
+    });
+
+    expect(screen.getByText(fittingLongDescription)).toBeVisible();
+    expect(
+      screen.queryByRole("button", {
+        name: /show more description for fitting_long_description_tool/i,
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("collapses expanded provider content when the provider header is clicked again", async () => {
@@ -507,6 +543,37 @@ describe("SkillCapabilityPicker", () => {
       screen.queryByText("No tools or prompts match your search."),
     ).not.toBeInTheDocument();
     expect(screen.getByText("take_screenshot")).toBeVisible();
+  });
+
+  it("shows provider logos in the MCP server filter options", async () => {
+    const user = userEvent.setup();
+    renderPicker({
+      providerFilters: [],
+      onProviderFiltersChange: vi.fn(),
+    });
+
+    await user.click(
+      screen.getByRole("combobox", { name: "Filter MCP servers" }),
+    );
+
+    const githubOption = screen.getByRole("option", { name: "github" });
+    const playwrightOption = screen.getByRole("option", {
+      name: "playwright",
+    });
+
+    const githubLogo = githubOption.querySelector("img");
+    const playwrightLogo = playwrightOption.querySelector("img");
+
+    expect(githubLogo).toHaveAttribute(
+      "src",
+      "https://icons.example/github.svg",
+    );
+    expect(githubLogo).toHaveClass("size-5");
+    expect(playwrightLogo).toHaveAttribute(
+      "src",
+      "https://icons.example/playwright.svg",
+    );
+    expect(playwrightLogo).toHaveClass("size-5");
   });
 
   it("keeps tools and prompts with the same name independent", async () => {

@@ -29,11 +29,11 @@ describe("SkillIdentity", () => {
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("BR")).toBeInTheDocument();
+    expect(screen.getByText("L")).toBeInTheDocument();
     expect(
       screen.getByText("Drive a real browser to reproduce bugs."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Maintained by")).toBeInTheDocument();
+    expect(screen.getByText("by")).toBeInTheDocument();
     expect(screen.getByText("Lunar")).toBeInTheDocument();
     expect(screen.getByText(/^Updated/)).toBeInTheDocument();
   });

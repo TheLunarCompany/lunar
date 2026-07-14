@@ -46,7 +46,6 @@ describe("SkillAppliedAgentsCard", () => {
     expect(
       screen.getByRole("heading", { name: "Applied to agents" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Engineering")).toBeInTheDocument();
     expect(screen.getByText("Legacy client")).toBeInTheDocument();
     expect(

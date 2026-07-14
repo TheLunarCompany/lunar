@@ -14,6 +14,29 @@ vi.mock("@/hooks/useDomainIcon", () => ({
 }));
 
 describe("SkillForm", () => {
+  it("marks required skill fields with indicators", () => {
+    render(<SkillForm submitLabel="Create skill" onSubmit={vi.fn()} />);
+
+    const requiredLabels = document.querySelectorAll(
+      'label[data-required="true"]',
+    );
+    expect(requiredLabels).toHaveLength(2);
+    requiredLabels.forEach((label) => {
+      expect(label).toHaveClass("after:content-['*']");
+    });
+    expect(screen.getByLabelText("Skill name")).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+    expect(screen.getByLabelText("Short description")).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+    expect(screen.getByLabelText("Markdown body")).not.toHaveAttribute(
+      "aria-required",
+    );
+  });
+
   it("submits a draft built from the fields", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<SkillForm submitLabel="Create skill" onSubmit={onSubmit} />);

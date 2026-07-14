@@ -70,8 +70,8 @@ describe("SkillEditor", () => {
       container.querySelector('[data-slot="skill-page-root"]'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Create skill" }),
-    ).toBeInTheDocument();
+      screen.getAllByRole("button", { name: "Create skill" }),
+    ).toHaveLength(2);
     expect(
       screen.getByRole("heading", { name: "Add a new skill" }),
     ).toBeInTheDocument();
@@ -84,6 +84,23 @@ describe("SkillEditor", () => {
     expect(
       screen.queryByTestId("skill-file-structure"),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders a disabled header create action until the form is dirty", async () => {
+    const user = userEvent.setup();
+    const { container } = renderEditorRoute("/skills/new/blank");
+    const header = container.querySelector<HTMLElement>(
+      '[data-slot="skill-page-header"]',
+    );
+    const headerCreateButton = within(header!).getByRole("button", {
+      name: "Create skill",
+    });
+
+    expect(headerCreateButton).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Skill name"), "new-skill");
+
+    expect(headerCreateButton).toBeEnabled();
   });
 
   it("creates a details-only skill and navigates to the skill detail page", async () => {
@@ -103,7 +120,7 @@ describe("SkillEditor", () => {
     renderEditorRoute("/skills/new/blank");
 
     await fillSkillForm(user);
-    await user.click(screen.getByRole("button", { name: "Create skill" }));
+    await user.click(getBottomCreateSkillButton());
 
     expect(createMutation.mutateAsync).toHaveBeenCalledWith({
       name: "repo-review",
@@ -129,7 +146,7 @@ describe("SkillEditor", () => {
     renderEditorRoute("/skills/new/blank");
 
     await fillSkillForm(user);
-    await user.click(screen.getByRole("button", { name: "Create skill" }));
+    await user.click(getBottomCreateSkillButton());
 
     await waitFor(() => expect(toast).toHaveBeenCalled());
     expect(toast).toHaveBeenCalledWith({
@@ -158,6 +175,10 @@ describe("SkillEditor", () => {
       "Imported description",
     );
     expect(screen.getByLabelText("Markdown body")).toHaveValue("# Imported");
+    expect(
+      screen.getAllByRole("button", { name: "Create skill" }),
+    ).toHaveLength(2);
+    expect(getBottomCreateSkillButton()).toBeEnabled();
     expect(
       screen.queryByRole("heading", { name: "MCP capabilities" }),
     ).not.toBeInTheDocument();
@@ -207,6 +228,7 @@ describe("SkillEditor", () => {
         container.querySelector('[data-slot="skill-page-header"]')!,
       ).getByRole("button", { name: "Save changes" }),
     ).toBeDisabled();
+    expect(getBottomSaveChangesButton()).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "MCP capabilities" }),
     ).not.toBeInTheDocument();
@@ -295,6 +317,32 @@ describe("SkillEditor", () => {
     expect(await screen.findByText("Skills list")).toBeInTheDocument();
   });
 
+  it("keeps the edit page save actions disabled until details are dirty", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useSkill).mockReturnValue({
+      data: existingSkill(),
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    const { container } = renderEditorRoute(
+      "/skills/0190a000-0000-7000-8000-000000000001/edit",
+    );
+    const headerSaveButton = within(
+      container.querySelector('[data-slot="skill-page-header"]')!,
+    ).getByRole("button", { name: "Save changes" });
+    const bottomSaveButton = getBottomSaveChangesButton();
+
+    expect(headerSaveButton).toBeDisabled();
+    expect(bottomSaveButton).toBeDisabled();
+
+    await user.clear(screen.getByLabelText("Short description"));
+    await user.type(screen.getByLabelText("Short description"), "Updated desc");
+
+    expect(headerSaveButton).toBeEnabled();
+    expect(bottomSaveButton).toBeEnabled();
+  });
+
   it("shows read-only linked capabilities and navigates to their editor", async () => {
     const user = userEvent.setup();
     const catalogItemId = "0190a000-0000-7000-8000-000000000010";
@@ -351,7 +399,7 @@ describe("SkillEditor", () => {
     const linkedCapabilities = screen.getByTestId("linked-mcp-capabilities");
     expect(
       within(linkedCapabilities).getByRole("button", {
-        name: "Link capabilities",
+        name: "Edit MCP capabilities",
       }),
     ).toBeInTheDocument();
     expect(
@@ -371,7 +419,7 @@ describe("SkillEditor", () => {
     );
   });
 
-  it("navigates to the capabilities editor from Link capabilities", async () => {
+  it("navigates to the capabilities editor from Edit MCP capabilities", async () => {
     const user = userEvent.setup();
     vi.mocked(useSkill).mockReturnValue({
       data: existingSkill(),
@@ -384,7 +432,7 @@ describe("SkillEditor", () => {
     await user.click(
       within(screen.getByTestId("linked-mcp-capabilities")).getByRole(
         "button",
-        { name: "Link capabilities" },
+        { name: "Edit MCP capabilities" },
       ),
     );
 
@@ -434,6 +482,11 @@ function CapabilitiesRoute() {
 
 function getBottomSaveChangesButton() {
   const buttons = screen.getAllByRole("button", { name: "Save changes" });
+  return buttons[buttons.length - 1];
+}
+
+function getBottomCreateSkillButton() {
+  const buttons = screen.getAllByRole("button", { name: "Create skill" });
   return buttons[buttons.length - 1];
 }
 

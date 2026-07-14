@@ -4,6 +4,7 @@ import {
   type ServerIconEntry,
   buildIconifyUrl,
   extractPrefix,
+  isSafeIconUrl,
   lookupRegistryKey,
 } from "@mcpx/toolkit-ui/src/utils/icons-utils";
 import { useQuery } from "@tanstack/react-query";
@@ -54,6 +55,9 @@ export const useDomainIcon = (name: string): string => {
   });
   if (!name) return "";
 
-  if (lookupResult) return entryToIconUrl(lookupResult.key, lookupResult.entry);
-  return data ?? "";
+  const iconUrl = lookupResult
+    ? entryToIconUrl(lookupResult.key, lookupResult.entry)
+    : (data ?? "");
+
+  return isSafeIconUrl(iconUrl) ? iconUrl : "";
 };

@@ -32,7 +32,7 @@ import {
   type Control,
   type UseFormSetValue,
 } from "react-hook-form";
-import { useNavigate, useParams } from "react-router-dom";
+import { generatePath, useNavigate, useParams } from "react-router-dom";
 
 export default function SkillCapabilitiesEditor() {
   const { id } = useParams();
@@ -104,6 +104,15 @@ export default function SkillCapabilitiesEditor() {
   } = form;
   const isSubmitting = updateSkillCapabilities.isPending;
   useUnsavedChangesPrompt(isDirty);
+
+  function handleCancel() {
+    if (!id) {
+      navigate(routes.skills);
+      return;
+    }
+
+    navigate(generatePath(routes.skillDetail, { id }));
+  }
 
   const activeProviderFilters = useMemo(() => {
     const providerNames = new Set(
@@ -195,6 +204,9 @@ export default function SkillCapabilitiesEditor() {
             </SkillPage.Description>
           </SkillPage.HeaderText>
           <SkillPage.Actions>
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
             <SaveCapabilitiesButton
               form="skill-capabilities-form"
               isSubmitting={isSubmitting}
@@ -236,12 +248,6 @@ export default function SkillCapabilitiesEditor() {
                   }
                 />
               </section>
-              <div className="flex shrink-0 justify-end gap-2 px-0 py-4 sm:px-5">
-                <SaveCapabilitiesButton
-                  isSubmitting={isSubmitting}
-                  disabled={!isDirty}
-                />
-              </div>
             </form>
           </div>
         )}

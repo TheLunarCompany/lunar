@@ -29,6 +29,8 @@ export type AgentIconEntry =
   | { kind: "local" };
 
 export const ICONIFY_BASE = "https://api.iconify.design";
+const ICONIFY_ORIGIN = new URL(ICONIFY_BASE).origin;
+const LOCAL_ICON_ORIGIN = "https://mcpx.local";
 
 export const MCP_ICON_URL = (name: string): string => {
   return buildIconifyUrl("hugeicons:mcp-server", getMcpColorByName(name));
@@ -39,6 +41,26 @@ export function buildIconifyUrl(iconifyId: string, color?: string): string {
   if (!prefix || !icon) return "";
   const url = `${ICONIFY_BASE}/${prefix}/${icon}.svg`;
   return color ? `${url}?color=${encodeURIComponent(color)}` : url;
+}
+
+export function isSafeIconUrl(url: string): boolean {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url, LOCAL_ICON_ORIGIN);
+    const isIconifyUrl =
+      parsed.origin === ICONIFY_ORIGIN &&
+      parsed.protocol === "https:" &&
+      parsed.pathname.endsWith(".svg");
+    const isLocalIconUrl =
+      parsed.origin === LOCAL_ICON_ORIGIN &&
+      parsed.pathname.startsWith("/icons/") &&
+      /\.(?:png|svg)$/.test(parsed.pathname);
+
+    return isIconifyUrl || isLocalIconUrl;
+  } catch {
+    return false;
+  }
 }
 
 export function matchRegistryKey(

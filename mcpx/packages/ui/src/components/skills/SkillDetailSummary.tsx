@@ -144,7 +144,7 @@ export function SkillIdentityMaintainer() {
       <span className="grid size-5 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
         {getInitial(maintainerName)}
       </span>
-      <span>Maintained by</span>
+      <span>by</span>
       <strong className="font-semibold text-[var(--text-colours-color-text-primary)]">
         {maintainerName}
       </strong>

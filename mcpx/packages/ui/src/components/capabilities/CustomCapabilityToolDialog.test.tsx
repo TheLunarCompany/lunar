@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CustomCapabilityToolDialog } from "./CustomCapabilityToolDialog";
 
+vi.mock("@/hooks/useDomainIcon", () => ({
+  useDomainIcon: (name: string) => `/icons/${name}.png`,
+}));
+
 describe("CustomCapabilityToolDialog", () => {
   afterEach(() => cleanup());
 
@@ -85,6 +89,63 @@ describe("CustomCapabilityToolDialog", () => {
 
     expect(screen.getByLabelText("Custom tool name")).toHaveValue(
       "Custom_read_file",
+    );
+  });
+
+  it("submits canonical provider and item names from the provider list", () => {
+    const onSubmitCustomCapabilityTool = vi.fn();
+
+    render(
+      <CustomCapabilityToolDialog
+        isOpen
+        onOpenChange={vi.fn()}
+        onClose={vi.fn()}
+        providers={[
+          {
+            name: "filesystem",
+            items: [
+              {
+                id: "filesystem:read_file",
+                kind: "tool",
+                name: "read_file",
+                description: "Read a file",
+                providerName: "filesystem",
+              },
+            ],
+          },
+          {
+            name: "github",
+            items: [
+              {
+                id: "github:search_repositories",
+                kind: "tool",
+                name: "search_repositories",
+                description: "Search repositories",
+                providerName: "github",
+              },
+            ],
+          },
+        ]}
+        onSubmitCustomCapabilityTool={onSubmitCustomCapabilityTool}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Server"), {
+      target: { value: "github" },
+    });
+    fireEvent.change(screen.getByLabelText("Tool"), {
+      target: { value: "search_repositories" },
+    });
+    fireEvent.change(screen.getByLabelText("Custom tool name"), {
+      target: { value: "safe_search" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onSubmitCustomCapabilityTool).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerName: "github",
+        baseCapabilityName: "search_repositories",
+      }),
     );
   });
 

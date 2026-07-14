@@ -87,7 +87,8 @@ export function SkillLinkedCapabilities({
             </span>
             <div className="space-y-1">
               <h2 className="text-base font-semibold text-[var(--text-colours-color-text-primary)]">
-                No MCP servers available
+                No servers connected yet. Click here to connect servers to your
+                MCPX instance.
               </h2>
               <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
                 Add an MCP server to make tools and prompts available for this

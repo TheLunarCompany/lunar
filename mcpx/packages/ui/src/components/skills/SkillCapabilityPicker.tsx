@@ -54,7 +54,7 @@ const sectionLabels: Record<SkillCapabilityKind, string> = {
   prompt: "PROMPTS",
 };
 
-const collapsedDescriptionLength = 220;
+const collapsedDescriptionLength = 250;
 
 export function SkillCapabilityPicker({
   providers,
@@ -190,11 +190,6 @@ export function SkillCapabilityPicker({
   return (
     <div className="min-w-0 space-y-3 py-1">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <ProviderFilterMultiSelect
-          providers={providers}
-          selectedProviderNames={providerFilters}
-          onSelectedProviderNamesChange={onProviderFiltersChange}
-        />
         <SearchInput
           role="searchbox"
           aria-label="Search MCP tools and prompts"
@@ -202,6 +197,11 @@ export function SkillCapabilityPicker({
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search MCP tools and prompts"
           wrapperClassName="min-w-0 flex-1"
+        />
+        <ProviderFilterMultiSelect
+          providers={providers}
+          selectedProviderNames={providerFilters}
+          onSelectedProviderNamesChange={onProviderFiltersChange}
         />
       </div>
 
@@ -356,7 +356,7 @@ function ProviderFilterMultiSelect({
       openOnInputClick
       disabled={disabled}
     >
-      <div ref={anchorRef} className="w-full sm:w-56">
+      <div ref={anchorRef} className="w-full sm:w-64">
         <ComboboxChips className="min-h-9 w-full flex-nowrap overflow-hidden bg-white ">
           {selectedProviderNames.length > 0 && (
             <ComboboxValue>
@@ -391,12 +391,49 @@ function ProviderFilterMultiSelect({
               value={providerName}
               data-checked={selectedProviderNameSet.has(providerName)}
             >
-              <span className="truncate">{providerName}</span>
+              <ProviderFilterOptionContent providerName={providerName} />
             </ComboboxItem>
           )}
         </ComboboxList>
       </ComboboxContent>
     </Combobox>
+  );
+}
+
+function ProviderFilterOptionContent({
+  providerName,
+}: {
+  providerName: string;
+}) {
+  return (
+    <>
+      <ProviderFilterOptionIcon name={providerName} />
+      <span className="truncate">{providerName}</span>
+    </>
+  );
+}
+
+function ProviderFilterOptionIcon({ name }: { name: string }) {
+  const iconUrl = useDomainIcon(name);
+
+  if (iconUrl) {
+    return (
+      <img
+        src={iconUrl}
+        alt=""
+        aria-hidden="true"
+        className="size-5 shrink-0 object-contain"
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="grid size-5 shrink-0 place-items-center rounded bg-[var(--colors-gray-900)] text-[10px] font-semibold text-[var(--colors-white)]"
+    >
+      {getProviderInitial(name)}
+    </span>
   );
 }
 

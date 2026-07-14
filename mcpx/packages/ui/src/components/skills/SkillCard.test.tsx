@@ -67,6 +67,12 @@ describe("SkillCard", () => {
     });
   });
 
+  it("labels the skill timestamp as updated", () => {
+    renderCard();
+
+    expect(screen.getByText(/Updated /)).toBeInTheDocument();
+  });
+
   it("navigates to the detail page when the card is clicked", () => {
     navigate.mockClear();
     renderCard();
@@ -201,10 +207,10 @@ describe("SkillCard", () => {
     expect(screen.queryByText("Resource only")).not.toBeInTheDocument();
   });
 
-  it("renders an MCP servers section with one badge per provider", () => {
+  it("renders an MCP capabilities section with one badge per provider", () => {
     renderCard(vi.fn(), ["github", "linear"]);
 
-    expect(screen.getByText("MCP Servers")).toBeInTheDocument();
+    expect(screen.getByText("MCP capabilities")).toBeInTheDocument();
     expect(screen.getByText("github")).toBeInTheDocument();
     expect(screen.getByText("linear")).toBeInTheDocument();
   });
@@ -323,10 +329,10 @@ describe("SkillCard", () => {
     expect(screen.queryByText("postgres")).not.toBeInTheDocument();
   });
 
-  it("renders an MCP servers empty state when there are no providers", () => {
+  it("renders an MCP capabilities empty state when there are no providers", () => {
     renderCard();
 
-    expect(screen.getByText("MCP Servers")).toBeInTheDocument();
+    expect(screen.getByText("MCP capabilities")).toBeInTheDocument();
     expect(screen.getByText("No capabilities linked yet")).toBeInTheDocument();
   });
 

@@ -6,7 +6,6 @@ import { Link2, X } from "lucide-react";
 import {
   SkillSidebarCardActionButton,
   SkillSidebarCardContent,
-  SkillSidebarCardCount,
   SkillSidebarCardHeader,
   SkillSidebarCardRoot,
   SkillSidebarCardRow,
@@ -38,7 +37,6 @@ export function SkillLinkedCapabilitiesCard({
     <SkillSidebarCardRoot data-testid="linked-mcp-capabilities">
       <SkillSidebarCardHeader>
         <SkillSidebarCardTitle>Linked MCP capabilities</SkillSidebarCardTitle>
-        <SkillSidebarCardCount>{providers.length}</SkillSidebarCardCount>
       </SkillSidebarCardHeader>
 
       <SkillSidebarCardContent>
@@ -62,7 +60,7 @@ export function SkillLinkedCapabilitiesCard({
       {onLinkCapabilities ? (
         <SkillSidebarCardActionButton onClick={onLinkCapabilities}>
           <Link2 aria-hidden="true" />
-          Link capabilities
+          Edit MCP capabilities
         </SkillSidebarCardActionButton>
       ) : null}
     </SkillSidebarCardRoot>

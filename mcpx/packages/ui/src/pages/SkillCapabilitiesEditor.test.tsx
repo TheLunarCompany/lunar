@@ -56,6 +56,29 @@ describe("SkillCapabilitiesEditor", () => {
     } as never);
   });
 
+  it("renders the existing back link and header save/cancel actions", () => {
+    renderCapabilitiesRoute();
+
+    expect(
+      screen.getByRole("link", { name: "Back to existing" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: "Save capabilities" }),
+    ).toHaveLength(1);
+  });
+
+  it("cancels from the header action area", async () => {
+    const user = userEvent.setup();
+
+    renderCapabilitiesRoute();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(await screen.findByText("Details route")).toBeInTheDocument();
+    expect(idleMutation.mutateAsync).not.toHaveBeenCalled();
+  });
+
   it("saves selected capabilities without sending skill details", async () => {
     const user = userEvent.setup();
     const updateMutation = { mutateAsync: vi.fn(), isPending: false };
@@ -88,7 +111,7 @@ describe("SkillCapabilitiesEditor", () => {
         name: "Select prompt write_pull_request",
       }),
     );
-    await user.click(getBottomSaveCapabilitiesButton());
+    await user.click(getSaveCapabilitiesButton());
 
     await waitFor(() => expect(updateMutation.mutateAsync).toHaveBeenCalled());
     expect(updateMutation.mutateAsync).toHaveBeenCalledWith({
@@ -151,7 +174,7 @@ describe("SkillCapabilitiesEditor", () => {
         name: "Select tool search_repositories",
       }),
     );
-    await user.click(getBottomSaveCapabilitiesButton());
+    await user.click(getSaveCapabilitiesButton());
 
     await waitFor(() => expect(updateMutation.mutateAsync).toHaveBeenCalled());
     expect(updateMutation.mutateAsync.mock.calls[0]?.[0]).toEqual({
@@ -310,7 +333,7 @@ describe("SkillCapabilitiesEditor", () => {
     await user.click(
       screen.getByRole("button", { name: /unlink github capabilities/i }),
     );
-    await user.click(getBottomSaveCapabilitiesButton());
+    await user.click(getSaveCapabilitiesButton());
 
     await waitFor(() => expect(updateMutation.mutateAsync).toHaveBeenCalled());
     expect(updateMutation.mutateAsync).toHaveBeenCalledWith({
@@ -464,7 +487,7 @@ describe("SkillCapabilitiesEditor", () => {
     await user.click(
       screen.getByRole("checkbox", { name: "Select tool archived_tool" }),
     );
-    await user.click(getBottomSaveCapabilitiesButton());
+    await user.click(getSaveCapabilitiesButton());
 
     await waitFor(() => expect(updateMutation.mutateAsync).toHaveBeenCalled());
     expect(updateMutation.mutateAsync).toHaveBeenCalledWith({
@@ -506,7 +529,7 @@ describe("SkillCapabilitiesEditor", () => {
       screen.getByRole("button", { name: /github 0 of 1 selected/i }),
     );
     await user.click(screen.getByText("search_repositories"));
-    await user.click(getBottomSaveCapabilitiesButton());
+    await user.click(getSaveCapabilitiesButton());
 
     await waitFor(() => expect(toast).toHaveBeenCalled());
     expect(toast).toHaveBeenCalledWith({
@@ -514,7 +537,7 @@ describe("SkillCapabilitiesEditor", () => {
       description: "Nope",
       variant: "destructive",
     });
-    expect(getBottomSaveCapabilitiesButton()).toBeEnabled();
+    expect(getSaveCapabilitiesButton()).toBeEnabled();
   });
 });
 
@@ -527,12 +550,8 @@ function renderCapabilitiesRoute(
   return render(createCapabilitiesRouterElement(nuqsOptions));
 }
 
-function getBottomSaveCapabilitiesButton() {
-  const buttons = screen.getAllByRole("button", {
-    name: "Save capabilities",
-  });
-
-  return buttons[buttons.length - 1];
+function getSaveCapabilitiesButton() {
+  return screen.getByRole("button", { name: "Save capabilities" });
 }
 
 function createCapabilitiesRouterElement({

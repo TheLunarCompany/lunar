@@ -143,7 +143,7 @@ export function CustomCapabilityToolDialog({
     );
     const nextItem = nextProvider?.items[0];
 
-    setProviderName(nextProviderName);
+    setProviderName(nextProvider?.name ?? "");
     setItemName(nextItem?.name ?? "");
     setDescription(nextItem?.description ?? "");
     setParameters(propertiesToParameters(nextItem));
@@ -154,7 +154,7 @@ export function CustomCapabilityToolDialog({
       (candidate) => candidate.name === nextItemName,
     );
 
-    setItemName(nextItemName);
+    setItemName(nextItem?.name ?? "");
     setDescription(nextItem?.description ?? "");
     setParameters(propertiesToParameters(nextItem));
   }
@@ -170,8 +170,8 @@ export function CustomCapabilityToolDialog({
     }
 
     await onSubmitCustomCapabilityTool({
-      providerName,
-      baseCapabilityName: itemName,
+      providerName: provider?.name ?? "",
+      baseCapabilityName: item?.name ?? "",
       customCapabilityName: submittedCustomName,
       originalCustomCapabilityName: preFilledData?.name,
       description,

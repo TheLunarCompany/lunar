@@ -1,6 +1,7 @@
 import {
   getAgentIconEntry,
   getAgentIconUrl,
+  isSafeIconUrl,
   matchRegistryKey,
   lookupRegistryKey,
   extractPrefix,
@@ -253,5 +254,25 @@ describe("getAgentIconUrl", () => {
     expect(getAgentIconUrl("unknown-agent")).toContain(
       "hugeicons/mcp-server.svg",
     );
+  });
+});
+
+describe("isSafeIconUrl", () => {
+  it.each([
+    "https://api.iconify.design/logos/github.svg",
+    "https://api.iconify.design/logos/github.svg?color=%23ffffff",
+    "/icons/codex.svg",
+  ])("accepts trusted icon URL %s", (url) => {
+    expect(isSafeIconUrl(url)).toBe(true);
+  });
+
+  it.each([
+    "javascript:alert(1)",
+    "data:image/svg+xml,<svg></svg>",
+    "https://attacker.example/icon.svg",
+    "/other-assets/icon.svg",
+    "",
+  ])("rejects unsafe icon URL %s", (url) => {
+    expect(isSafeIconUrl(url)).toBe(false);
   });
 });

@@ -24,6 +24,7 @@ type SkillFormProps = {
   defaultValues?: SkillDraft;
   submitLabel: string;
   showTopSubmit?: boolean;
+  submitDisabled?: boolean;
   status?: "idle" | "submitting";
   onSubmit: (draft: SkillDraft) => Promise<void> | void;
   onDirtyChange?: (isDirty: boolean) => void;
@@ -35,6 +36,7 @@ export function SkillForm({
   defaultValues,
   submitLabel,
   showTopSubmit = false,
+  submitDisabled = false,
   status = "idle",
   onSubmit,
   onDirtyChange,
@@ -79,7 +81,11 @@ export function SkillForm({
     >
       {showTopSubmit ? (
         <div className="flex shrink-0 justify-end pb-3">
-          <SubmitButton isSubmitting={isSubmitting} label={submitLabel} />
+          <SubmitButton
+            disabled={submitDisabled}
+            isSubmitting={isSubmitting}
+            label={submitLabel}
+          />
         </div>
       ) : null}
       <div className="min-h-0 flex-1 space-y-4 overflow-auto">
@@ -88,20 +94,34 @@ export function SkillForm({
           className="space-y-5 rounded-xl border border-[var(--colors-purple-200)] bg-[var(--colors-white)] p-4 shadow-none sm:p-5"
         >
           <div className="space-y-2">
-            <Label htmlFor="skill-name">Skill name</Label>
+            <Label
+              htmlFor="skill-name"
+              data-required="true"
+              className="after:ml-0.5 after:text-destructive after:content-['*']"
+            >
+              Skill name
+            </Label>
             <Input
               id="skill-name"
               aria-invalid={Boolean(errors.name)}
+              aria-required="true"
               className="bg-[var(--structure-color-bg-app)]"
               {...register("name")}
             />
             {errors.name ? <ErrorText>{errors.name.message}</ErrorText> : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="skill-description">Short description</Label>
+            <Label
+              htmlFor="skill-description"
+              data-required="true"
+              className="after:ml-0.5 after:text-destructive after:content-['*']"
+            >
+              Short description
+            </Label>
             <Textarea
               id="skill-description"
               aria-invalid={Boolean(errors.description)}
+              aria-required="true"
               className="min-h-20 resize-y bg-[var(--structure-color-bg-app)]"
               {...register("description")}
             />
@@ -179,21 +199,27 @@ export function SkillForm({
         </div>
       </div>
       <div className="flex shrink-0 justify-end px-0 py-4 sm:px-5">
-        <SubmitButton isSubmitting={isSubmitting} label={submitLabel} />
+        <SubmitButton
+          disabled={submitDisabled}
+          isSubmitting={isSubmitting}
+          label={submitLabel}
+        />
       </div>
     </form>
   );
 }
 
 function SubmitButton({
+  disabled,
   isSubmitting,
   label,
 }: {
+  disabled: boolean;
   isSubmitting: boolean;
   label: string;
 }) {
   return (
-    <Button type="submit" disabled={isSubmitting}>
+    <Button type="submit" disabled={isSubmitting || disabled}>
       {isSubmitting ? <Loader2 className="animate-spin" /> : null}
       {label}
     </Button>

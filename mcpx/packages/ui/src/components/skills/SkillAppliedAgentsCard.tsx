@@ -5,7 +5,6 @@ import { SkillAgentIcon } from "./SkillAgentIcon";
 import {
   SkillSidebarCardActionButton,
   SkillSidebarCardContent,
-  SkillSidebarCardCount,
   SkillSidebarCardHeader,
   SkillSidebarCardIcon,
   SkillSidebarCardRoot,
@@ -47,7 +46,6 @@ export function SkillAppliedAgentsCard({
     <SkillSidebarCardRoot data-testid="applied-agents">
       <SkillSidebarCardHeader>
         <SkillSidebarCardTitle>Applied to agents</SkillSidebarCardTitle>
-        <SkillSidebarCardCount>{appliedOptions.length}</SkillSidebarCardCount>
       </SkillSidebarCardHeader>
 
       <SkillSidebarCardContent>
