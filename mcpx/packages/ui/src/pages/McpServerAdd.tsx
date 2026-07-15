@@ -17,8 +17,17 @@ import { useToast } from "@/components/ui/use-toast";
 import { Sort } from "@/components/Sort";
 import { AddMcpServersSelectionBar } from "@/components/mcp-servers/AddMcpServersSelectionBar";
 import { McpServerCatalogCard } from "@/components/mcp-servers/McpServerCatalogCard";
+import { ErrorBanner } from "@/components/ErrorBanner";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useAddMcpServer } from "@/data/mcp-server";
+import { getAddServerErrorMessage } from "@/lib/api-errors";
+import {
+  buildInstalledCatalogServerLookup,
+  CATALOG_SERVER_SORT_OPTIONS,
+  type CatalogSortOrder,
+  filterAndSortCatalogServers,
+  isCatalogServerInstalled,
+} from "@/mapping/catalog-servers";
 import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
 
@@ -27,13 +36,6 @@ const catalogGridStyle = {
 };
 
 const SKELETON_PLACEHOLDERS = Array.from({ length: 6 }, (_, index) => index);
-
-type SortOrder = "asc" | "desc";
-
-const SORT_OPTIONS: Array<{ label: string; value: SortOrder }> = [
-  { label: "A to Z", value: "asc" },
-  { label: "Z to A", value: "desc" },
-];
 
 function getAddableCatalogServerConfig(
   server: CatalogMCPServerConfigByNameItem,
@@ -119,57 +121,29 @@ export default function McpServerAdd() {
     [catalogServersData],
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [sortOrder, setSortOrder] = useState<CatalogSortOrder>("asc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState("");
 
-  const addedItemIds = useMemo(
+  const installedLookup = useMemo(
+    () => buildInstalledCatalogServerLookup(targetServers),
+    [targetServers],
+  );
+
+  const filteredCatalogServers = useMemo(
     () =>
-      new Set(
-        targetServers
-          .map((server) => server.catalogItemId)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    [targetServers],
+      filterAndSortCatalogServers({
+        servers: catalogServers,
+        searchQuery,
+        sortOrder,
+        installedLookup,
+      }),
+    [catalogServers, installedLookup, searchQuery, sortOrder],
   );
-  const addedServerNames = useMemo(
-    () => new Set(targetServers.map((server) => server.name.toLowerCase())),
-    [targetServers],
-  );
-
-  const filteredCatalogServers = useMemo(() => {
-    const normalizedSearch = searchQuery.trim().toLowerCase();
-
-    return [...catalogServers]
-      .filter((server) => {
-        if (!normalizedSearch) return true;
-
-        return (
-          server.name.toLowerCase().includes(normalizedSearch) ||
-          server.displayName.toLowerCase().includes(normalizedSearch) ||
-          (server.description ?? "").toLowerCase().includes(normalizedSearch)
-        );
-      })
-      .sort((a, b) => {
-        const aIsInstalled =
-          addedItemIds.has(a.id) || addedServerNames.has(a.name.toLowerCase());
-        const bIsInstalled =
-          addedItemIds.has(b.id) || addedServerNames.has(b.name.toLowerCase());
-        if (aIsInstalled !== bIsInstalled) {
-          return aIsInstalled ? 1 : -1;
-        }
-
-        const comparison = (a.displayName || a.name).localeCompare(
-          b.displayName || b.name,
-        );
-        return sortOrder === "asc" ? comparison : -comparison;
-      });
-  }, [addedItemIds, addedServerNames, catalogServers, searchQuery, sortOrder]);
 
   const visibleSelectableServers = filteredCatalogServers.filter(
-    (server) =>
-      !addedItemIds.has(server.id) &&
-      !addedServerNames.has(server.name.toLowerCase()),
+    (server) => !isCatalogServerInstalled(server, installedLookup),
   );
   const selectedVisibleServers = visibleSelectableServers.filter((server) =>
     selectedIds.has(server.id),
@@ -213,7 +187,7 @@ export default function McpServerAdd() {
     if (selectedServers.length === 0) return;
 
     setIsAdding(true);
-    navigate(routes.mcpServers);
+    setAddError("");
     const addedIds: string[] = [];
     const failedServers: Array<{ name: string; error: string }> = [];
     const existingServers = targetServers.map((server) => ({
@@ -234,10 +208,7 @@ export default function McpServerAdd() {
       } catch (serverError) {
         failedServers.push({
           name: server.displayName || server.name,
-          error:
-            serverError instanceof Error
-              ? serverError.message
-              : "Failed to add server",
+          error: getAddServerErrorMessage(serverError),
         });
       }
     }
@@ -250,6 +221,7 @@ export default function McpServerAdd() {
     setIsAdding(false);
 
     if (failedServers.length === 0) {
+      navigate(routes.mcpServers);
       toast({
         title: "Servers Added",
         description: `Added ${addedIds.length} server${
@@ -262,6 +234,7 @@ export default function McpServerAdd() {
     }
 
     if (addedIds.length > 0) {
+      navigate(routes.mcpServers);
       toast({
         title: "Some Servers Added",
         description: `Added ${addedIds.length}; failed to add ${failedServers.length}.`,
@@ -271,16 +244,14 @@ export default function McpServerAdd() {
       return;
     }
 
-    toast({
-      title: "Failed to Add Servers",
-      description: failedServers[0]?.error ?? "Please try again.",
-      variant: "destructive",
-      position: "bottom-left",
-    });
+    setAddError(failedServers[0]?.error ?? "Please try again.");
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background p-6 pb-28">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-background p-6 pb-28">
+      {addError && (
+        <ErrorBanner message={addError} onClose={() => setAddError("")} />
+      )}
       <Link
         to={routes.mcpServers}
         className="mb-5 inline-flex w-fit items-center gap-2 text-[#20222A] transition-colors hover:text-gray-900"
@@ -299,7 +270,7 @@ export default function McpServerAdd() {
         />
         <Sort
           title="Sort"
-          options={SORT_OPTIONS}
+          options={CATALOG_SERVER_SORT_OPTIONS}
           selected={sortOrder}
           onChange={setSortOrder}
         />
@@ -346,9 +317,7 @@ export default function McpServerAdd() {
         <>
           <div className="grid gap-4" style={catalogGridStyle}>
             {filteredCatalogServers.map((server) => {
-              const isAdded =
-                addedItemIds.has(server.id) ||
-                addedServerNames.has(server.name.toLowerCase());
+              const isAdded = isCatalogServerInstalled(server, installedLookup);
 
               return (
                 <McpServerCatalogCard

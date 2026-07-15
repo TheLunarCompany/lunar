@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -37,6 +37,12 @@ import { useAddMcpServer } from "@/data/mcp-server";
 import { usePermissions } from "@/data/permissions";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getAddServerErrorMessage } from "@/lib/api-errors";
+import {
+  buildInstalledCatalogServerLookup,
+  CATALOG_SERVER_SORT_OPTIONS,
+  type CatalogSortOrder,
+  filterAndSortCatalogServers,
+} from "@/mapping/catalog-servers";
 import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
 import type { McpServerStatus } from "@/types";
@@ -67,13 +73,7 @@ const TABS = {
 } as const;
 
 type TabValue = "all" | "custom" | "migrate";
-type SortOrder = "asc" | "desc";
 type ErrorBannerVariant = "destructive" | "warning";
-
-const SORT_OPTIONS: Array<{ label: string; value: SortOrder }> = [
-  { label: "A to Z", value: "asc" },
-  { label: "Z to A", value: "desc" },
-];
 
 const extractServerConfig = (
   parsed: Record<string, unknown>,
@@ -166,6 +166,9 @@ function MultiServerAddWarningDescription({
 export default function McpRegistry() {
   const navigate = useNavigate();
   const systemState = useSocketStore((s) => s.systemState);
+  const targetServers = useSocketStore(
+    (state) => state.systemState?.targetServers ?? [],
+  );
   const { appConfig } = useSocketStore((s) => ({
     appConfig: s.appConfig,
   }));
@@ -176,12 +179,29 @@ export default function McpRegistry() {
     error,
   } = useAddMcpServer();
   const { data: serversFromCatalogData } = useGetMCPServers();
-  const serversFromCatalog = serversFromCatalogData ?? [];
+  const serversFromCatalog = useMemo(
+    () => serversFromCatalogData ?? [],
+    [serversFromCatalogData],
+  );
   const { canAddCustomServerAndEdit: canAddCustom } = usePermissions();
+  const installedLookup = useMemo(
+    () => buildInstalledCatalogServerLookup(targetServers),
+    [targetServers],
+  );
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
   const [activeTab, setActiveTab] = useState<TabValue>(TABS.ALL);
   const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [sortOrder, setSortOrder] = useState<CatalogSortOrder>("asc");
+  const filteredCatalogServers = useMemo(
+    () =>
+      filterAndSortCatalogServers({
+        servers: serversFromCatalog,
+        searchQuery: search,
+        sortOrder,
+        installedLookup,
+      }),
+    [installedLookup, search, serversFromCatalog, sortOrder],
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customJsonContent, setCustomJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
@@ -189,6 +209,7 @@ export default function McpRegistry() {
   const [migrateJsonContent, setMigrateJsonContent] = useState("");
   const [isValid, setIsValid] = useState(true);
   const [isCheckboxChecked, setIsCheckboxChecked] = useState(false);
+  const [allTabError, setAllTabError] = useState("");
   const [customTabError, setCustomTabError] = useState("");
   const [migrateTabError, setMigrateTabError] = useState("");
   const [customTabErrorVariant, setCustomTabErrorVariant] =
@@ -220,7 +241,9 @@ export default function McpRegistry() {
       details: Array<{ label: string; message: string }> = [],
       variant: ErrorBannerVariant = "destructive",
     ) => {
-      if (tab === TABS.CUSTOM) {
+      if (tab === TABS.ALL) {
+        setAllTabError(message);
+      } else if (tab === TABS.CUSTOM) {
         setCustomTabError(message);
         setCustomTabErrorDetails(details);
         setCustomTabErrorVariant(variant);
@@ -259,6 +282,7 @@ export default function McpRegistry() {
     setCustomJsonContent(DEFAULT_SERVER_CONFIGURATION_JSON);
     setMigrateJsonContent("");
     setIsSubmitting(false);
+    setAllTabError("");
     setCustomTabError("");
     setMigrateTabError("");
     setCustomTabErrorDetails([]);
@@ -506,7 +530,7 @@ export default function McpRegistry() {
     setCustomJsonContent(newJsonContent);
     setName(serverName);
     if (!needsEdit) {
-      handleAddServer(serverName, newJsonContent, TABS.CUSTOM, catalogItemId);
+      handleAddServer(serverName, newJsonContent, TABS.ALL, catalogItemId);
       return;
     }
     setActiveTab(TABS.CUSTOM);
@@ -523,6 +547,9 @@ export default function McpRegistry() {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white p-6">
+      {activeTab === TABS.ALL && allTabError && (
+        <ErrorBanner message={allTabError} onClose={() => setAllTabError("")} />
+      )}
       {activeTab === TABS.CUSTOM && customTabError && (
         <ErrorBanner
           details={customTabErrorDetails}
@@ -585,7 +612,7 @@ export default function McpRegistry() {
                 />
                 <Sort
                   title="Sort"
-                  options={SORT_OPTIONS}
+                  options={CATALOG_SERVER_SORT_OPTIONS}
                   selected={sortOrder}
                   onChange={setSortOrder}
                 />
@@ -603,27 +630,15 @@ export default function McpRegistry() {
               className="min-h-0 flex-1 overflow-hidden"
             >
               <div className="grid h-full grid-cols-1 content-start gap-4 overflow-y-auto pb-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {serversFromCatalog
-                  .filter((catalogServer) =>
-                    catalogServer.displayName
-                      .toLowerCase()
-                      .includes(search.toLowerCase()),
-                  )
-                  .sort((a, b) => {
-                    const comparison = (a.displayName || a.name).localeCompare(
-                      b.displayName || b.name,
-                    );
-                    return sortOrder === "asc" ? comparison : -comparison;
-                  })
-                  .map((server) => (
-                    <McpRegistryCard
-                      key={server.name}
-                      server={server}
-                      status={getServerStatus(server.name)}
-                      className="w-full border-[#E3E6EF] shadow-[0_1px_3px_rgba(16,24,40,0.10)]"
-                      onAddServer={handleUseExample}
-                    />
-                  ))}
+                {filteredCatalogServers.map((server) => (
+                  <McpRegistryCard
+                    key={server.name}
+                    server={server}
+                    status={getServerStatus(server.name)}
+                    className="w-full border-[#E3E6EF] shadow-[0_1px_3px_rgba(16,24,40,0.10)]"
+                    onAddServer={handleUseExample}
+                  />
+                ))}
               </div>
             </CustomTabsContent>
 
