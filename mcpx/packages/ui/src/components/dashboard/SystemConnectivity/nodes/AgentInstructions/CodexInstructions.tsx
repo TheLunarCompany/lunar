@@ -10,7 +10,10 @@ export const CodexInstructions: React.FC = () => {
         <div>
           <p className="font-semibold mb-2">Option 1: Edit config file</p>
           <ol className="list-decimal list-inside space-y-1">
-            <li>In Codex Desktop, go to Settings → Settings</li>
+            <li>
+              In Codex Desktop, click your username →{" "}
+              <span className="font-semibold">Settings</span>
+            </li>
             <li>In the left sidebar, select Configuration</li>
 
             <li>
@@ -36,12 +39,20 @@ export const CodexInstructions: React.FC = () => {
             Option 2: Connect with Codex Desktop
           </p>
           <ol className="list-decimal list-inside space-y-1">
-            <li>In Codex Desktop, go to Settings → Settings</li>
-            <li>In the left sidebar, select MCP Servers</li>
+            <li>
+              In Codex Desktop, click your username →{" "}
+              <span className="font-semibold">Settings</span>
+            </li>
+            <li>
+              In the left sidebar, select{" "}
+              <span className="font-semibold">Plugins</span> (under
+              Integrations)
+            </li>
+            <li>Click MCPs</li>
             <li>Click Add Server</li>
             <li>
               Choose <span className="font-semibold">Streamable HTTP</span> as
-              the transport, then fill in the following details:
+              the type, then fill in the following details:
               <ul className="list-disc list-inside ml-4 mt-1">
                 <li>
                   <span className="font-semibold">Name: </span>
@@ -60,12 +71,17 @@ export const CodexInstructions: React.FC = () => {
 
       <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6">
         <p className="font-semibold mb-4">Important Note</p>
-        <p>
-          MCPX will expose the available tools, however they are not yet
-          accessible for use. Please close and restart Codex to ensure all tools
-          and integrations are properly loaded and available. If you don't see
-          codex in the mcpx ui, try to ask codex which mcp tools are connected.
-        </p>
+        <ul className="list-disc list-inside ml-4 mt-1">
+          <li>
+            MCPX will expose the available tools, however they are not yet
+            accessible for use. Please close and restart Codex to ensure all
+            tools and integrations are properly loaded and available.
+          </li>
+          <li>
+            If Codex does not appear immediately codex in the MCPX UI, try to
+            ask codex which mcp tools are connected.
+          </li>
+        </ul>
       </div>
     </div>
   );
