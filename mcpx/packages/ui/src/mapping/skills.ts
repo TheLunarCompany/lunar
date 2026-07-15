@@ -7,6 +7,27 @@ export type SkillCardCapabilitySummary = {
   promptsCount: number;
 };
 
+export type SkillFilterOption = {
+  label: string;
+  value: string;
+};
+
+export function buildSkillFilterOptions(values: string[]): SkillFilterOption[] {
+  return [...new Set(values)]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .map((value) => ({ label: value, value }));
+}
+
+export function matchesSkillFilter(
+  values: string[],
+  selectedValues: string[],
+): boolean {
+  return (
+    selectedValues.length === 0 ||
+    selectedValues.some((selectedValue) => values.includes(selectedValue))
+  );
+}
+
 // Skills store their capability group by `catalogItemId`, while the UI shows
 // server names/icons. Resolve each item's catalog id back to the currently
 // connected target server's name. Ids that don't map to a connected server are

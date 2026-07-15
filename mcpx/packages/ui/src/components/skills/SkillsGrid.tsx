@@ -1,18 +1,25 @@
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Sort } from "@/components/Sort";
+import { MultiSelectFilterDropdown } from "@/components/ui/multi-select-filter-dropdown";
 import { SearchInput } from "@/components/ui/search-input";
 import { toast } from "@/components/ui/use-toast";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useDeleteSkill, useEnabledSkills, useSkills } from "@/data/skills";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { buildSkillAgentSelection } from "@/mapping/skill-agents";
-import { buildSkillCardCapabilitySummaryResolver } from "@/mapping/skills";
+import {
+  buildSkillCardCapabilitySummaryResolver,
+  buildSkillFilterOptions,
+  matchesSkillFilter,
+} from "@/mapping/skills";
 import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
-import { Plus, X } from "lucide-react";
-import { useQueryState } from "nuqs";
+import { ListFilter, Plus, ServerIcon, X } from "lucide-react";
+import { parseAsNativeArrayOf, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { SkillCard } from "./SkillCard";
+import { SkillAgentIcon } from "./SkillAgentIcon";
 import * as SkillPage from "./SkillPage";
 
 const SORT_VALUES = {
@@ -34,6 +41,26 @@ const SORT_OPTIONS: Array<{
   { label: "Z to A", value: SORT_VALUES.nameDesc },
 ];
 
+function SkillServerFilterOption({ name }: { name: string }) {
+  const iconUrl = useDomainIcon(name);
+
+  return (
+    <>
+      {iconUrl ? (
+        <img
+          src={iconUrl}
+          alt=""
+          aria-hidden="true"
+          className="size-4 shrink-0 rounded object-contain"
+        />
+      ) : (
+        <ServerIcon className="size-4 shrink-0" aria-hidden="true" />
+      )}
+      <span className="truncate">{name}</span>
+    </>
+  );
+}
+
 export function SkillsGrid() {
   const navigate = useNavigate();
   const skills = useSkills();
@@ -46,41 +73,16 @@ export function SkillsGrid() {
   const [sortValue, setSortValue] = useQueryState("sort", {
     defaultValue: SORT_VALUES.updatedAsc,
   });
+  const [selectedAgents, setSelectedAgents] = useQueryState(
+    "agents",
+    parseAsNativeArrayOf(parseAsString).withDefault([]),
+  );
+  const [selectedServers, setSelectedServers] = useQueryState(
+    "servers",
+    parseAsNativeArrayOf(parseAsString).withDefault([]),
+  );
 
   const all = useMemo(() => skills.data ?? [], [skills.data]);
-
-  const visible = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return [...all]
-      .filter((skill) => {
-        const matchesSearch =
-          !normalized ||
-          skill.name.toLowerCase().includes(normalized) ||
-          skill.description.toLowerCase().includes(normalized);
-        return matchesSearch;
-      })
-      .sort((a, b) => {
-        const nameComparison = a.name.localeCompare(b.name, undefined, {
-          sensitivity: "base",
-        });
-
-        switch (sortValue) {
-          case SORT_VALUES.nameAsc:
-            return nameComparison;
-          case SORT_VALUES.nameDesc:
-            return -nameComparison;
-          case SORT_VALUES.updatedDesc:
-            return (
-              b.updatedAt.getTime() - a.updatedAt.getTime() || nameComparison
-            );
-          case SORT_VALUES.updatedAsc:
-          default:
-            return (
-              a.updatedAt.getTime() - b.updatedAt.getTime() || nameComparison
-            );
-        }
-      });
-  }, [all, query, sortValue]);
 
   const summarizeSkillCapabilities = useMemo(
     () =>
@@ -88,9 +90,9 @@ export function SkillsGrid() {
     [catalogServers.data, systemState],
   );
 
-  const visibleCards = useMemo(
+  const allCards = useMemo(
     () =>
-      visible.map((skill) => ({
+      all.map((skill) => ({
         skill,
         capabilitySummary: summarizeSkillCapabilities(skill.capabilityGroup),
         agents: buildSkillAgentSelection({
@@ -99,13 +101,73 @@ export function SkillsGrid() {
           skillId: skill.id,
         }).selected.map((subject) => subject.value),
       })),
-    [enabledSkills.data, summarizeSkillCapabilities, systemState, visible],
+    [all, enabledSkills.data, summarizeSkillCapabilities, systemState],
   );
 
-  const isFiltered = query.trim().length > 0;
+  const agentOptions = useMemo(
+    () => buildSkillFilterOptions(allCards.flatMap(({ agents }) => agents)),
+    [allCards],
+  );
+  const serverOptions = useMemo(
+    () =>
+      buildSkillFilterOptions(
+        allCards.flatMap(
+          ({ capabilitySummary }) => capabilitySummary.providers,
+        ),
+      ),
+    [allCards],
+  );
+
+  const visibleCards = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return allCards
+      .filter(({ skill, agents, capabilitySummary }) => {
+        const matchesSearch =
+          !normalized ||
+          skill.name.toLowerCase().includes(normalized) ||
+          skill.description.toLowerCase().includes(normalized);
+        return (
+          matchesSearch &&
+          matchesSkillFilter(agents, selectedAgents) &&
+          matchesSkillFilter(capabilitySummary.providers, selectedServers)
+        );
+      })
+      .sort((a, b) => {
+        const nameComparison = a.skill.name.localeCompare(
+          b.skill.name,
+          undefined,
+          { sensitivity: "base" },
+        );
+
+        switch (sortValue) {
+          case SORT_VALUES.nameAsc:
+            return nameComparison;
+          case SORT_VALUES.nameDesc:
+            return -nameComparison;
+          case SORT_VALUES.updatedDesc:
+            return (
+              b.skill.updatedAt.getTime() - a.skill.updatedAt.getTime() ||
+              nameComparison
+            );
+          case SORT_VALUES.updatedAsc:
+          default:
+            return (
+              a.skill.updatedAt.getTime() - b.skill.updatedAt.getTime() ||
+              nameComparison
+            );
+        }
+      });
+  }, [allCards, query, selectedAgents, selectedServers, sortValue]);
+
+  const isFiltered =
+    query.trim().length > 0 ||
+    selectedAgents.length > 0 ||
+    selectedServers.length > 0;
 
   function resetFilters() {
     setQuery("");
+    setSelectedAgents([]);
+    setSelectedServers([]);
   }
 
   async function handleDelete(id: string) {
@@ -149,20 +211,65 @@ export function SkillsGrid() {
             selected={sortValue as SortValue}
             onChange={setSortValue}
           />
-          {/* <SkillsFacetedFilter
-            title="Type"
-            options={TYPE_OPTIONS}
-            selected={types}
-            facets={facets.type}
-            onChange={setTypes}
+          <MultiSelectFilterDropdown
+            options={agentOptions}
+            getOptionValue={(option) => option.value}
+            renderOption={(option) => (
+              <>
+                <SkillAgentIcon name={option.label} className="size-4" />
+                <span className="truncate">{option.label}</span>
+              </>
+            )}
+            selectedValues={selectedAgents}
+            onSelectedValuesChange={(values) => setSelectedAgents(values)}
+            allLabel="All agents"
+            searchPlaceholder="Search agents..."
+            triggerLabel="Filter by agents"
+            triggerClassName={buttonVariants({
+              variant: "ghost",
+              size: "sm",
+              className: "h-9",
+            })}
+            triggerContent={
+              <>
+                <ListFilter className="mr-2 size-4" />
+                Agents
+                {selectedAgents.length > 0 ? (
+                  <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+                    ({selectedAgents.length})
+                  </span>
+                ) : null}
+              </>
+            }
           />
-          <SkillsFacetedFilter
-            title="Tools"
-            options={TOOLS_OPTIONS}
-            selected={tools}
-            facets={facets.tools}
-            onChange={setTools}
-          /> */}
+          <MultiSelectFilterDropdown
+            options={serverOptions}
+            getOptionValue={(option) => option.value}
+            renderOption={(option) => (
+              <SkillServerFilterOption name={option.label} />
+            )}
+            selectedValues={selectedServers}
+            onSelectedValuesChange={(values) => setSelectedServers(values)}
+            allLabel="All MCP servers"
+            searchPlaceholder="Search MCP servers..."
+            triggerLabel="Filter by MCP servers"
+            triggerClassName={buttonVariants({
+              variant: "ghost",
+              size: "sm",
+              className: "h-9",
+            })}
+            triggerContent={
+              <>
+                <ListFilter className="mr-2 size-4" />
+                MCP servers
+                {selectedServers.length > 0 ? (
+                  <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+                    ({selectedServers.length})
+                  </span>
+                ) : null}
+              </>
+            }
+          />
           {isFiltered && (
             <Button
               type="button"
@@ -202,7 +309,7 @@ export function SkillsGrid() {
                 Create skill
               </Button>
             </SkillPage.Message>
-          ) : visible.length === 0 ? (
+          ) : visibleCards.length === 0 ? (
             <SkillPage.Message title="No skills match your filters." />
           ) : (
             <div className="grid min-w-0 grid-cols-1 content-start gap-4 pb-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

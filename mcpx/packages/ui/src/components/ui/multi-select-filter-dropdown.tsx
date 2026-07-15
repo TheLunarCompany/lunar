@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SearchInput } from "@/components/ui/search-input";
 import { cn } from "@/lib/utils";
 
 export type MultiSelectFilterDropdownProps<TOption> = {
@@ -23,6 +24,8 @@ export type MultiSelectFilterDropdownProps<TOption> = {
   triggerClassName?: string;
   /** Accessible name for the trigger, when the content isn't descriptive. */
   triggerLabel?: string;
+  /** Enables a search input for filtering options within the open menu. */
+  searchPlaceholder?: string;
   disabled?: boolean;
   /** Keep the menu open while toggling items (default: true). */
   keepOpenOnSelect?: boolean;
@@ -45,16 +48,25 @@ export function MultiSelectFilterDropdown<TOption>({
   triggerContent,
   triggerClassName,
   triggerLabel,
+  searchPlaceholder,
   disabled = false,
   keepOpenOnSelect = true,
   align = "start",
   contentClassName,
 }: MultiSelectFilterDropdownProps<TOption>) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
   const selectedValueSet = React.useMemo(
     () => new Set(selectedValues),
     [selectedValues],
   );
   const isAll = selectedValues.length === 0;
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const visibleOptions = normalizedSearchQuery
+    ? options.filter((option) =>
+        getOptionValue(option).toLowerCase().includes(normalizedSearchQuery),
+      )
+    : options;
 
   function toggleValue(value: string, checked: boolean) {
     const nextSelection = new Set(selectedValueSet);
@@ -73,8 +85,13 @@ export function MultiSelectFilterDropdown<TOption>({
     ? (event: Event) => event.preventDefault()
     : undefined;
 
+  function handleOpenChange(nextIsOpen: boolean) {
+    setIsOpen(nextIsOpen);
+    if (!nextIsOpen) setSearchQuery("");
+  }
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger
         disabled={disabled}
         aria-label={triggerLabel}
@@ -86,6 +103,17 @@ export function MultiSelectFilterDropdown<TOption>({
         align={align}
         className={cn("max-h-80 min-w-56 p-1", contentClassName)}
       >
+        {searchPlaceholder ? (
+          <SearchInput
+            aria-label={searchPlaceholder}
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onKeyDown={(event) => event.stopPropagation()}
+            wrapperClassName="mb-1 px-1 mt-1"
+            className="h-8 rounded"
+          />
+        ) : null}
         <DropdownMenuCheckboxItem
           checked={isAll}
           onCheckedChange={() => onSelectedValuesChange([])}
@@ -95,7 +123,7 @@ export function MultiSelectFilterDropdown<TOption>({
         </DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          {options.map((option) => {
+          {visibleOptions.map((option) => {
             const value = getOptionValue(option);
             return (
               <DropdownMenuCheckboxItem
@@ -110,6 +138,11 @@ export function MultiSelectFilterDropdown<TOption>({
               </DropdownMenuCheckboxItem>
             );
           })}
+          {visibleOptions.length === 0 ? (
+            <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+              No results found.
+            </div>
+          ) : null}
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

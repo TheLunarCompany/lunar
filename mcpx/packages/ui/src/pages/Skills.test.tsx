@@ -1,12 +1,14 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Skill } from "@mcpx/shared-model";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Skills from "./Skills";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useDeleteSkill, useEnabledSkills, useSkills } from "@/data/skills";
+import { socketStore } from "@/store";
 
 vi.mock("@/data/skills", () => ({
   useSkills: vi.fn(),
@@ -15,6 +17,9 @@ vi.mock("@/data/skills", () => ({
 }));
 vi.mock("@/data/catalog-servers", () => ({
   useGetMCPServers: vi.fn(),
+}));
+vi.mock("@/hooks/useDomainIcon", () => ({
+  useDomainIcon: (name: string) => `/icons/${name}.svg`,
 }));
 vi.mock("@/components/ui/use-toast", () => ({ toast: vi.fn() }));
 
@@ -51,19 +56,92 @@ const sortableSkills: Skill[] = [
   },
 ];
 
+const filterableSkills: Skill[] = [
+  {
+    ...skills[0],
+    id: "0190a000-0000-7000-8000-000000000011",
+    name: "engineering-slack",
+    capabilityGroup: {
+      items: [{ catalogItemId: "server-slack", tools: [], prompts: [] }],
+    },
+  },
+  {
+    ...skills[0],
+    id: "0190a000-0000-7000-8000-000000000012",
+    name: "cursor-slack",
+    capabilityGroup: {
+      items: [{ catalogItemId: "server-slack", tools: [], prompts: [] }],
+    },
+  },
+  {
+    ...skills[0],
+    id: "0190a000-0000-7000-8000-000000000013",
+    name: "engineering-github",
+    capabilityGroup: {
+      items: [{ catalogItemId: "server-github", tools: [], prompts: [] }],
+    },
+  },
+];
+
+const filterSystemState = {
+  targetServers: [
+    { name: "Slack", catalogItemId: "server-slack", tools: [], prompts: [] },
+    {
+      name: "GitHub",
+      catalogItemId: "server-github",
+      tools: [],
+      prompts: [],
+    },
+  ],
+  connectedClientClusters: [
+    {
+      identityType: "consumerTag",
+      consumerTag: "Engineering",
+      clientNames: [],
+      sessionIds: [],
+      usage: { callCount: 0 },
+    },
+    {
+      identityType: "consumerTag",
+      consumerTag: "Cursor",
+      clientNames: [],
+      sessionIds: [],
+      usage: { callCount: 0 },
+    },
+  ],
+};
+
+const filterEnabledSkills = [
+  {
+    subject: { kind: "consumerTag", value: "Engineering" },
+    skillIds: [filterableSkills[0].id, filterableSkills[2].id],
+  },
+  {
+    subject: { kind: "consumerTag", value: "Cursor" },
+    skillIds: [filterableSkills[1].id],
+  },
+];
+
 function renderPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
   return render(
-    <NuqsTestingAdapter>
-      <MemoryRouter>
-        <Skills />
-      </MemoryRouter>
-    </NuqsTestingAdapter>,
+    <QueryClientProvider client={queryClient}>
+      <NuqsTestingAdapter>
+        <MemoryRouter>
+          <Skills />
+        </MemoryRouter>
+      </NuqsTestingAdapter>
+    </QueryClientProvider>,
   );
 }
 
 describe("Skills page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    socketStore.setState({ systemState: null });
     vi.mocked(useDeleteSkill).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
@@ -171,5 +249,71 @@ describe("Skills page", () => {
     expect(
       screen.getByRole("menuitemcheckbox", { name: "Newest updated" }),
     ).toBeInTheDocument();
+  });
+
+  it("filters by multiple agents with OR semantics and servers with AND semantics", async () => {
+    const user = userEvent.setup();
+    socketStore.setState({ systemState: filterSystemState as never });
+    vi.mocked(useSkills).mockReturnValue({
+      data: filterableSkills,
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(useEnabledSkills).mockReturnValue({
+      data: filterEnabledSkills,
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    renderPage();
+
+    expect(
+      screen.getByRole("button", { name: "Filter by agents" }),
+    ).not.toHaveClass("bg-background");
+    await user.click(screen.getByRole("button", { name: "Filter by agents" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
+        name: "Engineering logo Engineering",
+      }),
+    );
+    expect(
+      within(
+        screen.getByRole("menuitemcheckbox", {
+          name: "Engineering logo Engineering",
+        }),
+      ).getByRole("img", { name: "Engineering logo" }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Cursor logo Cursor" }),
+    );
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(3));
+    expect(
+      screen.getByRole("button", { name: "Filter by MCP servers" }),
+    ).not.toHaveClass("bg-background");
+    await user.click(
+      screen.getByRole("button", { name: "Filter by MCP servers" }),
+    );
+    const slackOption = screen.getByRole("menuitemcheckbox", {
+      name: "Slack",
+    });
+    expect(slackOption.querySelector("img")).toHaveAttribute(
+      "src",
+      "/icons/Slack.svg",
+    );
+    await user.click(slackOption);
+    await user.keyboard("{Escape}");
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("article")
+          .map((card) => within(card).getByRole("heading").textContent),
+      ).toEqual(["cursor-slack", "engineering-slack"]),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(3));
   });
 });
