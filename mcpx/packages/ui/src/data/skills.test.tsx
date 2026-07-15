@@ -100,6 +100,21 @@ describe("skills data hooks", () => {
     expect(result.current.data).toEqual(enabled);
   });
 
+  it("does not fetch skill data when the query is disabled", () => {
+    const skillsQuery = renderHook(() => useSkills({ enabled: false }), {
+      wrapper,
+    });
+    const enabledQuery = renderHook(
+      () => useEnabledSkills({ enabled: false }),
+      { wrapper },
+    );
+
+    expect(skillsQuery.result.current.fetchStatus).toBe("idle");
+    expect(enabledQuery.result.current.fetchStatus).toBe("idle");
+    expect(apiClient.getSkills).not.toHaveBeenCalled();
+    expect(apiClient.getEnabledSkills).not.toHaveBeenCalled();
+  });
+
   it("does not write when skill enablement is unchanged", async () => {
     const reviewers: ScopeSubject = {
       kind: "consumerTag",

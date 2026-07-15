@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { useAgentDrawerSkillsData } from "@/data/agent-drawer-skills";
+import { isSkillsPageEnabled } from "@/config/runtime-config";
 
 import type { Agent } from "../../types/agent";
 
@@ -8,6 +11,15 @@ import { AgentDetailsModal } from "./AgentDetailsModal";
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
+  generatePath: (path: string, params: { id: string }) =>
+    path.replace(":id", params.id),
+  Link: ({ to, children }: { to: string; children: ReactNode }) => (
+    <a href={to}>{children}</a>
+  ),
+}));
+
+vi.mock("@/data/agent-drawer-skills", () => ({
+  useAgentDrawerSkillsData: vi.fn(),
 }));
 
 vi.mock("@/store", () => ({
@@ -21,7 +33,15 @@ vi.mock("@/store", () => ({
             clientInfo: { name: "agent-consumer" },
           },
         ],
-        targetServers: [{ name: "GitHub", icon: "" }],
+        targetServers: [
+          {
+            name: "GitHub",
+            icon: "",
+            catalogItemId: "catalog-1",
+            tools: ["list_issues"],
+            prompts: [],
+          },
+        ],
       },
       appConfig: {
         permissions: {
@@ -64,7 +84,15 @@ vi.mock("@/store", () => ({
             clientInfo: { name: "agent-consumer" },
           },
         ],
-        targetServers: [{ name: "GitHub", icon: "" }],
+        targetServers: [
+          {
+            name: "GitHub",
+            icon: "",
+            catalogItemId: "catalog-1",
+            tools: ["list_issues"],
+            prompts: [],
+          },
+        ],
       },
       appConfig: {
         permissions: {
@@ -107,6 +135,7 @@ vi.mock("@/hooks/useDomainIcon", () => ({
 
 vi.mock("@/config/runtime-config", () => ({
   isDynamicCapabilitiesEnabled: () => false,
+  isSkillsPageEnabled: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -132,7 +161,72 @@ const agent: Agent = {
   clientNames: ["agent-consumer"],
 };
 
+const assignedSkill = {
+  id: "0190a000-0000-7000-8000-000000000001",
+  name: "Review Pull Requests",
+  description: "Review repository changes.",
+  body: "# Review Pull Requests",
+  exposeAsPrompt: true,
+  author: { setupOwnerId: "owner-1", displayName: "Owner" },
+  updatedAt: new Date("2026-07-14T00:00:00.000Z"),
+  capabilityGroup: {
+    items: [
+      { catalogItemId: "catalog-1", tools: ["list_issues"], prompts: [] },
+    ],
+  },
+};
+
+function mockAgentDrawerSkillsData() {
+  vi.mocked(useAgentDrawerSkillsData).mockReturnValue({
+    skills: [assignedSkill],
+    enabledSkills: [
+      {
+        subject: { kind: "consumerTag", value: "agent-consumer" },
+        skillIds: [assignedSkill.id],
+      },
+    ],
+    catalogItems: [],
+    isLoading: false,
+    isError: false,
+  });
+}
+
+beforeEach(() => {
+  vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+  mockAgentDrawerSkillsData();
+});
+
 describe("AgentDetailsModal", () => {
+  it("provides an accessible close control", () => {
+    render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
+
+    expect(
+      screen.getByRole("button", { name: "Close agent details" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders assigned skills as links to their detail pages", () => {
+    render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
+
+    expect(
+      screen.getByRole("heading", { name: "Skills (1)" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Review repository changes.")).toBeInTheDocument();
+    expect(screen.getAllByText("GitHub")).toHaveLength(2);
+    expect(
+      screen.getByRole("link", { name: /Review Pull Requests/ }),
+    ).toHaveAttribute("href", "/skills/0190a000-0000-7000-8000-000000000001");
+  });
+
+  it("does not render or fetch skills when the Skills feature flag is disabled", () => {
+    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+
+    render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
+
+    expect(screen.queryByRole("heading", { name: /Skills/ })).toBeNull();
+    expect(useAgentDrawerSkillsData).toHaveBeenCalledWith({ enabled: false });
+  });
+
   it("uses an accessible icon-only caret button for tool group expansion", () => {
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 

@@ -25,22 +25,28 @@ import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
 import { ChevronDown, Sparkles, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { generatePath, useNavigate } from "react-router-dom";
 import { useAccessControlsStore, useSocketStore } from "@/store";
 import { apiClient } from "@/lib/api";
 import { routes } from "@/routes";
+import { useAgentDrawerSkillsData } from "@/data/agent-drawer-skills";
 import type { ConsumerConfig } from "@mcpx/shared-model";
 import type { AgentProfile, ToolGroup } from "@/store/access-controls";
 import { toast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { deriveAgentDisplay } from "./agent-display";
+import { AgentSkillsSection } from "./AgentSkillsSection";
+import { buildAgentDrawerSkills } from "@/mapping/agent-drawer";
 import {
   PermissionEntriesByName,
   getTotalConnectedTools,
   getConsumerToolAccess,
 } from "@/hooks/toolCount";
 import { agentsData } from "./constants";
-import { isDynamicCapabilitiesEnabled } from "@/config/runtime-config";
+import {
+  isDynamicCapabilitiesEnabled,
+  isSkillsPageEnabled,
+} from "@/config/runtime-config";
 import { DomainBadge } from "./DomainBadge";
 
 function getAgentDrawerPermissionFromConfig(
@@ -138,6 +144,10 @@ export const AgentDetailsModal = ({
   const [dynamicCapabilitiesLoading, setDynamicCapabilitiesLoading] =
     useState(false);
   const navigate = useNavigate();
+  const skillsPageEnabled = isSkillsPageEnabled();
+  const agentDrawerSkillsData = useAgentDrawerSkillsData({
+    enabled: isOpen && skillsPageEnabled,
+  });
 
   const { toolGroups, profiles, setProfiles } = useAccessControlsStore((s) => {
     return {
@@ -193,6 +203,27 @@ export const AgentDetailsModal = ({
     () => (agent ? deriveAgentDisplay(agent) : null),
     [agent],
   );
+
+  const agentSkillLinks = useMemo(() => {
+    if (!agent) return [];
+
+    return buildAgentDrawerSkills({
+      agent,
+      enabled: agentDrawerSkillsData.enabledSkills,
+      skills: agentDrawerSkillsData.skills,
+      systemState,
+      catalogItems: agentDrawerSkillsData.catalogItems,
+      targetServerAttributes: appConfig?.targetServerAttributes,
+      skillHref: (id) => generatePath(routes.skillDetail, { id }),
+    });
+  }, [
+    agent,
+    agentDrawerSkillsData.catalogItems,
+    agentDrawerSkillsData.enabledSkills,
+    agentDrawerSkillsData.skills,
+    appConfig?.targetServerAttributes,
+    systemState,
+  ]);
 
   // When there are no tool groups in the system, force "Allow All" and clear selections.
   // Do not touch allowAll when tool groups exist: empty selections can mean "block all" (allowAll false).
@@ -759,9 +790,9 @@ export const AgentDetailsModal = ({
     >
       <SheetContent
         side="right"
-        className="w-[600px]! gap-0 max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden"
+        className="w-[600px]! max-w-[600px]! gap-0 bg-background p-0 text-foreground shadow-xl [&>button]:hidden"
       >
-        <SheetHeader className="px-6 pt-2 pb-4 flex flex-row justify-between items-center border-b gap-2">
+        <SheetHeader className="flex flex-row items-center justify-between gap-2 border-b border-border px-6 py-3">
           <VisuallyHidden>
             <SheetTitle>
               {consumerTag || currentAgentData.name || "AI Agent"} Details
@@ -771,12 +802,13 @@ export const AgentDetailsModal = ({
               {consumerTag || currentAgentData.name || "AI Agent"}
             </SheetDescription>
           </VisuallyHidden>
-          <div></div>
-          <div className="flex mt-0 gap-1.5 items-center text-[#7F7999]">
+          <div />
+          <div className="flex items-center gap-1.5 text-muted-foreground">
             <Button
               variant="ghost"
               size="icon"
-              className="w-4 h-4"
+              className="size-8 rounded-lg"
+              aria-label="Close agent details"
               onClick={handleClose}
             >
               <ArrowRightIcon />
@@ -784,22 +816,22 @@ export const AgentDetailsModal = ({
           </div>
         </SheetHeader>
 
-        <div className="px-6 py-2  flex flex-col overflow-y-auto">
-          <div className="flex items-center gap-2 text-lg font-semibold  mt-2 mb-1">
+        <div className="flex shrink-0 flex-col px-6 py-4">
+          <div className="flex items-center gap-3">
             <img
               src={display?.icon.src ?? currentAgentData.icon}
               alt={display?.icon.alt ?? `${currentAgentData.name} Agent Avatar`}
-              className="w-12 h-12 rounded-md"
+              className="size-10 rounded-lg bg-muted/40 ring-1 ring-border"
             />
-            <div className="flex flex-col items-start ">
-              <p className="text-2xl font-medium capitalize">
+            <div className="flex min-w-0 flex-col items-start">
+              <p className="truncate text-xl font-semibold leading-tight tracking-tight">
                 {display?.title || "AI Agent"}
               </p>
               {display?.subtitle &&
                 (display.subtitle.extraCount > 0 ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999] cursor-help">
+                      <span className="mt-1 inline-flex max-w-full cursor-help items-center rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         {display.subtitle.primary} +
                         {display.subtitle.extraCount}
                       </span>
@@ -809,7 +841,7 @@ export const AgentDetailsModal = ({
                       align="start"
                       className="flex-col items-start gap-1"
                     >
-                      <div className="text-gray-400">All clients</div>
+                      <div className="text-muted-foreground">All clients</div>
                       <div className="space-y-0.5">
                         {display.subtitle.allPrettified.map((name, idx) => (
                           <div key={idx}>{name}</div>
@@ -818,7 +850,7 @@ export const AgentDetailsModal = ({
                     </TooltipContent>
                   </Tooltip>
                 ) : (
-                  <span className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999]">
+                  <span className="mt-1 inline-flex max-w-full items-center rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                     {display.subtitle.primary}
                   </span>
                 ))}
@@ -826,25 +858,33 @@ export const AgentDetailsModal = ({
           </div>
           <SessionIdsTooltip
             sessionIds={agent.sessionIds}
-            className="text-[#7F7999] font-medium text-sm"
+            className="mt-2 text-xs font-medium text-muted-foreground"
           />
         </div>
 
-        <div className="px-6">
-          <div className="grid grid-cols-3 gap-6 text-sm w-full">
-            <div className="text-left border  rounded-lg p-4">
-              <div className="text-gray-600 font-medium mb-1">Status</div>
-              <Badge className="bg-green-100 text-green-800 border-green-200">
+        <div className="shrink-0 px-6">
+          <div className="grid w-full grid-cols-3 gap-3 text-sm">
+            <div className="rounded-xl border border-border bg-muted/20 p-3 text-left">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Status
+              </div>
+              <Badge variant="success" size="sm" className="mt-2">
                 {agent.status || "CONNECTED"}
               </Badge>
             </div>
-            <div className="text-left border border-gray-200 rounded-lg p-4">
-              <div className="text-gray-600 font-medium mb-1">Calls</div>
-              <div className="">{agent.usage?.callCount || 0}</div>
+            <div className="rounded-xl border border-border bg-muted/20 p-3 text-left">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Calls
+              </div>
+              <div className="mt-2 text-sm font-semibold text-foreground">
+                {agent.usage?.callCount || 0}
+              </div>
             </div>
-            <div className="text-left border border-gray-200 rounded-lg p-4">
-              <div className="text-gray-600 font-medium mb-1">Last Call</div>
-              <div className="">
+            <div className="rounded-xl border border-border bg-muted/20 p-3 text-left">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Last Call
+              </div>
+              <div className="mt-2 text-sm font-semibold text-foreground">
                 {agent.usage?.lastCalledAt
                   ? formatDateTime(agent.usage.lastCalledAt)
                   : "N/A"}
@@ -854,21 +894,31 @@ export const AgentDetailsModal = ({
         </div>
 
         {/* Tool Catalog Section */}
-        <div className="px-6 flex-1 flex flex-col overflow-hidden">
-          <Separator className="my-4" />
-          <div className="text-lg font-semibold mb-2">Tools Access</div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pt-5">
+          {skillsPageEnabled ? (
+            <AgentSkillsSection
+              skills={agentSkillLinks}
+              loading={agentDrawerSkillsData.isLoading}
+              error={agentDrawerSkillsData.isError}
+            />
+          ) : null}
+
+          <Separator className="my-5" />
+          <div className="mb-3 text-base font-semibold leading-6 text-foreground">
+            Tools Access
+          </div>
 
           {isDynamicCapabilitiesEnabled() && (
-            <div className="flex items-center rounded-lg p-4 justify-between mb-4 shrink-0 bg-linear-to-r from-violet-100 to-purple-100 border border-violet-200">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white rounded-lg shadow-xs">
-                  <Sparkles className="w-5 h-5 text-violet-500" />
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background text-primary shadow-xs">
+                  <Sparkles className="size-4" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-violet-900">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Dynamic Tools Mode
                   </h3>
-                  <p className="text-xs text-violet-600">
+                  <p className="text-xs text-muted-foreground">
                     Agent discovers tools on-demand
                     {dynamicToolsCount > 0 &&
                       ` (${dynamicToolsCount} tools exposed)`}
@@ -883,8 +933,8 @@ export const AgentDetailsModal = ({
             </div>
           )}
 
-          <div className="flex items-center border rounded-lg p-4 justify-between mb-4 shrink-0">
-            <h3 className="text-sm font-semibold ">
+          <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border border-border bg-muted/20 p-3">
+            <h3 className="text-sm font-semibold text-foreground">
               All Server Tools ({totalConnectedTools})
             </h3>
             <div className="flex items-center gap-2">
@@ -897,22 +947,26 @@ export const AgentDetailsModal = ({
           </div>
 
           {/* Tool Groups List */}
-          <div className="space-y-3 overflow-y-auto pb-6 mb-4 border rounded-lg p-4">
-            <div className="text-lg font-bold  mb-2">Tools </div>
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3 pb-4">
+            <div className="mb-3 text-sm font-semibold text-foreground">
+              Tools
+            </div>
             <SearchInput
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              wrapperClassName="flex-1 shrink-0 mb-2"
-              className="bg-[#FBFBFF]"
+              wrapperClassName="mb-3 flex-1 shrink-0"
+              className="bg-background"
             />
             {agentToolGroups.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                <h4 className="font-semibold  mb-2">No Tool Groups Defined</h4>
-                <p className="text-gray-600 mb-4">
+              <div className="rounded-lg border border-border bg-background px-4 py-8 text-center">
+                <h4 className="mb-2 font-semibold text-foreground">
+                  No Tool Groups Defined
+                </h4>
+                <p className="mb-4 text-sm text-muted-foreground">
                   Create a Tool Group for effective agent control.
                 </p>
-                <p className="text-gray-500 text-sm mb-4">
+                <p className="mb-4 text-xs text-muted-foreground">
                   Go to the Tool Catalog area to set this up.
                 </p>
                 <Button onClick={goToToolCatalog}>
@@ -920,7 +974,7 @@ export const AgentDetailsModal = ({
                 </Button>
               </div>
             ) : filteredGroups.length === 0 ? (
-              <div className="text-center py-6 text-gray-600">
+              <div className="py-6 text-center text-sm text-muted-foreground">
                 No tool groups found
               </div>
             ) : (
@@ -928,7 +982,7 @@ export const AgentDetailsModal = ({
                 return (
                   <Card
                     key={group.id}
-                    className="cursor-pointer gap-3 rounded-[8px] border border-[var(--colors-gray-200)] bg-white py-3 ring-0"
+                    className="cursor-pointer gap-3 rounded-lg border-border bg-background py-3 shadow-xs ring-0 transition-colors hover:border-primary/30 hover:bg-muted/20"
                     onClick={() => toggleGroupExpansion(group.id)}
                   >
                     <CardHeader className="px-3 py-0">
@@ -938,7 +992,7 @@ export const AgentDetailsModal = ({
                             type="button"
                             variant="ghost"
                             size="icon-xs"
-                            className="mt-0.5 size-5 rounded-[4px] p-0 text-[#1a1a1e] hover:bg-gray-100"
+                            className="mt-0.5 size-5 rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
                             aria-label={
                               expandedGroups.has(group.id)
                                 ? "Collapse tool group"
@@ -961,7 +1015,7 @@ export const AgentDetailsModal = ({
                             <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
                               {group.title}
                             </CardTitle>
-                            <p className="text-[10px] font-regular mt-1 line-clamp-2 cursor-default">
+                            <p className="mt-1 line-clamp-2 cursor-default text-xs leading-4 text-muted-foreground">
                               {group.description}
                             </p>
                           </div>
@@ -984,7 +1038,7 @@ export const AgentDetailsModal = ({
                     </CardHeader>
                     <CardContent className="px-3 py-0">
                       {/* MCPs and Tool Count */}
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex flex-wrap items-center gap-2">
                         {group.mcpNames.map((mcpName, index) => (
                           <DomainBadge
                             key={index}
@@ -992,14 +1046,14 @@ export const AgentDetailsModal = ({
                             groupId={group.id}
                           />
                         ))}
-                        <span className="text-xs ">
+                        <span className="text-xs text-muted-foreground">
                           {group.totalToolCount !== group.toolCount
                             ? `${group.toolCount}/${group.totalToolCount} tools`
                             : `${group.toolCount} tools`}
                         </span>
                         {group.totalToolCount !== group.toolCount && (
                           <div className="w-full">
-                            <span className="flex items-center gap-2 text-xs font-semibold leading-[18px] text-[var(--colors-warning-700)]">
+                            <span className="flex items-center gap-2 text-xs font-medium leading-5 text-badge-warning-fg">
                               <TriangleAlert
                                 aria-hidden="true"
                                 className="size-4 shrink-0"
@@ -1017,15 +1071,15 @@ export const AgentDetailsModal = ({
                           id={`agent-tool-group-${group.id}-tools`}
                           className="max-h-64 overflow-y-auto mt-2"
                         >
-                          <div className="flex items-center mb-2 flex-wrap gap-2">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
                             {group.allTools.map((tool, index) => (
                               <Badge
                                 key={index}
                                 variant="outline"
                                 className={
                                   tool.isUnavailable
-                                    ? "rounded-[4px] border border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] px-[6px] py-[2px] text-xs font-medium leading-[18px] text-[var(--colors-warning-700)]"
-                                    : "rounded-[4px] border-0 bg-[#dcdafa] px-[6px] py-[2px] text-xs font-medium leading-[18px] text-[#312b89]"
+                                    ? "border-badge-warning-border bg-badge-warning-bg text-badge-warning-fg"
+                                    : "border-primary/20 bg-primary/10 text-primary"
                                 }
                               >
                                 {tool.name}
@@ -1045,10 +1099,10 @@ export const AgentDetailsModal = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white shrink-0">
-          <div className="flex gap-3 justify-end">
+        <div className="shrink-0 border-t border-border bg-background p-4">
+          <div className="flex justify-end gap-3">
             <Button
-              className=" disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
               onClick={saveConfiguration}
               disabled={!hasChanges}
             >

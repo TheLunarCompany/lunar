@@ -1,9 +1,11 @@
 import {
   scopeSubjectKey,
   type EnabledSkills,
+  type Skill,
   type ScopeSubject,
   type SystemState,
 } from "@mcpx/shared-model";
+import type { Agent } from "../types/agent";
 
 export type SkillAgentOption = {
   key: string;
@@ -11,6 +13,38 @@ export type SkillAgentOption = {
   label: string;
   connected: boolean;
 };
+
+export function buildAgentSkills({
+  agent,
+  enabled,
+  skills,
+}: {
+  agent: Agent;
+  enabled: EnabledSkills[];
+  skills: Skill[];
+}): Skill[] {
+  const subject = getAgentSkillSubject(agent);
+  if (!subject) return [];
+
+  const subjectKey = scopeSubjectKey(subject);
+  const assignedSkillIds = new Set(
+    enabled
+      .filter((row) => scopeSubjectKey(row.subject) === subjectKey)
+      .flatMap((row) => row.skillIds),
+  );
+
+  return skills
+    .filter((skill) => assignedSkillIds.has(skill.id))
+    .sort((a, b) => {
+      const nameComparison = compareStrings(
+        a.name.toLowerCase(),
+        b.name.toLowerCase(),
+      );
+      return nameComparison !== 0
+        ? nameComparison
+        : compareStrings(a.name, b.name);
+    });
+}
 
 export function buildSkillAgentSelection({
   clusters,
@@ -113,4 +147,15 @@ function compareStrings(a: string, b: string): number {
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
+}
+
+function getAgentSkillSubject(agent: Agent): ScopeSubject | null {
+  switch (agent.identityType) {
+    case "consumerTag":
+      return { kind: "consumerTag", value: agent.consumerTag };
+    case "clientName":
+      return { kind: "clientName", value: agent.clientName };
+    case "anonymous":
+      return null;
+  }
 }

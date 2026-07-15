@@ -15,10 +15,15 @@ export const skillsQueryKey = {
   enabled: ["skills", "enabled"] as const,
 };
 
-export function useSkills() {
+type SkillQueryOptions = {
+  enabled?: boolean;
+};
+
+export function useSkills({ enabled = true }: SkillQueryOptions = {}) {
   return useQuery({
     queryKey: skillsQueryKey.all,
     queryFn: () => apiClient.getSkills(),
+    enabled,
   });
 }
 
@@ -30,10 +35,11 @@ export function useSkill(id: string) {
   });
 }
 
-export function useEnabledSkills() {
+export function useEnabledSkills({ enabled = true }: SkillQueryOptions = {}) {
   return useQuery({
     queryKey: skillsQueryKey.enabled,
     queryFn: () => apiClient.getEnabledSkills(),
+    enabled,
   });
 }
 

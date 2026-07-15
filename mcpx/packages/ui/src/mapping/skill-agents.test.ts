@@ -1,11 +1,18 @@
 import type {
   EnabledSkills,
+  Skill,
   ScopeSubject,
   SystemState,
 } from "@mcpx/shared-model";
 import { describe, expect, it } from "vitest";
 
-import { buildSkillAgentSelection, diffScopeSubjects } from "./skill-agents";
+import type { Agent } from "../types/agent";
+
+import {
+  buildAgentSkills,
+  buildSkillAgentSelection,
+  diffScopeSubjects,
+} from "./skill-agents";
 
 const SKILL_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_SKILL_ID = "22222222-2222-4222-8222-222222222222";
@@ -183,8 +190,119 @@ describe("diffScopeSubjects", () => {
   });
 });
 
+describe("buildAgentSkills", () => {
+  it("resolves consumer-tag assignments and sorts skills by name", () => {
+    const alpha = skill(SKILL_ID, "alpha-skill");
+    const zebra = skill(OTHER_SKILL_ID, "Zebra skill");
+
+    expect(
+      buildAgentSkills({
+        agent: consumerTagAgent("engineering"),
+        enabled: [
+          enabledRow({ kind: "consumerTag", value: "engineering" }, [
+            OTHER_SKILL_ID,
+            SKILL_ID,
+          ]),
+        ],
+        skills: [zebra, alpha],
+      }),
+    ).toEqual([alpha, zebra]);
+  });
+
+  it("resolves client-name assignments without matching consumer tags", () => {
+    const clientSkill = skill(SKILL_ID, "client-skill");
+
+    expect(
+      buildAgentSkills({
+        agent: clientNameAgent("Cursor"),
+        enabled: [
+          enabledRow({ kind: "consumerTag", value: "Cursor" }, [
+            OTHER_SKILL_ID,
+          ]),
+          enabledRow({ kind: "clientName", value: "Cursor" }, [SKILL_ID]),
+        ],
+        skills: [clientSkill],
+      }),
+    ).toEqual([clientSkill]);
+  });
+
+  it("returns no skills for anonymous agents and ignores stale skill IDs", () => {
+    const knownSkill = skill(SKILL_ID, "known-skill");
+    const enabled = [
+      enabledRow({ kind: "consumerTag", value: "engineering" }, [
+        SKILL_ID,
+        OTHER_SKILL_ID,
+      ]),
+    ];
+
+    expect(
+      buildAgentSkills({
+        agent: consumerTagAgent("engineering"),
+        enabled,
+        skills: [knownSkill],
+      }),
+    ).toEqual([knownSkill]);
+
+    expect(
+      buildAgentSkills({
+        agent: anonymousAgent(),
+        enabled,
+        skills: [knownSkill],
+      }),
+    ).toEqual([]);
+  });
+});
+
 function enabledRow(subject: ScopeSubject, skillIds: string[]): EnabledSkills {
   return { subject, skillIds };
+}
+
+function skill(id: string, name: string): Skill {
+  return {
+    id,
+    name,
+    description: `${name} description`,
+    body: `# ${name}`,
+    exposeAsPrompt: true,
+    author: { setupOwnerId: "owner-1", displayName: "Owner" },
+    updatedAt: new Date("2026-07-14T00:00:00.000Z"),
+  };
+}
+
+function consumerTagAgent(consumerTag: string): Agent {
+  return {
+    id: "agent-1",
+    identifier: consumerTag,
+    sessionIds: ["session-1"],
+    status: "CONNECTED",
+    usage: { callCount: 0 },
+    identityType: "consumerTag",
+    consumerTag,
+    clientNames: [],
+  };
+}
+
+function clientNameAgent(clientName: string): Agent {
+  return {
+    id: "agent-1",
+    identifier: clientName,
+    sessionIds: ["session-1"],
+    status: "CONNECTED",
+    usage: { callCount: 0 },
+    identityType: "clientName",
+    clientName,
+  };
+}
+
+function anonymousAgent(): Agent {
+  return {
+    id: "agent-1",
+    identifier: "anonymous",
+    sessionIds: ["session-1"],
+    status: "CONNECTED",
+    usage: { callCount: 0 },
+    identityType: "anonymous",
+  };
 }
 
 function consumerTagCluster(
