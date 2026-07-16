@@ -16,7 +16,6 @@ import {
   validateAndProcessServer,
   validateServerCommand,
   validateServerName,
-  CatalogMCPServerConfigByNameItem,
   getReservedServersNames,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import {
@@ -42,13 +41,20 @@ import {
 import { JsonUpload } from "@/components/ui/json-upload";
 import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
-import { ServerCard } from "./ServerCard";
+import { McpRegistryCard } from "@/components/mcp-servers/McpRegistryCard";
 import { SearchInput } from "@/components/ui/search-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CustomAddCheckboxText } from "@/config/runtime-config";
 import type { McpServerStatus } from "@/types";
 import { getMcpServerStatusFromTargetServer } from "./helpers";
 import { getAddServerErrorMessage } from "@/lib/api-errors";
+import { Sort } from "@/components/Sort";
+import {
+  buildInstalledCatalogServerLookup,
+  CATALOG_SERVER_SORT_OPTIONS,
+  type CatalogSortOrder,
+  filterAndSortCatalogServers,
+} from "@/mapping/catalog-servers";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -207,14 +213,32 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     error,
   } = useAddMcpServer();
   const { data: serversFromCatalogData } = useGetMCPServers();
-  const serversFromCatalog = serversFromCatalogData ?? [];
+  const serversFromCatalog = useMemo(
+    () => serversFromCatalogData ?? [],
+    [serversFromCatalogData],
+  );
   const { canAddCustomServerAndEdit: canAddCustom } = usePermissions();
+  const installedLookup = useMemo(
+    () => buildInstalledCatalogServerLookup(systemState?.targetServers ?? []),
+    [systemState?.targetServers],
+  );
 
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
   const checkboxText = CustomAddCheckboxText();
   const [isCheckboxChecked, setIsCheckboxChecked] = useState(false);
 
   const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState<CatalogSortOrder>("asc");
+  const filteredCatalogServers = useMemo(
+    () =>
+      filterAndSortCatalogServers({
+        servers: serversFromCatalog,
+        searchQuery: search,
+        sortOrder,
+        installedLookup,
+      }),
+    [installedLookup, search, serversFromCatalog, sortOrder],
+  );
 
   const [errorMessage, setErrorMessage] = useState("");
   const [errorVariant, setErrorVariant] =
@@ -554,6 +578,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     setErrorVariant("destructive");
     setIsValid(true);
     setSearch("");
+    setSortOrder("asc");
     setActiveTab(TABS.ALL);
     setIsCheckboxChecked(false);
   }, []);
@@ -702,11 +727,20 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     <div className="my-4 text-sm">
                       Select server to add to your configuration
                     </div>
-                    <SearchInput
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search..."
-                      wrapperClassName="px-1"
-                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <SearchInput
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Search..."
+                        wrapperClassName="w-[320px] max-w-full"
+                        className="h-9 rounded-lg border-[#D8DCED] bg-white"
+                      />
+                      <Sort
+                        title="Sort"
+                        options={CATALOG_SERVER_SORT_OPTIONS}
+                        selected={sortOrder}
+                        onChange={setSortOrder}
+                      />
+                    </div>
                   </div>
                 )}
                 {!canAddCustom && activeTab !== TABS.ALL && (
@@ -722,24 +756,16 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 className="min-h-0 flex-1 flex flex-col overflow-hidden"
               >
                 <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4 pb-4 content-start">
-                    {serversFromCatalog
-                      .filter(
-                        (catalogServer: CatalogMCPServerConfigByNameItem) =>
-                          catalogServer.displayName
-                            .toLowerCase()
-                            .includes(search.toLowerCase()),
-                      )
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map((example: CatalogMCPServerConfigByNameItem) => (
-                        <ServerCard
-                          key={example.name}
-                          server={example}
-                          status={getServerStatus(example.name)}
-                          className="w-full"
-                          onAddServer={handleUseExample}
-                        />
-                      ))}
+                  <div className="grid grid-cols-1 content-start gap-4 pb-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {filteredCatalogServers.map((server) => (
+                      <McpRegistryCard
+                        key={server.name}
+                        server={server}
+                        status={getServerStatus(server.name)}
+                        className="w-full border-[#E3E6EF] shadow-[0_1px_3px_rgba(16,24,40,0.10)]"
+                        onAddServer={handleUseExample}
+                      />
+                    ))}
                   </div>
                 </div>
               </CustomTabsContent>

@@ -102,8 +102,8 @@ vi.mock("./McpJsonForm", () => ({
   McpJsonForm: () => <div data-testid="mcp-json-form" />,
 }));
 
-vi.mock("./ServerCard", () => ({
-  ServerCard: () => <div data-testid="server-card" />,
+vi.mock("@/components/mcp-servers/McpRegistryCard", () => ({
+  McpRegistryCard: () => <div data-testid="mcp-registry-card" />,
 }));
 
 vi.mock("@/data/mcp-server", () => ({
