@@ -1,5 +1,5 @@
 import { Handle, NodeProps, Position } from "@xyflow/react";
-import { Hammer } from "lucide-react";
+import { Hammer, WifiOff } from "lucide-react";
 import { memo } from "react";
 import { AgentNode } from "../types";
 import { deriveAgentDisplay } from "../../agent-display";
@@ -29,6 +29,10 @@ const AgentNodeRenderer = ({
     },
   });
 
+  const toolCount = data.dynamicMode
+    ? data.visibleTools.length
+    : connectedToolsCount;
+
   return (
     <div className="overflow-visible">
       <div
@@ -36,9 +40,11 @@ const AgentNodeRenderer = ({
         id={`agent-${data.id}`}
       >
         <NodeCard
-          variant="default"
+          variant={
+            data.connectionState === "disconnected" ? "disabled" : "default"
+          }
           state={selected ? "active" : "default"}
-          className="w-[200px] cursor-pointer overflow-visible"
+          className={`w-[200px] cursor-pointer overflow-visible${data.connectionState === "disconnected" ? " grayscale" : ""}`}
         >
           {/* Tool count badge */}
           <div
@@ -52,9 +58,27 @@ const AgentNodeRenderer = ({
               strokeWidth={2}
             />
             <span className="text-xs font-semibold text-[var(--colors-primary-500)] tabular-nums">
-              {connectedToolsCount}
+              {toolCount}
             </span>
           </div>
+
+          {data.connectionState !== "connected" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="absolute bottom-2 right-2">
+                  <WifiOff
+                    className={`h-5 w-5 ${data.connectionState === "unresponsive" ? "text-amber-500" : "text-[var(--colors-gray-400)]"}`}
+                    strokeWidth={2}
+                  />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {data.connectionState === "unresponsive"
+                  ? "Missing pings (unresponsive)"
+                  : "Disconnected"}
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           <div className="flex items-center gap-3 min-w-0 w-full">
             <NodeCardIcon>

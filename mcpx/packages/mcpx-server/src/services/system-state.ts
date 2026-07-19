@@ -1,6 +1,7 @@
 import {
   ConnectedClient,
   ConnectedClientCluster,
+  ConnectionState,
   SSETargetServer,
   StdioTargetServer,
   StreamableHTTPTargetServer,
@@ -104,6 +105,10 @@ type InternalTargetServerNew =
 interface InternalConnectedClient {
   usage: InternalUsage;
   clientId: string; // Stable unique identifier for the agent
+  connectionState: ConnectionState;
+  lastSeenAt?: number;
+  // Epoch ms the session went offline, set only for disconnected records.
+  disconnectedAt?: number;
   consumerTag?: string;
   llm?: {
     provider?: string;
@@ -163,9 +168,18 @@ export class SystemStateTracker {
   private state: InternalMcpxInstance;
   private listeners = new Set<(snapshot: SystemState) => void>();
   private logger: Logger;
+  // How long an offline client shows before pruning. Infinity = never.
+  private disconnectedRetentionMs: number;
+  private retentionSweepStopper?: () => void;
 
-  constructor(clock: Clock, logger: Logger) {
+  constructor(
+    clock: Clock,
+    logger: Logger,
+    options?: { disconnectedRetentionMs?: number },
+  ) {
     this.clock = clock;
+    this.disconnectedRetentionMs =
+      options?.disconnectedRetentionMs ?? Number.POSITIVE_INFINITY;
 
     this.state = {
       targetServersByName: new Map(),
@@ -363,7 +377,10 @@ export class SystemStateTracker {
 
   recordClientConnected(client: {
     sessionId: string;
-    client: Omit<InternalConnectedClient, "usage">;
+    client: Omit<
+      InternalConnectedClient,
+      "usage" | "connectionState" | "lastSeenAt" | "disconnectedAt"
+    >;
   }): void {
     const now = this.clock.now();
     this.state.lastUpdatedAt = now;
@@ -371,12 +388,77 @@ export class SystemStateTracker {
     this.state.connectedClientsBySessionId.set(client.sessionId, {
       ...client.client,
       usage: new InternalUsage(),
+      connectionState: "connected",
     });
     this.notifyListeners();
   }
 
   recordClientDisconnected(_client: { sessionId: string }): void {
     this.state.connectedClientsBySessionId.delete(_client.sessionId);
+    this.state.lastUpdatedAt = this.clock.now();
+    this.notifyListeners();
+  }
+
+  // Flip a client to offline but keep the card until retention prunes it, so a
+  // disconnect stays visible. No-op if the session was never recorded (probes).
+  markClientDisconnected(sessionId: string, disconnectedAt: number): void {
+    const client = this.state.connectedClientsBySessionId.get(sessionId);
+    if (!client) {
+      return;
+    }
+    client.connectionState = "disconnected";
+    client.disconnectedAt = disconnectedAt;
+    this.state.lastUpdatedAt = this.clock.now();
+    this.notifyListeners();
+  }
+
+  // Flip a live client between connected and unresponsive. No-op if unknown.
+  setClientConnectionState(
+    sessionId: string,
+    connectionState: ConnectionState,
+    opts?: { lastSeenAt?: number },
+  ): void {
+    const client = this.state.connectedClientsBySessionId.get(sessionId);
+    if (!client) {
+      return;
+    }
+    client.connectionState = connectionState;
+    if (opts?.lastSeenAt !== undefined) {
+      client.lastSeenAt = opts.lastSeenAt;
+    }
+    if (connectionState !== "disconnected") {
+      client.disconnectedAt = undefined;
+    }
+    this.state.lastUpdatedAt = this.clock.now();
+    this.notifyListeners();
+  }
+
+  // Surface a previously-connected agent as offline. Never clobbers a live entry.
+  recordDisconnectedClient(props: {
+    sessionId: string;
+    client: Omit<
+      InternalConnectedClient,
+      "usage" | "connectionState" | "disconnectedAt" | "lastSeenAt"
+    >;
+    disconnectedAt: number;
+    lastSeenAt?: number;
+  }): void {
+    if (this.state.connectedClientsBySessionId.has(props.sessionId)) {
+      return;
+    }
+    this.state.connectedClientsBySessionId.set(props.sessionId, {
+      ...props.client,
+      usage: new InternalUsage(),
+      connectionState: "disconnected",
+      disconnectedAt: props.disconnectedAt,
+      lastSeenAt: props.lastSeenAt,
+    });
+    this.state.lastUpdatedAt = this.clock.now();
+    this.notifyListeners();
+  }
+
+  // Re-broadcast the snapshot when a change lives outside this tracker.
+  notifyChanged(): void {
     this.state.lastUpdatedAt = this.clock.now();
     this.notifyListeners();
   }
@@ -466,17 +548,68 @@ export class SystemStateTracker {
     );
   }
 
+  // Drop offline records past retention. Returns whether any were removed.
+  private pruneExpiredDisconnected(now: number): boolean {
+    let removed = false;
+    for (const [sessionId, client] of this.state.connectedClientsBySessionId) {
+      if (
+        client.connectionState === "disconnected" &&
+        client.disconnectedAt !== undefined &&
+        now - client.disconnectedAt > this.disconnectedRetentionMs
+      ) {
+        this.state.connectedClientsBySessionId.delete(sessionId);
+        removed = true;
+      }
+    }
+    return removed;
+  }
+
+  // Removes and re-broadcasts expired offline agents at their deadline.
+  startRetentionSweep(intervalMs: number): void {
+    if (
+      this.retentionSweepStopper ||
+      !Number.isFinite(this.disconnectedRetentionMs) ||
+      intervalMs <= 0
+    ) {
+      return;
+    }
+    const timer = setInterval(() => {
+      if (this.pruneExpiredDisconnected(this.clock.now().getTime())) {
+        this.state.lastUpdatedAt = this.clock.now();
+        this.notifyListeners();
+      }
+    }, intervalMs);
+    this.retentionSweepStopper = (): void => {
+      clearInterval(timer);
+      this.retentionSweepStopper = undefined;
+    };
+  }
+
+  stopRetentionSweep(): void {
+    this.retentionSweepStopper?.();
+  }
+
   private exportConnectedClients(): SystemState["connectedClients"] {
-    return Array.from(this.state.connectedClientsBySessionId.entries()).map(
-      ([sessionId, client]) => ({
+    const now = this.clock.now().getTime();
+    this.pruneExpiredDisconnected(now);
+    const result: ConnectedClient[] = [];
+    for (const [sessionId, client] of this.state.connectedClientsBySessionId) {
+      result.push({
         sessionId,
         clientId: client.clientId,
         usage: client.usage,
         consumerTag: client.consumerTag,
         llm: client.llm,
         clientInfo: client.clientInfo,
-      }),
-    );
+        // Defaulted until populated per session (T03).
+        dynamicMode: false,
+        visibleTools: [],
+        lastSeenAt: client.lastSeenAt,
+        connectionState: client.connectionState,
+        disconnectedAt: client.disconnectedAt,
+      });
+    }
+    return result;
   }
 
   private exportConnectedClientClusters(): SystemState["connectedClientClusters"] {

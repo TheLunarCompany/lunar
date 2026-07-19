@@ -39,6 +39,7 @@ describe("seedToolsPageMockState", () => {
       "broken-server",
       "slack",
       "filesystem",
+      "context7",
     ]);
 
     const githubServer = state.systemState?.targetServers.find(

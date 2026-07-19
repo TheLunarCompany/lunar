@@ -134,16 +134,11 @@ vi.mock("@/hooks/useDomainIcon", () => ({
 }));
 
 vi.mock("@/config/runtime-config", () => ({
-  isDynamicCapabilitiesEnabled: () => false,
   isSkillsPageEnabled: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/api", () => ({
-  apiClient: {
-    getDynamicCapabilitiesStatus: vi.fn(
-      () => new Promise<{ enabled: boolean }>(() => undefined),
-    ),
-  },
+  apiClient: {},
 }));
 
 vi.mock("@/components/ui/use-toast", () => ({
@@ -156,6 +151,9 @@ const agent: Agent = {
   sessionIds: ["session-1"],
   status: "CONNECTED",
   usage: { callCount: 0 },
+  dynamicMode: false,
+  visibleTools: [],
+  connectionState: "connected",
   identityType: "consumerTag",
   consumerTag: "agent-consumer",
   clientNames: ["agent-consumer"],
@@ -203,6 +201,37 @@ describe("AgentDetailsModal", () => {
     expect(
       screen.getByRole("button", { name: "Close agent details" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows a Connected status badge for a connected agent", () => {
+    render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
+
+    expect(screen.getByText("Connected")).toBeInTheDocument();
+  });
+
+  it("shows a Disconnected status badge for a disconnected agent", () => {
+    render(
+      <AgentDetailsModal
+        agent={{ ...agent, connectionState: "disconnected" }}
+        isOpen
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Disconnected")).toBeInTheDocument();
+    expect(screen.queryByText("Connected")).toBeNull();
+  });
+
+  it("shows an Unresponsive status badge for an unresponsive agent", () => {
+    render(
+      <AgentDetailsModal
+        agent={{ ...agent, connectionState: "unresponsive" }}
+        isOpen
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Unresponsive")).toBeInTheDocument();
   });
 
   it("renders assigned skills as links to their detail pages", () => {

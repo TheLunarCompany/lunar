@@ -1,4 +1,8 @@
-import { ConnectedClientCluster } from "@mcpx/shared-model";
+import type {
+  ConnectedClientCluster,
+  ConnectionState,
+  VisibleTool,
+} from "@mcpx/shared-model";
 
 // Display string derived from a cluster's identity. Anonymous clusters use a sentinel.
 export function clusterDisplayName(cluster: ConnectedClientCluster): string {
@@ -37,6 +41,9 @@ type AgentBase = {
   lastActivity?: Date | string | number | null;
   llm?: LLM;
   usage: Usage;
+  dynamicMode: boolean;
+  visibleTools: VisibleTool[];
+  connectionState: ConnectionState;
 };
 
 // Mirrors ConnectedClientCluster's discriminator. `clientNames` on tag clusters

@@ -1,7 +1,12 @@
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { Clock } from "@mcpx/toolkit-core/time";
+import {
+  isInvalidResponseFormatError,
+  isMethodNotFoundError,
+} from "./client-extension.js";
 import {
   CloseSessionReason,
   McpxSession,
@@ -10,12 +15,11 @@ import {
   TouchSource,
 } from "../model/sessions.js";
 
-type PingResult =
-  | { type: "timeout" }
-  | { type: "failure"; error: Error }
-  | { type: "success" };
-
+// Fraction of the ping interval a ping may take before it counts as missed.
 const PING_TIMEOUT_FACTOR = 0.8;
+
+// Fired when a session's `unresponsive` flag flips.
+export type OnLivenessChanged = (sessionId: string) => void;
 
 export class SessionLivenessManager {
   private _store: SessionLivenessStore;
@@ -23,17 +27,21 @@ export class SessionLivenessManager {
   private _logger: Logger;
   private _gcStopper?: () => void;
   private _clock: Clock;
+  private _onLivenessChanged: OnLivenessChanged;
+  private _probeTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(
     store: SessionLivenessStore,
     config: SessionLivenessConfig,
     logger: Logger,
     clock: Clock,
+    onLivenessChanged: OnLivenessChanged,
   ) {
     this._store = store;
     this._config = config;
     this._logger = logger.child({ component: "SessionLiveness" });
     this._clock = clock;
+    this._onLivenessChanged = onLivenessChanged;
   }
 
   initialize(): void {
@@ -46,6 +54,10 @@ export class SessionLivenessManager {
   shutdown(): void {
     this.stopGc();
     this.stopAllSessionLiveness();
+    for (const timer of this._probeTimers.values()) {
+      clearTimeout(timer);
+    }
+    this._probeTimers.clear();
   }
 
   touchSession(sessionId: string, source?: TouchSource): void {
@@ -54,11 +66,21 @@ export class SessionLivenessManager {
       return;
     }
     session.liveness.lastSeenAt = this._clock.now().getTime();
+    // Any inbound activity or ping success proves liveness: reset the miss streak
+    // and clear staleness so an active client isn't reaped for undeliverable pings.
+    session.liveness.consecutiveMisses = 0;
+    this.setUnresponsive(sessionId, false);
     this._logger.silly("Session liveness touch", {
       sessionId,
       metadata: session.metadata,
       source,
     });
+  }
+
+  // Flag a session unresponsive now (e.g. its notification stream dropped),
+  // via the same path as a missed ping. Activity/ping then restores or reaps it.
+  markUnresponsive(sessionId: string): void {
+    this.setUnresponsive(sessionId, true);
   }
 
   onSessionAdded(sessionId: string): void {
@@ -145,6 +167,11 @@ export class SessionLivenessManager {
   }
 
   private stopSessionLiveness(sessionId: string): void {
+    const probeTimer = this._probeTimers.get(sessionId);
+    if (probeTimer !== undefined) {
+      clearTimeout(probeTimer);
+      this._probeTimers.delete(sessionId);
+    }
     const session = this._store.getSession(sessionId);
     if (!session?.liveness) {
       return;
@@ -174,16 +201,25 @@ export class SessionLivenessManager {
       return;
     }
 
-    const entry: McpxSession["liveness"] = {
+    // Stop any prior loop before replacing it so its timer can't leak.
+    session.liveness?.stopPing();
+
+    // Only clients with a deliverable ping channel (see isPingCapable) get the
+    // ping loop. The rest rely on the idle TTL, reset by inbound activity.
+    const stopPing = this.isPingCapable(session)
+      ? this.setupPingMonitoring(
+          session.server,
+          sessionId,
+          session.metadata,
+          options,
+        )
+      : (): void => {};
+    session.liveness = {
       lastSeenAt: this._clock.now().getTime(),
-      stopPing: this.setupPingMonitoring(
-        session.server,
-        sessionId,
-        session.metadata,
-        options,
-      ),
+      unresponsive: false,
+      consecutiveMisses: 0,
+      stopPing,
     };
-    session.liveness = entry;
     return;
   }
 
@@ -197,52 +233,132 @@ export class SessionLivenessManager {
   ): () => void {
     const { pingIntervalMs } = options;
     if (this.shouldSkipPingMonitoring(metadata, sessionId, pingIntervalMs)) {
-      return () => {};
+      return (): void => {};
     }
 
     const pingTimeoutMs = Math.floor(pingIntervalMs * PING_TIMEOUT_FACTOR);
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
+    let running = false;
 
-    const schedule = (): void => {
-      timeoutId = setTimeout(() => runPing(), pingIntervalMs);
-    };
-
-    const runPing = async (): Promise<void> => {
-      const result = await this.executePingWithTimeout(
-        server,
-        pingTimeoutMs,
-        sessionId,
-        metadata,
-      );
-      switch (result.type) {
-        case "timeout":
-          // ignore (keep for case we want to add a flow for ping timeout)
-          break;
-        case "failure":
-          this._logger.debug("Ping failed", {
-            sessionId,
-            metadata,
-            error: loggableError(result.error),
-          });
-          break;
-        case "success":
-          this.touchSession(sessionId, TouchSource.Ping);
-          break;
-      }
-      if (!stopped) schedule();
-    };
-
-    schedule();
-
-    return () => {
+    const stopPing = (): void => {
       if (stopped) {
         return;
       }
       this._logger.debug("Stopping ping monitoring", { sessionId, metadata });
       stopped = true;
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      if (timer !== undefined) clearTimeout(timer);
     };
+
+    // The SDK owns the per-request timeout. `running` prevents overlap.
+    const tick = async (): Promise<void> => {
+      if (stopped || running) {
+        return;
+      }
+      running = true;
+      try {
+        await server.request({ method: "ping" }, EmptyResultSchema, {
+          timeout: pingTimeoutMs,
+        });
+        if (stopped) return;
+        this.touchSession(sessionId, TouchSource.Ping);
+      } catch (error) {
+        if (stopped) return;
+        if (isPingUnsupportedError(error)) {
+          this.handlePingUnsupported(sessionId, metadata, stopPing);
+          return;
+        }
+        await this.recordMissedPing(sessionId, metadata, error);
+      } finally {
+        running = false;
+      }
+      if (!stopped) {
+        timer = setTimeout(() => void tick(), pingIntervalMs);
+      }
+    };
+
+    timer = setTimeout(() => void tick(), pingIntervalMs);
+
+    return stopPing;
+  }
+
+  // Notifies only on an actual transition, not on every missed ping.
+  private setUnresponsive(sessionId: string, value: boolean): void {
+    const session = this._store.getSession(sessionId);
+    if (!session?.liveness) {
+      return;
+    }
+    if (session.liveness.unresponsive === value) {
+      return;
+    }
+    session.liveness.unresponsive = value;
+    this._logger.debug("Session unresponsive state changed", {
+      sessionId,
+      unresponsive: value,
+      metadata: session.metadata,
+    });
+    this._onLivenessChanged(sessionId);
+  }
+
+  private async recordMissedPing(
+    sessionId: string,
+    metadata: McpxSession["metadata"],
+    error: unknown,
+  ): Promise<void> {
+    const session = this._store.getSession(sessionId);
+    if (!session?.liveness) {
+      return;
+    }
+    session.liveness.consecutiveMisses += 1;
+    const consecutiveMisses = session.liveness.consecutiveMisses;
+    this._logger.debug("Ping missed (timeout or failure)", {
+      sessionId,
+      metadata,
+      consecutiveMisses,
+      error: loggableError(error),
+    });
+    this.setUnresponsive(sessionId, true);
+    const max = this._config.pingMaxConsecutiveTimeouts;
+    if (max > 0 && consecutiveMisses >= max) {
+      this._logger.debug("Reaping session after consecutive missed pings", {
+        sessionId,
+        metadata,
+        consecutiveMisses,
+        max,
+      });
+      await this._store
+        .closeSession(sessionId, CloseSessionReason.PingTimeout)
+        .catch((error) => {
+          this._logger.warn("Failed to close unresponsive session", {
+            sessionId,
+            metadata,
+            error: loggableError(error),
+          });
+        });
+    }
+  }
+
+  private handlePingUnsupported(
+    sessionId: string,
+    metadata: McpxSession["metadata"],
+    stopPing: () => void,
+  ): void {
+    this._logger.debug(
+      "Client does not support ping (method-not-found / invalid-format), stopping ping monitoring",
+      { sessionId, metadata },
+    );
+    this.setUnresponsive(sessionId, false);
+    stopPing();
+  }
+
+  // Ping is deliverable on SSE (stream always open) or a client that advertises
+  // ping support. Others (including `ping === false`) fall back to the idle TTL.
+  private isPingCapable(session: McpxSession): boolean {
+    const pingSupport = session.metadata.clientInfo.adapter?.support?.ping;
+    if (pingSupport === false) {
+      return false;
+    }
+    return session.transport.type === "sse" || pingSupport === true;
   }
 
   private shouldSkipPingMonitoring(
@@ -250,15 +366,8 @@ export class SessionLivenessManager {
     sessionId: string,
     pingIntervalMs: number,
   ): boolean {
-    if (metadata.clientInfo.adapter?.support?.ping === false) {
-      this._logger.info(
-        "Client adapter does not support ping, skipping ping monitoring",
-        { sessionId, metadata },
-      );
-      return true;
-    }
     if (pingIntervalMs <= 0) {
-      this._logger.info("Ping monitoring disabled by interval", {
+      this._logger.debug("Ping monitoring disabled by interval", {
         sessionId,
         metadata,
         pingIntervalMs,
@@ -266,40 +375,6 @@ export class SessionLivenessManager {
       return true;
     }
     return false;
-  }
-
-  private async executePingWithTimeout(
-    server: Server,
-    pingTimeoutMs: number,
-    sessionId: string,
-    metadata: McpxSession["metadata"],
-  ): Promise<PingResult> {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const timeoutPromise = new Promise<PingResult>((resolve) => {
-      timeoutId = setTimeout(
-        () => resolve({ type: "timeout" as const }),
-        pingTimeoutMs,
-      );
-    });
-
-    const pingPromise = server
-      .ping()
-      .then(() => ({ type: "success" as const }))
-      .catch((error) => ({ type: "failure" as const, error }))
-      .finally(() => {
-        if (timeoutId !== undefined) {
-          clearTimeout(timeoutId);
-        }
-      });
-
-    return Promise.race([pingPromise, timeoutPromise]).catch((error) => {
-      this._logger.error("Unexpected error during ping", {
-        error: loggableError(error),
-        sessionId,
-        metadata,
-      });
-      return { type: "failure" as const, error };
-    });
   }
 
   private scheduleProbeTransportTermination(
@@ -312,12 +387,18 @@ export class SessionLivenessManager {
     if (!session) {
       return;
     }
-    setTimeout(async () => {
-      await this._store
+    const timer = setTimeout(() => {
+      this._probeTimers.delete(sessionId);
+      void this._store
         .closeSession(sessionId, CloseSessionReason.ProbeTermination)
-        .catch(() => {
-          // ignore
-        });
+        .catch(() => {});
     }, options.probeClientsGraceLivenessPeriodMs);
+    this._probeTimers.set(sessionId, timer);
   }
+}
+
+// Reachable but no working ping (method-not-found or invalid result shape),
+// reusing ExtendedClient's classification. Other errors are genuine misses.
+function isPingUnsupportedError(error: unknown): boolean {
+  return isMethodNotFoundError(error) || isInvalidResponseFormatError(error);
 }

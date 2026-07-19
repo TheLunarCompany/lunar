@@ -89,3 +89,27 @@ export const deleteDownstreamSessionAckSchema = z.discriminatedUnion(
 export type DeleteDownstreamSessionAck = z.infer<
   typeof deleteDownstreamSessionAckSchema
 >;
+
+// The Hub derives the owner from the socket, so the request has no payload.
+export const listDownstreamSessionsPayloadSchema = z.object({});
+
+export const persistedDownstreamSessionEntrySchema = z.object({
+  sessionId: z.string(),
+  data: persistedDownstreamSessionDataSchema,
+});
+
+export type PersistedDownstreamSessionEntryWire = z.infer<
+  typeof persistedDownstreamSessionEntrySchema
+>;
+
+export const listDownstreamSessionsAckSchema = z.discriminatedUnion("success", [
+  z.object({
+    success: z.literal(true),
+    sessions: z.array(persistedDownstreamSessionEntrySchema),
+  }),
+  z.object({ success: z.literal(false), error: z.string() }),
+]);
+
+export type ListDownstreamSessionsAck = z.infer<
+  typeof listDownstreamSessionsAckSchema
+>;

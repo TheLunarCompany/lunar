@@ -133,6 +133,10 @@ async function handleWsEvent(
         socket.emit(UI_ClientBoundMessage.SystemState, systemState);
         break;
       }
+      case UI_ServerBoundMessage.SetDynamicCapabilities: {
+        // Handling is wired in a later change.
+        break;
+      }
       default: {
         logger.warn(`Unhandled event: ${eventName}`, {
           id: socket.id,

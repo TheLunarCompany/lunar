@@ -276,6 +276,9 @@ function consumerTagAgent(consumerTag: string): Agent {
     sessionIds: ["session-1"],
     status: "CONNECTED",
     usage: { callCount: 0 },
+    dynamicMode: false,
+    visibleTools: [],
+    connectionState: "connected",
     identityType: "consumerTag",
     consumerTag,
     clientNames: [],
@@ -289,6 +292,9 @@ function clientNameAgent(clientName: string): Agent {
     sessionIds: ["session-1"],
     status: "CONNECTED",
     usage: { callCount: 0 },
+    dynamicMode: false,
+    visibleTools: [],
+    connectionState: "connected",
     identityType: "clientName",
     clientName,
   };
@@ -301,6 +307,9 @@ function anonymousAgent(): Agent {
     sessionIds: ["session-1"],
     status: "CONNECTED",
     usage: { callCount: 0 },
+    dynamicMode: false,
+    visibleTools: [],
+    connectionState: "connected",
     identityType: "anonymous",
   };
 }

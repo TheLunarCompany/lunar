@@ -12,7 +12,6 @@ export interface RuntimeConfig {
   VITE_ADMIN_WEBSERVER_URL?: string;
   VITE_ENABLE_PERMISSIONS: string;
   VITE_ENABLE_CAPABILITIES_UI: string;
-  VITE_ENABLE_DYNAMIC_CAPABILITIES: string;
   VITE_ADD_SERVER_CHECKBOX: string;
   VITE_SHOW_SKILLS_PAGE: string;
   VITE_UI_SIDEBAR_RESTRUCTURE: string;
@@ -77,8 +76,6 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
           import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
         VITE_ENABLE_CAPABILITIES_UI:
           import.meta.env.VITE_ENABLE_CAPABILITIES_UI || "false",
-        VITE_ENABLE_DYNAMIC_CAPABILITIES:
-          import.meta.env.VITE_ENABLE_DYNAMIC_CAPABILITIES || "false",
         VITE_ADD_SERVER_CHECKBOX:
           import.meta.env.VITE_ADD_SERVER_CHECKBOX || undefined,
         VITE_SHOW_SKILLS_PAGE: import.meta.env.VITE_SHOW_SKILLS_PAGE || "false",
@@ -117,8 +114,6 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_ENABLE_PERMISSIONS: import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
     VITE_ENABLE_CAPABILITIES_UI:
       import.meta.env.VITE_ENABLE_CAPABILITIES_UI || "false",
-    VITE_ENABLE_DYNAMIC_CAPABILITIES:
-      import.meta.env.VITE_ENABLE_DYNAMIC_CAPABILITIES || "false",
     VITE_ADD_SERVER_CHECKBOX:
       import.meta.env.VITE_ADD_SERVER_CHECKBOX || undefined,
     VITE_SHOW_SKILLS_PAGE: import.meta.env.VITE_SHOW_SKILLS_PAGE || "false",
@@ -165,11 +160,6 @@ export function getAuthBffUrl(): string | null {
   const config = getRuntimeConfigSync();
   const url = (config.VITE_AUTH_BFF_URL || "").trim();
   return url.length > 0 ? url : null;
-}
-
-export function isDynamicCapabilitiesEnabled(): boolean {
-  const config = getRuntimeConfigSync();
-  return config.VITE_ENABLE_DYNAMIC_CAPABILITIES === "true";
 }
 
 export function isSkillsPageEnabled(): boolean {

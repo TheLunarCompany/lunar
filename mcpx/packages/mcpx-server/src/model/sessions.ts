@@ -15,6 +15,7 @@ export enum CloseSessionReason {
   IdleTtlExceeded = "idle_ttl_exceeded",
   Shutdown = "shutdown",
   ProbeTermination = "probe_termination",
+  PingTimeout = "ping_timeout",
 }
 
 export enum TouchSource {
@@ -28,6 +29,8 @@ export interface SessionsManagerConfig {
   probeClientsGraceLivenessPeriodMs: number;
   sessionTtlMin: number;
   sessionSweepIntervalMin?: number;
+  // Consecutive missed pings before the session is reaped.
+  pingMaxConsecutiveTimeouts: number;
 }
 
 export interface SessionLivenessConfig {
@@ -35,6 +38,7 @@ export interface SessionLivenessConfig {
   probeClientsGraceLivenessPeriodMs: number;
   sessionTtlMin: number;
   sessionSweepIntervalMin?: number;
+  pingMaxConsecutiveTimeouts: number;
 }
 
 export interface McpxSession {
@@ -47,6 +51,10 @@ export interface McpxSession {
   toolCallCache?: Map<string, ToolCallCacheEntry>;
   liveness?: {
     lastSeenAt: number;
+    // Missed at least one ping but not yet reaped.
+    unresponsive: boolean;
+    // Consecutive missed pings, reset by any inbound activity or ping success.
+    consecutiveMisses: number;
     stopPing: () => void;
   };
 }
@@ -69,6 +77,11 @@ export type ToolCallCacheEntry =
       error: Error;
       expiresAt: number;
     };
+
+export interface SessionLivenessInfo {
+  lastSeenAt: number;
+  unresponsive: boolean;
+}
 
 export interface SessionLivenessStore {
   getSession: (sessionId: string) => McpxSession | undefined;

@@ -85,11 +85,15 @@ export {
   storeDownstreamSessionAckSchema,
   loadDownstreamSessionAckSchema,
   deleteDownstreamSessionAckSchema,
+  listDownstreamSessionsAckSchema,
   persistedDownstreamSessionDataSchema,
+  persistedDownstreamSessionEntrySchema,
 } from "./webapp-bound/downstream-session.js";
 export type {
   StoreDownstreamSessionAck,
   LoadDownstreamSessionAck,
   DeleteDownstreamSessionAck,
+  ListDownstreamSessionsAck,
   PersistedDownstreamSessionDataWire,
+  PersistedDownstreamSessionEntryWire,
 } from "./webapp-bound/downstream-session.js";

@@ -81,8 +81,12 @@ const envSchema = z
       .number()
       .default(5 * 60_000),
     PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS: z.coerce.number().default(10000),
-    AGENT_SESSION_TTL_MIN: z.coerce.number().default(1440),
-    KEEPALIVE_SWEEP_INTERVAL_MIN: z.coerce.number().optional(),
+    AGENT_SESSION_TTL_MIN: z.coerce.number().default(30),
+    KEEPALIVE_SWEEP_INTERVAL_MIN: z.coerce.number().default(1),
+    // Consecutive missed pings before a session is reaped.
+    PING_MAX_CONSECUTIVE_TIMEOUTS: z.coerce.number().default(3),
+    // Minutes an offline agent shows on the dashboard before aging out.
+    AGENT_DISCONNECTED_RETENTION_MIN: z.coerce.number().default(60),
     ENABLE_CONTROL_PLANE_STREAMING: z.stringbool().default(true),
     ENABLE_CONTROL_PLANE_REST: z.stringbool().default(true),
     HUB_WS_URL: z.string().default("ws://127.0.0.1:3030"),
@@ -173,6 +177,8 @@ const NON_SECRET_KEYS = [
   "PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS",
   "AGENT_SESSION_TTL_MIN",
   "KEEPALIVE_SWEEP_INTERVAL_MIN",
+  "PING_MAX_CONSECUTIVE_TIMEOUTS",
+  "AGENT_DISCONNECTED_RETENTION_MIN",
   "ENABLE_CONTROL_PLANE_STREAMING",
   "ENABLE_CONTROL_PLANE_REST",
   "HUB_WS_URL",

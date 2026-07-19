@@ -39,6 +39,9 @@ function createAgent(overrides: Partial<Agent> = {}): Agent {
       callCount: 0,
       lastCalledAt: null,
     },
+    dynamicMode: false,
+    visibleTools: [],
+    connectionState: "connected",
     ...overrides,
   } as Agent;
 }

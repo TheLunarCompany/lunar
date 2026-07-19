@@ -163,6 +163,9 @@ export const createMockAgent = (
       provider: config.provider || "openai",
       modelId: config.model || "gpt-4",
     },
+    dynamicMode: false,
+    visibleTools: [],
+    connectionState: "connected",
   };
 
   const cluster: ConnectedClientCluster = {

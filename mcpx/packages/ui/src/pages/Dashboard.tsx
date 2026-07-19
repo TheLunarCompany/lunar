@@ -7,90 +7,13 @@ import { useIsEditingSpaceOnBehalf } from "@/data/identity";
 
 import { routes } from "@/routes";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
-import { Agent, clusterDisplayName, McpServer } from "@/types";
+import { Agent, McpServer } from "@/types";
 import { ACTIVE_REQUEST_DURATION_MS, isActive } from "@/utils";
 import { serversEqual } from "@/utils/server-comparison";
-import { mapTargetServersToMcpServers } from "@/mapping/system-state";
+import { transformConfigurationData } from "@/mapping/system-state";
 import { SystemState } from "@mcpx/shared-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-
-type TransformedState = {
-  agents: Agent[];
-  lastUpdated?: Date;
-  servers: McpServer[];
-  systemUsage?: {
-    callCount: number;
-    lastCalledAt?: Date;
-  };
-};
-
-// Helper function to create default access config for agents
-const createDefaultAccessConfig = (servers: McpServer[]) => {
-  return servers.map((server) => ({
-    serverId: server.id,
-    serverName: server.name,
-    allowServer: true,
-    tools: server.tools.map((tool) => ({
-      toolName: tool.name,
-      allowTool: true,
-    })),
-  }));
-};
-
-const transformConfigurationData = (config: SystemState): TransformedState => {
-  const transformedServers = mapTargetServersToMcpServers(config.targetServers);
-
-  // Transform agents using clusters (backend always provides clusters now)
-  const defaultAccessConfig = createDefaultAccessConfig(transformedServers);
-
-  const transformedAgents: Agent[] = (config.connectedClientClusters || []).map(
-    (cluster, index) => {
-      const lastSessionId = cluster.sessionIds[cluster.sessionIds.length - 1];
-      const clientForLastSession = config.connectedClients.find(
-        (client) => client.sessionId === lastSessionId,
-      );
-      const base = {
-        id: `agent-cluster-${index}`,
-        identifier:
-          clientForLastSession?.clientInfo?.name ?? clusterDisplayName(cluster),
-        status: "connected",
-        lastActivity: cluster.usage.lastCalledAt,
-        sessionIds: cluster.sessionIds,
-        llm: clientForLastSession?.llm || {
-          provider: "unknown",
-          model: "unknown",
-        },
-        usage: cluster.usage,
-        accessConfig: defaultAccessConfig,
-      };
-      switch (cluster.identityType) {
-        case "consumerTag":
-          return {
-            ...base,
-            identityType: "consumerTag",
-            consumerTag: cluster.consumerTag,
-            clientNames: cluster.clientNames,
-          };
-        case "clientName":
-          return {
-            ...base,
-            identityType: "clientName",
-            clientName: cluster.clientName,
-          };
-        case "anonymous":
-          return { ...base, identityType: "anonymous" };
-      }
-    },
-  );
-
-  return {
-    servers: transformedServers,
-    agents: transformedAgents,
-    systemUsage: config.usage,
-    lastUpdated: config.lastUpdatedAt,
-  };
-};
 
 // TODO: Split this component into smaller pieces for better maintainability
 export default function Dashboard() {
@@ -226,16 +149,20 @@ export default function Dashboard() {
       !serversEqual(prev.servers, processedData.servers) ||
       prev.servers.some((s, i) => s.icon !== processedData.servers[i]?.icon);
 
-    // Check if agents actually changed - compare by ID to handle order changes
-    const prevAgentIds = new Set(prev.agents.map((a) => a.id));
-    const newAgentIds = new Set(processedData.agents.map((a) => a.id));
+    // Compare agents by id (order-independent). A change in any rendered field —
+    // identifier or the live connection/tool fields — triggers an update.
+    const newAgentsById = new Map(processedData.agents.map((a) => [a.id, a]));
     const agentsChanged =
       prev.agents.length !== processedData.agents.length ||
-      prevAgentIds.size !== newAgentIds.size ||
-      Array.from(prevAgentIds).some((id) => !newAgentIds.has(id)) ||
       prev.agents.some((a) => {
-        const newAgent = processedData.agents.find((na) => na.id === a.id);
-        return !newAgent || a.identifier !== newAgent.identifier;
+        const next = newAgentsById.get(a.id);
+        return (
+          !next ||
+          a.identifier !== next.identifier ||
+          a.connectionState !== next.connectionState ||
+          a.dynamicMode !== next.dynamicMode ||
+          a.visibleTools.length !== next.visibleTools.length
+        );
       });
 
     // Check if status changed

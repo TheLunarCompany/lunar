@@ -23,31 +23,38 @@ import {
 } from "@/components/ui/tooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
-import { ChevronDown, Sparkles, TriangleAlert } from "lucide-react";
+import { ChevronDown, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generatePath, useNavigate } from "react-router-dom";
 import { useAccessControlsStore, useSocketStore } from "@/store";
 import { apiClient } from "@/lib/api";
 import { routes } from "@/routes";
 import { useAgentDrawerSkillsData } from "@/data/agent-drawer-skills";
-import type { ConsumerConfig } from "@mcpx/shared-model";
+import type { ConnectionState, ConsumerConfig } from "@mcpx/shared-model";
 import type { AgentProfile, ToolGroup } from "@/store/access-controls";
 import { toast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { deriveAgentDisplay } from "./agent-display";
 import { AgentSkillsSection } from "./AgentSkillsSection";
 import { buildAgentDrawerSkills } from "@/mapping/agent-drawer";
+import { pickRepresentativeClient } from "@/mapping/system-state";
 import {
   PermissionEntriesByName,
   getTotalConnectedTools,
   getConsumerToolAccess,
 } from "@/hooks/toolCount";
 import { agentsData } from "./constants";
-import {
-  isDynamicCapabilitiesEnabled,
-  isSkillsPageEnabled,
-} from "@/config/runtime-config";
+import { isSkillsPageEnabled } from "@/config/runtime-config";
 import { DomainBadge } from "./DomainBadge";
+
+const CONNECTION_BADGE: Record<
+  ConnectionState,
+  { variant: "success" | "warning" | "secondary"; label: string }
+> = {
+  connected: { variant: "success", label: "Connected" },
+  unresponsive: { variant: "warning", label: "Unresponsive" },
+  disconnected: { variant: "secondary", label: "Disconnected" },
+};
 
 function getAgentDrawerPermissionFromConfig(
   entriesByName: PermissionEntriesByName,
@@ -140,9 +147,6 @@ export const AgentDetailsModal = ({
   const [editedToolGroups, setEditedToolGroups] = useState<Set<string>>(
     new Set(),
   );
-  const [dynamicCapabilitiesMode, setDynamicCapabilitiesMode] = useState(false);
-  const [dynamicCapabilitiesLoading, setDynamicCapabilitiesLoading] =
-    useState(false);
   const navigate = useNavigate();
   const skillsPageEnabled = isSkillsPageEnabled();
   const agentDrawerSkillsData = useAgentDrawerSkillsData({
@@ -168,12 +172,53 @@ export const AgentDetailsModal = ({
     appConfig: s.appConfig,
   }));
 
+  // The `agent` prop is a snapshot from click time. Re-read the cluster from the
+  // live system state so sessions and usage update without a refresh.
+  const liveCluster = useMemo(() => {
+    if (!agent) return undefined;
+    const clusters = systemState?.connectedClientClusters ?? [];
+    return clusters.find((cluster) => {
+      if (cluster.identityType !== agent.identityType) return false;
+      if (
+        cluster.identityType === "consumerTag" &&
+        agent.identityType === "consumerTag"
+      ) {
+        return cluster.consumerTag === agent.consumerTag;
+      }
+      if (
+        cluster.identityType === "clientName" &&
+        agent.identityType === "clientName"
+      ) {
+        return cluster.clientName === agent.clientName;
+      }
+      // Anonymous clusters have no identity key, so match on session overlap.
+      return cluster.sessionIds.some((id) => agent.sessionIds.includes(id));
+    });
+  }, [agent, systemState]);
+
+  const liveSessionIds = liveCluster?.sessionIds ?? agent?.sessionIds ?? [];
+  const liveUsage = liveCluster?.usage ?? agent?.usage;
+
+  // Live connection health for the Status badge, from the same healthiest-session
+  // reduction the node uses, so the modal and the node never disagree.
+  const liveConnectionState: ConnectionState = useMemo(() => {
+    const sessionIds = liveCluster?.sessionIds ?? agent?.sessionIds ?? [];
+    const representative = pickRepresentativeClient(
+      sessionIds,
+      systemState?.connectedClients ?? [],
+    );
+    return (
+      representative?.connectionState ?? agent?.connectionState ?? "connected"
+    );
+  }, [liveCluster, systemState, agent]);
+
   // Get consumerTag from x-lunar-consumer-tag header
   const consumerTag = useMemo(() => {
-    if (!agent?.sessionIds || agent.sessionIds.length === 0) {
+    const sessionIds = liveCluster?.sessionIds ?? agent?.sessionIds ?? [];
+    if (sessionIds.length === 0) {
       return null;
     }
-    const lastSessionId = agent.sessionIds[agent.sessionIds.length - 1];
+    const lastSessionId = sessionIds[sessionIds.length - 1];
     const session = systemState?.connectedClients?.find(
       (client) => client.sessionId === lastSessionId,
     );
@@ -183,16 +228,7 @@ export const AgentDetailsModal = ({
       agent?.identifier ||
       null
     );
-  }, [agent?.sessionIds, systemState, agent?.identifier]);
-
-  // Count tools in the dynamic tool group for this consumer
-  const dynamicToolsCount = useMemo(() => {
-    if (!consumerTag || !toolGroups) return 0;
-    const dynamicGroupName = `${consumerTag}_dynamic`;
-    const dynamicGroup = toolGroups.find((g) => g.name === dynamicGroupName);
-    if (!dynamicGroup) return 0;
-    return Object.values(dynamicGroup.services).flat().length;
-  }, [consumerTag, toolGroups]);
+  }, [liveCluster, systemState, agent]);
 
   const agentType = getAgentType(agent?.identifier, consumerTag);
 
@@ -236,20 +272,10 @@ export const AgentDetailsModal = ({
     setEditedToolGroups(new Set());
   }, [toolGroups]);
 
-  // On open: sync internal state, dismiss toasts, fetch dynamic capabilities
+  // On open: sync internal state.
   useEffect(() => {
     setInternalOpen(isOpen);
-    if (!isOpen) return;
-
-    if (consumerTag) {
-      apiClient
-        .getDynamicCapabilitiesStatus(consumerTag)
-        .then((status) => setDynamicCapabilitiesMode(status.enabled))
-        .catch((error) =>
-          console.warn("Failed to fetch dynamic capabilities status:", error),
-        );
-    }
-  }, [isOpen, consumerTag]);
+  }, [isOpen]);
 
   const arraysEqual = (arr1: string[], arr2: string[]) => {
     if (arr1.length !== arr2.length) return false;
@@ -483,37 +509,6 @@ export const AgentDetailsModal = ({
       }
       return newSet;
     });
-  };
-
-  const handleDynamicCapabilitiesToggle = async (checked: boolean) => {
-    if (!consumerTag) return;
-
-    setDynamicCapabilitiesLoading(true);
-    try {
-      if (checked) {
-        await apiClient.enableDynamicCapabilities(consumerTag);
-      } else {
-        await apiClient.disableDynamicCapabilities(consumerTag);
-      }
-      setDynamicCapabilitiesMode(checked);
-      toast({
-        title: checked
-          ? "Dynamic Capabilities Enabled"
-          : "Dynamic Capabilities Disabled",
-        description: checked
-          ? "Tools will be discovered on-demand via natural language"
-          : "All configured tools are now visible",
-      });
-    } catch (error) {
-      console.error("Failed to toggle dynamic capabilities:", error);
-      toast({
-        title: "Error",
-        description: "Failed to toggle dynamic capabilities mode",
-        variant: "destructive",
-      });
-    } finally {
-      setDynamicCapabilitiesLoading(false);
-    }
   };
 
   const handleAllowAllToggle = (checked: boolean) => {
@@ -857,7 +852,7 @@ export const AgentDetailsModal = ({
             </div>
           </div>
           <SessionIdsTooltip
-            sessionIds={agent.sessionIds}
+            sessionIds={liveSessionIds}
             className="mt-2 text-xs font-medium text-muted-foreground"
           />
         </div>
@@ -868,8 +863,12 @@ export const AgentDetailsModal = ({
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Status
               </div>
-              <Badge variant="success" size="sm" className="mt-2">
-                {agent.status || "CONNECTED"}
+              <Badge
+                variant={CONNECTION_BADGE[liveConnectionState].variant}
+                size="sm"
+                className="mt-2"
+              >
+                {CONNECTION_BADGE[liveConnectionState].label}
               </Badge>
             </div>
             <div className="rounded-xl border border-border bg-muted/20 p-3 text-left">
@@ -877,7 +876,7 @@ export const AgentDetailsModal = ({
                 Calls
               </div>
               <div className="mt-2 text-sm font-semibold text-foreground">
-                {agent.usage?.callCount || 0}
+                {liveUsage?.callCount || 0}
               </div>
             </div>
             <div className="rounded-xl border border-border bg-muted/20 p-3 text-left">
@@ -885,8 +884,8 @@ export const AgentDetailsModal = ({
                 Last Call
               </div>
               <div className="mt-2 text-sm font-semibold text-foreground">
-                {agent.usage?.lastCalledAt
-                  ? formatDateTime(agent.usage.lastCalledAt)
+                {liveUsage?.lastCalledAt
+                  ? formatDateTime(liveUsage.lastCalledAt)
                   : "N/A"}
               </div>
             </div>
@@ -908,31 +907,6 @@ export const AgentDetailsModal = ({
             Tools Access
           </div>
 
-          {isDynamicCapabilitiesEnabled() && (
-            <div className="mb-3 flex shrink-0 items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background text-primary shadow-xs">
-                  <Sparkles className="size-4" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Dynamic Tools Mode
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Agent discovers tools on-demand
-                    {dynamicToolsCount > 0 &&
-                      ` (${dynamicToolsCount} tools exposed)`}
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={dynamicCapabilitiesMode}
-                onCheckedChange={handleDynamicCapabilitiesToggle}
-                disabled={dynamicCapabilitiesLoading || !consumerTag}
-              />
-            </div>
-          )}
-
           <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border border-border bg-muted/20 p-3">
             <h3 className="text-sm font-semibold text-foreground">
               All Server Tools ({totalConnectedTools})
@@ -941,7 +915,6 @@ export const AgentDetailsModal = ({
               <Switch
                 checked={allowAll}
                 onCheckedChange={handleAllowAllToggle}
-                disabled={dynamicCapabilitiesMode}
               />
             </div>
           </div>
@@ -1031,7 +1004,6 @@ export const AgentDetailsModal = ({
                             onCheckedChange={(checked: boolean) => {
                               handleToolGroupToggle(group.id, checked);
                             }}
-                            disabled={dynamicCapabilitiesMode}
                           />
                         </div>
                       </div>

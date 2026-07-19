@@ -33,8 +33,6 @@ interface BindTransportLifecycleParams {
   transportSessionId: string;
 }
 
-const MIN_PROTOCOL_VERSION_FOR_STREAMABLE_EVENTS = "2025-11-25";
-
 export function buildDownstreamTransportsRouter(
   authGuard: express.RequestHandler,
   services: Services,
@@ -304,6 +302,14 @@ function registerTransportRoutes(
     }
 
     services.sessions.touchSession(sessionId, TouchSource.TransportGetMcp);
+    // If the notification stream drops before we end it, flag the agent
+    // unresponsive now. Later activity or a ping restores or reaps it.
+    res.on("close", () => {
+      if (res.writableEnded) {
+        return;
+      }
+      services.sessions.markSessionUnresponsive(sessionId);
+    });
     try {
       session.transport.transport.closeStandaloneSSEStream();
     } catch (error) {
@@ -505,11 +511,11 @@ class DownstreamTransportFactory {
       metadata.isProbe,
     );
     const streamableSessionId = sessionIdHint ?? randomUUID();
-    const eventStore = supportsStreamableEventReplay(metadata)
-      ? new InMemoryEventStore(this.logger, {
-          maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
-        })
-      : undefined;
+    // Replay buffer so a reopened GET stream recovers notifications missed while
+    // disconnected (e.g. tools/list_changed).
+    const eventStore = new InMemoryEventStore(this.logger, {
+      maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
+    });
     const streamableTransport = new StreamableHTTPServerTransport({
       sessionIdGenerator: (): string => streamableSessionId,
       onsessioninitialized: (initializedSessionId): void => {
@@ -523,7 +529,7 @@ class DownstreamTransportFactory {
           server,
         });
       },
-      ...(eventStore ? { eventStore } : {}),
+      eventStore,
     });
 
     await server.connect(streamableTransport);
@@ -550,16 +556,14 @@ class DownstreamTransportFactory {
       this.logger,
       metadata.isProbe,
     );
-    const eventStore = supportsStreamableEventReplay(metadata)
-      ? new InMemoryEventStore(this.logger, {
-          maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
-        })
-      : undefined;
-    // onsessioninitialized is intentionally omitted — we register the session
+    const eventStore = new InMemoryEventStore(this.logger, {
+      maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
+    });
+    // onsessioninitialized is intentionally omitted. We register the session
     // manually below after pre-seeding the initialized state.
     const streamableTransport = new StreamableHTTPServerTransport({
       sessionIdGenerator: (): string => sessionIdHint,
-      ...(eventStore ? { eventStore } : {}),
+      eventStore,
     });
 
     // No public SDK API exists for pre-seeding session state (tracking: sdk#1786).
@@ -676,26 +680,4 @@ class DownstreamTransportFactory {
     }
     return "streamableHttp";
   }
-}
-
-function supportsStreamableEventReplay(
-  metadata: McpxSession["metadata"],
-): boolean {
-  return isProtocolVersionAtLeast(
-    metadata.clientInfo.protocolVersion,
-    MIN_PROTOCOL_VERSION_FOR_STREAMABLE_EVENTS,
-  );
-}
-
-function isProtocolVersionAtLeast(
-  version: string | undefined,
-  minimumVersion: string,
-): boolean {
-  if (!version) {
-    return false;
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(version)) {
-    return false;
-  }
-  return version >= minimumVersion;
 }

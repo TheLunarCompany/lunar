@@ -526,7 +526,10 @@ export const ConnectivityDiagram = memo(
         return (
           prevAgent.id === nextAgent.id &&
           prevAgent.identifier === nextAgent.identifier &&
-          prevAgent.status === nextAgent.status
+          prevAgent.status === nextAgent.status &&
+          prevAgent.dynamicMode === nextAgent.dynamicMode &&
+          prevAgent.connectionState === nextAgent.connectionState &&
+          prevAgent.visibleTools.length === nextAgent.visibleTools.length
         );
       });
 

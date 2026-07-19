@@ -16,6 +16,10 @@
     "./config": {
       "import": "./dist/config/index.js",
       "types": "./dist/config/index.d.ts"
+    },
+    "./mocks": {
+      "import": "./dist/mocks/index.js",
+      "types": "./dist/mocks/index.d.ts"
     }
   },
   "scripts": {
@@ -31,7 +35,7 @@
     "build:deps:one": "cd ../.. && npm run build:deps:one"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "yaml": "^2.8.3",
     "zod": "^3.25.76"
   },

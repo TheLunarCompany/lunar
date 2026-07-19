@@ -1,5 +1,6 @@
 import {
   deleteDownstreamSessionAckSchema,
+  listDownstreamSessionsAckSchema,
   loadDownstreamSessionAckSchema,
   persistedDownstreamSessionDataSchema,
   PersistedDownstreamSessionDataWire,
@@ -7,14 +8,24 @@ import {
   WEBAPP_BOUND_EVENTS,
   wrapInEnvelope,
 } from "@mcpx/webapp-protocol/messages";
-import { SemVer } from "semver";
+import { parse as parseSemVer, SemVer } from "semver";
 import { Logger } from "winston";
 import { z } from "zod/v4";
 import {
   DownstreamSessionStore,
   PersistedDownstreamSessionData,
+  PersistedDownstreamSessionEntry,
 } from "./downstream-session-store.js";
 import { HubSocketAdapter } from "./saved-setups-client.js";
+
+// Fail soft: `semver.parse` returns null (never throws) on a bad version, so it
+// can't escape the transform and reject the whole recovery list. Drop the
+// version instead. A throw here would bypass safeParse and break recovery.
+function toSemVer(version: string | undefined): SemVer | undefined {
+  return version === undefined
+    ? undefined
+    : (parseSemVer(version) ?? undefined);
+}
 
 // wire → domain: validates Hub response and reconstructs SemVer instances
 const inboundSessionSchema = persistedDownstreamSessionDataSchema.transform(
@@ -26,9 +37,7 @@ const inboundSessionSchema = persistedDownstreamSessionDataSchema.transform(
         adapter: wire.metadata.clientInfo.adapter
           ? {
               name: wire.metadata.clientInfo.adapter.name,
-              version: wire.metadata.clientInfo.adapter.version
-                ? new SemVer(wire.metadata.clientInfo.adapter.version)
-                : undefined,
+              version: toSemVer(wire.metadata.clientInfo.adapter.version),
               support: wire.metadata.clientInfo.adapter.support,
             }
           : undefined,
@@ -154,6 +163,45 @@ export class HubDownstreamSessionClient implements DownstreamSessionStore {
       return undefined;
     }
     return domain.data;
+  }
+
+  // Throws on failure (no socket, bad/refused ack) so callers can tell an
+  // authoritative empty list from a transient failure. Corrupt records are skipped.
+  async list(): Promise<PersistedDownstreamSessionEntry[]> {
+    const socket = this.getSocket();
+    if (!socket) {
+      throw new Error("Hub socket not available for list-downstream-sessions");
+    }
+    const envelope = wrapInEnvelope({ payload: {} });
+    const raw = await socket.emitWithAck(
+      WEBAPP_BOUND_EVENTS.LIST_DOWNSTREAM_SESSIONS,
+      envelope,
+    );
+    const parsed = listDownstreamSessionsAckSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new Error(
+        `Invalid ack for list-downstream-sessions: ${parsed.error.message}`,
+      );
+    }
+    if (!parsed.data.success) {
+      throw new Error(
+        `Hub refused list-downstream-sessions: ${parsed.data.error}`,
+      );
+    }
+    const entries: PersistedDownstreamSessionEntry[] = [];
+    for (const entry of parsed.data.sessions) {
+      const domain = inboundSessionSchema.safeParse(entry.data);
+      if (!domain.success) {
+        // Skip a corrupt record so one bad value can't fail recovery.
+        this.logger.warn("Invalid persisted session in list from hub", {
+          sessionId: entry.sessionId,
+          error: domain.error.message,
+        });
+        continue;
+      }
+      entries.push({ sessionId: entry.sessionId, data: domain.data });
+    }
+    return entries;
   }
 
   async delete(sessionId: string): Promise<void> {

@@ -3,6 +3,7 @@ import type {
   PromptMessage,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod/v4";
 
 // Currently, describe the state of the system - for a single MCPX instance
 export interface SystemState {
@@ -70,17 +71,85 @@ export type TargetServer =
   | StdioTargetServer
   | SSETargetServer
   | StreamableHTTPTargetServer;
-export interface ConnectedClient {
-  sessionId: string;
-  clientId: string; // Stable unique identifier for the agent
-  usage: Usage;
-  consumerTag?: string;
-  llm?: {
-    provider?: string;
-    modelId?: string;
-  };
-  clientInfo?: ConnectedClientInfo;
-}
+export const usageSchema = z.object({
+  callCount: z.number(),
+  lastCalledAt: z.date().optional(),
+});
+export type Usage = z.infer<typeof usageSchema>;
+
+export const visibleToolSchema = z.object({
+  serverName: z.string(),
+  toolName: z.string(),
+});
+export type VisibleTool = z.infer<typeof visibleToolSchema>;
+
+export const connectedClientAdapterSchema = z.object({
+  // essentially a union type, right now we only recognize mcp-remote
+  name: z.literal("mcp-remote"),
+  version: z
+    .object({
+      major: z.number(),
+      minor: z.number(),
+      patch: z.number(),
+      prerelease: z.array(z.union([z.string(), z.number()])),
+      build: z.array(z.union([z.string(), z.number()])),
+    })
+    .optional(),
+  support: z
+    .object({
+      ping: z.boolean(),
+    })
+    .optional(),
+});
+export type ConnectedClientAdapter = z.infer<
+  typeof connectedClientAdapterSchema
+>;
+
+export const connectedClientInfoSchema = z.object({
+  protocolVersion: z.string().optional(),
+  name: z.string().optional(),
+  version: z.string().optional(),
+  adapter: connectedClientAdapterSchema.optional(),
+});
+export type ConnectedClientInfo = z.infer<typeof connectedClientInfoSchema>;
+
+// Connection health and presence for the dashboard, as a single axis:
+// - "connected": live and responsive.
+// - "unresponsive": live but missing pings (the staleness signal), not yet reaped.
+// - "disconnected": not live. Set when a session ends at runtime (transport
+//   closed or errored, or an idle-TTL / ping-timeout reap) or when a persisted
+//   session is surfaced after an MCPX restart or hibernation. Kept visible for
+//   the retention window, or until the same session id reconnects.
+export const connectionStateSchema = z.enum([
+  "connected",
+  "unresponsive",
+  "disconnected",
+]);
+export type ConnectionState = z.infer<typeof connectionStateSchema>;
+
+export const connectedClientSchema = z.object({
+  sessionId: z.string(),
+  clientId: z.string(), // Stable unique identifier for the agent
+  usage: usageSchema,
+  consumerTag: z.string().optional(),
+  llm: z
+    .object({
+      provider: z.string().optional(),
+      modelId: z.string().optional(),
+    })
+    .optional(),
+  clientInfo: connectedClientInfoSchema.optional(),
+  // Per-session live fields.
+  dynamicMode: z.boolean(),
+  visibleTools: z.array(visibleToolSchema),
+  lastSeenAt: z.number().optional(),
+  // Health/presence on one axis (see connectionStateSchema). Replaces a separate
+  // `unresponsive` boolean so there is a single source of truth for the UI.
+  connectionState: connectionStateSchema,
+  // Epoch ms the session went disconnected. Set only for offline agents.
+  disconnectedAt: z.number().optional(),
+});
+export type ConnectedClient = z.infer<typeof connectedClientSchema>;
 
 export interface ConsumerTagCluster {
   identityType: "consumerTag";
@@ -107,26 +176,6 @@ export type ConnectedClientCluster =
   | ConsumerTagCluster
   | ClientNameCluster
   | AnonymousCluster;
-export interface ConnectedClientInfo {
-  protocolVersion?: string;
-  name?: string;
-  version?: string;
-  adapter?: ConnectedClientAdapter;
-}
-
-export interface ConnectedClientAdapter {
-  name: "mcp-remote"; // essentially a union type, right now we only recognize mcp-remote
-  version?: {
-    major: number;
-    minor: number;
-    patch: number;
-    prerelease: (string | number)[];
-    build: (string | number)[];
-  };
-  support?: {
-    ping: boolean;
-  };
-}
 
 export interface TargetServerTool {
   name: string;
@@ -155,9 +204,4 @@ export interface TargetServerPromptArgument {
   name: string;
   description?: string;
   required?: boolean;
-}
-
-export interface Usage {
-  callCount: number;
-  lastCalledAt?: Date;
 }

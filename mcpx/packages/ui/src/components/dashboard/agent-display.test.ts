@@ -15,6 +15,9 @@ function makeAgentBase(): Omit<Agent, "identityType"> & {
     sessionIds: ["s1"],
     status: "connected",
     usage: { callCount: 0 },
+    dynamicMode: false,
+    visibleTools: [],
+    connectionState: "connected",
   };
 }
 

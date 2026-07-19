@@ -17,6 +17,7 @@ import {
   storeDownstreamSessionPayloadSchema,
   loadDownstreamSessionPayloadSchema,
   deleteDownstreamSessionPayloadSchema,
+  listDownstreamSessionsPayloadSchema,
 } from "./downstream-session.js";
 import {
   saveSkillPayloadSchema,
@@ -40,6 +41,7 @@ export const WebappBoundPayloads = {
   storeDownstreamSession: storeDownstreamSessionPayloadSchema,
   loadDownstreamSession: loadDownstreamSessionPayloadSchema,
   deleteDownstreamSession: deleteDownstreamSessionPayloadSchema,
+  listDownstreamSessions: listDownstreamSessionsPayloadSchema,
   saveSkill: saveSkillPayloadSchema,
   updateSkill: updateSkillPayloadSchema,
   deleteSkill: deleteSkillPayloadSchema,
@@ -64,6 +66,7 @@ export const WEBAPP_BOUND_EVENTS = {
   STORE_DOWNSTREAM_SESSION: "store-downstream-session",
   LOAD_DOWNSTREAM_SESSION: "load-downstream-session",
   DELETE_DOWNSTREAM_SESSION: "delete-downstream-session",
+  LIST_DOWNSTREAM_SESSIONS: "list-downstream-sessions",
   SAVE_SKILL: "save-skill",
   UPDATE_SKILL: "update-skill",
   DELETE_SKILL: "delete-skill",
@@ -111,13 +114,19 @@ export type WebappBoundPayloadOf<E extends WebappBoundEventName> =
                                 ? z.input<
                                     typeof deleteDownstreamSessionPayloadSchema
                                   >
-                                : E extends typeof WEBAPP_BOUND_EVENTS.SAVE_SKILL
-                                  ? z.input<typeof saveSkillPayloadSchema>
-                                  : E extends typeof WEBAPP_BOUND_EVENTS.UPDATE_SKILL
-                                    ? z.input<typeof updateSkillPayloadSchema>
-                                    : E extends typeof WEBAPP_BOUND_EVENTS.DELETE_SKILL
-                                      ? z.input<typeof deleteSkillPayloadSchema>
-                                      : never;
+                                : E extends typeof WEBAPP_BOUND_EVENTS.LIST_DOWNSTREAM_SESSIONS
+                                  ? z.input<
+                                      typeof listDownstreamSessionsPayloadSchema
+                                    >
+                                  : E extends typeof WEBAPP_BOUND_EVENTS.SAVE_SKILL
+                                    ? z.input<typeof saveSkillPayloadSchema>
+                                    : E extends typeof WEBAPP_BOUND_EVENTS.UPDATE_SKILL
+                                      ? z.input<typeof updateSkillPayloadSchema>
+                                      : E extends typeof WEBAPP_BOUND_EVENTS.DELETE_SKILL
+                                        ? z.input<
+                                            typeof deleteSkillPayloadSchema
+                                          >
+                                        : never;
 
 // This maps the kebab-case event names to their enveloped message types
 export type WebappBoundEnvelopedOf<E extends WebappBoundEventName> =

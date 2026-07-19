@@ -11,7 +11,6 @@ import type {
   MessageResponse,
   GetIdentityResponse,
   StrictnessResponse,
-  DynamicCapabilitiesStatusResponse,
   TargetServer,
   CreateServerFromCatalogRequest,
   CatalogMCPServerItem,
@@ -37,7 +36,6 @@ import {
   messageResponseSchema,
   getIdentityResponseSchema,
   strictnessResponseSchema,
-  dynamicCapabilitiesStatusResponseSchema,
   catalogMCPServerListSchema,
   auditLogsResponseSchema,
   skillCatalogResponseSchema,
@@ -562,39 +560,6 @@ class ApiClient {
 
   async getSecrets(): Promise<SecretKeys> {
     return this.request("/catalog/secrets", secretKeysSchema);
-  }
-
-  // ==================== DYNAMIC CAPABILITIES ====================
-
-  async getDynamicCapabilitiesStatus(
-    consumerTag: string,
-  ): Promise<DynamicCapabilitiesStatusResponse> {
-    return this.request(
-      `/dynamic-capabilities/${encodeURIComponent(consumerTag)}`,
-      dynamicCapabilitiesStatusResponseSchema,
-    );
-  }
-
-  async enableDynamicCapabilities(
-    consumerTag: string,
-  ): Promise<DynamicCapabilitiesStatusResponse> {
-    return this.requestWithBody(
-      `/dynamic-capabilities/${encodeURIComponent(consumerTag)}/enable`,
-      "PUT",
-      {},
-      dynamicCapabilitiesStatusResponseSchema,
-    );
-  }
-
-  async disableDynamicCapabilities(
-    consumerTag: string,
-  ): Promise<DynamicCapabilitiesStatusResponse> {
-    return this.requestWithBody(
-      `/dynamic-capabilities/${encodeURIComponent(consumerTag)}/disable`,
-      "PUT",
-      {},
-      dynamicCapabilitiesStatusResponseSchema,
-    );
   }
 
   // Private polymorphic core for permission entries — `consumers` and `clientNames`

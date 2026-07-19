@@ -5,6 +5,7 @@ import { Logger } from "winston";
 import {
   CloseSessionReason,
   McpxSession,
+  SessionLivenessInfo,
   SessionsManagerConfig,
   TouchSource,
 } from "../model/sessions.js";
@@ -44,6 +45,8 @@ export class SessionsManager {
   private config: SessionsManagerConfig;
   private liveness: SessionLivenessManager;
   private sessionStore: DownstreamSessionStore;
+  private clock: Clock;
+  private recoveryLoaded = false;
   private _listChangedDebounces: Partial<
     Record<CapabilityKind, ReturnType<typeof setTimeout>>
   > = {};
@@ -60,6 +63,7 @@ export class SessionsManager {
     this.logger = logger.child({ component: "SessionsManager" });
     this.config = config;
     this.sessionStore = sessionStore;
+    this.clock = clock;
     this.liveness = new SessionLivenessManager(
       {
         getSession: (sessionId): McpxSession | undefined =>
@@ -72,6 +76,20 @@ export class SessionsManager {
       this.config,
       this.logger,
       clock,
+      (sessionId) => this.onLivenessChanged(sessionId),
+    );
+  }
+
+  // A live session is only ever connected or unresponsive. "disconnected" is
+  // reserved for recovered offline records.
+  private onLivenessChanged(sessionId: string): void {
+    const session = this._sessions[sessionId];
+    if (!session) {
+      return;
+    }
+    this.systemState.setClientConnectionState(
+      sessionId,
+      session.liveness?.unresponsive ? "unresponsive" : "connected",
     );
   }
 
@@ -86,6 +104,7 @@ export class SessionsManager {
     return {
       consumerTag: session.metadata.consumerTag,
       clientName: session.metadata.clientInfo?.name,
+      sessionId,
     };
   }
 
@@ -93,6 +112,26 @@ export class SessionsManager {
     this.liveness.touchSession(sessionId, source);
   }
 
+  // Read-only liveness snapshot, consumed by the report merge (T07).
+  getSessionLiveness(sessionId: string): SessionLivenessInfo | undefined {
+    const liveness = this._sessions[sessionId]?.liveness;
+    if (!liveness) {
+      return undefined;
+    }
+    return {
+      lastSeenAt: liveness.lastSeenAt,
+      unresponsive: liveness.unresponsive,
+    };
+  }
+
+  // Flag a session unresponsive now (e.g. its notification stream dropped),
+  // via the same liveness path as a missed ping.
+  markSessionUnresponsive(sessionId: string): void {
+    this.liveness.markUnresponsive(sessionId);
+  }
+
+  // Best-effort: a streamable client receives this only while its GET stream is
+  // open (replay buffer backstops brief drops), and must re-list to apply it.
   async broadcastListChanged(kind: CapabilityKind): Promise<void> {
     const sessions = this.getAllSessions();
     const { send } = CAPABILITY_BROADCASTS[kind];
@@ -195,7 +234,19 @@ export class SessionsManager {
     this.logger.debug("Closing session", { sessionId, reason });
     this.liveness.onSessionRemoved(sessionId);
     delete this._sessions[sessionId];
-    this.systemState.recordClientDisconnected({ sessionId });
+    // Keep a client-gone disconnect visible as offline for the retention window.
+    // Hard-remove only on shutdown or probe teardown.
+    if (
+      reason === CloseSessionReason.Shutdown ||
+      reason === CloseSessionReason.ProbeTermination
+    ) {
+      this.systemState.recordClientDisconnected({ sessionId });
+    } else {
+      this.systemState.markClientDisconnected(
+        sessionId,
+        this.clock.now().getTime(),
+      );
+    }
     if (reason !== CloseSessionReason.Shutdown) {
       void this.sessionStore.delete(sessionId).catch((e) => {
         this.logger.warn("Failed to delete persisted downstream session", {
@@ -252,6 +303,61 @@ export class SessionsManager {
 
   async initialize(): Promise<void> {
     this.liveness.initialize();
+    // Recovery load is deferred to Hub authentication (store needs a live socket).
+  }
+
+  // After a restart, surface persisted sessions as offline. Latches on the first
+  // successful list, so a transient failure retries on the next Hub connect. A
+  // same-id reconnect (addSession) later overwrites a record as connected.
+  async loadDisconnectedSessions(): Promise<void> {
+    if (this.recoveryLoaded) {
+      return;
+    }
+    let entries;
+    try {
+      entries = await this.sessionStore.list();
+    } catch (e) {
+      this.logger.warn(
+        "Failed to list persisted downstream sessions; will retry on next Hub connect",
+        { error: loggableError(e) },
+      );
+      return;
+    }
+    this.recoveryLoaded = true;
+    if (entries.length === 0) {
+      return;
+    }
+    const disconnectedAt = this.clock.now().getTime();
+    let recorded = 0;
+    for (const { sessionId, data } of entries) {
+      // A live session (already reconnected) wins. Probes are never shown.
+      if (this._sessions[sessionId] || data.metadata.isProbe) {
+        continue;
+      }
+      this.systemState.recordDisconnectedClient({
+        sessionId,
+        client: {
+          clientId: data.metadata.clientId,
+          consumerTag: data.metadata.consumerTag,
+          llm: {
+            provider: data.metadata.llm?.provider,
+            modelId: data.metadata.llm?.modelId,
+          },
+          clientInfo: {
+            ...data.metadata.clientInfo,
+            adapter: this.prepareClientAdapter(
+              data.metadata.clientInfo.adapter,
+            ),
+          },
+        },
+        disconnectedAt,
+      });
+      recorded += 1;
+    }
+    this.logger.info("Surfaced persisted downstream sessions as disconnected", {
+      total: entries.length,
+      recorded,
+    });
   }
 
   private getAllSessions(): McpxSession[] {

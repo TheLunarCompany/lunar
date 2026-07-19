@@ -3,6 +3,10 @@ import type { ToolsItem } from "@/types/tools";
 import type { AgentProfile, ToolGroup } from "@/store/access-controls";
 import type { ServerTool, CustomTool } from "@/store/tools";
 import type { AppConfig, SystemState } from "@mcpx/shared-model";
+import {
+  buildConnectedClientMock,
+  connectedClientMocks,
+} from "@mcpx/shared-model/mocks";
 
 // ── MCP Servers ──────────────────────────────────────────────────────────────
 
@@ -115,6 +119,9 @@ export function createMockAgent(
     lastActivity: new Date(),
     llm: { provider: "anthropic", model: "claude-sonnet-4-20250514" },
     usage: { callCount: 120, lastCalledAt: new Date() },
+    dynamicMode: false,
+    visibleTools: [],
+    connectionState: "connected" as const,
     ...overrides,
   };
   switch (identity.identityType) {
@@ -392,18 +399,43 @@ export function createMockSystemState(): SystemState {
       },
     ],
     connectedClients: [
-      {
+      buildConnectedClientMock({
         sessionId: "session-abc-123",
         clientId: "claude-desktop",
         usage: { callCount: 120 },
         consumerTag: "claude-desktop",
-      },
+        clientInfo: { name: "claude-desktop", version: "1.2.0" },
+      }),
+      ...connectedClientMocks,
     ],
     connectedClientClusters: [
       {
-        name: "claude-desktop",
+        identityType: "consumerTag",
+        consumerTag: "claude-desktop",
+        clientNames: ["claude-desktop"],
         sessionIds: ["session-abc-123"],
         usage: { callCount: 120 },
+      },
+      {
+        identityType: "consumerTag",
+        consumerTag: "team-alpha",
+        clientNames: ["cursor"],
+        sessionIds: ["sess-connected"],
+        usage: { callCount: 3 },
+      },
+      {
+        identityType: "consumerTag",
+        consumerTag: "team-beta",
+        clientNames: ["claude-desktop"],
+        sessionIds: ["sess-unresponsive"],
+        usage: { callCount: 3 },
+      },
+      {
+        identityType: "consumerTag",
+        consumerTag: "team-gamma",
+        clientNames: ["vscode"],
+        sessionIds: ["sess-disconnected"],
+        usage: { callCount: 3 },
       },
     ],
     usage: { callCount: 200, lastCalledAt: new Date() },

@@ -36,6 +36,8 @@ interface ProjectedCapability<T> {
 export interface ConsumerContext {
   consumerTag?: string;
   clientName?: string;
+  // Per-session isolation key for the Dynamic Capabilities engine (T03).
+  sessionId?: string;
 }
 
 export interface PermissionCheck {

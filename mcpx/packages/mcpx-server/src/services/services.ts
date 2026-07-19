@@ -1,7 +1,7 @@
 import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import path from "path";
-import { LunarLogger } from "@mcpx/toolkit-core/logging";
+import { LunarLogger, loggableError } from "@mcpx/toolkit-core/logging";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import { OAuthSessionManager } from "../server/oauth-session-manager.js";
@@ -94,7 +94,9 @@ export class Services {
 
     startupLogger.info("Constructing services...");
 
-    const systemStateTracker = new SystemStateTracker(systemClock, logger);
+    const systemStateTracker = new SystemStateTracker(systemClock, logger, {
+      disconnectedRetentionMs: env.AGENT_DISCONNECTED_RETENTION_MIN * 60_000,
+    });
     this._systemStateTracker = systemStateTracker;
 
     this._identityService = new IdentityService(logger, {
@@ -219,6 +221,7 @@ export class Services {
           env.PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS,
         sessionTtlMin: env.AGENT_SESSION_TTL_MIN,
         sessionSweepIntervalMin: env.KEEPALIVE_SWEEP_INTERVAL_MIN,
+        pingMaxConsecutiveTimeouts: env.PING_MAX_CONSECUTIVE_TIMEOUTS,
       },
       systemStateTracker,
       logger,
@@ -333,9 +336,27 @@ export class Services {
 
     this.setupAuditLogging();
 
+    // Recovery needs an authenticated Hub. Fire on the authenticated transition,
+    // and check current status too since addStatusListener does not replay.
+    const loadDisconnectedOnHubReady = (): void => {
+      void this._sessions.loadDisconnectedSessions().catch((e) => {
+        this.logger.warn(
+          "Failed to load disconnected sessions on Hub connect",
+          {
+            error: loggableError(e),
+          },
+        );
+      });
+    };
     this._hubService.addStatusListener((status) => {
       this.logger.debug("Hub connection status changed", status);
+      if (status.status === "authenticated") {
+        loadDisconnectedOnHubReady();
+      }
     });
+    if (this._hubService.status.status === "authenticated") {
+      loadDisconnectedOnHubReady();
+    }
 
     this._hubService.addPersonalSkillsListener((payload) =>
       this._skills.store.applyPersonalSkills(payload),
@@ -357,6 +378,11 @@ export class Services {
     await this._sessions.initialize();
     startupLogger.info("SessionsManager initialized");
     this.bindClientNotificationListeners();
+
+    // Sweep expired offline agents at their deadline (not only on other changes).
+    this._systemStateTracker.startRetentionSweep(
+      env.KEEPALIVE_SWEEP_INTERVAL_MIN * 60_000,
+    );
 
     this.initialized = true;
     startupLogger.info("All services initialized");
@@ -444,6 +470,7 @@ export class Services {
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down services...");
 
+    this._systemStateTracker.stopRetentionSweep();
     this._skills.projector.shutdown();
     this._capabilityResolver.shutdown();
     this._capabilityRegistry.shutdown();
