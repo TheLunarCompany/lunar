@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { SavedSetupItem } from "@mcpx/shared-model";
 import { formatDistanceToNow } from "date-fns";
+import { pluralizeWithCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
 
 interface SavedSetupSheetProps {
   isOpen: boolean;
@@ -165,8 +166,7 @@ export function SavedSetupSheet({
                 ))}
               </div>
               <div className="text-xs text-gray-500">
-                {serverNames.length} server
-                {serverNames.length !== 1 ? "s" : ""}
+                {pluralizeWithCount(serverNames.length, "server")}
               </div>
             </div>
           )}
@@ -205,18 +205,15 @@ export function SavedSetupSheet({
                         </p>
                       )}
                       <p className="text-xs text-gray-400">
-                        {serviceNames.length} server
-                        {serviceNames.length !== 1 ? "s" : ""} · {totalTools}{" "}
-                        tool
-                        {totalTools !== 1 ? "s" : ""}
+                        {pluralizeWithCount(serviceNames.length, "server")} ·{" "}
+                        {pluralizeWithCount(totalTools, "tool")}
                       </p>
                     </div>
                   );
                 })}
               </div>
               <div className="text-xs text-gray-500">
-                {toolGroups.length} tool group
-                {toolGroups.length !== 1 ? "s" : ""}
+                {pluralizeWithCount(toolGroups.length, "tool group")} selected
               </div>
             </div>
           )}

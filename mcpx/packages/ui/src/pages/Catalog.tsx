@@ -634,7 +634,7 @@ export default function Catalog() {
               <SearchInput
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search..."
-                wrapperClassName="mb-4 w-[320px]"
+                wrapperClassName="mb-4 w-[320px] ml-[3px]"
                 className="h-9 rounded-lg border-[#D8DCED] bg-white"
               />
             )}

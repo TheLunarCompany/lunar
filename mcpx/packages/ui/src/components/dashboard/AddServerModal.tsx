@@ -725,13 +725,13 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 {activeTab === TABS.ALL && (
                   <div className="my-4">
                     <div className="my-4 text-sm">
-                      Select server to add to your configuration
+                      Select a server to add to your configuration"
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <SearchInput
                         onChange={(event) => setSearch(event.target.value)}
                         placeholder="Search..."
-                        wrapperClassName="w-[320px] max-w-full"
+                        wrapperClassName="w-[320px] max-w-full ml-[3px]"
                         className="h-9 rounded-lg border-[#D8DCED] bg-white"
                       />
                       <Sort

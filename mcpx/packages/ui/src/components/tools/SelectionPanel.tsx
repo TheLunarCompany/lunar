@@ -1,5 +1,6 @@
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pluralizeWithoutCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
 
 interface SelectionPanelProps {
   selectedTools: Set<string>;
@@ -42,7 +43,7 @@ export function SelectionPanel({
                 {selectedTools.size}
               </span>
               <span className="text-sm text-gray-700 font-medium">
-                Tool{selectedTools.size !== 1 ? "s" : ""} selected
+                {pluralizeWithoutCount(selectedTools.size, "Tool")} selected
               </span>
             </div>
           </div>
@@ -81,7 +82,7 @@ export function SelectionPanel({
               {selectedTools.size}
             </span>
             <span className="text-sm text-gray-700 font-medium">
-              Tool{selectedTools.size !== 1 ? "s" : ""} selected
+              {pluralizeWithoutCount(selectedTools.size, "Tool")} selected
             </span>
           </div>
         </div>

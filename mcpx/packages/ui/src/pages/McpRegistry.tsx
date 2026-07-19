@@ -603,19 +603,24 @@ export default function McpRegistry() {
               )}
             </CustomTabsList>
             {activeTab === TABS.ALL && (
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                <SearchInput
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search..."
-                  wrapperClassName="w-[320px] max-w-full"
-                  className="h-9 rounded-lg border-[#D8DCED] bg-white"
-                />
-                <Sort
-                  title="Sort"
-                  options={CATALOG_SERVER_SORT_OPTIONS}
-                  selected={sortOrder}
-                  onChange={setSortOrder}
-                />
+              <div className="my-4">
+                <div className="my-4 text-sm">
+                  Select a server to add to your configuration
+                </div>
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <SearchInput
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search..."
+                    wrapperClassName="w-[320px] max-w-full ml-[3px]"
+                    className="h-9 rounded-lg border-[#D8DCED] bg-white"
+                  />
+                  <Sort
+                    title="Sort"
+                    options={CATALOG_SERVER_SORT_OPTIONS}
+                    selected={sortOrder}
+                    onChange={setSortOrder}
+                  />
+                </div>
               </div>
             )}
             {!canAddCustom && activeTab !== TABS.ALL && (

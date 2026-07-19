@@ -48,8 +48,13 @@ export const CodexInstructions: React.FC = () => {
               <span className="font-semibold">Plugins</span> (under
               Integrations)
             </li>
-            <li>Click MCPs</li>
-            <li>Click Add Server</li>
+            <li>
+              Click <span className="font-semibold">MCPs</span> (at the top of
+              the Plugins page)
+            </li>
+            <li>
+              Click <span className="font-semibold">Add Server</span>
+            </li>
             <li>
               Choose <span className="font-semibold">Streamable HTTP</span> as
               the type, then fill in the following details:

@@ -42,6 +42,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDateTimeLong } from "@/utils";
 import { useSocketStore } from "@/store";
+import { pluralizeWithCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
 
 type PendingAction =
   | { type: "restore"; setup: SavedSetupItem }
@@ -55,14 +56,10 @@ type CurrentSetupSummary = {
 function formatCurrentSetupSummary(summary: CurrentSetupSummary): string {
   const parts: string[] = [];
   if (summary.serverCount > 0) {
-    parts.push(
-      `${summary.serverCount} server${summary.serverCount !== 1 ? "s" : ""}`,
-    );
+    parts.push(`${pluralizeWithCount(summary.serverCount, "server")}`);
   }
   if (summary.toolGroupCount > 0) {
-    parts.push(
-      `${summary.toolGroupCount} tool group${summary.toolGroupCount !== 1 ? "s" : ""}`,
-    );
+    parts.push(`${pluralizeWithCount(summary.toolGroupCount, "tool group")}`);
   }
   return parts.length > 0 ? parts.join(" and ") : "";
 }

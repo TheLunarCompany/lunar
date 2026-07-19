@@ -39,6 +39,7 @@ import { McpxServerCard } from "./McpxServerCard";
 import { ServerStatusBadge } from "./ServerStatusBadge";
 import type { McpServerStatus } from "@/types";
 import { ServerMetricCard } from "./ServerMetricCards";
+import { pluralizeWithCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
 
 const DRAWER_CLOSING_DELAY_MS = 100;
 
@@ -183,12 +184,10 @@ export const McpxDetailsModal = ({
     const toolGroupCount = appConfig?.toolGroups?.length ?? 0;
     const parts: string[] = [];
     if (serverCount > 0) {
-      parts.push(`${serverCount} server${serverCount !== 1 ? "s" : ""}`);
+      parts.push(`${pluralizeWithCount(serverCount, "server")}`);
     }
     if (toolGroupCount > 0) {
-      parts.push(
-        `${toolGroupCount} tool group${toolGroupCount !== 1 ? "s" : ""}`,
-      );
+      parts.push(`${pluralizeWithCount(toolGroupCount, "toll group")}`);
     }
     return parts.length > 0 ? parts.join(" and ") : "";
   }, [systemState?.targetServers?.length, appConfig?.toolGroups?.length]);
