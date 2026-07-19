@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import type {
   CatalogMCPServerItem,
   CatalogMCPServerList,
@@ -1014,21 +1014,26 @@ export const handlers = [
     return HttpResponse.json(catalogMcpServers);
   }),
 
-  http.post("*/catalog-item/:id/target-server", ({ params }) => {
+  http.post("*/catalog-item/:id/target-server", async ({ params }) => {
     const catalogItemId = String(params.id);
-
-    if (catalogItemId === PLAYWRIGHT_CATALOG_ITEM_ID) {
-      return HttpResponse.json(STDIO_MCP_SERVERS_NOT_ALLOWED_RESPONSE, {
-        status: 403,
-      });
-    }
-
     const server = catalogServersById.get(catalogItemId);
     if (!server) {
       return HttpResponse.json(
         { message: `Catalog item not found: ${catalogItemId}` },
         { status: 404 },
       );
+    }
+
+    const serverIndex = catalogMcpServers.findIndex(
+      (catalogServer) => catalogServer.id === catalogItemId,
+    );
+    const delayMs = 2000 + (serverIndex % 9) * 1000;
+    await delay(delayMs);
+
+    if (catalogItemId === PLAYWRIGHT_CATALOG_ITEM_ID) {
+      return HttpResponse.json(STDIO_MCP_SERVERS_NOT_ALLOWED_RESPONSE, {
+        status: 403,
+      });
     }
 
     return HttpResponse.json(createMockTargetServer(server));

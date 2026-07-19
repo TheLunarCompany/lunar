@@ -124,12 +124,27 @@ export default function McpServerAdd() {
   const [sortOrder, setSortOrder] = useState<CatalogSortOrder>("asc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isAdding, setIsAdding] = useState(false);
-  const [addError, setAddError] = useState("");
-
-  const installedLookup = useMemo(
-    () => buildInstalledCatalogServerLookup(targetServers),
-    [targetServers],
+  const [addingServerIds, setAddingServerIds] = useState<Set<string>>(
+    () => new Set(),
   );
+  const [installedServerIds, setInstalledServerIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [addFailures, setAddFailures] = useState<
+    Array<{ name: string; error: string }>
+  >([]);
+  const [addedCount, setAddedCount] = useState(0);
+
+  const installedLookup = useMemo(() => {
+    const targetServerLookup = buildInstalledCatalogServerLookup(targetServers);
+    return {
+      ...targetServerLookup,
+      addedItemIds: new Set([
+        ...targetServerLookup.addedItemIds,
+        ...installedServerIds,
+      ]),
+    };
+  }, [installedServerIds, targetServers]);
 
   const filteredCatalogServers = useMemo(
     () =>
@@ -143,6 +158,9 @@ export default function McpServerAdd() {
   );
 
   const visibleSelectableServers = filteredCatalogServers.filter(
+    (server) => !isCatalogServerInstalled(server, installedLookup),
+  );
+  const hasAvailableServers = catalogServers.some(
     (server) => !isCatalogServerInstalled(server, installedLookup),
   );
   const selectedVisibleServers = visibleSelectableServers.filter((server) =>
@@ -187,31 +205,49 @@ export default function McpServerAdd() {
     if (selectedServers.length === 0) return;
 
     setIsAdding(true);
-    setAddError("");
+    setAddingServerIds(new Set(selectedServers.map((server) => server.id)));
+    setAddFailures([]);
+    setAddedCount(0);
     const addedIds: string[] = [];
     const failedServers: Array<{ name: string; error: string }> = [];
     const existingServers = targetServers.map((server) => ({
       name: server.name,
     }));
 
-    // Add sequentially so each successful server joins `existingServers`
-    // before validating the next selected catalog item.
-    for (const server of selectedServers) {
-      try {
-        const payload = buildCatalogServerPayload({
-          server,
-          existingServers,
-        });
-        const addedServer = await addServerAsync({ payload });
-        addedIds.push(server.id);
-        existingServers.push({ name: addedServer.name });
-      } catch (serverError) {
-        failedServers.push({
-          name: server.displayName || server.name,
-          error: getAddServerErrorMessage(serverError),
-        });
-      }
-    }
+    await Promise.all(
+      selectedServers.map(async (server) => {
+        try {
+          const payload = buildCatalogServerPayload({
+            server,
+            existingServers,
+          });
+          existingServers.push({ name: payload.name });
+          await addServerAsync({ payload });
+          addedIds.push(server.id);
+          setInstalledServerIds((current) => {
+            const next = new Set(current);
+            next.add(server.id);
+            return next;
+          });
+          setSelectedIds((current) => {
+            const next = new Set(current);
+            next.delete(server.id);
+            return next;
+          });
+        } catch (serverError) {
+          failedServers.push({
+            name: server.displayName || server.name,
+            error: getAddServerErrorMessage(serverError),
+          });
+        } finally {
+          setAddingServerIds((current) => {
+            const next = new Set(current);
+            next.delete(server.id);
+            return next;
+          });
+        }
+      }),
+    );
 
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -219,6 +255,7 @@ export default function McpServerAdd() {
       return next;
     });
     setIsAdding(false);
+    setAddingServerIds(new Set());
 
     if (failedServers.length === 0) {
       navigate(routes.mcpServers);
@@ -233,24 +270,31 @@ export default function McpServerAdd() {
       return;
     }
 
-    if (addedIds.length > 0) {
-      navigate(routes.mcpServers);
-      toast({
-        title: "Some Servers Added",
-        description: `Added ${addedIds.length}; failed to add ${failedServers.length}.`,
-        variant: "warning",
-        position: "bottom-left",
-      });
-      return;
-    }
-
-    setAddError(failedServers[0]?.error ?? "Please try again.");
+    setAddedCount(addedIds.length);
+    setAddFailures(failedServers);
   };
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-background p-6 pb-28">
-      {addError && (
-        <ErrorBanner message={addError} onClose={() => setAddError("")} />
+      {addFailures.length > 0 && (
+        <ErrorBanner
+          message={
+            addedCount > 0
+              ? `${addedCount} server${
+                  addedCount === 1 ? "" : "s"
+                } added successfully. Review the remaining errors and try again.`
+              : "Failed to add selected servers. Review the errors and try again."
+          }
+          details={addFailures.map(({ name, error }) => ({
+            label: name,
+            message: error,
+          }))}
+          onClose={() => {
+            setAddFailures([]);
+            setAddedCount(0);
+          }}
+          variant={addedCount > 0 ? "warning" : "destructive"}
+        />
       )}
       <Link
         to={routes.mcpServers}
@@ -331,6 +375,7 @@ export default function McpServerAdd() {
                   }
                   className={isAdded ? "cursor-default" : ""}
                   checkboxDisabled={isAdded}
+                  isAdding={addingServerIds.has(server.id)}
                 />
               );
             })}
@@ -348,6 +393,7 @@ export default function McpServerAdd() {
 
       <AddMcpServersSelectionBar
         selectedCount={selectedIds.size}
+        hasAvailableServers={hasAvailableServers}
         onAdd={() => void handleAddSelected()}
         isAdding={isAdding}
       />

@@ -73,6 +73,39 @@ describe("McpServerCatalogCard", () => {
     expect(onCheckedChange).toHaveBeenNthCalledWith(3, true);
   });
 
+  it("replaces the checkbox with a spinner only while the server is adding", () => {
+    const onCheckedChange = vi.fn();
+    const { container, rerender } = render(
+      <McpServerCatalogCard
+        server={catalogServer}
+        checked
+        onCheckedChange={onCheckedChange}
+        isAdding
+      />,
+    );
+
+    expect(
+      screen.getByRole("status", { name: "Adding GitHub" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+
+    fireEvent.click(container.firstElementChild as Element);
+    expect(onCheckedChange).not.toHaveBeenCalled();
+
+    rerender(
+      <McpServerCatalogCard
+        server={catalogServer}
+        checked
+        onCheckedChange={onCheckedChange}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("status", { name: "Adding GitHub" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeChecked();
+  });
+
   it("renders environment variables in the footer instead of docs links", () => {
     render(<McpServerCatalogCard server={catalogServer} />);
 

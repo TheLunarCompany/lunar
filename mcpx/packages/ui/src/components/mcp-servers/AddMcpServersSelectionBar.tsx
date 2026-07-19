@@ -2,15 +2,19 @@ import { Button } from "@/components/ui/button";
 
 type AddMcpServersSelectionBarProps = {
   selectedCount: number;
+  hasAvailableServers: boolean;
   onAdd: () => void;
   isAdding?: boolean;
 };
 
 export function AddMcpServersSelectionBar({
   selectedCount,
+  hasAvailableServers,
   onAdd,
   isAdding = false,
 }: AddMcpServersSelectionBarProps) {
+  if (!hasAvailableServers) return null;
+
   const hasSelection = selectedCount > 0;
   const label =
     selectedCount === 0

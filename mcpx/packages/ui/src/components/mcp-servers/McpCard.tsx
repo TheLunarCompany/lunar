@@ -135,35 +135,39 @@ export function McpCard({
         </Tooltip>
       </TooltipProvider>
 
-      {envVarKeys.length > 0 && (
-        <div className="mt-auto flex min-w-0 flex-col gap-3">
-          <hr className="border-border" />
-          <div className="flex min-w-0 items-center gap-2 overflow-hidden text-[11px] font-semibold text-[#7D7B98]">
-            <span className="shrink-0">
-              {urlNeedsEdit ? "PARAMETERS" : "ENV. VARS"}
-            </span>
-            <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
-              {visibleEnvVarKeys.map((key) => (
-                <div
-                  key={key}
-                  className="min-w-0 max-w-32 truncate rounded bg-[#EBE6FB] px-1.5 text-[9px] font-semibold leading-4 text-[#5147E4]"
-                  title={key}
-                >
-                  {key}
-                </div>
-              ))}
-              {hiddenEnvVarCount > 0 && (
-                <div
-                  className="shrink-0"
-                  title={envVarKeys.slice(MAX_VISIBLE_ENV_VAR_KEYS).join(", ")}
-                >
-                  +{hiddenEnvVarCount}
-                </div>
-              )}
+      <div className="mt-auto flex min-h-7 min-w-0 flex-col gap-3">
+        {envVarKeys.length > 0 && (
+          <>
+            <hr className="border-border" />
+            <div className="flex min-w-0 items-center gap-2 overflow-hidden text-[11px] font-semibold text-[#7D7B98]">
+              <span className="shrink-0">
+                {urlNeedsEdit ? "PARAMETERS" : "ENV. VARS"}
+              </span>
+              <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
+                {visibleEnvVarKeys.map((key) => (
+                  <div
+                    key={key}
+                    className="min-w-0 max-w-32 truncate rounded bg-[#EBE6FB] px-1.5 text-[9px] font-semibold leading-4 text-[#5147E4]"
+                    title={key}
+                  >
+                    {key}
+                  </div>
+                ))}
+                {hiddenEnvVarCount > 0 && (
+                  <div
+                    className="shrink-0"
+                    title={envVarKeys
+                      .slice(MAX_VISIBLE_ENV_VAR_KEYS)
+                      .join(", ")}
+                  >
+                    +{hiddenEnvVarCount}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

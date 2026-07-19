@@ -3,6 +3,7 @@ import type { KeyboardEvent } from "react";
 import type { CatalogMCPServerConfigByNameItem } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { McpCard } from "@/components/mcp-servers/McpCard";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 type McpServerCatalogCardProps = {
@@ -12,6 +13,7 @@ type McpServerCatalogCardProps = {
   selected?: boolean;
   className?: string;
   checkboxDisabled?: boolean;
+  isAdding?: boolean;
 };
 
 export function McpServerCatalogCard({
@@ -21,12 +23,13 @@ export function McpServerCatalogCard({
   selected = false,
   className = "",
   checkboxDisabled = false,
+  isAdding = false,
 }: McpServerCatalogCardProps) {
   const isInstalled = checkboxDisabled;
   const showCheckbox = onCheckedChange != null && !isInstalled;
   const isSelected =
     isInstalled || (showCheckbox && (checked ?? false)) || selected;
-  const interactive = showCheckbox;
+  const interactive = showCheckbox && !isAdding;
 
   const toggleSelection = (): void => {
     if (!interactive) return;
@@ -41,7 +44,12 @@ export function McpServerCatalogCard({
     }
   };
 
-  const action = isInstalled ? (
+  const action = isAdding ? (
+    <Spinner
+      aria-label={`Adding ${server.displayName || server.name}`}
+      className="text-primary"
+    />
+  ) : isInstalled ? (
     <div className="inline-flex items-center gap-1 rounded-md bg-[#7D7B98] px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
       <Check className="size-3.5" />
       Installed
@@ -69,7 +77,7 @@ export function McpServerCatalogCard({
       tabIndex={interactive ? 0 : undefined}
       role={interactive ? "button" : undefined}
       aria-pressed={interactive ? isSelected : undefined}
-      aria-disabled={isInstalled ? true : undefined}
+      aria-disabled={isInstalled || isAdding ? true : undefined}
     />
   );
 }
