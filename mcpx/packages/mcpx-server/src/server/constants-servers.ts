@@ -707,6 +707,94 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
     doc: "https://slack.com/help/articles/48855576908307-Guide-to-the-Slack-MCP-server",
     config: { type: "streamable-http", url: "https://mcp.slack.com/mcp" },
   },
+  {
+    name: "wiz",
+    displayName: "Wiz",
+    description:
+      "Enhances natural language understanding and powers automated workflows across the Wiz platform. It seamlessly translates plain-language queries into Wiz-specific operations, such as querying resources, assessing risks, and retrieving data from third-party security tools. Designed to complement our in-product AI assistant, Mika AI, the Wiz MCP Server adds robustness and simplifies integration with external systems.",
+    doc: "https://app.wiz.io/login?redirect=%2Fdocs%2Fconnect-remote-wiz-mcp-server",
+    config: { type: "streamable-http", url: "https://mcp.app.wiz.io" },
+  },
+  {
+    name: "monday",
+    displayName: "monday.com",
+    description:
+      "monday.com's open framework for connecting agents into your work OS - giving them secure access to structured data, tools to take action, and the context needed to make smart decisions.",
+    link: "https://github.com/mondaycom/mcp",
+    config: { type: "streamable-http", url: "https://mcp.monday.com/mcp" },
+  },
+  {
+    name: "intercom",
+    displayName: "Intercom",
+    description:
+      "Connect your AI tools to Intercom, enabling AI assistants to manage and interact with Intercom API.",
+    link: "https://github.com/intercom/intercom-mcp-server",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: ["mcp-remote", "https://mcp.intercom.com/mcp"],
+      env: {},
+    },
+  },
+  {
+    name: "webflow",
+    displayName: "Webflow",
+    description:
+      "Connects agents and AI tools directly to your Webflow projects. Import designs, create pages, analyze site activity, work with the CMS and more from your preferred AI environment.",
+    doc: "https://developers.webflow.com/mcp/reference/overview",
+    config: { type: "streamable-http", url: "https://mcp.webflow.com/mcp" },
+  },
+  {
+    name: "clarity",
+    displayName: "Microsoft Clarity",
+    description:
+      "Clarity MCP server acts as an analytics data bridge, making it incredibly easy to query Clarity's web metrics using natural language. Ask plain-text questions and get clean, actionable analytics within seconds.",
+    doc: "https://clarity.microsoft.com/blog/introducing-the-microsoft-clarity-mcp-server-a-smarter-way-to-fetch-analytics-with-ai/",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: ["@microsoft/clarity-mcp-server"],
+      env: {
+        clarity_api_token: {
+          kind: "required",
+          prefilled: "your-api-token-here",
+          isSecret: false,
+        },
+      },
+    },
+  },
+  {
+    name: "chili-piper",
+    displayName: "Chili Piper",
+    description:
+      "Let your AI assistant read and manage your Chili Piper data – users, meetings, routing rules, distributions, and more.",
+    doc: "https://help.chilipiper.com/hc/en-us/articles/50430350863635-How-do-I-connect-Chili-Piper-via-MCP",
+    config: {
+      type: "streamable-http",
+      url: "https://fire.chilipiper.com/api/fire-edge/v1/org/mcp",
+      headers: { Authorization: "Bearer {{YOUR_API_KEY}}" },
+    },
+  },
+  {
+    name: "salesforce",
+    displayName: "Salesforce",
+    description:
+      "Note: Server URL format: For All production orgs: https://api.salesforce.com/platform/mcp/v1/<SERVER-NAME>. For sandbox or scratch orgs: https://api.salesforce.com/platform/mcp/v1/sandbox/<SERVER-NAME>. Salesforce MCP Servers give AI agents a secure, governed way to interact with Salesforce data and automation. Configure a server once in Salesforce and any MCP-compatible client can connect to it using standard OAuth-based authentication.",
+    doc: "https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/hosted-mcp-servers-overview.html",
+    config: {
+      type: "streamable-http",
+      url: "https://api.salesforce.com/platform/mcp/v1/<SERVER-NAME>",
+      headers: { CLIENT_ID: { fromEnv: "CONSUMER-KEY" } },
+    },
+  },
+  {
+    name: "posthog",
+    displayName: "PostHog",
+    description:
+      "Let your AI agent use PostHog - with just plain text questions your agents can ship a feature flag from a prompt, dig into a stack trace without leaving your editor, run a HogQL query through Claude, triage a support ticket, set up a CDP destination, and much more.",
+    doc: "https://posthog.com/docs/model-context-protocol",
+    config: { type: "streamable-http", url: "https://mcp.posthog.com/mcp" },
+  },
 ];
 
 export const backendDefaultServers: CatalogMCPServerItem[] =
