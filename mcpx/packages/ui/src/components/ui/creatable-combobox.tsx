@@ -27,7 +27,7 @@ const isCreatableItem = (item: unknown): item is CreatableItem => {
 };
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-/** Display string for an item — mirrors base-ui's own default logic. */
+/** Display string for an item - mirrors base-ui's own default logic. */
 const toLabel = (item: unknown): string => {
   if (typeof item === "string") return item;
   if (item && typeof item === "object") {
@@ -37,7 +37,7 @@ const toLabel = (item: unknown): string => {
   return String(item);
 };
 
-/** Equality key for an item — prefers .value for stable identity. */
+/** Equality key for an item - prefers .value for stable identity. */
 const toValueKey = (item: unknown): string => {
   if (typeof item === "string") return item;
   if (item && typeof item === "object") {
@@ -84,7 +84,7 @@ type CreatableComboboxProps = ComboboxRootProps & {
  *
  * Instead of a boolean flag, `creatable` holds the raw typed string.
  * This means isCreatableItem doubles as a type guard AND gives you the original
- * query back without any extra state — `item.creatable` is the value to create.
+ * query back without any extra state - `item.creatable` is the value to create.
  *
  * @param props - The props for the creatable combobox.
  * @param props.items - The items of the creatable combobox.
