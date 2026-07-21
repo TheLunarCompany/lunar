@@ -1,0 +1,9 @@
+allowed_domains:
+blocked_domains:
+
+
+exporters:
+  file:
+    exporter_id: my_file_exporter
+    file_dir: "/etc/lunar-proxy"
+    file_name: "transaction.log"
