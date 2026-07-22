@@ -2,6 +2,7 @@ import { Skill, SkillDraft } from "@mcpx/shared-model";
 import {
   deleteSkillAckSchema,
   skillWriteAckSchema,
+  WebappBoundPayloadOf,
   wrapInEnvelope,
 } from "@mcpx/webapp-protocol/messages";
 import { Logger } from "winston";
@@ -28,6 +29,14 @@ export class HubSkillClient implements SkillHubClient {
     return this.writeSkill("update-skill", { ...draft, id });
   }
 
+  publishSkill(id: string): Promise<Skill> {
+    return this.writeSkill("publish-skill", { id });
+  }
+
+  unpublishSkill(id: string): Promise<Skill> {
+    return this.writeSkill("unpublish-skill", { id });
+  }
+
   async deleteSkill(id: string): Promise<void> {
     const socket = this.requireSocket();
     const envelope = wrapInEnvelope({ payload: { id } });
@@ -42,10 +51,13 @@ export class HubSkillClient implements SkillHubClient {
     }
   }
 
-  private async writeSkill(
-    event: "save-skill" | "update-skill",
-    payload: unknown,
-  ): Promise<Skill> {
+  private async writeSkill<
+    E extends
+      | "save-skill"
+      | "update-skill"
+      | "publish-skill"
+      | "unpublish-skill",
+  >(event: E, payload: WebappBoundPayloadOf<E>): Promise<Skill> {
     const socket = this.requireSocket();
     const envelope = wrapInEnvelope({ payload });
     this.logger.debug(`Sending ${event} to Hub`, {

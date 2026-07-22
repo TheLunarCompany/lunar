@@ -12,6 +12,8 @@ import {
   saveSkillPayloadSchema,
   updateSkillPayloadSchema,
   deleteSkillPayloadSchema,
+  publishSkillPayloadSchema,
+  unpublishSkillPayloadSchema,
   SkillWriteAck,
   DeleteSkillAck,
 } from "@mcpx/webapp-protocol/messages";
@@ -19,10 +21,17 @@ import { Skill } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { v7 as uuidv7 } from "uuid";
 
-const MOCK_SKILL_AUTHOR = {
-  setupOwnerId: "mock-owner",
-  displayName: "Mock Author",
-};
+// The real Hub stamps the connecting owner as the author; mirror that.
+function skillAuthorOf(socket: Socket): {
+  setupOwnerId: string;
+  displayName: string;
+} {
+  const setupOwnerId = socket.handshake.auth["setupOwnerId"];
+  return {
+    setupOwnerId,
+    displayName: `Mock Author (${setupOwnerId})`,
+  };
+}
 
 export type SetCatalogPayload = z.input<typeof McpxBoundPayloads.setCatalog>;
 export type SavedSetupItem = z.infer<typeof savedSetupItemSchema>;
@@ -148,6 +157,20 @@ export class MockHubServer {
 
   getConnectedClients(): string[] {
     return Array.from(this.connectedSockets.keys());
+  }
+
+  /** Push the org-wide published stream to all connected clients. */
+  emitPublishedSkillsToAll(skills: Skill[]): void {
+    this.connectedSockets.forEach((socket, socketId) => {
+      socket.emit("set-published-skills", {
+        metadata: { id: "mock-published-skills" },
+        payload: { skills },
+      });
+      this.logger.info("Emitted set-published-skills", {
+        socketId,
+        count: skills.length,
+      });
+    });
   }
 
   emitToClient(socketId: string, event: string, data: unknown): void {
@@ -365,6 +388,11 @@ export class MockHubServer {
         });
       }
 
+      socket.emit("boot-complete", {
+        metadata: { id: "mock-boot-complete" },
+        payload: {},
+      });
+
       // Notify connect listeners
       this.connectListeners.forEach((listener) => listener(socket.id));
 
@@ -520,8 +548,9 @@ export class MockHubServer {
           const skill: Skill = {
             ...parsed.data,
             id: uuidv7(),
-            author: MOCK_SKILL_AUTHOR,
+            author: skillAuthorOf(socket),
             updatedAt: new Date(),
+            publishedAt: null,
           };
           this.skills.set(skill.id, skill);
           this.logger.info("Saved skill", { id: skill.id, name: skill.name });
@@ -550,9 +579,63 @@ export class MockHubServer {
             ...parsed.data,
             author: existing.author,
             updatedAt: new Date(),
+            publishedAt: existing.publishedAt,
           };
           this.skills.set(skill.id, skill);
           this.logger.info("Updated skill", { id: skill.id });
+          ack({ success: true, skill });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.PUBLISH_SKILL,
+        (envelope: { payload: unknown }, ack: (res: SkillWriteAck) => void) => {
+          const parsed = publishSkillPayloadSchema.safeParse(envelope.payload);
+          if (!parsed.success) {
+            ack({ success: false, error: "Invalid publish-skill payload" });
+            return;
+          }
+          const existing = this.skills.get(parsed.data.id);
+          if (!existing) {
+            ack({
+              success: false,
+              error: "Skill not found",
+              errorCode: "not_found",
+            });
+            return;
+          }
+          const skill: Skill = {
+            ...existing,
+            publishedAt: existing.publishedAt ?? new Date(),
+          };
+          this.skills.set(skill.id, skill);
+          this.logger.info("Published skill", { id: skill.id });
+          ack({ success: true, skill });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.UNPUBLISH_SKILL,
+        (envelope: { payload: unknown }, ack: (res: SkillWriteAck) => void) => {
+          const parsed = unpublishSkillPayloadSchema.safeParse(
+            envelope.payload,
+          );
+          if (!parsed.success) {
+            ack({ success: false, error: "Invalid unpublish-skill payload" });
+            return;
+          }
+          const existing = this.skills.get(parsed.data.id);
+          if (!existing) {
+            ack({
+              success: false,
+              error: "Skill not found",
+              errorCode: "not_found",
+            });
+            return;
+          }
+          const skill: Skill = { ...existing, publishedAt: null };
+          this.skills.set(skill.id, skill);
+          this.logger.info("Unpublished skill", { id: skill.id });
           ack({ success: true, skill });
         },
       );

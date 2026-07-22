@@ -886,7 +886,7 @@ export function resetMockApiState(): void {
 
 export const handlers = [
   http.get("*/skills", () => {
-    return HttpResponse.json({ skills: personalSkills });
+    return HttpResponse.json({ mine: personalSkills, others: [] });
   }),
 
   http.get("*/skills/:id", ({ params }) => {
@@ -909,6 +909,7 @@ export const handlers = [
         displayName: "Mock User",
       },
       updatedAt: new Date("2026-06-29T11:00:00.000Z"),
+      publishedAt: null,
     };
 
     nextSkillId += 1;

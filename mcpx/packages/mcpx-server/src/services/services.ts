@@ -362,6 +362,10 @@ export class Services {
       this._skills.store.applyPersonalSkills(payload),
     );
 
+    this._hubService.addPublishedSkillsListener((payload) =>
+      this._skills.store.applyPublishedSkills(payload),
+    );
+
     startupLogger.info("Initializing HubService...");
     await this._hubService.initialize();
     startupLogger.info("HubService initialized");

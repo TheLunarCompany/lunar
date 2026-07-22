@@ -26,6 +26,7 @@ function makeSkill(overrides: Partial<Skill> = {}): Skill {
     exposeAsPrompt: true,
     author: { setupOwnerId: "owner-1", displayName: "Owner" },
     updatedAt: new Date(0),
+    publishedAt: null,
     ...overrides,
   };
 }
@@ -44,6 +45,16 @@ class FakeSkillStore implements SkillStoreI {
   applyPersonalSkills(payload: SetPersonalSkillsPayload): void {
     this.byId = new Map(payload.skills.map((s) => [s.id, s]));
     this.notify();
+  }
+
+  applyPublishedSkills(): void {}
+
+  async publishSkill(id: string): Promise<Skill> {
+    return this.setPublishedAt(id, new Date(0));
+  }
+
+  async unpublishSkill(id: string): Promise<Skill> {
+    return this.setPublishedAt(id, null);
   }
 
   async createSkill(draft: SkillDraft): Promise<Skill> {
@@ -76,6 +87,15 @@ class FakeSkillStore implements SkillStoreI {
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  private setPublishedAt(id: string, publishedAt: Date | null): Skill {
+    const existing = this.byId.get(id);
+    if (!existing) throw new Error(`Skill ${id} not found`);
+    const skill = { ...existing, publishedAt };
+    this.byId.set(id, skill);
+    this.notify();
+    return skill;
   }
 
   private notify(): void {

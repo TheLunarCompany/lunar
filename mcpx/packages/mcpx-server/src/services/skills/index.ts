@@ -4,17 +4,17 @@ import { env } from "../../env.js";
 import { CapabilityRegistry } from "../capability-registry.js";
 import { InternalCapabilitiesService } from "../internal-capabilities-service.js";
 import { HubSocketAdapter } from "../saved-setups-client.js";
-import { HubSkillClient } from "./hub-skill-client.js";
 import {
   noOpSkillResourceProjector,
   SkillResourceProjector,
   SkillResourceProjectorI,
 } from "./skill-resource-projector.js";
 import { SkillScope } from "./skill-scope.js";
-import { SkillStore } from "./skill-store.js";
+import { buildSkillStore } from "./skill-store-factory.js";
+import { SkillStoreI } from "./skill-store.js";
 
 export interface SkillServices {
-  store: SkillStore;
+  store: SkillStoreI;
   scope: SkillScope;
   projector: SkillResourceProjectorI;
 }
@@ -31,10 +31,7 @@ export function buildSkillServices(
   deps: SkillServicesDeps,
   logger: Logger,
 ): SkillServices {
-  const store = new SkillStore(
-    logger,
-    new HubSkillClient(deps.getSocketAdapter, logger),
-  );
+  const store = buildSkillStore(deps.getSocketAdapter, logger);
   const scope = new SkillScope(
     {
       getEnabledSkills: deps.getEnabledSkills,
@@ -54,7 +51,7 @@ export function buildSkillServices(
 // inert. The kind flags govern upstream serving and play no part here.
 function buildProjector(
   props: {
-    store: SkillStore;
+    store: SkillStoreI;
     scope: SkillScope;
     deps: SkillServicesDeps;
   },

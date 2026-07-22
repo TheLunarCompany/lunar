@@ -27,6 +27,7 @@ const SKILL: Skill = {
   exposeAsPrompt: true,
   author: { setupOwnerId: "owner-1", displayName: "Owner" },
   updatedAt: new Date("2026-07-01T10:00:00.000Z"),
+  publishedAt: null,
   capabilityGroup: {
     items: [{ catalogItemId: echoCatalogItem.id, tools: "*", prompts: [] }],
   },

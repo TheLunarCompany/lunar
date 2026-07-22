@@ -9,6 +9,7 @@ import {
   McpxBoundPayloads,
   safeParseEnvelopedMessage,
   SetPersonalSkillsPayload,
+  SetPublishedSkillsPayload,
   WEBAPP_BOUND_EVENTS,
   WebappBoundEventName,
   WebappBoundPayloadOf,
@@ -87,10 +88,33 @@ const PHASE_STEP: Record<BootPhase, number> = {
   connected: 1,
   "identity-received": 2,
   "catalog-received": 3,
-  "profile-secrets-received": 4,
-  "oauth-credentials-received": 4,
-  "setup-received": 5,
+  "personal-skills-received": 4,
+  "published-skills-received": 4,
+  "profile-secrets-received": 5,
+  "oauth-credentials-received": 5,
+  "setup-received": 6,
+  "boot-complete": 7,
 };
+
+// Phases that must have been touched by the end of boot: each phase maps to
+// itself (required) or null (may legitimately be absent). Exhaustive by type,
+// so a new phase cannot be forgotten here.
+const BOOT_PHASE_REQUIREMENT: { [P in BootPhase]: P | null } = {
+  disconnected: null,
+  connected: "connected",
+  "identity-received": "identity-received",
+  "catalog-received": "catalog-received",
+  "personal-skills-received": "personal-skills-received",
+  "published-skills-received": "published-skills-received",
+  "profile-secrets-received": "profile-secrets-received",
+  "oauth-credentials-received": "oauth-credentials-received",
+  "setup-received": null, // owner may have no setup
+  "boot-complete": "boot-complete",
+};
+
+const REQUIRED_BOOT_PHASES = Object.values(BOOT_PHASE_REQUIREMENT).filter(
+  (phase): phase is BootPhase => phase !== null,
+);
 
 function isSorted(arr: number[]): boolean {
   return arr.every((v, i, a) => {
@@ -136,6 +160,10 @@ const envelopedSetPersonalSkillsSafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.setPersonalSkills,
 );
 
+const envelopedSetPublishedSkillsSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setPublishedSkills,
+);
+
 export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
@@ -151,7 +179,10 @@ export type BootPhase =
   | "catalog-received"
   | "profile-secrets-received"
   | "oauth-credentials-received"
-  | "setup-received";
+  | "personal-skills-received"
+  | "published-skills-received"
+  | "setup-received"
+  | "boot-complete";
 
 export interface BootPhaseEntry {
   phase: BootPhase;
@@ -193,6 +224,9 @@ export class HubService {
     UpstreamHandlerOAuthHandler;
   private readonly personalSkillsListeners = new Set<
     (payload: SetPersonalSkillsPayload) => void
+  >();
+  private readonly publishedSkillsListeners = new Set<
+    (payload: SetPublishedSkillsPayload) => void
   >();
   readonly savedSetups: SavedSetupsClient;
 
@@ -276,6 +310,12 @@ export class HubService {
     listener: (payload: SetPersonalSkillsPayload) => void,
   ): void {
     this.personalSkillsListeners.add(listener);
+  }
+
+  addPublishedSkillsListener(
+    listener: (payload: SetPublishedSkillsPayload) => void,
+  ): void {
+    this.publishedSkillsListeners.add(listener);
   }
 
   get latestBootPhase(): BootPhase {
@@ -659,6 +699,7 @@ export class HubService {
           this.logger.info("Received set-personal-skills message from Hub", {
             count: message.skills.length,
           });
+          this.transitionBootPhase("personal-skills-received");
           this.personalSkillsListeners.forEach((listener) => listener(message));
           ack?.({ ok: true });
         } catch (e) {
@@ -670,6 +711,49 @@ export class HubService {
         }
       },
     );
+
+    this.socket.on(
+      "set-published-skills",
+      (envelope, ack?: (res: { ok: boolean }) => void) => {
+        try {
+          const parseResult = envelopedSetPublishedSkillsSafeParse(envelope);
+          if (!parseResult.success) {
+            this.logger.error("Failed to parse set-published-skills message", {
+              error: parseResult.error,
+              envelope,
+            });
+            ack?.({ ok: false });
+            return;
+          }
+          const message = parseResult.data.payload;
+          this.logger.info("Received set-published-skills message from Hub", {
+            count: message.skills.length,
+          });
+          this.transitionBootPhase("published-skills-received");
+          this.publishedSkillsListeners.forEach((listener) =>
+            listener(message),
+          );
+          ack?.({ ok: true });
+        } catch (e) {
+          this.logger.error("Failed to handle set-published-skills", {
+            ...loggableError(e),
+            envelope,
+          });
+          ack?.({ ok: false });
+        }
+      },
+    );
+
+    this.socket.on("boot-complete", () => {
+      this.transitionBootPhase("boot-complete");
+      const touched = new Set(this.bootPhaseHistory.map((e) => e.phase));
+      const missing = REQUIRED_BOOT_PHASES.filter((p) => !touched.has(p));
+      if (missing.length) {
+        this.logger.warn("Boot completed with missing phases", { missing });
+      } else {
+        this.logger.info("Hub boot sync complete");
+      }
+    });
 
     this.socket.on(
       "set-profile-secrets",
@@ -841,6 +925,9 @@ export class HubService {
 
   private transitionBootPhase(newPhase: BootPhase): void {
     const previousPhase = this.latestBootPhase;
+    // Boot is over; steady-state pushes reuse the same events and carry no
+    // ordering guarantees, so they don't feed the tracker.
+    if (previousPhase === "boot-complete") return;
     this.bootPhaseHistory.push({ phase: newPhase, timestamp: new Date() });
 
     const phases = this.bootPhaseHistorySnapshot.map((entry) => entry.phase);

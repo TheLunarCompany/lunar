@@ -14,6 +14,19 @@ export const deleteSkillPayloadSchema = z.object({
 });
 export type DeleteSkillPayload = z.output<typeof deleteSkillPayloadSchema>;
 
+// Publish stamps publishedAt; unpublish nullifies it. Both ack with the updated skill.
+export const publishSkillPayloadSchema = z.object({
+  id: z.uuidv7(),
+});
+export type PublishSkillPayload = z.output<typeof publishSkillPayloadSchema>;
+
+export const unpublishSkillPayloadSchema = z.object({
+  id: z.uuidv7(),
+});
+export type UnpublishSkillPayload = z.output<
+  typeof unpublishSkillPayloadSchema
+>;
+
 export const skillErrorCodeSchema = z.enum(["not_found"]);
 export type SkillErrorCode = z.infer<typeof skillErrorCodeSchema>;
 

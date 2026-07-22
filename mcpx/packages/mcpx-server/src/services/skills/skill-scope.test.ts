@@ -24,6 +24,7 @@ function makeSkill(props: {
     capabilityGroup: props.capabilityGroup,
     author: { setupOwnerId: "owner-1", displayName: "Owner" },
     updatedAt: new Date("2026-07-01T00:00:00Z"),
+    publishedAt: null,
   };
 }
 

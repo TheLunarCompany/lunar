@@ -23,6 +23,7 @@ const persisted = {
   },
   author: { setupOwnerId: "owner-1", displayName: "Alice" },
   updatedAt: "2026-01-02T00:00:00.000Z",
+  publishedAt: null,
 };
 
 const draft: SkillDraft = {
@@ -111,6 +112,42 @@ describe("HubSkillClient", () => {
       expect(socket.calls).toEqual([
         { event: "update-skill", payload: { ...draft, id: "skill-1" } },
       ]);
+    });
+  });
+
+  // The ack-handling paths (failure, malformed, disconnected) are shared with
+  // createSkill above; these only pin the event/payload mapping.
+  describe("publishSkill", () => {
+    it("emits publish-skill and returns the stamped skill", async () => {
+      const stamped = { ...persisted, publishedAt: "2026-01-03T00:00:00.000Z" };
+      const socket = new FakeSocket({ success: true, skill: stamped });
+
+      const skill = await clientWith(socket).publishSkill(persisted.id);
+
+      expect(socket.calls).toEqual([
+        { event: "publish-skill", payload: { id: persisted.id } },
+      ]);
+      expect(skill.publishedAt).toEqual(new Date("2026-01-03T00:00:00.000Z"));
+    });
+  });
+
+  describe("unpublishSkill", () => {
+    it("emits unpublish-skill and returns the nullified skill", async () => {
+      const published = {
+        ...persisted,
+        publishedAt: "2026-01-03T00:00:00.000Z",
+      };
+      const socket = new FakeSocket({
+        success: true,
+        skill: { ...published, publishedAt: null },
+      });
+
+      const skill = await clientWith(socket).unpublishSkill(published.id);
+
+      expect(socket.calls).toEqual([
+        { event: "unpublish-skill", payload: { id: persisted.id } },
+      ]);
+      expect(skill.publishedAt).toBeNull();
     });
   });
 

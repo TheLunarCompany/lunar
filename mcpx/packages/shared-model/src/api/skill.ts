@@ -50,15 +50,18 @@ export const skillDraftSchema = z.object({
 export type SkillDraft = z.infer<typeof skillDraftSchema>;
 
 // Authored core plus Hub-minted metadata.
+// publishedAt is publish-time only; unpublish nullifies it, edits bump updatedAt, never publishedAt.
 export const skillSchema = skillDraftSchema.extend({
   id: z.uuidv7(),
   author: skillAuthorSchema,
   updatedAt: z.coerce.date(),
+  publishedAt: z.coerce.date().nullable(),
 });
 export type Skill = z.infer<typeof skillSchema>;
 
 export const skillCatalogResponseSchema = z.object({
-  skills: z.array(skillSchema),
+  mine: z.array(skillSchema),
+  others: z.array(skillSchema),
 });
 export type SkillCatalogResponse = z.infer<typeof skillCatalogResponseSchema>;
 

@@ -1,4 +1,5 @@
-import { Skill } from "@mcpx/shared-model";
+import { Skill, SkillCatalogResponse } from "@mcpx/shared-model";
+import { withAsyncPolling } from "@mcpx/toolkit-core/time";
 import { getTestHarness, TestHarness } from "./utils.js";
 
 const MCPX_PORT = 19000;
@@ -15,6 +16,7 @@ const seedSkill: Skill = {
     displayName: "Amir",
   },
   updatedAt: new Date("2026-06-29T10:00:00.000Z"),
+  publishedAt: null,
 };
 const catalogItemId = "0190a000-0000-7000-8000-000000000010";
 
@@ -40,7 +42,8 @@ describe("Skills endpoints", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      skills: [{ id: seedSkill.id, name: "review-pull-requests" }],
+      mine: [{ id: seedSkill.id, name: "review-pull-requests" }],
+      others: [],
     });
   });
 
@@ -432,6 +435,115 @@ describe("Skills endpoints", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+
+  describe("publish lifecycle", () => {
+    // The seed skill is injected straight into the store, so the mock hub does
+    // not know it; publish round-trips go through a REST-created skill.
+    async function createSkill(): Promise<Skill> {
+      const response = await fetch(`${MCPX_BASE_URL}/skills`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "publish-me",
+          description: "A skill to publish.",
+          body: "# Publish me",
+          exposeAsPrompt: true,
+        }),
+      });
+      expect(response.status).toBe(201);
+      return response.json();
+    }
+
+    function publishSkill(id: string): Promise<Response> {
+      return fetch(`${MCPX_BASE_URL}/skills/${id}/published`, {
+        method: "PUT",
+      });
+    }
+
+    function unpublishSkill(id: string): Promise<Response> {
+      return fetch(`${MCPX_BASE_URL}/skills/${id}/published`, {
+        method: "DELETE",
+      });
+    }
+
+    async function getSkill(id: string): Promise<Skill> {
+      const response = await fetch(`${MCPX_BASE_URL}/skills/${id}`);
+      expect(response.status).toBe(200);
+      return response.json();
+    }
+
+    it("publishes a skill and returns the stamped record", async () => {
+      const created = await createSkill();
+
+      const response = await publishSkill(created.id);
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.publishedAt).not.toBeNull();
+      await expect(getSkill(created.id)).resolves.toMatchObject({
+        publishedAt: body.publishedAt,
+      });
+    });
+
+    it("unpublishes a published skill", async () => {
+      const created = await createSkill();
+      await publishSkill(created.id);
+
+      const response = await unpublishSkill(created.id);
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.publishedAt).toBeNull();
+      await expect(getSkill(created.id)).resolves.toMatchObject({
+        publishedAt: null,
+      });
+    });
+
+    it("returns 404 when publishing an unknown skill", async () => {
+      const response = await publishSkill(
+        "0190a000-0000-7000-8000-000000000099",
+      );
+
+      expect(response.status).toBe(404);
+    });
+
+    it("splits the org stream into mine | others by author", async () => {
+      // Publish an own skill so the org stream carries it alongside the other
+      // owner's — the own entry must land in mine only, never in others.
+      const created = await createSkill();
+      await publishSkill(created.id);
+      const ownPublished = await getSkill(created.id);
+      const otherSkill: Skill = {
+        ...seedSkill,
+        id: "0190a000-0000-7000-8000-000000000042",
+        name: "borrowed-wisdom",
+        author: { setupOwnerId: "owner-2", displayName: "Bea" },
+        publishedAt: new Date("2026-07-01T08:00:00.000Z"),
+      };
+
+      harness.mockHubServer.emitPublishedSkillsToAll([
+        ownPublished,
+        otherSkill,
+      ]);
+      // The push travels the socket asynchronously; poll the catalog until it lands.
+      const catalog = await withAsyncPolling({
+        maxAttempts: 50,
+        sleepTimeMs: 10,
+        getValue: async (): Promise<SkillCatalogResponse> => {
+          const response = await fetch(`${MCPX_BASE_URL}/skills`);
+          return response.json();
+        },
+        found: (body): body is SkillCatalogResponse => body.others.length > 0,
+      });
+
+      expect(catalog.others).toMatchObject([
+        { id: otherSkill.id, name: "borrowed-wisdom" },
+      ]);
+      expect(catalog.mine.map((s) => s.id).sort()).toEqual(
+        [seedSkill.id, ownPublished.id].sort(),
+      );
+    });
   });
 
   describe("skill enablement", () => {

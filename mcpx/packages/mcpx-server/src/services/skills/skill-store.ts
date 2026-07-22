@@ -1,5 +1,8 @@
 import { Skill, SkillDraft } from "@mcpx/shared-model";
-import { SetPersonalSkillsPayload } from "@mcpx/webapp-protocol/messages";
+import {
+  SetPersonalSkillsPayload,
+  SetPublishedSkillsPayload,
+} from "@mcpx/webapp-protocol/messages";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
 
@@ -10,10 +13,12 @@ export interface SkillHubClient {
   createSkill(draft: SkillDraft): Promise<Skill>;
   updateSkill(id: string, draft: SkillDraft): Promise<Skill>;
   deleteSkill(id: string): Promise<void>;
+  publishSkill(id: string): Promise<Skill>;
+  unpublishSkill(id: string): Promise<Skill>;
 }
 
-// Only the owner's own skills exist (no sharing yet). `others` stays empty; it's kept so the
-// shape doesn't churn when shared skills return.
+// mine = the personal stream (all of this owner's skills, published or not).
+// others = the org-wide published stream minus this owner's own entries.
 export interface SkillCatalog {
   mine: Skill[];
   others: Skill[];
@@ -21,23 +26,30 @@ export interface SkillCatalog {
 
 export interface SkillStoreI {
   applyPersonalSkills(payload: SetPersonalSkillsPayload): void;
+  applyPublishedSkills(payload: SetPublishedSkillsPayload): void;
   createSkill(draft: SkillDraft): Promise<Skill>;
   updateSkill(id: string, draft: SkillDraft): Promise<Skill>;
   deleteSkill(id: string): Promise<void>; // hard delete (mine only)
+  publishSkill(id: string): Promise<Skill>;
+  unpublishSkill(id: string): Promise<Skill>;
   getCatalog(): SkillCatalog;
   getById(id: string): Skill | undefined;
   subscribe(listener: () => void): () => void;
 }
 
-// Holds the pushed personal stream plus the local authoring surface.
+// Holds the two pushed streams (personal + org-wide published) plus the local
+// authoring surface. Both maps mirror the wire faithfully; dedup between them
+// happens on read (getCatalog filters published by this instance's own owner).
 export class SkillStore implements SkillStoreI {
   private readonly logger: Logger;
   private personalById = new Map<string, Skill>();
+  private publishedById = new Map<string, Skill>();
   private readonly listeners = new Set<() => void>();
 
   constructor(
     logger: Logger,
     private readonly hubClient: SkillHubClient,
+    private readonly ownSetupOwnerId: string,
   ) {
     this.logger = logger.child({ component: "SkillStore" });
   }
@@ -45,6 +57,14 @@ export class SkillStore implements SkillStoreI {
   applyPersonalSkills(payload: SetPersonalSkillsPayload): void {
     this.personalById = new Map(payload.skills.map((s) => [s.id, s]));
     this.logger.debug("Applied personal skills", {
+      count: payload.skills.length,
+    });
+    this.notify();
+  }
+
+  applyPublishedSkills(payload: SetPublishedSkillsPayload): void {
+    this.publishedById = new Map(payload.skills.map((s) => [s.id, s]));
+    this.logger.debug("Applied published skills", {
       count: payload.skills.length,
     });
     this.notify();
@@ -75,9 +95,25 @@ export class SkillStore implements SkillStoreI {
     this.notify();
   }
 
+  async publishSkill(id: string): Promise<Skill> {
+    const skill = await this.hubClient.publishSkill(id);
+    this.ingestPersonal(skill);
+    return skill;
+  }
+
+  async unpublishSkill(id: string): Promise<Skill> {
+    const skill = await this.hubClient.unpublishSkill(id);
+    this.ingestPersonal(skill);
+    return skill;
+  }
+
   getCatalog(): SkillCatalog {
     const mine = Array.from(this.personalById.values());
-    return structuredClone({ mine, others: [] });
+    // Must be O(n) (map is by *skill* id), but it's a small n and occurs on the instance-level on demand
+    const others = Array.from(this.publishedById.values()).filter(
+      (s) => s.author.setupOwnerId !== this.ownSetupOwnerId,
+    );
+    return structuredClone({ mine, others });
   }
 
   getById(id: string): Skill | undefined {

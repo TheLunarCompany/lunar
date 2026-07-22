@@ -22,8 +22,8 @@ export function buildSkillsRouter(
   const router = Router();
 
   router.get("/", authGuard, (_req, res) => {
-    const { mine } = services.skills.store.getCatalog();
-    res.status(200).json({ skills: mine } satisfies SkillCatalogResponse);
+    const { mine, others } = services.skills.store.getCatalog();
+    res.status(200).json({ mine, others } satisfies SkillCatalogResponse);
   });
 
   // Registered before /:id so the literal path isn't captured as an id.
@@ -181,6 +181,43 @@ export function buildSkillsRouter(
       logger.error("Error updating skill capabilities", {
         error: loggableError(e),
       });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Publish state as a sub-resource: PUT stamps it, DELETE clears it. Both
+  // answer the updated skill. "Mine" only — the id resolves against the
+  // personal stream.
+  router.put("/:id/published", authGuard, async (req, res) => {
+    const id = req.params["id"];
+    const existing = id ? services.skills.store.getById(id) : undefined;
+    if (!existing) {
+      res.status(404).json({ message: "Skill not found" });
+      return;
+    }
+
+    try {
+      const skill = await services.skills.store.publishSkill(existing.id);
+      res.status(200).json(skill satisfies Skill);
+    } catch (e) {
+      logger.error("Error publishing skill", { error: loggableError(e) });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  router.delete("/:id/published", authGuard, async (req, res) => {
+    const id = req.params["id"];
+    const existing = id ? services.skills.store.getById(id) : undefined;
+    if (!existing) {
+      res.status(404).json({ message: "Skill not found" });
+      return;
+    }
+
+    try {
+      const skill = await services.skills.store.unpublishSkill(existing.id);
+      res.status(200).json(skill satisfies Skill);
+    } catch (e) {
+      logger.error("Error unpublishing skill", { error: loggableError(e) });
       res.status(500).json({ message: "Internal server error" });
     }
   });

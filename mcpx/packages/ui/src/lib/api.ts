@@ -77,7 +77,8 @@ const apiSkillSchema = skillSchema.extend({
 });
 
 const apiSkillCatalogResponseSchema = skillCatalogResponseSchema.extend({
-  skills: z.array(apiSkillSchema),
+  mine: z.array(apiSkillSchema),
+  others: z.array(apiSkillSchema),
 });
 
 async function getApiError(response: Response): Promise<ApiError> {
@@ -643,12 +644,13 @@ class ApiClient {
 
   // ==================== SKILLS ====================
 
+  // The catalog also carries others' published skills; current pages only show mine.
   async getSkills(): Promise<Skill[]> {
-    const { skills } = await this.request(
+    const { mine } = await this.request(
       "/skills",
       apiSkillCatalogResponseSchema,
     );
-    return skills;
+    return mine;
   }
 
   async getSkill(id: string): Promise<Skill> {
