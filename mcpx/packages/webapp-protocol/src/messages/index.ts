@@ -52,6 +52,8 @@ export {
   deleteSkillPayloadSchema,
   publishSkillPayloadSchema,
   unpublishSkillPayloadSchema,
+  saveSkillDraftPayloadSchema,
+  discardSkillDraftPayloadSchema,
   skillErrorCodeSchema,
   skillWriteAckSchema,
   deleteSkillAckSchema,
@@ -65,6 +67,8 @@ export type {
   DeleteSkillPayload,
   PublishSkillPayload,
   UnpublishSkillPayload,
+  SaveSkillDraftPayload,
+  DiscardSkillDraftPayload,
 } from "./webapp-bound/author-skill.js";
 export type { SetProfileSecretsPayload } from "./mcpx-bound/set-profile-secrets.js";
 export type { SetOauthCredentialsPayload } from "./mcpx-bound/set-oauth-credentials.js";

@@ -1,4 +1,8 @@
-import { Skill, SkillCatalogResponse } from "@mcpx/shared-model";
+import {
+  Skill,
+  SkillCatalogResponse,
+  SkillWithDraft,
+} from "@mcpx/shared-model";
 import { withAsyncPolling } from "@mcpx/toolkit-core/time";
 import { getTestHarness, TestHarness } from "./utils.js";
 
@@ -543,6 +547,162 @@ describe("Skills endpoints", () => {
       expect(catalog.mine.map((s) => s.id).sort()).toEqual(
         [seedSkill.id, ownPublished.id].sort(),
       );
+    });
+  });
+
+  describe("draft lifecycle", () => {
+    const overlay = {
+      description: "Drafted description.",
+      body: "# Drafted body",
+      exposeAsPrompt: true,
+    };
+
+    // Like publish: draft round-trips need the mock hub to know the skill, so
+    // they go through a REST-created one, not the injected seed.
+    async function createSkill(): Promise<Skill> {
+      const response = await fetch(`${MCPX_BASE_URL}/skills`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "draft-me",
+          description: "A skill to draft on.",
+          body: "# Draft me",
+          exposeAsPrompt: true,
+        }),
+      });
+      expect(response.status).toBe(201);
+      return response.json();
+    }
+
+    function saveDraft(params: {
+      id: string;
+      baseUpdatedAt: Skill["updatedAt"];
+    }): Promise<Response> {
+      return fetch(`${MCPX_BASE_URL}/skills/${params.id}/draft`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draft: overlay,
+          baseUpdatedAt: params.baseUpdatedAt,
+        }),
+      });
+    }
+
+    function discardDraft(id: string): Promise<Response> {
+      return fetch(`${MCPX_BASE_URL}/skills/${id}/draft`, {
+        method: "DELETE",
+      });
+    }
+
+    async function getSkill(id: string): Promise<SkillWithDraft> {
+      const response = await fetch(`${MCPX_BASE_URL}/skills/${id}`);
+      expect(response.status).toBe(200);
+      return response.json();
+    }
+
+    it("saves a draft without touching the saved skill", async () => {
+      const created = await createSkill();
+
+      // no draft before
+      const responseBefore = await getSkill(created.id);
+      expect(responseBefore).not.toHaveProperty("draft");
+
+      // save draft
+      const responseAfter = await saveDraft({
+        id: created.id,
+        baseUpdatedAt: created.updatedAt,
+      });
+
+      expect(responseAfter.status).toBe(200);
+      await expect(responseAfter.json()).resolves.toMatchObject({
+        id: created.id,
+        body: "# Draft me",
+        draft: overlay,
+      });
+      await expect(getSkill(created.id)).resolves.toMatchObject({
+        updatedAt: created.updatedAt,
+        draft: overlay,
+      });
+    });
+
+    it("answers 409 when the skill moved past the draft's base", async () => {
+      const created = await createSkill();
+
+      const response = await saveDraft({
+        id: created.id,
+        // `baseUpdatedAt` represents the skill's updatedAt the draft saw upon first edit.
+        // 2020 is surely behind us, so this will trigger a 409.
+        baseUpdatedAt: new Date("2020-01-01T00:00:00.000Z"),
+      });
+
+      expect(response.status).toBe(409);
+      await expect(getSkill(created.id)).resolves.not.toHaveProperty("draft");
+    });
+
+    it("discards a draft", async () => {
+      const created = await createSkill();
+      await saveDraft({ id: created.id, baseUpdatedAt: created.updatedAt });
+
+      const responseBefore = await getSkill(created.id);
+      expect(responseBefore).toHaveProperty("draft");
+
+      const responseAfter = await discardDraft(created.id);
+
+      expect(responseAfter.status).toBe(200);
+      await expect(responseAfter.json()).resolves.not.toHaveProperty("draft");
+      await expect(getSkill(created.id)).resolves.not.toHaveProperty("draft");
+    });
+
+    it("a real save clears the pending draft", async () => {
+      const created = await createSkill();
+      await saveDraft({ id: created.id, baseUpdatedAt: created.updatedAt });
+
+      const response = await fetch(`${MCPX_BASE_URL}/skills/${created.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "draft-me",
+          description: "Saved for real.",
+          body: "# Committed",
+          exposeAsPrompt: true,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const saved = await getSkill(created.id);
+      expect(saved).toMatchObject({ body: "# Committed" });
+      expect(saved).not.toHaveProperty("draft");
+    });
+
+    it("name is not draftable: a smuggled name is stripped, the skill keeps its own", async () => {
+      const created = await createSkill();
+
+      const response = await fetch(
+        `${MCPX_BASE_URL}/skills/${created.id}/draft`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            draft: { ...overlay, name: "hijacked" },
+            baseUpdatedAt: created.updatedAt,
+          }),
+        },
+      );
+
+      expect(response.status).toBe(200);
+      const skill = await getSkill(created.id);
+      expect(skill.name).toBe(created.name);
+      expect(skill).toMatchObject({ draft: overlay });
+      expect(skill.draft).not.toHaveProperty("name");
+    });
+
+    it("returns 404 for a draft on an unknown skill", async () => {
+      const response = await saveDraft({
+        id: "0190a000-0000-7000-8000-000000000099",
+        baseUpdatedAt: new Date(),
+      });
+
+      expect(response.status).toBe(404);
     });
   });
 

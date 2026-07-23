@@ -1,9 +1,11 @@
 import {
   EnabledSkillsResponse,
+  saveSkillDraftRequestSchema,
   scopeSubjectSchema,
   Skill,
   SkillCatalogResponse,
-  SkillDraft,
+  SkillInput,
+  SkillWithDraft,
   updateSkillCapabilitiesRequestSchema,
   updateSkillDetailsRequestSchema,
   upsertSkillRequestSchema,
@@ -13,6 +15,7 @@ import express, { Router } from "express";
 import { Logger } from "winston";
 import z from "zod/v4";
 import { Services } from "../services/services.js";
+import { StaleDraftBaseError } from "../services/skills/skill-store.js";
 
 export function buildSkillsRouter(
   authGuard: express.RequestHandler,
@@ -45,7 +48,7 @@ export function buildSkillsRouter(
       return;
     }
 
-    res.status(200).json(skill satisfies Skill);
+    res.status(200).json(skill satisfies SkillWithDraft);
   });
 
   router.post("/", authGuard, async (req, res) => {
@@ -123,13 +126,13 @@ export function buildSkillsRouter(
       return;
     }
 
-    const draft: SkillDraft = {
+    const input: SkillInput = {
       ...parsed.data,
       capabilityGroup: existing.capabilityGroup,
     };
 
     try {
-      const skill = await services.skills.store.updateSkill(existing.id, draft);
+      const skill = await services.skills.store.updateSkill(existing.id, input);
       res.status(200).json(skill satisfies Skill);
     } catch (e) {
       logger.error("Error updating skill details", {
@@ -162,7 +165,7 @@ export function buildSkillsRouter(
     }
 
     const nextCapabilityGroup = parsed.data.capabilityGroup;
-    const draft: SkillDraft = {
+    const input: SkillInput = {
       name: existing.name,
       description: existing.description,
       body: existing.body,
@@ -175,7 +178,7 @@ export function buildSkillsRouter(
     };
 
     try {
-      const skill = await services.skills.store.updateSkill(existing.id, draft);
+      const skill = await services.skills.store.updateSkill(existing.id, input);
       res.status(200).json(skill satisfies Skill);
     } catch (e) {
       logger.error("Error updating skill capabilities", {
@@ -218,6 +221,59 @@ export function buildSkillsRouter(
       res.status(200).json(skill satisfies Skill);
     } catch (e) {
       logger.error("Error unpublishing skill", { error: loggableError(e) });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // The draft as a sub-resource: PUT saves it (409 when the skill moved past
+  // the draft's base), DELETE discards. Both answer the updated skill.
+  router.put("/:id/draft", authGuard, async (req, res) => {
+    const id = req.params["id"];
+    const existing = id ? services.skills.store.getById(id) : undefined;
+    if (!existing) {
+      res.status(404).json({ message: "Skill not found" });
+      return;
+    }
+
+    const parsed = saveSkillDraftRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        message: "Invalid request schema",
+        error: z.treeifyError(parsed.error),
+      });
+      return;
+    }
+
+    try {
+      const skill = await services.skills.store.saveDraft({
+        skillId: existing.id,
+        draft: parsed.data.draft,
+        baseUpdatedAt: parsed.data.baseUpdatedAt,
+      });
+      res.status(200).json(skill satisfies SkillWithDraft);
+    } catch (e) {
+      if (e instanceof StaleDraftBaseError) {
+        res.status(409).json({ message: e.message });
+        return;
+      }
+      logger.error("Error saving skill draft", { error: loggableError(e) });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  router.delete("/:id/draft", authGuard, async (req, res) => {
+    const id = req.params["id"];
+    const existing = id ? services.skills.store.getById(id) : undefined;
+    if (!existing) {
+      res.status(404).json({ message: "Skill not found" });
+      return;
+    }
+
+    try {
+      const skill = await services.skills.store.discardDraft(existing.id);
+      res.status(200).json(skill satisfies SkillWithDraft);
+    } catch (e) {
+      logger.error("Error discarding skill draft", { error: loggableError(e) });
       res.status(500).json({ message: "Internal server error" });
     }
   });

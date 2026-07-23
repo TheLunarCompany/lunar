@@ -1,4 +1,4 @@
-import { Skill } from "@mcpx/shared-model";
+import { Skill, SkillWithDraft } from "@mcpx/shared-model";
 import { Logger } from "winston";
 import { env } from "../../env.js";
 import { HubSocketAdapter } from "../saved-setups-client.js";
@@ -28,11 +28,11 @@ class NoOpSkillStore implements SkillStoreI {
 
   applyPublishedSkills(): void {}
 
-  createSkill(): Promise<Skill> {
+  createSkill(): Promise<SkillWithDraft> {
     return this.reject();
   }
 
-  updateSkill(): Promise<Skill> {
+  updateSkill(): Promise<SkillWithDraft> {
     return this.reject();
   }
 
@@ -40,11 +40,19 @@ class NoOpSkillStore implements SkillStoreI {
     return this.reject();
   }
 
-  publishSkill(): Promise<Skill> {
+  publishSkill(): Promise<SkillWithDraft> {
     return this.reject();
   }
 
-  unpublishSkill(): Promise<Skill> {
+  unpublishSkill(): Promise<SkillWithDraft> {
+    return this.reject();
+  }
+
+  saveDraft(): Promise<SkillWithDraft> {
+    return this.reject();
+  }
+
+  discardDraft(): Promise<SkillWithDraft> {
     return this.reject();
   }
 
@@ -52,8 +60,16 @@ class NoOpSkillStore implements SkillStoreI {
     return { mine: [], others: [] };
   }
 
-  getById(): Skill | undefined {
+  getById(): SkillWithDraft | undefined {
     return undefined;
+  }
+
+  getEffectiveById(): Skill | undefined {
+    return undefined;
+  }
+
+  getEffectiveMine(): Skill[] {
+    return [];
   }
 
   subscribe(): () => void {

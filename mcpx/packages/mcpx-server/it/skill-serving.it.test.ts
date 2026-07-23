@@ -224,6 +224,111 @@ describe("Skill serving under scoping over StreamableHTTP", () => {
     }
   });
 
+  // The full author flow from the outside: create over REST (mock hub mints the
+  // skill), draft over REST, observe what agents get over MCP. Each test
+  // arranges its own skill; nothing leans on a previous test's state.
+  describe("draft overlay on serving", () => {
+    const originalSavedBody = "Saved instructions: run `git status` first.";
+    const overlay = {
+      description: "Drafted: draft a commit message",
+      body: "Drafted instructions: just run `git commit`.", // Different from `originalSavedBody`!
+      exposeAsPrompt: true,
+    };
+    let harness: TestHarness;
+
+    beforeAll(async () => {
+      harness = buildHarness(ENABLED_TAG);
+      await harness.initialize("StreamableHTTP");
+    }, 15_000);
+
+    afterAll(async () => {
+      await harness.shutdown();
+    });
+
+    // Skill names are per-test: the name is the prompt's identity, so tests
+    // sharing one would collide in the registry.
+    async function createEnabledSkill(name: string): Promise<Skill> {
+      const response = await fetch(`${MCPX_BASE_URL}/skills`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          description: "A skill to draft on.",
+          body: originalSavedBody,
+          exposeAsPrompt: true,
+        }),
+      });
+      expect(response.status).toBe(201);
+      const skill: Skill = await response.json();
+      await enableSkillViaRoute({
+        skillId: skill.id,
+        consumerTag: ENABLED_TAG,
+      });
+      return skill;
+    }
+
+    async function saveDraft(skill: Skill): Promise<void> {
+      const response = await fetch(
+        `${MCPX_BASE_URL}/skills/${skill.id}/draft`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            draft: overlay,
+            baseUpdatedAt: skill.updatedAt,
+          }),
+        },
+      );
+      expect(response.status).toBe(200);
+    }
+
+    async function readSkillText(skill: Skill): Promise<string> {
+      const result = await harness.client.readResource({
+        uri: `skill://mcpx-skills/${skill.id}/SKILL.md`,
+      });
+      const content = result.contents[0];
+      return content && "text" in content ? String(content.text) : "";
+    }
+
+    it("serves the saved content while no draft exists", async () => {
+      const skill = await createEnabledSkill("draft-serving-none");
+
+      await expect(readSkillText(skill)).resolves.toContain(originalSavedBody);
+    });
+
+    it("serves the drafted content once a draft is saved", async () => {
+      const skill = await createEnabledSkill("draft-serving-drafted");
+
+      await saveDraft(skill);
+
+      const text = await readSkillText(skill);
+      expect(text).not.toContain(originalSavedBody);
+      expect(text).toContain(overlay.body);
+
+      const prompt = await harness.client.getPrompt({ name: skill.name });
+      const message = prompt.messages[0];
+      const promptText =
+        message && message.content.type === "text" ? message.content.text : "";
+      expect(promptText).not.toContain(originalSavedBody);
+      expect(promptText).toContain(overlay.body);
+    });
+
+    it("serves the saved content again after the draft is discarded", async () => {
+      const skill = await createEnabledSkill("draft-serving-discarded");
+      await saveDraft(skill);
+
+      const response = await fetch(
+        `${MCPX_BASE_URL}/skills/${skill.id}/draft`,
+        { method: "DELETE" },
+      );
+      expect(response.status).toBe(200);
+
+      const text = await readSkillText(skill);
+      expect(text).toContain(originalSavedBody);
+      expect(text).not.toContain(overlay.body);
+    });
+  });
+
   describe("consumer with nothing enabled", () => {
     let harness: TestHarness;
 

@@ -3,11 +3,11 @@ import { diffScopeSubjects } from "@/mapping/skill-agents";
 import type {
   ScopeSubject,
   SkillCapabilityGroup,
-  SkillDraft,
+  SkillInput,
 } from "@mcpx/shared-model";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export type SkillDetailsDraft = Omit<SkillDraft, "capabilityGroup">;
+export type SkillDetailsDraft = Omit<SkillInput, "capabilityGroup">;
 
 export const skillsQueryKey = {
   all: ["skills"] as const,
@@ -88,7 +88,7 @@ export function useCreateSkill() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (draft: SkillDraft) => apiClient.createSkill(draft),
+    mutationFn: (draft: SkillInput) => apiClient.createSkill(draft),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: skillsQueryKey.all });
     },

@@ -3,7 +3,7 @@ import { getSkillBreadcrumbs } from "@/components/skills/skill-breadcrumbs";
 import { toast } from "@/components/ui/use-toast";
 import { parseSkillMarkdown } from "@/lib/skill-markdown";
 import { routes } from "@/routes";
-import type { SkillDraft } from "@mcpx/shared-model";
+import type { SkillInput } from "@mcpx/shared-model";
 import { FileText, FileUp } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -39,7 +39,7 @@ export default function SkillCreateStart() {
     try {
       setIsParsing(true);
       const parsed = parseSkillMarkdown(await file.text());
-      const draft: SkillDraft = {
+      const draft: SkillInput = {
         name: parsed.name ?? "",
         description: parsed.description ?? "",
         body: parsed.body,

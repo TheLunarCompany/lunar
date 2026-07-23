@@ -38,7 +38,7 @@ export const skillAuthorSchema = z.object({
 export type SkillAuthor = z.infer<typeof skillAuthorSchema>;
 
 // The authored core, before Hub mints metadata.
-export const skillDraftSchema = z.object({
+export const skillInputSchema = z.object({
   // name/description caps mirror the agentskills.io SKILL.md spec.
   name: z.string().trim().min(1).max(64).regex(skillNameSlugRegex),
   description: z.string().trim().min(1).max(1024),
@@ -47,11 +47,11 @@ export const skillDraftSchema = z.object({
   exposeAsPrompt: z.boolean().default(true),
   capabilityGroup: skillCapabilityGroupSchema.optional(),
 });
-export type SkillDraft = z.infer<typeof skillDraftSchema>;
+export type SkillInput = z.infer<typeof skillInputSchema>;
 
 // Authored core plus Hub-minted metadata.
 // publishedAt is publish-time only; unpublish nullifies it, edits bump updatedAt, never publishedAt.
-export const skillSchema = skillDraftSchema.extend({
+export const skillSchema = skillInputSchema.extend({
   id: z.uuidv7(),
   author: skillAuthorSchema,
   updatedAt: z.coerce.date(),
@@ -59,16 +59,34 @@ export const skillSchema = skillDraftSchema.extend({
 });
 export type Skill = z.infer<typeof skillSchema>;
 
+// Unsaved edits overlaying a saved skill. name is excluded — it is the
+// skill's identity (prompt name, frontmatter, catalog entry).
+export const skillDraftOverlaySchema = skillInputSchema.omit({ name: true });
+export type SkillDraftOverlay = z.infer<typeof skillDraftOverlaySchema>;
+
+export const skillWithDraftSchema = skillSchema.extend({
+  draft: skillDraftOverlaySchema.optional(),
+});
+export type SkillWithDraft = z.infer<typeof skillWithDraftSchema>;
+
 export const skillCatalogResponseSchema = z.object({
-  mine: z.array(skillSchema),
+  mine: z.array(skillWithDraftSchema),
   others: z.array(skillSchema),
 });
 export type SkillCatalogResponse = z.infer<typeof skillCatalogResponseSchema>;
 
-export const upsertSkillRequestSchema = skillDraftSchema;
+// baseUpdatedAt = the updatedAt of the saved skill the draft was edited
+// against; a mismatch on save means the skill moved underneath the draft.
+export const saveSkillDraftRequestSchema = z.object({
+  draft: skillDraftOverlaySchema,
+  baseUpdatedAt: z.coerce.date(),
+});
+export type SaveSkillDraftRequest = z.input<typeof saveSkillDraftRequestSchema>;
+
+export const upsertSkillRequestSchema = skillInputSchema;
 export type UpsertSkillRequest = z.input<typeof upsertSkillRequestSchema>;
 
-export const updateSkillDetailsRequestSchema = skillDraftSchema.omit({
+export const updateSkillDetailsRequestSchema = skillInputSchema.omit({
   capabilityGroup: true,
 });
 export type UpdateSkillDetailsRequest = z.input<

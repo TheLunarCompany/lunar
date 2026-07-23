@@ -25,6 +25,8 @@ import {
   deleteSkillPayloadSchema,
   publishSkillPayloadSchema,
   unpublishSkillPayloadSchema,
+  saveSkillDraftPayloadSchema,
+  discardSkillDraftPayloadSchema,
 } from "./author-skill.js";
 
 // Raw payload schemas
@@ -49,6 +51,8 @@ export const WebappBoundPayloads = {
   deleteSkill: deleteSkillPayloadSchema,
   publishSkill: publishSkillPayloadSchema,
   unpublishSkill: unpublishSkillPayloadSchema,
+  saveSkillDraft: saveSkillDraftPayloadSchema,
+  discardSkillDraft: discardSkillDraftPayloadSchema,
 } as const;
 
 export type WebappBoundPayload =
@@ -76,6 +80,8 @@ export const WEBAPP_BOUND_EVENTS = {
   DELETE_SKILL: "delete-skill",
   PUBLISH_SKILL: "publish-skill",
   UNPUBLISH_SKILL: "unpublish-skill",
+  SAVE_SKILL_DRAFT: "save-skill-draft",
+  DISCARD_SKILL_DRAFT: "discard-skill-draft",
 } as const;
 
 export type WebappBoundEventName =
@@ -111,6 +117,8 @@ export const webappBoundSchemasByEvent = {
   [WEBAPP_BOUND_EVENTS.DELETE_SKILL]: deleteSkillPayloadSchema,
   [WEBAPP_BOUND_EVENTS.PUBLISH_SKILL]: publishSkillPayloadSchema,
   [WEBAPP_BOUND_EVENTS.UNPUBLISH_SKILL]: unpublishSkillPayloadSchema,
+  [WEBAPP_BOUND_EVENTS.SAVE_SKILL_DRAFT]: saveSkillDraftPayloadSchema,
+  [WEBAPP_BOUND_EVENTS.DISCARD_SKILL_DRAFT]: discardSkillDraftPayloadSchema,
 } as const satisfies Record<
   Exclude<WebappBoundEventName, typeof WEBAPP_BOUND_EVENTS.LIST_SAVED_SETUPS>,
   z.ZodType

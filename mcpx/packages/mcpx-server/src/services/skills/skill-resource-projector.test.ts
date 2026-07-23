@@ -1,5 +1,5 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { Skill, SkillDraft } from "@mcpx/shared-model";
+import { Skill, SkillInput, SkillWithDraft } from "@mcpx/shared-model";
 import { SetPersonalSkillsPayload } from "@mcpx/webapp-protocol/messages";
 import { CapabilityRegistry } from "../capability-registry.js";
 import {
@@ -8,7 +8,7 @@ import {
   ConsumerContext,
 } from "../capability-resolver.js";
 import { InternalCapabilitiesService } from "../internal-capabilities-service.js";
-import { SkillCatalog, SkillStoreI } from "./skill-store.js";
+import { SaveDraftParams, SkillCatalog, SkillStoreI } from "./skill-store.js";
 import {
   parseIdFromSkillUri,
   SkillResourceProjector,
@@ -34,7 +34,7 @@ function makeSkill(overrides: Partial<Skill> = {}): Skill {
 // Hand-built store: a Map plus subscribe/notify, no Hub. Mutating methods notify
 // so the projector re-projects, exactly as the real store's ingest does.
 class FakeSkillStore implements SkillStoreI {
-  private byId = new Map<string, Skill>();
+  private byId = new Map<string, SkillWithDraft>();
   private readonly listeners = new Set<() => void>();
   private seq = 0;
 
@@ -57,14 +57,14 @@ class FakeSkillStore implements SkillStoreI {
     return this.setPublishedAt(id, null);
   }
 
-  async createSkill(draft: SkillDraft): Promise<Skill> {
+  async createSkill(draft: SkillInput): Promise<Skill> {
     const skill = makeSkill({ ...draft, id: `id-${++this.seq}` });
     this.byId.set(skill.id, skill);
     this.notify();
     return skill;
   }
 
-  async updateSkill(id: string, draft: SkillDraft): Promise<Skill> {
+  async updateSkill(id: string, draft: SkillInput): Promise<Skill> {
     const skill = makeSkill({ ...draft, id });
     this.byId.set(id, skill);
     this.notify();
@@ -76,12 +76,36 @@ class FakeSkillStore implements SkillStoreI {
     this.notify();
   }
 
+  async saveDraft(params: SaveDraftParams): Promise<SkillWithDraft> {
+    const existing = this.requireSkill(params.skillId);
+    const skill = { ...existing, draft: params.draft };
+    this.byId.set(skill.id, skill);
+    this.notify();
+    return skill;
+  }
+
+  async discardDraft(id: string): Promise<SkillWithDraft> {
+    const { draft: _draft, ...skill } = this.requireSkill(id);
+    this.byId.set(skill.id, skill);
+    this.notify();
+    return skill;
+  }
+
   getCatalog(): SkillCatalog {
     return { mine: [...this.byId.values()], others: [] };
   }
 
-  getById(id: string): Skill | undefined {
+  getById(id: string): SkillWithDraft | undefined {
     return this.byId.get(id);
+  }
+
+  getEffectiveById(id: string): Skill | undefined {
+    const skill = this.byId.get(id);
+    return skill && this.effective(skill);
+  }
+
+  getEffectiveMine(): Skill[] {
+    return [...this.byId.values()].map((s) => this.effective(s));
   }
 
   subscribe(listener: () => void): () => void {
@@ -90,12 +114,24 @@ class FakeSkillStore implements SkillStoreI {
   }
 
   private setPublishedAt(id: string, publishedAt: Date | null): Skill {
-    const existing = this.byId.get(id);
-    if (!existing) throw new Error(`Skill ${id} not found`);
+    const existing = this.requireSkill(id);
     const skill = { ...existing, publishedAt };
     this.byId.set(id, skill);
     this.notify();
     return skill;
+  }
+
+  private effective(skill: SkillWithDraft): Skill {
+    const { draft, ...saved } = skill;
+    if (!draft) return saved;
+    const { id, author, name, updatedAt, publishedAt } = saved;
+    return { id, author, name, updatedAt, publishedAt, ...draft };
+  }
+
+  private requireSkill(id: string): SkillWithDraft {
+    const existing = this.byId.get(id);
+    if (!existing) throw new Error(`Skill ${id} not found`);
+    return existing;
   }
 
   private notify(): void {

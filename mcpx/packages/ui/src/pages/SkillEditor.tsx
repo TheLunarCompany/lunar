@@ -19,7 +19,7 @@ import {
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useUnsavedChangesPrompt } from "@/hooks/useUnsavedChangesPrompt";
 import { routes } from "@/routes";
-import { skillDraftSchema, type SkillDraft } from "@mcpx/shared-model";
+import { skillInputSchema, type SkillInput } from "@mcpx/shared-model";
 import {
   addUnavailableSavedSkillCapabilities,
   buildLinkedCapabilityProviders,
@@ -60,7 +60,7 @@ export default function SkillEditor() {
   const hasUnsavedDetails = isDetailsDirty || hasUploadedDraft;
   const { allowNextNavigation } = useUnsavedChangesPrompt(hasUnsavedDetails);
 
-  async function handleSubmit(draft: SkillDraft) {
+  async function handleSubmit(draft: SkillInput) {
     try {
       if (isEdit && id) {
         await updateSkillDetails.mutateAsync({ id, draft });
@@ -253,11 +253,11 @@ export default function SkillEditor() {
   );
 }
 
-function getUploadedDraft(state: unknown): SkillDraft | undefined {
+function getUploadedDraft(state: unknown): SkillInput | undefined {
   if (!state || typeof state !== "object" || !("draft" in state)) {
     return undefined;
   }
-  const parsed = skillDraftSchema.safeParse(state.draft);
+  const parsed = skillInputSchema.safeParse(state.draft);
   return parsed.success ? parsed.data : undefined;
 }
 

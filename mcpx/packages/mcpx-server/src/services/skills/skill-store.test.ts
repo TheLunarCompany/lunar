@@ -1,6 +1,6 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { Skill, SkillDraft } from "@mcpx/shared-model";
-import { SkillStore, SkillHubClient } from "./skill-store.js";
+import { Skill, SkillInput, SkillWithDraft } from "@mcpx/shared-model";
+import { SaveDraftParams, SkillStore, SkillHubClient } from "./skill-store.js";
 
 function makeSkill(overrides: Partial<Skill> & { id: string }): Skill {
   return {
@@ -19,23 +19,27 @@ function makeSkill(overrides: Partial<Skill> & { id: string }): Skill {
 // Hub sends back (e.g. the minted skill). Throws if a create/update is hit without a return
 // configured, so unconfigured calls surface instead of returning junk.
 class FakeSkillHubClient implements SkillHubClient {
-  public readonly createdDrafts: SkillDraft[] = [];
-  public readonly updatedCalls: { id: string; draft: SkillDraft }[] = [];
+  public readonly createdInputs: SkillInput[] = [];
+  public readonly updatedCalls: { id: string; input: SkillInput }[] = [];
   public readonly deletedIds: string[] = [];
   public readonly publishedIds: string[] = [];
   public readonly unpublishedIds: string[] = [];
+  public readonly savedDraftCalls: SaveDraftParams[] = [];
+  public readonly discardedDraftIds: string[] = [];
   public createReturn?: Skill;
   public updateReturn?: Skill;
   public publishReturn?: Skill;
   public unpublishReturn?: Skill;
+  public saveDraftReturn?: SkillWithDraft;
+  public discardDraftReturn?: SkillWithDraft;
 
-  createSkill(draft: SkillDraft): Promise<Skill> {
-    this.createdDrafts.push(draft);
+  createSkill(input: SkillInput): Promise<Skill> {
+    this.createdInputs.push(input);
     return this.respond(this.createReturn);
   }
 
-  updateSkill(id: string, draft: SkillDraft): Promise<Skill> {
-    this.updatedCalls.push({ id, draft });
+  updateSkill(id: string, input: SkillInput): Promise<Skill> {
+    this.updatedCalls.push({ id, input });
     return this.respond(this.updateReturn);
   }
 
@@ -52,6 +56,16 @@ class FakeSkillHubClient implements SkillHubClient {
   unpublishSkill(id: string): Promise<Skill> {
     this.unpublishedIds.push(id);
     return this.respond(this.unpublishReturn);
+  }
+
+  saveDraft(params: SaveDraftParams): Promise<SkillWithDraft> {
+    this.savedDraftCalls.push(params);
+    return this.respond(this.saveDraftReturn);
+  }
+
+  discardDraft(skillId: string): Promise<SkillWithDraft> {
+    this.discardedDraftIds.push(skillId);
+    return this.respond(this.discardDraftReturn);
   }
 
   private respond(skill: Skill | undefined): Promise<Skill> {
@@ -88,6 +102,12 @@ class RejectingSkillHubClient implements SkillHubClient {
   unpublishSkill(): Promise<Skill> {
     return Promise.reject(this.error);
   }
+  saveDraft(): Promise<SkillWithDraft> {
+    return Promise.reject(this.error);
+  }
+  discardDraft(): Promise<SkillWithDraft> {
+    return Promise.reject(this.error);
+  }
 }
 
 function makeRejectingStore(error = new Error("ack failed")): SkillStore {
@@ -98,7 +118,7 @@ function makeRejectingStore(error = new Error("ack failed")): SkillStore {
   );
 }
 
-const draft: SkillDraft = {
+const skillInput: SkillInput = {
   name: "new",
   description: "d",
   body: "b",
@@ -206,9 +226,9 @@ describe("SkillStore", () => {
       const { store, hub } = makeStore();
       hub.createReturn = minted;
 
-      const result = await store.createSkill(draft);
+      const result = await store.createSkill(skillInput);
 
-      expect(hub.createdDrafts).toEqual([draft]);
+      expect(hub.createdInputs).toEqual([skillInput]);
       expect(result).toEqual(minted);
       expect(store.getById("minted")).toEqual(minted);
     });
@@ -218,11 +238,11 @@ describe("SkillStore", () => {
       const { store, hub } = makeStore();
       store.applyPersonalSkills({ skills: [before] });
 
-      const edit: SkillDraft = { ...draft, name: "after" };
+      const edit: SkillInput = { ...skillInput, name: "after" };
       hub.updateReturn = { ...before, name: "after" };
       const result = await store.updateSkill("s1", edit);
 
-      expect(hub.updatedCalls).toEqual([{ id: "s1", draft: edit }]);
+      expect(hub.updatedCalls).toEqual([{ id: "s1", input: edit }]);
       expect(result.name).toBe("after");
       expect(store.getById("s1")?.name).toBe("after");
     });
@@ -264,6 +284,118 @@ describe("SkillStore", () => {
     });
   });
 
+  describe("drafts", () => {
+    const overlay = {
+      description: "drafted desc",
+      body: "drafted body",
+      exposeAsPrompt: false,
+    };
+
+    it("saveDraft delegates and ingests the draft-carrying record", async () => {
+      const { store, hub } = makeStore();
+      store.applyPersonalSkills({ skills: [makeSkill({ id: "s1" })] });
+      const base = new Date("2026-01-01T00:00:00Z");
+      hub.saveDraftReturn = { ...makeSkill({ id: "s1" }), draft: overlay };
+
+      const result = await store.saveDraft({
+        skillId: "s1",
+        draft: overlay,
+        baseUpdatedAt: base,
+      });
+
+      expect(hub.savedDraftCalls).toEqual([
+        { skillId: "s1", draft: overlay, baseUpdatedAt: base },
+      ]);
+      expect(result.draft).toEqual(overlay);
+      expect(store.getById("s1")?.draft).toEqual(overlay);
+    });
+
+    it("discardDraft delegates and ingests the draft-free record", async () => {
+      const { store, hub } = makeStore();
+      store.applyPersonalSkills({
+        skills: [{ ...makeSkill({ id: "s1" }), draft: overlay }],
+      });
+      hub.discardDraftReturn = makeSkill({ id: "s1" });
+
+      await store.discardDraft("s1");
+
+      expect(hub.discardedDraftIds).toEqual(["s1"]);
+      expect(store.getById("s1")?.draft).toBeUndefined();
+    });
+
+    it("getEffectiveById overlays the draft fields and keeps saved metadata", () => {
+      const { store } = makeStore();
+      const saved = makeSkill({ id: "s1", publishedAt: new Date(7) });
+      store.applyPersonalSkills({ skills: [{ ...saved, draft: overlay }] });
+
+      const effective = store.getEffectiveById("s1");
+
+      expect(effective).toEqual({
+        id: saved.id,
+        author: saved.author,
+        name: saved.name,
+        updatedAt: saved.updatedAt,
+        publishedAt: saved.publishedAt,
+        ...overlay,
+      });
+    });
+
+    it("a draft without a capabilityGroup clears the saved one in the effective view", () => {
+      const { store } = makeStore();
+      const saved = makeSkill({
+        id: "s1",
+        capabilityGroup: { items: [] },
+      });
+
+      store.applyPersonalSkills({ skills: [saved] });
+      // before
+      expect(store.getEffectiveById("s1")?.capabilityGroup).toEqual({
+        items: [],
+      });
+
+      // apply a draft that does not include capabilityGroup
+      store.applyPersonalSkills({ skills: [{ ...saved, draft: overlay }] });
+
+      // after
+      expect(store.getEffectiveById("s1")?.capabilityGroup).toBeUndefined();
+    });
+
+    it("without a draft, effective reads equal the saved skill", () => {
+      const { store } = makeStore();
+      const saved = makeSkill({ id: "s1" });
+      store.applyPersonalSkills({ skills: [saved] });
+
+      expect(store.getEffectiveById("s1")).toEqual(saved);
+      expect(store.getEffectiveMine()).toEqual([saved]);
+    });
+
+    it("getEffectiveMine overlays only the drafted skills", () => {
+      const { store } = makeStore();
+      const plain = makeSkill({ id: "plain" });
+      const drafted = { ...makeSkill({ id: "drafted" }), draft: overlay };
+      store.applyPersonalSkills({ skills: [plain, drafted] });
+
+      const byId = new Map(store.getEffectiveMine().map((s) => [s.id, s]));
+      expect(byId.get("plain")?.body).toBe(plain.body);
+      expect(byId.get("drafted")?.body).toBe(overlay.body);
+    });
+
+    it("saveDraft rejects without touching local state", async () => {
+      const store = makeRejectingStore();
+      store.applyPersonalSkills({ skills: [makeSkill({ id: "s1" })] });
+
+      await expect(
+        store.saveDraft({
+          skillId: "s1",
+          draft: overlay,
+          baseUpdatedAt: new Date(),
+        }),
+      ).rejects.toThrow("ack failed");
+
+      expect(store.getById("s1")?.draft).toBeUndefined();
+    });
+  });
+
   describe("hub ack failure", () => {
     it("createSkill rejects and leaves local state untouched", async () => {
       const store = makeRejectingStore();
@@ -272,7 +404,7 @@ describe("SkillStore", () => {
         notified += 1;
       });
 
-      await expect(store.createSkill(draft)).rejects.toThrow("ack failed");
+      await expect(store.createSkill(skillInput)).rejects.toThrow("ack failed");
 
       expect(store.getCatalog().mine).toHaveLength(0);
       expect(notified).toBe(0);
@@ -285,7 +417,7 @@ describe("SkillStore", () => {
       });
 
       await expect(
-        store.updateSkill("s1", { ...draft, name: "after" }),
+        store.updateSkill("s1", { ...skillInput, name: "after" }),
       ).rejects.toThrow("ack failed");
 
       expect(store.getById("s1")?.name).toBe("before");
@@ -320,7 +452,7 @@ describe("SkillStore", () => {
       });
 
       store.applyPersonalSkills({ skills: [] });
-      await store.createSkill(draft);
+      await store.createSkill(skillInput);
       expect(count).toBe(2);
 
       unsubscribe();

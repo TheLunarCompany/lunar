@@ -14,10 +14,12 @@ import {
   deleteSkillPayloadSchema,
   publishSkillPayloadSchema,
   unpublishSkillPayloadSchema,
+  saveSkillDraftPayloadSchema,
+  discardSkillDraftPayloadSchema,
   SkillWriteAck,
   DeleteSkillAck,
 } from "@mcpx/webapp-protocol/messages";
-import { Skill } from "@mcpx/shared-model";
+import { Skill, SkillWithDraft } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { v7 as uuidv7 } from "uuid";
 
@@ -60,7 +62,7 @@ export class MockHubServer {
   private catalogPayload: SetCatalogPayload | undefined;
   private identityPayload: SetIdentityPayload;
   private savedSetups: Map<string, SavedSetupItem> = new Map();
-  private skills: Map<string, Skill> = new Map();
+  private skills: Map<string, SkillWithDraft> = new Map();
   private downstreamSessions: Map<string, PersistedDownstreamSessionDataWire> =
     new Map();
   private dynamicCapabilitiesResponse: DynamicCapabilitiesMatchingAck = {
@@ -636,6 +638,75 @@ export class MockHubServer {
           const skill: Skill = { ...existing, publishedAt: null };
           this.skills.set(skill.id, skill);
           this.logger.info("Unpublished skill", { id: skill.id });
+          ack({ success: true, skill });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.SAVE_SKILL_DRAFT,
+        (envelope: { payload: unknown }, ack: (res: SkillWriteAck) => void) => {
+          const parsed = saveSkillDraftPayloadSchema.safeParse(
+            envelope.payload,
+          );
+          if (!parsed.success) {
+            ack({ success: false, error: "Invalid save-skill-draft payload" });
+            return;
+          }
+          const existing = this.skills.get(parsed.data.skillId);
+          if (!existing) {
+            ack({
+              success: false,
+              error: "Skill not found",
+              errorCode: "not_found",
+            });
+            return;
+          }
+          // Same guard the real hub applies; draft saves never bump updatedAt.
+          if (
+            existing.updatedAt.getTime() !== parsed.data.baseUpdatedAt.getTime()
+          ) {
+            ack({
+              success: false,
+              error: "Skill changed since the draft's base",
+              errorCode: "stale_base",
+            });
+            return;
+          }
+          const skill: SkillWithDraft = {
+            ...existing,
+            draft: parsed.data.draft,
+          };
+          this.skills.set(skill.id, skill);
+          this.logger.info("Saved skill draft", { id: skill.id });
+          ack({ success: true, skill });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.DISCARD_SKILL_DRAFT,
+        (envelope: { payload: unknown }, ack: (res: SkillWriteAck) => void) => {
+          const parsed = discardSkillDraftPayloadSchema.safeParse(
+            envelope.payload,
+          );
+          if (!parsed.success) {
+            ack({
+              success: false,
+              error: "Invalid discard-skill-draft payload",
+            });
+            return;
+          }
+          const existing = this.skills.get(parsed.data.skillId);
+          if (!existing) {
+            ack({
+              success: false,
+              error: "Skill not found",
+              errorCode: "not_found",
+            });
+            return;
+          }
+          const { draft: _draft, ...skill } = existing;
+          this.skills.set(skill.id, skill);
+          this.logger.info("Discarded skill draft", { id: skill.id });
           ack({ success: true, skill });
         },
       );

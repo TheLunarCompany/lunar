@@ -3,7 +3,7 @@ import type {
   CatalogMCPServerItem,
   CatalogMCPServerList,
   Skill,
-  SkillDraft,
+  SkillInput,
 } from "@mcpx/shared-model";
 import { skillSchema } from "@mcpx/shared-model";
 
@@ -900,7 +900,7 @@ export const handlers = [
   }),
 
   http.post("*/skills", async ({ request }) => {
-    const draft = (await request.json()) as SkillDraft;
+    const draft = (await request.json()) as SkillInput;
     const skill: Skill = {
       ...draft,
       id: `0190a000-0000-7000-8000-${String(nextSkillId).padStart(12, "0")}`,
@@ -926,7 +926,7 @@ export const handlers = [
       return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
     }
 
-    const draft = (await request.json()) as SkillDraft;
+    const draft = (await request.json()) as SkillInput;
     const skill: Skill = {
       ...existingSkill,
       ...draft,
@@ -952,7 +952,7 @@ export const handlers = [
       return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
     }
 
-    const draft = (await request.json()) as SkillDraft;
+    const draft = (await request.json()) as SkillInput;
     const skill: Skill = {
       ...existingSkill,
       ...draft,

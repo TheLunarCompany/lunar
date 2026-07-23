@@ -1,4 +1,4 @@
-import type { SkillDraft } from "@mcpx/shared-model";
+import type { SkillInput } from "@mcpx/shared-model";
 import { z } from "zod";
 
 const skillNameSlugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -32,7 +32,7 @@ export const skillFormSchema: z.ZodType<SkillFormValues> = z.object({
   exposeAsPrompt: z.boolean(),
 });
 
-export function draftToFormValues(draft?: SkillDraft): SkillFormValues {
+export function draftToFormValues(draft?: SkillInput): SkillFormValues {
   return {
     name: draft?.name ?? "",
     description: draft?.description ?? "",
@@ -41,7 +41,7 @@ export function draftToFormValues(draft?: SkillDraft): SkillFormValues {
   };
 }
 
-export function formValuesToDraft(values: SkillFormValues): SkillDraft {
+export function formValuesToDraft(values: SkillFormValues): SkillInput {
   return {
     name: values.name.trim(),
     description: values.description.trim(),

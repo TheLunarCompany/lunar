@@ -1,4 +1,4 @@
-import { SkillDraft } from "@mcpx/shared-model";
+import { SkillInput } from "@mcpx/shared-model";
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { HubSkillClient } from "./hub-skill-client.js";
 import { HubSocketAdapter } from "../saved-setups-client.js";
@@ -26,7 +26,7 @@ const persisted = {
   publishedAt: null,
 };
 
-const draft: SkillDraft = {
+const draft: SkillInput = {
   name: "greet",
   description: "says hi",
   body: "Say hello.",

@@ -21,7 +21,7 @@ import type {
   AuditLogEventType,
   Skill,
   SkillCapabilityGroup,
-  SkillDraft,
+  SkillInput,
   EnabledSkills,
   ScopeSubject,
 } from "@mcpx/shared-model";
@@ -39,6 +39,7 @@ import {
   catalogMCPServerListSchema,
   auditLogsResponseSchema,
   skillCatalogResponseSchema,
+  skillDraftOverlaySchema,
   skillSchema,
   enabledSkillsResponseSchema,
 } from "@mcpx/shared-model";
@@ -54,7 +55,7 @@ import {
   CatalogMCPServerConfigByNameList,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 
-type SkillDetailsDraft = Omit<SkillDraft, "capabilityGroup">;
+type SkillDetailsDraft = Omit<SkillInput, "capabilityGroup">;
 
 export class ApiError extends Error {
   status: number;
@@ -76,8 +77,12 @@ const apiSkillSchema = skillSchema.extend({
   body: z.string().trim(),
 });
 
+const apiSkillWithDraftSchema = apiSkillSchema.extend({
+  draft: skillDraftOverlaySchema.optional(),
+});
+
 const apiSkillCatalogResponseSchema = skillCatalogResponseSchema.extend({
-  mine: z.array(apiSkillSchema),
+  mine: z.array(apiSkillWithDraftSchema),
   others: z.array(apiSkillSchema),
 });
 
@@ -657,7 +662,7 @@ class ApiClient {
     return this.request(`/skills/${encodeURIComponent(id)}`, apiSkillSchema);
   }
 
-  async createSkill(draft: SkillDraft): Promise<Skill> {
+  async createSkill(draft: SkillInput): Promise<Skill> {
     return this.requestWithBody("/skills", "POST", draft, apiSkillSchema);
   }
 

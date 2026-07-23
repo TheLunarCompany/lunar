@@ -110,15 +110,18 @@ export class SkillResourceProjector implements SkillResourceProjectorI {
   // Consumes adoption to decide what to serve (skillStore ∩ adopted). Stubbed to
   // "all stored" until adoption (RND-826) lands; then this reads adoptedSkillIds
   // off the setup/config service (which owns setup data) and the projector
-  // subscribes to setup changes too.
+  // subscribes to setup changes too. Effective reads: a pending draft serves in
+  // place of the saved content, so authors test drafts live.
   private adoptedSkills(): Skill[] {
-    return this.skillStore.getCatalog().mine;
+    return this.skillStore.getEffectiveMine();
   }
 
   // The mcpx-skills resource repository: turn a skill uri back into its SKILL.md.
   private readContent(uri: string): ResourceContent | undefined {
     const skillId = parseIdFromSkillUri(uri);
-    const skill = skillId ? this.skillStore.getById(skillId) : undefined;
+    const skill = skillId
+      ? this.skillStore.getEffectiveById(skillId)
+      : undefined;
     if (!skill) return undefined;
     return { mimeType: "text/markdown", text: skillToSkillMd(skill) };
   }

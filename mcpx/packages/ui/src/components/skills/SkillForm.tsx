@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { SkillDraft } from "@mcpx/shared-model";
+import type { SkillInput } from "@mcpx/shared-model";
 import { Code2, Eye, FileText, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -21,12 +21,12 @@ import {
 
 type SkillFormProps = {
   id?: string;
-  defaultValues?: SkillDraft;
+  defaultValues?: SkillInput;
   submitLabel: string;
   showTopSubmit?: boolean;
   submitDisabled?: boolean;
   status?: "idle" | "submitting";
-  onSubmit: (draft: SkillDraft) => Promise<void> | void;
+  onSubmit: (draft: SkillInput) => Promise<void> | void;
   onDirtyChange?: (isDirty: boolean) => void;
   className?: string;
 };

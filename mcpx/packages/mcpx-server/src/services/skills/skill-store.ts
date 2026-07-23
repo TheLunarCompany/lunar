@@ -1,4 +1,9 @@
-import { Skill, SkillDraft } from "@mcpx/shared-model";
+import {
+  Skill,
+  SkillDraftOverlay,
+  SkillInput,
+  SkillWithDraft,
+} from "@mcpx/shared-model";
 import {
   SetPersonalSkillsPayload,
   SetPublishedSkillsPayload,
@@ -10,30 +15,52 @@ import { Logger } from "winston";
 // Hub-persisted result (with its minted id) into local state. Production is satisfied by
 // HubService / a socket client; tests pass a hand-crafted fake.
 export interface SkillHubClient {
-  createSkill(draft: SkillDraft): Promise<Skill>;
-  updateSkill(id: string, draft: SkillDraft): Promise<Skill>;
+  createSkill(input: SkillInput): Promise<SkillWithDraft>;
+  updateSkill(id: string, input: SkillInput): Promise<SkillWithDraft>;
   deleteSkill(id: string): Promise<void>;
-  publishSkill(id: string): Promise<Skill>;
-  unpublishSkill(id: string): Promise<Skill>;
+  publishSkill(id: string): Promise<SkillWithDraft>;
+  unpublishSkill(id: string): Promise<SkillWithDraft>;
+  saveDraft(params: SaveDraftParams): Promise<SkillWithDraft>;
+  discardDraft(skillId: string): Promise<SkillWithDraft>;
+}
+
+export interface SaveDraftParams {
+  skillId: string;
+  draft: SkillDraftOverlay;
+  baseUpdatedAt: Date;
+}
+
+// Hub rejected a draft save: the skill's updatedAt moved past the draft's
+// baseUpdatedAt. Callers answer 409.
+export class StaleDraftBaseError extends Error {
+  constructor() {
+    super("Skill changed since the draft's base");
+    this.name = "StaleDraftBaseError";
+  }
 }
 
 // mine = the personal stream (all of this owner's skills, published or not).
 // others = the org-wide published stream minus this owner's own entries.
 export interface SkillCatalog {
-  mine: Skill[];
+  mine: SkillWithDraft[];
   others: Skill[];
 }
 
 export interface SkillStoreI {
   applyPersonalSkills(payload: SetPersonalSkillsPayload): void;
   applyPublishedSkills(payload: SetPublishedSkillsPayload): void;
-  createSkill(draft: SkillDraft): Promise<Skill>;
-  updateSkill(id: string, draft: SkillDraft): Promise<Skill>;
+  createSkill(input: SkillInput): Promise<SkillWithDraft>;
+  updateSkill(id: string, input: SkillInput): Promise<SkillWithDraft>;
   deleteSkill(id: string): Promise<void>; // hard delete (mine only)
-  publishSkill(id: string): Promise<Skill>;
-  unpublishSkill(id: string): Promise<Skill>;
+  publishSkill(id: string): Promise<SkillWithDraft>;
+  unpublishSkill(id: string): Promise<SkillWithDraft>;
+  saveDraft(params: SaveDraftParams): Promise<SkillWithDraft>;
+  discardDraft(id: string): Promise<SkillWithDraft>;
   getCatalog(): SkillCatalog;
-  getById(id: string): Skill | undefined;
+  getById(id: string): SkillWithDraft | undefined;
+  // Draft-overlaid reads; what the serving path projects.
+  getEffectiveById(id: string): Skill | undefined;
+  getEffectiveMine(): Skill[];
   subscribe(listener: () => void): () => void;
 }
 
@@ -42,7 +69,7 @@ export interface SkillStoreI {
 // happens on read (getCatalog filters published by this instance's own owner).
 export class SkillStore implements SkillStoreI {
   private readonly logger: Logger;
-  private personalById = new Map<string, Skill>();
+  private personalById = new Map<string, SkillWithDraft>();
   private publishedById = new Map<string, Skill>();
   private readonly listeners = new Set<() => void>();
 
@@ -77,14 +104,14 @@ export class SkillStore implements SkillStoreI {
   // (applyPersonalSkills) reconciles that. A client-supplied idempotency key would make create
   // retries safe (dedupe instead of duplicate); not implemented yet.
   // TODO: better resiliency
-  async createSkill(draft: SkillDraft): Promise<Skill> {
-    const skill = await this.hubClient.createSkill(draft);
+  async createSkill(input: SkillInput): Promise<SkillWithDraft> {
+    const skill = await this.hubClient.createSkill(input);
     this.ingestPersonal(skill);
     return skill;
   }
 
-  async updateSkill(id: string, draft: SkillDraft): Promise<Skill> {
-    const skill = await this.hubClient.updateSkill(id, draft);
+  async updateSkill(id: string, input: SkillInput): Promise<SkillWithDraft> {
+    const skill = await this.hubClient.updateSkill(id, input);
     this.ingestPersonal(skill);
     return skill;
   }
@@ -95,14 +122,26 @@ export class SkillStore implements SkillStoreI {
     this.notify();
   }
 
-  async publishSkill(id: string): Promise<Skill> {
+  async publishSkill(id: string): Promise<SkillWithDraft> {
     const skill = await this.hubClient.publishSkill(id);
     this.ingestPersonal(skill);
     return skill;
   }
 
-  async unpublishSkill(id: string): Promise<Skill> {
+  async unpublishSkill(id: string): Promise<SkillWithDraft> {
     const skill = await this.hubClient.unpublishSkill(id);
+    this.ingestPersonal(skill);
+    return skill;
+  }
+
+  async saveDraft(params: SaveDraftParams): Promise<SkillWithDraft> {
+    const skill = await this.hubClient.saveDraft(params);
+    this.ingestPersonal(skill);
+    return skill;
+  }
+
+  async discardDraft(id: string): Promise<SkillWithDraft> {
+    const skill = await this.hubClient.discardDraft(id);
     this.ingestPersonal(skill);
     return skill;
   }
@@ -116,9 +155,20 @@ export class SkillStore implements SkillStoreI {
     return structuredClone({ mine, others });
   }
 
-  getById(id: string): Skill | undefined {
+  getById(id: string): SkillWithDraft | undefined {
     const skill = this.personalById.get(id);
     return skill ? structuredClone(skill) : undefined;
+  }
+
+  getEffectiveById(id: string): Skill | undefined {
+    const skill = this.personalById.get(id);
+    return skill ? structuredClone(effective(skill)) : undefined;
+  }
+
+  getEffectiveMine(): Skill[] {
+    return structuredClone(
+      Array.from(this.personalById.values()).map(effective),
+    );
   }
 
   subscribe(listener: () => void): () => void {
@@ -142,4 +192,16 @@ export class SkillStore implements SkillStoreI {
       }
     });
   }
+}
+
+// The overlay rule: metadata stays saved, every draftable field comes from the
+// draft — including capabilityGroup, whose absence in the draft clears the
+// saved one (spreading draft over the full saved skill would leak it).
+function effective(skill: SkillWithDraft): Skill {
+  const { draft, ...saved } = skill;
+  if (!draft) {
+    return saved;
+  }
+  const { id, author, name, updatedAt, publishedAt } = saved;
+  return { id, author, name, updatedAt, publishedAt, ...draft };
 }

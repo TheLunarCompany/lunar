@@ -1,4 +1,4 @@
-import { Skill, SkillDraft } from "@mcpx/shared-model";
+import { SkillInput, SkillWithDraft } from "@mcpx/shared-model";
 import {
   deleteSkillAckSchema,
   skillWriteAckSchema,
@@ -7,7 +7,11 @@ import {
 } from "@mcpx/webapp-protocol/messages";
 import { Logger } from "winston";
 import { HubSocketAdapter } from "../saved-setups-client.js";
-import { SkillHubClient } from "./skill-store.js";
+import {
+  SaveDraftParams,
+  SkillHubClient,
+  StaleDraftBaseError,
+} from "./skill-store.js";
 
 // The client SkillStore owns. Turns each authoring call into an emit+ack round-trip and
 // converts the ack union into the Promise<Skill>/throw contract SkillStore expects.
@@ -21,20 +25,33 @@ export class HubSkillClient implements SkillHubClient {
     this.logger = logger.child({ component: "HubSkillClient" });
   }
 
-  createSkill(draft: SkillDraft): Promise<Skill> {
-    return this.writeSkill("save-skill", draft);
+  createSkill(input: SkillInput): Promise<SkillWithDraft> {
+    return this.writeSkill("save-skill", input);
   }
 
-  updateSkill(id: string, draft: SkillDraft): Promise<Skill> {
-    return this.writeSkill("update-skill", { ...draft, id });
+  updateSkill(id: string, input: SkillInput): Promise<SkillWithDraft> {
+    return this.writeSkill("update-skill", { ...input, id });
   }
 
-  publishSkill(id: string): Promise<Skill> {
+  publishSkill(id: string): Promise<SkillWithDraft> {
     return this.writeSkill("publish-skill", { id });
   }
 
-  unpublishSkill(id: string): Promise<Skill> {
+  unpublishSkill(id: string): Promise<SkillWithDraft> {
     return this.writeSkill("unpublish-skill", { id });
+  }
+
+  saveDraft(params: SaveDraftParams): Promise<SkillWithDraft> {
+    const { skillId, draft, baseUpdatedAt } = params;
+    return this.writeSkill("save-skill-draft", {
+      skillId,
+      draft,
+      baseUpdatedAt,
+    });
+  }
+
+  discardDraft(skillId: string): Promise<SkillWithDraft> {
+    return this.writeSkill("discard-skill-draft", { skillId });
   }
 
   async deleteSkill(id: string): Promise<void> {
@@ -56,8 +73,10 @@ export class HubSkillClient implements SkillHubClient {
       | "save-skill"
       | "update-skill"
       | "publish-skill"
-      | "unpublish-skill",
-  >(event: E, payload: WebappBoundPayloadOf<E>): Promise<Skill> {
+      | "unpublish-skill"
+      | "save-skill-draft"
+      | "discard-skill-draft",
+  >(event: E, payload: WebappBoundPayloadOf<E>): Promise<SkillWithDraft> {
     const socket = this.requireSocket();
     const envelope = wrapInEnvelope({ payload });
     this.logger.debug(`Sending ${event} to Hub`, {
@@ -69,6 +88,9 @@ export class HubSkillClient implements SkillHubClient {
       throw new Error(`Invalid ${event} response from Hub`);
     }
     if (!parsed.data.success) {
+      if (parsed.data.errorCode === "stale_base") {
+        throw new StaleDraftBaseError();
+      }
       throw new Error(parsed.data.error);
     }
     return parsed.data.skill;
