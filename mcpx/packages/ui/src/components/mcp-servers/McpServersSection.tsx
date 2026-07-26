@@ -28,6 +28,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { MultiSelectFilterDropdown } from "@/components/ui/multi-select-filter-dropdown";
 import { SearchInput } from "@/components/ui/search-input";
 import { toast, useToast } from "@/components/ui/use-toast";
+import { getApiErrorMessage } from "@/lib/api-errors";
 import { cn } from "@/lib/utils";
 import {
   McpServerPromptCard,
@@ -767,7 +768,10 @@ function McpServerAuthenticationCard({ server }: { server: TargetServer }) {
           setIsAuthenticating(false);
           showToast({
             title: "Authentication Failed",
-            description: `Failed to initiate authentication: ${error.message}`,
+            description: getApiErrorMessage(
+              error,
+              "Failed to initiate authentication.",
+            ),
             variant: "destructive",
           });
         },

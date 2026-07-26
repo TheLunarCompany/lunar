@@ -3,7 +3,9 @@ import * as ToastPrimitives from "@radix-ui/react-toast";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
   AlertTriangle,
+  Check,
   CheckCircle2,
+  Copy,
   Info,
   Server,
   ShieldAlert,
@@ -107,10 +109,18 @@ const Toast = React.forwardRef<
     VariantProps<typeof toastVariants> & {
       isClosable?: boolean;
       domain?: string;
+      /** Plain-text message to offer a copy button for. Errors only. */
+      copyText?: string;
     }
 >(
   (
-    { className, variant, isClosable: isClosableProp = true, ...props },
+    {
+      className,
+      variant,
+      isClosable: isClosableProp = true,
+      copyText,
+      ...props
+    },
     ref,
   ) => {
     const children = props.children as React.ReactNode[];
@@ -118,23 +128,37 @@ const Toast = React.forwardRef<
     const actionButton = children?.[1];
     const closeButton = children?.[2];
 
+    // navigator.clipboard is undefined outside a secure context, and mcpx gets
+    // served over plain http, so render nothing rather than a dead button.
+    const copyable =
+      variant === "destructive" && navigator.clipboard ? copyText : undefined;
+
     return (
       <ToastPrimitives.Root
         ref={ref}
-        className={cn(toastVariants({ variant }), className)}
+        className={cn(
+          toastVariants({ variant }),
+          copyable && "pr-20",
+          className,
+        )}
         duration={props.duration ?? 4000}
         {...props}
       >
-        {isClosableProp && (
-          <div className="absolute top-2 right-2 flex size-7 items-center justify-center">
-            {closeButton}
+        {(isClosableProp || copyable) && (
+          <div className="absolute top-2 right-2 flex items-center gap-0.5">
+            {copyable && <ToastCopy value={copyable} />}
+            {isClosableProp && closeButton}
           </div>
         )}
 
         <div className={toastIconVariants({ variant })}>
           <ToastIcon variant={variant} />
         </div>
-        <div className="min-w-0 py-4 pr-6">{content}</div>
+        {/* The viewport is overflow-visible, so it will not scroll an oversized
+            toast for us. Bound it here. 6rem clears the viewport's m-4. */}
+        <div className="max-h-[calc(100vh-6rem)] min-w-0 overflow-y-auto py-4 pr-6">
+          {content}
+        </div>
         <div className="flex items-center self-center py-4 pr-2">
           {actionButton}
         </div>
@@ -174,6 +198,38 @@ const ToastClose = React.forwardRef<
 ));
 ToastClose.displayName = ToastPrimitives.Close.displayName;
 
+// Errors are the messages users need to paste into a ticket or a chat, and they
+// are also the ones long enough to be annoying to select by hand out of a toast
+// that dismisses itself.
+const ToastCopy = ({ value }: { value: string }) => {
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const label = copied ? "Copied" : "Copy message";
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      className={toastCloseClassName}
+      onClick={() => {
+        navigator.clipboard.writeText(value).then(
+          () => setCopied(true),
+          () => setCopied(false),
+        );
+      }}
+    >
+      {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+    </button>
+  );
+};
+
 const ToastTitle = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Title>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>
@@ -196,7 +252,10 @@ const ToastDescription = React.forwardRef<
   <ToastPrimitives.Description
     ref={ref}
     className={cn(
-      "wrap-break-word mt-0.5 line-clamp-2 text-sm leading-5 whitespace-normal text-current/75",
+      // No clamp: messages come from upstream servers, so we cannot know where
+      // the useful part sits. min-w-0 stops an unbreakable token (a JWT, a URL)
+      // from widening the grid track until overflow-hidden clips it.
+      "wrap-break-word mt-0.5 min-w-0 text-sm leading-5 whitespace-normal text-current/75",
       className,
     )}
     {...props}

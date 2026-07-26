@@ -603,9 +603,12 @@ export function buildControlPlaneRouter(
         targetServerName: name,
         error: loggableError(error),
       });
-      res
-        .status(500)
-        .json({ message: "Failed to initiate OAuth", error: loggableError(e) });
+      // `message` is what the UI renders, so it is the cause alone. Callers
+      // already know the action failed, and no stack goes in the body.
+      res.status(500).json({
+        message: error.message,
+        error: error.message,
+      });
     }
   });
 

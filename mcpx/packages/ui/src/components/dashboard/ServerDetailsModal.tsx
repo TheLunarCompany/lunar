@@ -8,6 +8,7 @@ import {
 import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
 const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { useToast } from "@/components/ui/use-toast";
+import { getApiErrorMessage } from "@/lib/api-errors";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { AuthenticationDialog } from "./AuthenticationDialog";
 import { EnvVarsEditor, HeadersEditor } from "./EnvVarsEditor";
@@ -418,7 +419,10 @@ export const ServerDetailsModal = ({
           setIsAuthenticating(false);
           toast({
             title: "Authentication Failed",
-            description: `Failed to initiate authentication: ${error.message}`,
+            description: getApiErrorMessage(
+              error,
+              "Failed to initiate authentication.",
+            ),
             variant: "destructive",
           });
         },

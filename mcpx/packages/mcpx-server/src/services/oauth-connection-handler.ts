@@ -1,5 +1,6 @@
+import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
-import { withPolling } from "@mcpx/toolkit-core/time";
+import { withTimeout } from "@mcpx/toolkit-core/time";
 import {
   auth,
   UnauthorizedError,
@@ -22,7 +23,10 @@ import { ExtendedClientBuilderI, ExtendedClientI } from "./client-extension.js";
 import { buildClient } from "./target-server-connection-factory.js";
 
 const OAUTH_POLLING_INTERVAL_MS = 1000;
-const OAUTH_URL_POLLING_MAX_ATTEMPTS = 30;
+// The SDK sets no AbortSignal on its fetches, so without this an unresponsive
+// authorization server leaves auth() pending and strands every later attempt on
+// the same `flows` entry.
+export const OAUTH_FLOW_TIMEOUT_MS = 30_000;
 // Device codes typically expire in 15 minutes, so poll for up to 15 minutes
 const DEVICE_FLOW_TIMEOUT_MS = 15 * 60 * 1000;
 const DEVICE_FLOW_MAX_POLL_ATTEMPTS = Math.ceil(
@@ -88,11 +92,14 @@ type AuthorizationServerMeta = Awaited<
 export interface OAuthDiscovery {
   discoverOAuthProtectedResourceMetadata: typeof discoverOAuthProtectedResourceMetadata;
   discoverAuthorizationServerMetadata: typeof discoverAuthorizationServerMetadata;
+  auth?: typeof auth;
+  flowTimeoutMs?: number;
 }
 
 const DEFAULT_DISCOVERY: OAuthDiscovery = {
   discoverOAuthProtectedResourceMetadata,
   discoverAuthorizationServerMetadata,
+  auth,
 };
 
 /**
@@ -102,6 +109,8 @@ export class OAuthConnectionHandler {
   // Store pending OAuth flows by server name for two-phase completion
   private pendingFlows: Map<string, PendingOAuthFlow> = new Map();
   private discovery: OAuthDiscovery;
+  private authorize: typeof auth;
+  private flowTimeoutMs: number;
   // In-progress initiation per server, reused by concurrent or repeat callers
   // (e.g. reopening after closing the tab) until the flow completes or is cancelled.
   private flows: Map<string, Promise<InitiateOAuthResult>> = new Map();
@@ -114,6 +123,8 @@ export class OAuthConnectionHandler {
   ) {
     this.logger = logger.child({ component: "OAuthConnectionHandler" });
     this.discovery = discovery;
+    this.authorize = discovery.auth ?? auth;
+    this.flowTimeoutMs = discovery.flowTimeoutMs ?? OAUTH_FLOW_TIMEOUT_MS;
   }
 
   // True if the server advertises RFC 9728 or RFC 8414 OAuth metadata.
@@ -317,7 +328,11 @@ export class OAuthConnectionHandler {
       this.cleanupPendingFlow(targetServer.name);
     }
 
-    const flow = this.startOAuthFlow(targetServer, options);
+    const flow = withTimeout(
+      this.startOAuthFlow(targetServer, options),
+      this.flowTimeoutMs,
+      `OAuth initiation for "${targetServer.name}"`,
+    );
     this.flows.set(targetServer.name, flow);
     // Drop it on failure so a later attempt starts fresh. On success it stays
     // until the flow completes or is cancelled.
@@ -384,30 +399,39 @@ export class OAuthConnectionHandler {
 
     // Drive the authorization request directly instead of waiting for the
     // transport to receive a 401. Servers that allow unauthenticated connects
-    // never challenge, so the transport-triggered auth would never fire. auth()
-    // runs discovery + PKCE and calls redirectToAuthorization(), which records
-    // the URL polled for below and returns without blocking. Not awaited: the
-    // token exchange happens later in completeOAuthFlow via transport.finishAuth().
-    void auth(authProvider, { serverUrl: targetServer.url }).catch(
-      (e: unknown) => {
-        this.logger.debug("auth() settled before authorization completed", {
-          name: targetServer.name,
-          error: loggableError(e),
-        });
-      },
-    );
-
-    // Poll for authorization URL (quick, should be available fast)
-    const authorizationUrl = await withPolling({
-      maxAttempts: OAUTH_URL_POLLING_MAX_ATTEMPTS,
-      sleepTimeMs: OAUTH_POLLING_INTERVAL_MS,
-      getValue: () => authProvider.getAuthorizationUrl(),
-      found: (url): url is URL => Boolean(url),
+    // never challenge, so the transport-triggered auth would never fire.
+    // auth() returns "REDIRECT" on the line after it calls
+    // redirectToAuthorization(), and our providers record the URL inside that
+    // call, so the URL is available as soon as this resolves.
+    const result = await this.authorize(authProvider, {
+      serverUrl: targetServer.url,
+    }).catch((e: unknown) => {
+      this.logger.error("Failed to obtain authorization URL", {
+        name: targetServer.name,
+        url: targetServer.url,
+        // Rejected outright by servers enforcing a redirect_uri allowlist.
+        redirectUrl: authProvider.redirectUrl,
+        error: loggableError(e),
+      });
+      // Cause first: this reaches a toast that shows a limited number of lines,
+      // so anything ahead of it pushes the actionable part out of view. The
+      // server name and URL are already on the log line above.
+      throw new Error(makeError(e).message, { cause: e });
     });
 
+    const authorizationUrl = authProvider.getAuthorizationUrl();
     if (!authorizationUrl) {
+      // "AUTHORIZED" means tokens were issued with no user step, so there is
+      // nothing to visit. Happens on re-auth of a connected server whose
+      // refresh token is still good.
+      this.logger.warn("OAuth flow produced no authorization URL", {
+        name: targetServer.name,
+        result,
+      });
       throw new Error(
-        `Failed to obtain authorization URL for server: ${targetServer.name}`,
+        result === "AUTHORIZED"
+          ? `"${targetServer.name}" authorized without user interaction. Reconnect with the stored tokens instead.`
+          : `No authorization URL was produced for "${targetServer.name}".`,
       );
     }
 

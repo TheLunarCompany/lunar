@@ -24,7 +24,13 @@ export function Toaster() {
       }) {
         return (
           <ToastViewport key={id} position={props.position}>
-            <Toast {...props} domain={domain}>
+            <Toast
+              {...props}
+              domain={domain}
+              copyText={
+                typeof description === "string" ? description : undefined
+              }
+            >
               <div className="grid">
                 {title && <ToastTitle>{title}</ToastTitle>}
                 {description && (

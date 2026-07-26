@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-errors";
 import { cn } from "@/lib/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import { memo, useState } from "react";
@@ -235,7 +236,10 @@ const McpServerNodeRenderer = ({
         onError: (error) => {
           toast({
             title: "Authentication Failed",
-            description: `Failed to initiate authentication: ${error.message}`,
+            description: getApiErrorMessage(
+              error,
+              "Failed to initiate authentication.",
+            ),
             variant: "destructive",
           });
         },

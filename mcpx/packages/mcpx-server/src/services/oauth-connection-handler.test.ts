@@ -670,5 +670,127 @@ describe("OAuthConnectionHandler", () => {
         expect(verdict.kind).toBe("needs-auth");
       });
     });
+
+    describe(".initiateOAuth", () => {
+      const remoteServer = {
+        name: TEST_SERVER_NAME,
+        type: "streamable-http" as const,
+        url: "https://example.com/mcp",
+      };
+
+      // Discovery is stubbed away so applyDiscoveredScope makes no network calls.
+      function buildHandler(opts: {
+        provider: McpxOAuthProviderI;
+        auth: NonNullable<OAuthDiscovery["auth"]>;
+        flowTimeoutMs?: number;
+      }): OAuthConnectionHandler {
+        return new OAuthConnectionHandler(
+          createMockSessionManager(opts.provider),
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+          {
+            discoverOAuthProtectedResourceMetadata: async () => {
+              throw new Error("404 Not Found");
+            },
+            discoverAuthorizationServerMetadata: async () => undefined,
+            auth: opts.auth,
+            flowTimeoutMs: opts.flowTimeoutMs,
+          },
+        );
+      }
+
+      it("returns the URL recorded by redirectToAuthorization", async () => {
+        const handler = buildHandler({
+          provider: createMockProvider(),
+          auth: async () => "REDIRECT" as const,
+        });
+
+        const result = await handler.initiateOAuth(remoteServer);
+        expect(result.authorizationUrl).toBe(TEST_AUTH_URL.toString());
+        expect(result.state).toBe(TEST_STATE);
+      });
+
+      it("surfaces the auth() failure as the error message", async () => {
+        const handler = buildHandler({
+          provider: createMockProvider({ getAuthorizationUrl: () => null }),
+          auth: async () => {
+            throw new Error("Dynamic client registration failed: HTTP 403");
+          },
+        });
+
+        // Anchored so a prepended prefix fails. An unanchored string or an
+        // Error object would not catch that (the latter also compares `cause`).
+        await expect(handler.initiateOAuth(remoteServer)).rejects.toThrow(
+          /^Dynamic client registration failed: HTTP 403$/,
+        );
+      });
+
+      it("times out instead of hanging when auth() never settles", async () => {
+        const handler = buildHandler({
+          provider: createMockProvider({ getAuthorizationUrl: () => null }),
+          auth: () => new Promise<never>(() => {}),
+          flowTimeoutMs: 20,
+        });
+
+        await expect(handler.initiateOAuth(remoteServer)).rejects.toThrow(
+          /OAuth initiation for "test-server" timed out after 20ms/,
+        );
+      });
+
+      it("lets a new attempt through after one timed out", async () => {
+        // A retry awaits the cached flow, so the timeout has to clear it.
+        let settle = false;
+        const handler = buildHandler({
+          provider: createMockProvider({
+            getAuthorizationUrl: () => (settle ? TEST_AUTH_URL : null),
+          }),
+          auth: () =>
+            settle
+              ? Promise.resolve("REDIRECT" as const)
+              : new Promise<never>(() => {}),
+          flowTimeoutMs: 20,
+        });
+
+        await expect(handler.initiateOAuth(remoteServer)).rejects.toThrow(
+          /timed out/,
+        );
+        settle = true;
+        const result = await handler.initiateOAuth(remoteServer);
+        expect(result.authorizationUrl).toBe(TEST_AUTH_URL.toString());
+      });
+
+      it("does not let a failed attempt block the next one", async () => {
+        let attempts = 0;
+        const provider = createMockProvider({
+          getAuthorizationUrl: () => (attempts > 1 ? TEST_AUTH_URL : null),
+        });
+        const handler = buildHandler({
+          provider,
+          auth: async () => {
+            attempts++;
+            if (attempts === 1) throw new Error("transient discovery failure");
+            return "REDIRECT" as const;
+          },
+        });
+
+        await expect(handler.initiateOAuth(remoteServer)).rejects.toThrow(
+          /transient discovery failure/,
+        );
+        const result = await handler.initiateOAuth(remoteServer);
+        expect(result.authorizationUrl).toBe(TEST_AUTH_URL.toString());
+      });
+
+      it("fails fast when auth() authorizes without a redirect", async () => {
+        // Re-auth of a connected server whose refresh token still works.
+        const handler = buildHandler({
+          provider: createMockProvider({ getAuthorizationUrl: () => null }),
+          auth: async () => "AUTHORIZED" as const,
+        });
+
+        await expect(handler.initiateOAuth(remoteServer)).rejects.toThrow(
+          /authorized without user interaction/,
+        );
+      });
+    });
   });
 });

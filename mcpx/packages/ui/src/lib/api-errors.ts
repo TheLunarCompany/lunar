@@ -34,13 +34,21 @@ function getResponseMessage(error: unknown): string | undefined {
   return undefined;
 }
 
-export function getAddServerErrorMessage(
-  error: unknown,
-  fallback = DEFAULT_ADD_SERVER_ERROR_MESSAGE,
-): string {
+/**
+ * The server's message in preference to the transport's. Axios only reports
+ * "Request failed with status code 500", hiding the cause sent in the body.
+ */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
   return (
     getResponseMessage(error) ||
     (error instanceof Error ? error.message : undefined) ||
     fallback
   );
+}
+
+export function getAddServerErrorMessage(
+  error: unknown,
+  fallback = DEFAULT_ADD_SERVER_ERROR_MESSAGE,
+): string {
+  return getApiErrorMessage(error, fallback);
 }

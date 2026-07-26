@@ -1,7 +1,7 @@
 import { AxiosError } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "./api";
-import { getAddServerErrorMessage } from "./api-errors";
+import { getAddServerErrorMessage, getApiErrorMessage } from "./api-errors";
 
 const STDIO_DISABLED_RESPONSE = {
   message:
@@ -113,5 +113,38 @@ describe("mcpx API errors", () => {
     );
 
     expect(getAddServerErrorMessage(error)).toBe("Axios-style server error");
+  });
+
+  it("prefers the server's OAuth failure reason over the axios status text", () => {
+    const error = new AxiosError(
+      "Request failed with status code 500",
+      undefined,
+      undefined,
+      undefined,
+      {
+        data: {
+          message: "All redirect_uris must be in the allowlist",
+          error: "All redirect_uris must be in the allowlist",
+        },
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: {},
+        config: { headers: {} } as never,
+      },
+    );
+
+    expect(getApiErrorMessage(error, "fallback")).toBe(
+      "All redirect_uris must be in the allowlist",
+    );
+  });
+
+  it("falls back when the response carries no message", () => {
+    const error = new AxiosError("Network Error");
+    expect(
+      getApiErrorMessage(error, "Failed to initiate authentication."),
+    ).toBe("Network Error");
+    expect(getApiErrorMessage({}, "Failed to initiate authentication.")).toBe(
+      "Failed to initiate authentication.",
+    );
   });
 });
