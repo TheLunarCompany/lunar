@@ -30,6 +30,7 @@ const badgeVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
+        xs: "h-4 px-1 text-[10px] leading-none",
         sm: "px-1.5 py-0.5 text-xs",
         md: "px-2 py-0.5 text-xs",
         lg: "px-2.5 py-1 text-xs",

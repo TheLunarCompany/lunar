@@ -149,8 +149,8 @@ export default function Dashboard() {
       !serversEqual(prev.servers, processedData.servers) ||
       prev.servers.some((s, i) => s.icon !== processedData.servers[i]?.icon);
 
-    // Compare agents by id (order-independent). A change in any rendered field —
-    // identifier or the live connection/tool fields — triggers an update.
+    // Compare agents by id (order-independent). A change in any rendered field -
+    // identifier or the live connection/tool fields - triggers an update.
     const newAgentsById = new Map(processedData.agents.map((a) => [a.id, a]));
     const agentsChanged =
       prev.agents.length !== processedData.agents.length ||

@@ -188,7 +188,12 @@ describe("SkillLinkedCapabilities", () => {
       <SkillLinkedCapabilities showEmptyState onEdit={onEdit} />,
     );
 
-    expect(screen.getByText("No MCP servers available")).toBeInTheDocument();
+    expect(screen.getByText("Linked MCP capabilities")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "No servers connected yet. Click here to connect servers to your MCPX instance.",
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         "Add an MCP server to make tools and prompts available for this skill.",

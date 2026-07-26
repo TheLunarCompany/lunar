@@ -5,8 +5,10 @@ import {
   SkillIdentity,
   SkillLinkedCapabilities,
   SkillPage,
+  SkillSetupSummary,
 } from "@/components/skills";
 import { getSkillBreadcrumbs } from "@/components/skills/skill-breadcrumbs";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,10 +24,11 @@ import { toast } from "@/components/ui/use-toast";
 import { useDeleteSkill, useEnabledSkills, useSkill } from "@/data/skills";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { buildSkillAgentSelection } from "@/mapping/skill-agents";
+import { buildSkillCardCapabilitySummaryResolver } from "@/mapping/skills";
 import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
+import { CircleAlert, CircleCheck, Trash2, Users, Unplug } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
 import {
   generatePath,
   useLocation,
@@ -54,6 +57,23 @@ export default function SkillDetail() {
       }),
     [enabledSkillsQuery.data, skill?.id, systemState?.connectedClientClusters],
   );
+  const capabilitySummary = useMemo(
+    () =>
+      buildSkillCardCapabilitySummaryResolver(
+        systemState,
+        catalogServersQuery.data,
+      )(skill?.capabilityGroup),
+    [catalogServersQuery.data, skill?.capabilityGroup, systemState],
+  );
+  const capabilityCount =
+    capabilitySummary.toolsCount + capabilitySummary.promptsCount;
+  const hasCapabilities = (skill?.capabilityGroup?.items.length ?? 0) > 0;
+  const appliedAgentCount = skillAgentSelection.selected.length;
+  const agentTabCount = enabledSkillsQuery.isLoading
+    ? "…"
+    : enabledSkillsQuery.isError
+      ? "-"
+      : appliedAgentCount;
 
   useEffect(() => {
     if (!skill || !location.hash) {
@@ -144,6 +164,200 @@ export default function SkillDetail() {
                 <SkillIdentity.UpdatedAt />
               </SkillIdentity.Meta>
             </SkillIdentity.Root>
+            <SkillSetupSummary.Root>
+              <SkillSetupSummary.Card>
+                <SkillSetupSummary.Icon className="bg-[var(--component-colours-color-fg-success)]">
+                  <CircleCheck aria-hidden="true" className="size-4" />
+                </SkillSetupSummary.Icon>
+                <SkillSetupSummary.Content>
+                  <SkillSetupSummary.Title>
+                    Instructions
+                  </SkillSetupSummary.Title>
+                  <SkillSetupSummary.Description>
+                    Added · SKILL.md
+                  </SkillSetupSummary.Description>
+                </SkillSetupSummary.Content>
+                <SkillSetupSummary.Action>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label="Edit skill instructions"
+                    onClick={() =>
+                      navigate(
+                        generatePath(routes.skillEditor, { id: skill.id }),
+                      )
+                    }
+                  >
+                    Edit
+                  </Button>
+                </SkillSetupSummary.Action>
+              </SkillSetupSummary.Card>
+
+              {hasCapabilities ? (
+                <SkillSetupSummary.Card>
+                  <SkillSetupSummary.Icon className="bg-[var(--component-colours-color-fg-success)]">
+                    <CircleCheck aria-hidden="true" className="size-4" />
+                  </SkillSetupSummary.Icon>
+                  <SkillSetupSummary.Content>
+                    <SkillSetupSummary.Title>
+                      MCP capabilities
+                    </SkillSetupSummary.Title>
+                    <SkillSetupSummary.Description>
+                      Added
+                    </SkillSetupSummary.Description>
+                  </SkillSetupSummary.Content>
+                  <SkillSetupSummary.Action>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label="Edit MCP capabilities"
+                      onClick={() =>
+                        navigate(
+                          generatePath(routes.skillCapabilities, {
+                            id: skill.id,
+                          }),
+                        )
+                      }
+                    >
+                      Edit
+                    </Button>
+                  </SkillSetupSummary.Action>
+                </SkillSetupSummary.Card>
+              ) : (
+                <SkillSetupSummary.Card>
+                  <SkillSetupSummary.Icon className="bg-[var(--colors-gray-100)] text-[var(--colors-gray-500)]">
+                    <Unplug aria-hidden="true" className="size-4" />
+                  </SkillSetupSummary.Icon>
+                  <SkillSetupSummary.Content>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <SkillSetupSummary.Title className="min-w-0 flex-1">
+                        MCP capabilities
+                      </SkillSetupSummary.Title>
+                      <Badge
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 rounded-[4px] border-0 bg-[var(--colors-gray-100)] px-1.5 py-0 text-[9px] leading-none font-semibold tracking-[0.04em] text-[var(--colors-gray-500)]"
+                      >
+                        OPTIONAL
+                      </Badge>
+                    </div>
+                    <SkillSetupSummary.Description>
+                      optional for some skills
+                    </SkillSetupSummary.Description>
+                  </SkillSetupSummary.Content>
+                  <SkillSetupSummary.Action>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label="Add MCP capabilities"
+                      onClick={() =>
+                        navigate(
+                          generatePath(routes.skillCapabilities, {
+                            id: skill.id,
+                          }),
+                        )
+                      }
+                    >
+                      Add
+                    </Button>
+                  </SkillSetupSummary.Action>
+                </SkillSetupSummary.Card>
+              )}
+
+              {enabledSkillsQuery.isLoading || enabledSkillsQuery.isError ? (
+                <SkillSetupSummary.Card>
+                  <SkillSetupSummary.Icon className="bg-[var(--colors-gray-100)] text-[var(--colors-gray-500)]">
+                    <CircleAlert aria-hidden="true" className="size-4" />
+                  </SkillSetupSummary.Icon>
+                  <SkillSetupSummary.Content>
+                    <SkillSetupSummary.Title>
+                      Applied to agents
+                    </SkillSetupSummary.Title>
+                    <SkillSetupSummary.Description>
+                      {enabledSkillsQuery.isLoading
+                        ? "Loading agents…"
+                        : "Unable to load agents."}
+                    </SkillSetupSummary.Description>
+                  </SkillSetupSummary.Content>
+                  <SkillSetupSummary.Action>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label="Manage skill agents"
+                      onClick={() =>
+                        navigate(
+                          generatePath(routes.skillAgents, { id: skill.id }),
+                        )
+                      }
+                    >
+                      Manage
+                    </Button>
+                  </SkillSetupSummary.Action>
+                </SkillSetupSummary.Card>
+              ) : appliedAgentCount > 0 ? (
+                <SkillSetupSummary.Card>
+                  <SkillSetupSummary.Icon className="bg-[var(--component-colours-color-fg-success)]">
+                    <CircleCheck aria-hidden="true" className="size-4" />
+                  </SkillSetupSummary.Icon>
+                  <SkillSetupSummary.Content>
+                    <SkillSetupSummary.Title>
+                      Applied to agents
+                    </SkillSetupSummary.Title>
+                    <SkillSetupSummary.Description>
+                      Applied
+                    </SkillSetupSummary.Description>
+                  </SkillSetupSummary.Content>
+                  <SkillSetupSummary.Action>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label="Manage skill agents"
+                      onClick={() =>
+                        navigate(
+                          generatePath(routes.skillAgents, { id: skill.id }),
+                        )
+                      }
+                    >
+                      Manage
+                    </Button>
+                  </SkillSetupSummary.Action>
+                </SkillSetupSummary.Card>
+              ) : (
+                <SkillSetupSummary.Card>
+                  <SkillSetupSummary.Icon className="bg-[var(--colors-gray-100)] text-[var(--colors-gray-500)]">
+                    <Users aria-hidden="true" className="size-4" />
+                  </SkillSetupSummary.Icon>
+                  <SkillSetupSummary.Content>
+                    <SkillSetupSummary.Title>
+                      Applied to agents
+                    </SkillSetupSummary.Title>
+                    <SkillSetupSummary.Description className="text-[var(--component-colours-color-fg-warning)]">
+                      Required to run
+                    </SkillSetupSummary.Description>
+                  </SkillSetupSummary.Content>
+                  <SkillSetupSummary.Action>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label="Apply skill to agents"
+                      onClick={() =>
+                        navigate(
+                          generatePath(routes.skillAgents, { id: skill.id }),
+                        )
+                      }
+                    >
+                      Apply
+                    </Button>
+                  </SkillSetupSummary.Action>
+                </SkillSetupSummary.Card>
+              )}
+            </SkillSetupSummary.Root>
             <Tabs defaultValue="skill" className="min-w-0 gap-4">
               <TabsList
                 variant="line"
@@ -155,9 +369,23 @@ export default function SkillDetail() {
                 </TabsTrigger>
                 <TabsTrigger value="mcp-capabilities" className="px-4">
                   MCP capabilities
+                  <Badge
+                    variant="secondary"
+                    size="sm"
+                    className="min-w-5 justify-center rounded-full border-[var(--structure-color-border-primary)]"
+                  >
+                    {capabilityCount}
+                  </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="applied-agents" className="px-4">
                   Applied to agents
+                  <Badge
+                    variant="secondary"
+                    size="sm"
+                    className="min-w-5 justify-center rounded-full border-[var(--structure-color-border-primary)]"
+                  >
+                    {agentTabCount}
+                  </Badge>
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="skill" className="mt-0">

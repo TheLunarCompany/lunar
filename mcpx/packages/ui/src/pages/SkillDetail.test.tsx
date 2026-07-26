@@ -64,6 +64,10 @@ describe("SkillDetail", () => {
           <Routes>
             <Route path="/skills/:id" element={<SkillDetail />} />
             <Route
+              path="/skills/:id/edit"
+              element={<div>Skill editor route</div>}
+            />
+            <Route
               path="/skills/:id/capabilities"
               element={<div>Capabilities editor route</div>}
             />
@@ -138,10 +142,10 @@ describe("SkillDetail", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Skill" })).toBeInTheDocument();
     expect(
-      screen.getByRole("tab", { name: "MCP capabilities" }),
+      screen.getByRole("tab", { name: "MCP capabilities 0" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("tab", { name: "Applied to agents" }),
+      screen.getByRole("tab", { name: "Applied to agents 0" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
@@ -155,6 +159,127 @@ describe("SkillDetail", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the empty setup checklist and zero tab counts", () => {
+    renderSkillDetail("/skills/0190a000-0000-7000-8000-000000000001");
+
+    const setup = screen.getByRole("region", { name: "Skill setup" });
+    expect(setup).toBeInTheDocument();
+    expect(screen.getByText("Added · SKILL.md")).toBeInTheDocument();
+    expect(screen.getByText("optional for some skills")).toBeInTheDocument();
+    expect(screen.getByText("Required to run")).toBeInTheDocument();
+    expect(
+      within(setup).getByRole("button", { name: "Add MCP capabilities" }),
+    ).toBeInTheDocument();
+    expect(
+      within(setup).getByRole("button", { name: "Apply skill to agents" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "MCP capabilities 0" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Applied to agents 0" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows configured setup states and their tab counts", () => {
+    const skillId = "0190a000-0000-7000-8000-000000000001";
+    vi.mocked(useSkill).mockReturnValue({
+      data: {
+        id: skillId,
+        name: "existing",
+        description: "Existing description",
+        body: "# Existing instructions",
+        exposeAsPrompt: true,
+        author: { setupOwnerId: "o", displayName: "Amir" },
+        capabilityGroup: {
+          items: [
+            {
+              catalogItemId: "0190a000-0000-7000-8000-000000000010",
+              tools: ["browser_open"],
+              prompts: ["browser_plan"],
+            },
+          ],
+        },
+        updatedAt: new Date("2026-06-29T10:00:00.000Z"),
+      },
+      isLoading: false,
+      isError: false,
+    } as never);
+    vi.mocked(useEnabledSkills).mockReturnValue({
+      data: [
+        {
+          subject: { kind: "consumerTag", value: "engineering" },
+          skillIds: [skillId],
+        },
+        {
+          subject: { kind: "clientName", value: "reviewer" },
+          skillIds: [skillId],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    renderSkillDetail(`/skills/${skillId}`);
+
+    expect(screen.getByText("Added", { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText("Applied", { selector: "p" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "MCP capabilities 2" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Applied to agents 2" }),
+    ).toBeInTheDocument();
+  });
+
+  it("navigates from each setup action to its editor", async () => {
+    const user = userEvent.setup();
+    const skillId = "0190a000-0000-7000-8000-000000000001";
+
+    const firstRender = renderSkillDetail(`/skills/${skillId}`);
+    await user.click(
+      screen.getByRole("button", { name: "Edit skill instructions" }),
+    );
+    expect(screen.getByText("Skill editor route")).toBeInTheDocument();
+    firstRender.unmount();
+
+    const secondRender = renderSkillDetail(`/skills/${skillId}`);
+    await user.click(
+      screen.getByRole("button", { name: "Add MCP capabilities" }),
+    );
+    expect(screen.getByText("Capabilities editor route")).toBeInTheDocument();
+    secondRender.unmount();
+
+    renderSkillDetail(`/skills/${skillId}`);
+    await user.click(
+      screen.getByRole("button", { name: "Apply skill to agents" }),
+    );
+    expect(screen.getByText("Skill agents editor route")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["loading", { data: undefined, isLoading: true, isError: false }],
+    ["error", { data: undefined, isLoading: false, isError: true }],
+  ] as const)(
+    "does not claim zero agents while the agent query is %s",
+    (state, result) => {
+      vi.mocked(useEnabledSkills).mockReturnValue(result as never);
+
+      renderSkillDetail("/skills/0190a000-0000-7000-8000-000000000001");
+
+      expect(screen.queryByText("Required to run")).not.toBeInTheDocument();
+      expect(screen.queryByText("Applied")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Manage skill agents" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          state === "loading" ? "Loading agents…" : "Unable to load agents.",
+        ),
+      ).toBeInTheDocument();
+    },
+  );
+
   it("renders Applied to agents read-only and navigates to its editor", async () => {
     const user = userEvent.setup();
     const skillId = "0190a000-0000-7000-8000-000000000001";
@@ -166,7 +291,7 @@ describe("SkillDetail", () => {
     } as never);
 
     renderSkillDetail(`/skills/${skillId}`);
-    await user.click(screen.getByRole("tab", { name: "Applied to agents" }));
+    await user.click(screen.getByRole("tab", { name: "Applied to agents 1" }));
 
     expect(screen.getByText("engineering")).toBeInTheDocument();
     expect(screen.getByText("Not currently connected")).toBeInTheDocument();
@@ -216,7 +341,7 @@ describe("SkillDetail", () => {
 
     renderSkillDetail("/skills/0190a000-0000-7000-8000-000000000001");
 
-    await user.click(screen.getByRole("tab", { name: "MCP capabilities" }));
+    await user.click(screen.getByRole("tab", { name: "MCP capabilities 1" }));
 
     await waitFor(() => {
       expect(screen.getByText("Linked MCP capabilities")).toBeInTheDocument();
@@ -229,7 +354,7 @@ describe("SkillDetail", () => {
 
     renderSkillDetail("/skills/0190a000-0000-7000-8000-000000000001");
 
-    await user.click(screen.getByRole("tab", { name: "MCP capabilities" }));
+    await user.click(screen.getByRole("tab", { name: "MCP capabilities 0" }));
     await user.click(screen.getByRole("button", { name: "Edit" }));
 
     expect(screen.getByText("Capabilities editor route")).toBeInTheDocument();

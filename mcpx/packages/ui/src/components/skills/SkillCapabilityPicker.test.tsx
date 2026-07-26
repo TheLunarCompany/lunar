@@ -192,8 +192,14 @@ describe("SkillCapabilityPicker", () => {
     expect(
       within(githubSection).getByText("Find repositories by owner and topic"),
     ).toBeVisible();
-    expect(within(githubSection).getByText("READ ONLY")).toBeVisible();
-    expect(within(githubSection).getByText("DESTRUCTIVE")).toBeVisible();
+    expect(within(githubSection).getByText("READ ONLY")).toHaveAttribute(
+      "data-size",
+      "xs",
+    );
+    expect(within(githubSection).getByText("DESTRUCTIVE")).toHaveAttribute(
+      "data-size",
+      "xs",
+    );
     expect(within(githubSection).getByText("write_pull_request")).toBeVisible();
   });
 

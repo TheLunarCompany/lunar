@@ -452,12 +452,12 @@ function CapabilityItemRowView({
             {item.name}
           </span>
           {item.annotations?.readOnlyHint === true && (
-            <Badge variant="success" size="sm">
+            <Badge variant="success" size="xs">
               READ ONLY
             </Badge>
           )}
           {item.annotations?.destructiveHint === true && (
-            <Badge variant="danger" size="sm">
+            <Badge variant="danger" size="xs">
               DESTRUCTIVE
             </Badge>
           )}

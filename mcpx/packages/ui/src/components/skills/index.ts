@@ -33,6 +33,7 @@ export { SkillForm } from "./SkillForm";
 export { SkillLinkedCapabilities } from "./SkillLinkedCapabilities";
 export * as SkillPage from "./SkillPage";
 export { SkillSectionCard } from "./SkillSectionCard";
+export { SkillSetupSummary } from "./SkillSetupSummary";
 export { SkillsHeader } from "./SkillsHeader";
 export { SkillsGrid } from "./SkillsGrid";
 

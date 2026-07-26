@@ -5,10 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { SkillInput } from "@mcpx/shared-model";
-import { Code2, Eye, FileText, Loader2 } from "lucide-react";
+import { Code2, Eye, FileText, Info, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { SkillSectionCard } from "./SkillSectionCard";
@@ -134,7 +140,28 @@ export function SkillForm({
             control={control}
             render={({ field }) => (
               <div className="flex items-center justify-between gap-4 rounded-md border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-app)] px-3 py-2">
-                <Label htmlFor="skill-expose-as-prompt">Expose as prompt</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="skill-expose-as-prompt">
+                    Expose as slash command
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="About slash commands"
+                          className="rounded-full p-0.5 text-[var(--text-colours-color-text-secondary)] transition-colors hover:text-[var(--text-colours-color-text-primary)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        >
+                          <Info aria-hidden="true" className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" sideOffset={6}>
+                        When enabled, agents can invoke this skill as a slash
+                        command.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Switch
                   id="skill-expose-as-prompt"
                   checked={field.value}

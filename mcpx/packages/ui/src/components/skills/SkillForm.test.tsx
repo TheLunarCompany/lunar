@@ -75,7 +75,9 @@ describe("SkillForm", () => {
     fireEvent.change(screen.getByLabelText("Markdown body"), {
       target: { value: "# My skill" },
     });
-    await user.click(screen.getByRole("switch", { name: "Expose as prompt" }));
+    await user.click(
+      screen.getByRole("switch", { name: "Expose as slash command" }),
+    );
     await user.click(screen.getByRole("button", { name: "Create skill" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
@@ -85,6 +87,20 @@ describe("SkillForm", () => {
       body: "# My skill",
       exposeAsPrompt: false,
     });
+  });
+
+  it("explains slash commands with an info tooltip", async () => {
+    const user = userEvent.setup();
+    render(<SkillForm submitLabel="Create skill" onSubmit={vi.fn()} />);
+
+    const infoButton = screen.getByRole("button", {
+      name: "About slash commands",
+    });
+    await user.hover(infoButton);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "When enabled, agents can invoke this skill as a slash command.",
+    );
   });
 
   it("shows validation errors and does not submit when empty", async () => {
@@ -203,7 +219,7 @@ describe("SkillForm", () => {
     );
     expect(screen.getByLabelText("Markdown body")).toHaveValue("# Existing");
     expect(
-      screen.getByRole("switch", { name: "Expose as prompt" }),
+      screen.getByRole("switch", { name: "Expose as slash command" }),
     ).toBeChecked();
   });
 
@@ -221,7 +237,9 @@ describe("SkillForm", () => {
       within(detailsSection).getByLabelText("Short description"),
     ).toBeInTheDocument();
     expect(
-      within(detailsSection).getByRole("switch", { name: "Expose as prompt" }),
+      within(detailsSection).getByRole("switch", {
+        name: "Expose as slash command",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -263,7 +281,7 @@ describe("SkillForm", () => {
     );
 
     expect(
-      screen.getByRole("switch", { name: "Expose as prompt" }),
+      screen.getByRole("switch", { name: "Expose as slash command" }),
     ).not.toBeChecked();
 
     await user.click(screen.getByRole("button", { name: "Save changes" }));

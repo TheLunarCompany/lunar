@@ -3,7 +3,6 @@ import GitBranchIcon from "@/components/capabilities/icons/git-branch-01.svg?rea
 import PromptIcon from "@/components/capabilities/icons/prompt.svg?react";
 import { Button } from "@/components/ui/button";
 import ServerIconSvg from "@/icons/server_icon.svg?react";
-import { cn } from "@/lib/utils";
 import type { SkillCapabilityGroup, SystemState } from "@mcpx/shared-model";
 import type { CatalogMCPServerConfigByNameList } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { Pencil, Unplug } from "lucide-react";
@@ -61,15 +60,11 @@ export function SkillLinkedCapabilities({
   if (providers.length === 0) {
     if (showEmptyState) {
       return (
-        <section
-          className={cn(
-            "overflow-hidden rounded-xl border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] shadow-sm",
-            className,
-          )}
-          {...props}
-        >
-          {onEdit ? (
-            <div className="flex justify-end border-b border-[var(--colors-gray-200)] bg-[var(--colors-gray-100)] px-4 py-3">
+        <SkillSectionCard
+          icon={<Unplug className="size-4" />}
+          title="Linked MCP capabilities"
+          actions={
+            onEdit ? (
               <Button
                 type="button"
                 variant="outline"
@@ -79,8 +74,12 @@ export function SkillLinkedCapabilities({
                 <Pencil />
                 Edit
               </Button>
-            </div>
-          ) : null}
+            ) : null
+          }
+          className={className}
+          contentClassName="bg-[var(--colors-gray-50)]"
+          {...props}
+        >
           <div className="flex min-h-80 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
             <span aria-hidden="true">
               <ServerIconSvg className="h-40 w-auto" />
@@ -96,7 +95,7 @@ export function SkillLinkedCapabilities({
               </p>
             </div>
           </div>
-        </section>
+        </SkillSectionCard>
       );
     }
 
