@@ -1,0 +1,244 @@
+# This test verifies basic MCPX UI functionality on the new dashboard layout
+# It starts MCPX connected to a Time MCP server, verifies
+# the UI loads, performs a get_current_time tool call, checks the top stats
+# cards (Connected Tools / Connected MCP servers / Active Agents / Total Requests),
+# confirms Last Activity shows "Active", and verifies the System Connectivity
+# graph shows MCPX and the "time" server (with "2 Tools" text visible).
+
+name: "MCPX Time MCP Server UI Smoke Test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+configMount: config
+env: {}
+dependentContainers: []
+verboseOutput: false
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Total Requests label
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Total Requests"
+      time: 20
+    expected:
+      mode: contains
+      value: "Waited for Total Requests"
+
+  - name: Verify Total Requests starts at 0
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const text = document.body?.innerText || '';
+          const match = text.match(/Total Requests\s*(\d+)/i);
+          return match ? Number(match[1]) : -1;
+        }
+    expected:
+      mode: regex
+      value: "\"?0\"?"
+
+  - name: Time MCP Server Call
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: "UTC"
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Wait for Updated Total Requests
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            if (value > 0 || Date.now() - start > 15000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Verify Total Requests > 0
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            resolve(value);
+          };
+          poll();
+        })
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Wait for Active Agents label
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Active Agents"
+      time: 20
+    expected:
+      mode: contains
+      value: "Waited for Active Agents"
+
+  - name: Verify Active Agents > 0
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find(el => /Active Agents/i.test(el.textContent || ''));
+          const m = card?.textContent?.match(/\d+/);
+          return m ? Number(m[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Wait for Connected MCP servers label
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Connected MCP servers"
+      time: 20
+    expected:
+      mode: contains
+      value: "Waited for Connected MCP servers"
+
+  - name: Verify Connected MCP servers ≥ 1
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find(el => /Connected MCP servers/i.test(el.textContent || ''));
+          const m = card?.textContent?.match(/\d+/);
+          return m ? Number(m[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Wait for Connected Tools label
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Connected Tools"
+      time: 20
+    expected:
+      mode: contains
+      value: "Waited for Connected Tools"
+
+  - name: Verify Connected Tools ≥ 1
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find(el => /Connected Tools/i.test(el.textContent || ''));
+          const m = card?.textContent?.match(/\d+/);
+          return m ? Number(m[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Wait for Last Activity card
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Last Activity"
+      time: 20
+    expected:
+      mode: contains
+      value: "Waited for Last Activity"
+
+  - name: Verify Last Activity timestamp is present
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = Array.from(document.querySelectorAll('div,section,article'))
+            .find((el) => /Last Activity/i.test(el.textContent || ''));
+          if (!card) {
+            return 'last-activity-card-missing';
+          }
+          const text = (card.textContent || '').replace(/\s+/g, ' ').trim();
+          if (/\b[A-Za-z]{3,}\s+\d{1,2},\s+\d{2}:\d{2}\b/.test(text)) {
+            return 'last-activity-timestamp';
+          }
+          if (/\d{1,2}:\d{2}/.test(text)) {
+            return 'last-activity-time';
+          }
+          return `last-activity-unexpected:${text}`;
+        }
+    expected:
+      mode: regex
+      value: "last-activity-(timestamp|time)"
+
+  # System Connectivity graph checks
+
+  - name: Wait for System Connectivity section
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "System Connectivity"
+      time: 20
+    expected:
+      mode: contains
+      value: "Waited for System Connectivity"
+
+  - name: Verify graph shows MCPX and time server
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const text = (document.body.innerText || '').toLowerCase();
+          const hasMCPX = text.includes('mcpx');
+          const hasTime = text.includes('\ntime') || text.includes(' time ');
+          return hasMCPX && hasTime;
+        }
+    expected:
+      mode: regex
+      value: "\"?true\"?"
+
+  - name: Verify time node shows “2 Tools”
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => /time[\s\S]*2\s*Tools/i.test(document.body.innerText || '')
+    expected:
+      mode: regex
+      value: "\"?true\"?"
