@@ -14,6 +14,7 @@ type McpServerCatalogCardProps = {
   className?: string;
   checkboxDisabled?: boolean;
   isAdding?: boolean;
+  selectionDisabled?: boolean;
 };
 
 export function McpServerCatalogCard({
@@ -24,12 +25,13 @@ export function McpServerCatalogCard({
   className = "",
   checkboxDisabled = false,
   isAdding = false,
+  selectionDisabled = false,
 }: McpServerCatalogCardProps) {
   const isInstalled = checkboxDisabled;
   const showCheckbox = onCheckedChange != null && !isInstalled;
   const isSelected =
     isInstalled || (showCheckbox && (checked ?? false)) || selected;
-  const interactive = showCheckbox && !isAdding;
+  const interactive = showCheckbox && !isAdding && !selectionDisabled;
 
   const toggleSelection = (): void => {
     if (!interactive) return;
@@ -58,6 +60,7 @@ export function McpServerCatalogCard({
     <div onClick={(event) => event.stopPropagation()}>
       <Checkbox
         checked={checked ?? false}
+        disabled={selectionDisabled}
         onCheckedChange={(nextChecked) =>
           onCheckedChange?.(nextChecked === true)
         }
@@ -77,7 +80,9 @@ export function McpServerCatalogCard({
       tabIndex={interactive ? 0 : undefined}
       role={interactive ? "button" : undefined}
       aria-pressed={interactive ? isSelected : undefined}
-      aria-disabled={isInstalled || isAdding ? true : undefined}
+      aria-disabled={
+        isInstalled || isAdding || selectionDisabled ? true : undefined
+      }
     />
   );
 }

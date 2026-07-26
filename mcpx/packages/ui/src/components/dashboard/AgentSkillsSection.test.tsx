@@ -15,7 +15,7 @@ const skills = [
     description: "Review pull requests.",
     href: "/skills/skill-1",
     providers: [
-      { name: "Context7" },
+      { name: "Context7", isMissingOrInactive: false },
       { name: "GitHub", isMissingOrInactive: true },
     ],
   },

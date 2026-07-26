@@ -266,6 +266,7 @@ function skill(id: string, name: string): Skill {
     exposeAsPrompt: true,
     author: { setupOwnerId: "owner-1", displayName: "Owner" },
     updatedAt: new Date("2026-07-14T00:00:00.000Z"),
+    publishedAt: null,
   };
 }
 

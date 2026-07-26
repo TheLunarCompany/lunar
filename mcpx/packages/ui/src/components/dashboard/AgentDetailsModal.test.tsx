@@ -167,6 +167,7 @@ const assignedSkill = {
   exposeAsPrompt: true,
   author: { setupOwnerId: "owner-1", displayName: "Owner" },
   updatedAt: new Date("2026-07-14T00:00:00.000Z"),
+  publishedAt: null,
   capabilityGroup: {
     items: [
       { catalogItemId: "catalog-1", tools: ["list_issues"], prompts: [] },

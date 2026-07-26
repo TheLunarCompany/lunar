@@ -105,6 +105,40 @@ describe("McpServerAdd", () => {
     );
   });
 
+  it("locks all selection controls while an add batch is pending", async () => {
+    const user = userEvent.setup();
+    const githubRequest = deferred<{ name: string }>();
+    mocks.addServerAsync.mockReturnValueOnce(githubRequest.promise);
+    renderPage();
+
+    await user.click(screen.getByRole("checkbox", { name: "Select GitHub" }));
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(mocks.addServerAsync).toHaveBeenCalledTimes(1));
+
+    const linearCheckbox = screen.getByRole("checkbox", {
+      name: "Select Linear",
+    });
+    expect(linearCheckbox).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Select visible" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Clear visible" }),
+    ).toBeDisabled();
+
+    await user.click(linearCheckbox);
+    expect(linearCheckbox).not.toBeChecked();
+
+    await act(async () => {
+      githubRequest.resolve({ name: "github" });
+      await githubRequest.promise;
+    });
+
+    expect(await screen.findByText("MCP servers route")).toBeInTheDocument();
+    expect(mocks.addServerAsync).toHaveBeenCalledTimes(1);
+  });
+
   it("stays on the page after a partial failure and preserves failed selection", async () => {
     const user = userEvent.setup();
     mocks.addServerAsync

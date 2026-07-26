@@ -30,6 +30,7 @@ const skill: Skill = {
     ],
   },
   updatedAt: new Date("2026-06-29T10:00:00.000Z"),
+  publishedAt: null,
 };
 
 function renderCard(

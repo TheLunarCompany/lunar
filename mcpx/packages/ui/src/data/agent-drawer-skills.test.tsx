@@ -45,7 +45,7 @@ describe("useAgentDrawerSkillsData", () => {
 
   it("only reports skill loading and errors for the Skills section state", () => {
     vi.mocked(useSkills).mockReturnValue(
-      queryResult<Skill>([], { isLoading: true }),
+      queryResult<Skill[]>([], { isLoading: true }),
     );
     vi.mocked(useEnabledSkills).mockReturnValue(queryResult([]));
     vi.mocked(useGetMCPServers).mockReturnValue(

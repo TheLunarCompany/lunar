@@ -32,6 +32,7 @@ const skills: Skill[] = [
     exposeAsPrompt: true,
     author: { setupOwnerId: "o", displayName: "Amir" },
     updatedAt: new Date("2026-06-29T10:00:00.000Z"),
+    publishedAt: null,
   },
 ];
 

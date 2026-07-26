@@ -12,7 +12,9 @@ function catalogServer(
     Pick<CatalogMCPServerConfigByNameItem, "id" | "name" | "displayName">,
 ): CatalogMCPServerConfigByNameItem {
   return {
-    config: { [overrides.name]: { command: "cmd", args: [] } },
+    config: {
+      [overrides.name]: { type: "stdio", command: "npx", args: [] },
+    },
     description: "",
     ...overrides,
   };

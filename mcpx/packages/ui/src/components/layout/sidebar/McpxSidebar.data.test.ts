@@ -70,6 +70,34 @@ describe("getDefaultMcpxSidebarSections", () => {
     );
   });
 
+  it.each([false, true])(
+    "includes Tools when the sidebar restructure flag is %s",
+    async (isSidebarRestructureEnabled) => {
+      vi.doMock("@/config/runtime-config", () => ({
+        isCapabilitiesEnabled: () => false,
+        isSkillsPageEnabled: () => false,
+        isUiSidebarRestructureEnabled: () => isSidebarRestructureEnabled,
+      }));
+      const { getDefaultMcpxSidebarSections } = await import(
+        "./McpxSidebar.data"
+      );
+
+      const items = getDefaultMcpxSidebarSections().flatMap(
+        (section) => section.items,
+      );
+
+      expect(items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "tools",
+            label: "Tools",
+            url: "/tools",
+          }),
+        ]),
+      );
+    },
+  );
+
   it("uses the restructured sections when the sidebar restructure flag is enabled", async () => {
     vi.doMock("@/config/runtime-config", () => ({
       isCapabilitiesEnabled: () => true,
@@ -88,6 +116,7 @@ describe("getDefaultMcpxSidebarSections", () => {
       items: [
         expect.objectContaining({ id: "dashboard", label: "Dashboard" }),
         expect.objectContaining({ id: "mcp-servers", label: "MCP Servers" }),
+        expect.objectContaining({ id: "tools", label: "Tools" }),
         expect.objectContaining({ id: "skills", label: "Skills" }),
         expect.objectContaining({ id: "saved-setups", label: "Saved Setups" }),
         expect.objectContaining({ id: "audit-log", label: "Audit Log" }),
@@ -122,7 +151,7 @@ describe("getDefaultMcpxSidebarSections", () => {
     expect(skillsItem?.icon).toBe(Sparkles);
   });
 
-  it("points MCP Registry to the existing catalog route", async () => {
+  it("points MCP Registry to its dedicated route", async () => {
     vi.doMock("@/config/runtime-config", () => ({
       isCapabilitiesEnabled: () => false,
       isSkillsPageEnabled: () => false,
@@ -137,7 +166,7 @@ describe("getDefaultMcpxSidebarSections", () => {
       .find((item) => item.id === "mcp-registry");
 
     expect(registryItem).toEqual(
-      expect.objectContaining({ label: "MCP Registry", url: "/catalog" }),
+      expect.objectContaining({ label: "MCP Registry", url: "/mcp-registry" }),
     );
   });
 });

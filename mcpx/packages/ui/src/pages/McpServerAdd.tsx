@@ -324,7 +324,7 @@ export default function McpServerAdd() {
             variant="outline"
             size="sm"
             onClick={handleSelectVisible}
-            disabled={!canSelectVisible}
+            disabled={isAdding || !canSelectVisible}
           >
             Select visible
           </Button>
@@ -333,7 +333,7 @@ export default function McpServerAdd() {
             variant="ghost"
             size="sm"
             onClick={handleClearVisible}
-            disabled={!canClearVisible}
+            disabled={isAdding || !canClearVisible}
           >
             Clear visible
           </Button>
@@ -376,6 +376,7 @@ export default function McpServerAdd() {
                   className={isAdded ? "cursor-default" : ""}
                   checkboxDisabled={isAdded}
                   isAdding={addingServerIds.has(server.id)}
+                  selectionDisabled={isAdding}
                 />
               );
             })}

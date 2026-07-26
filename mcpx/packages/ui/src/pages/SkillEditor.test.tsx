@@ -511,6 +511,7 @@ function existingSkill(overrides: Partial<Skill> = {}): Skill {
     exposeAsPrompt: true,
     author: { setupOwnerId: "o", displayName: "Amir" },
     updatedAt: new Date("2026-07-07T00:00:00.000Z"),
+    publishedAt: overrides.publishedAt ?? null,
     ...overrides,
   };
 }

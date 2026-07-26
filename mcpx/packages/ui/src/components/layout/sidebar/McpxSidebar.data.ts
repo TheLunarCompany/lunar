@@ -86,6 +86,12 @@ function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
       icon: Server,
       url: routes.mcpServers,
     },
+    {
+      id: "tools",
+      label: "Tools",
+      icon: Hammer,
+      url: routes.tools,
+    },
   ];
 
   if (isSkillsPageEnabled()) {
