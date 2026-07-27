@@ -795,6 +795,216 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
     doc: "https://posthog.com/docs/model-context-protocol",
     config: { type: "streamable-http", url: "https://mcp.posthog.com/mcp" },
   },
+  {
+    name: "zoom",
+    displayName: "Zoom",
+    description:
+      "Zoom MCP servers using the Static OAuth flow and map to specific Zoom product areas, such as Meetings, Chat, or Whiteboard. External MCP clients (AI agents) connect to Zoom MCP servers, and enable users to interact with Zoom resources through natural language-for example, to schedule meetings, generate summaries, and automate Zoom workflows.",
+    doc: "https://developers.zoom.us/docs/mcp/servers/connect-to-zoom-mcp-servers/",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.zoom.us/mcp/zoom/streamable",
+    },
+  },
+  {
+    name: "excalidraw",
+    displayName: "Excalidraw",
+    description:
+      "Excalidraw creates interactive hand-drawn diagrams from assistant conversations. Its MCP connector gives users a way to turn ideas, flows, and sketches into editable visual diagrams inside Excalidraw.",
+    doc: "https://mcpservers.org/remote-mcp-servers/excalidraw-app-demo",
+    config: {
+      type: "streamable-http",
+      url: "https://excalidraw-mcp-app.vercel.app/mcp",
+    },
+  },
+  {
+    name: "netlify",
+    displayName: "Netlify",
+    description:
+      "Connect to the Netlify MCP server to equip your agent with the best of Netlify expertise and the Netlify CLI.",
+    doc: "https://docs.netlify.com/build/build-with-ai/agent-setup-guides/agent-setup-overview/",
+    config: {
+      type: "streamable-http",
+      url: "https://netlify-mcp.netlify.app/mcp",
+    },
+  },
+  {
+    name: "base44",
+    displayName: "Base44",
+    description:
+      "The Base44 MCP server exposes your Base44 account to any MCP-compatible AI assistant. Once connected, you can describe what you want to build or change and the AI will create or update projects on your behalf. Note: requires setting the redirect URI.",
+    doc: "https://docs.base44.com/developers/backend/overview/mcp-server",
+    config: {
+      type: "streamable-http",
+      url: "https://app.base44.com/mcp",
+    },
+  },
+  {
+    name: "minimax",
+    displayName: "MiniMax",
+    description:
+      "MiniMax MCP provides image generation, video generation, text-to-speech, and more.",
+    link: "https://github.com/MiniMax-AI/MiniMax-MCP-JS",
+    config: {
+      type: "stdio",
+      command: "uvx",
+      args: ["minimax-mcp", "-y"],
+      env: {
+        MINIMAX_API_KEY: { kind: "required", isSecret: false },
+        MINIMAX_MCP_BASE_PATH: {
+          kind: "required",
+          prefilled: "local-output-dir-path, such as /User/xxx/Desktop",
+          isSecret: false,
+        },
+        MINIMAX_API_HOST: {
+          kind: "optional",
+          prefilled: "https://api.minimax.io | https://api.minimaxi.com",
+          isSecret: false,
+        },
+        MINIMAX_API_RESOURCE_MODE: {
+          kind: "optional",
+          prefilled: "local-url",
+          isSecret: false,
+        },
+      },
+    },
+  },
+  {
+    name: "context7-remote",
+    displayName: "Context7 (Remote)",
+    description:
+      "Context7 brings up-to-date, version-specific library documentation into your AI coding assistant.",
+    doc: "https://context7.com/docs/resources/all-clients#cursor",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.context7.com/mcp",
+      headers: { CONTEXT7_API_KEY: { fromEnv: "YOUR_API_KEY" } },
+    },
+  },
+  {
+    name: "neon",
+    displayName: "Neon",
+    description:
+      "Neon integrates with AI coding tools and agents through MCP. Pick your editor for setup and integration details.",
+    doc: "https://neon.com/guides/cursor-mcp-neon",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.neon.tech/mcp",
+    },
+  },
+  {
+    name: "parallel",
+    displayName: "Parallel",
+    description:
+      "The Parallel MCP Servers expose Parallel APIs to AI assistants and large language model (LLM) workflows, delivering high-quality, relevant results from the web while optimizing for the price-performance balance your AI applications need at scale.",
+    doc: "https://docs.parallel.ai/integrations/mcp/quickstart",
+    config: {
+      type: "streamable-http",
+      url: "https://task-mcp.parallel.ai/mcp",
+    },
+  },
+  {
+    name: "supabase",
+    displayName: "Supabase",
+    description:
+      "Once connected, your AI assistants can interact with and query your Supabase projects on your behalf.",
+    doc: "https://supabase.com/docs/guides/ai-tools/mcp",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.supabase.com/mcp?features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching",
+    },
+  },
+  {
+    name: "canva",
+    displayName: "Canva",
+    description:
+      "The Canva MCP server enables AI assistants to seamlessly interact with Canva's design capabilities. By exposing Canva's capabilities (including design creation and editing, asset and brand management, library search, export, and commenting) as MCP-compatible tools, you can give your users access to Canva's design capabilities through natural language, directly from the AI tools they already use.",
+    doc: "https://www.canva.dev/docs/mcp/",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.canva.com/mcp",
+    },
+  },
+  {
+    name: "amplitude",
+    displayName: "Amplitude",
+    description:
+      "Amplitude MCP exposes Amplitude analytics, taxonomy, and content as tools that an AI client (Cursor, Claude, ChatGPT, Codex, Gemini, and others) can call over OAuth. It reads and writes charts, dashboards, experiments, cohorts, events, and properties from natural-language prompts, so you query and edit product data without SQL or the Amplitude UI.",
+    doc: "https://amplitude.com/docs/amplitude-ai/amplitude-mcp",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.amplitude.com/mcp",
+    },
+  },
+  {
+    name: "calendly",
+    displayName: "Calendly",
+    description:
+      "You can connect Calendly to AI tools like Claude or ChatGPT to manage scheduling directly from your conversation. MCP powers this connection behind the scenes, so your AI tool can take actions in your Calendly account.",
+    doc: "https://calendly.com/help/connect-calendly-to-your-ai-tools",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.calendly.com",
+    },
+  },
+  {
+    name: "factset",
+    displayName: "FactSet",
+    description:
+      "AI-Ready Data MCP helps investment research, market data, application development, and GenAI product builders accelerate LLM-powered analytics, research automation, and intelligent workflow applications, by enabling direct interaction between large language models and FactSet content through standardized MCP tool interfaces.",
+    doc: "https://developer.factset.com/mcp/factset-ai-ready-data-mcp",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.factset.com/content/v1",
+    },
+  },
+  {
+    name: "grain",
+    displayName: "Grain",
+    description:
+      "Grain captures and enriches your meetings, then delivers them to Claude, ChatGPT, or any AI tool so your agents can do the work. Start recording in minutes.",
+    doc: "https://grain.com/release-note/06-18-2025",
+    config: {
+      type: "streamable-http",
+      url: "https://api.grain.com/_/mcp",
+    },
+  },
+  {
+    name: "honeycomb",
+    displayName: "Honeycomb",
+    description:
+      "Honeycomb provides observability data and SLO context for engineering teams. Its connector helps assistants query telemetry, explore service behavior, and reason about reliability questions using Honeycomb data.",
+    doc: "https://docs.honeycomb.io/integrations/mcp",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.honeycomb.io/mcp",
+    },
+  },
+  {
+    name: "next-devtools",
+    displayName: "Next.js DevTools",
+    description:
+      "The Model Context Protocol (MCP) is an open standard that allows AI agents and coding assistants to interact with your applications through a standardized interface.",
+    doc: "https://nextjs.org/docs/app/guides/mcp",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "next-devtools-mcp@latest"],
+      env: {},
+    },
+  },
+  {
+    name: "instacart-dev",
+    displayName: "Instacart (Dev)",
+    description:
+      "MCP lets your AI agent or LLM learn the input parameters needed for our APIs, and automatically generate the proper input to our MCP server.",
+    doc: "https://docs.instacart.com/developer_platform_api/guide/tutorials/mcp",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.dev.instacart.tools/mcp",
+      headers: { Authorization: "Bearer Token {{YOUR_TOKEN_HERE}}" },
+    },
+  },
 ];
 
 export const backendDefaultServers: CatalogMCPServerItem[] =
