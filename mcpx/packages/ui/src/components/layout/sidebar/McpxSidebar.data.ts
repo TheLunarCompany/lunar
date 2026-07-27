@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import {
   isCapabilitiesEnabled,
+  isMcpServersShown,
   isSkillsPageEnabled,
   isUiSidebarRestructureEnabled,
 } from "@/config/runtime-config";
@@ -80,19 +81,23 @@ function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
       icon: Gauge,
       url: routes.dashboard,
     },
-    {
+  ];
+
+  if (isMcpServersShown()) {
+    workspaceItems.push({
       id: "mcp-servers",
       label: "MCP Servers",
       icon: Server,
       url: routes.mcpServers,
-    },
-    {
-      id: "tools",
-      label: "Tools",
-      icon: Hammer,
-      url: routes.tools,
-    },
-  ];
+    });
+  }
+
+  workspaceItems.push({
+    id: "tools",
+    label: "Tools",
+    icon: Hammer,
+    url: routes.tools,
+  });
 
   if (isSkillsPageEnabled()) {
     workspaceItems.push({

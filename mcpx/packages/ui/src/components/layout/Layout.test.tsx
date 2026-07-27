@@ -57,6 +57,7 @@ vi.mock("@/hooks/useMcpxConnection", () => ({
 
 vi.mock("@/config/runtime-config", () => ({
   getRuntimeConfigSync: () => ({}),
+  isMcpServersShown: () => true,
   isSkillsPageEnabled: () => true,
   isUiSidebarRestructureEnabled: () => true,
 }));

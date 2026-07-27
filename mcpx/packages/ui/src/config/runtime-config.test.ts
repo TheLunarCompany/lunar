@@ -38,6 +38,36 @@ describe("runtime config feature helpers", () => {
     expect(isSkillsPageEnabled()).toBe(false);
   });
 
+  it("shows MCP Servers when the runtime flag is true", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          VITE_MCPX_SERVER_URL: "http://localhost:9000",
+          VITE_SHOW_MCP_SERVERS: "true",
+        }),
+      ),
+    );
+    const { isMcpServersShown, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isMcpServersShown()).toBe(true);
+  });
+
+  it("hides MCP Servers by default", async () => {
+    vi.stubEnv("VITE_SHOW_MCP_SERVERS", "false");
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("missing"));
+    const { isMcpServersShown, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isMcpServersShown()).toBe(false);
+  });
+
   it("enables the sidebar restructure when the runtime flag is true", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(

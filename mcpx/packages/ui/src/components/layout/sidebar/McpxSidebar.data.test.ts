@@ -77,6 +77,7 @@ describe("getDefaultMcpxSidebarSections", () => {
         isCapabilitiesEnabled: () => false,
         isSkillsPageEnabled: () => false,
         isUiSidebarRestructureEnabled: () => isSidebarRestructureEnabled,
+        isMcpServersShown: () => false,
       }));
       const { getDefaultMcpxSidebarSections } = await import(
         "./McpxSidebar.data"
@@ -103,6 +104,7 @@ describe("getDefaultMcpxSidebarSections", () => {
       isCapabilitiesEnabled: () => true,
       isSkillsPageEnabled: () => true,
       isUiSidebarRestructureEnabled: () => true,
+      isMcpServersShown: () => true,
     }));
     const { getDefaultMcpxSidebarSections } = await import(
       "./McpxSidebar.data"
@@ -138,6 +140,7 @@ describe("getDefaultMcpxSidebarSections", () => {
       isCapabilitiesEnabled: () => false,
       isSkillsPageEnabled: () => true,
       isUiSidebarRestructureEnabled: () => true,
+      isMcpServersShown: () => false,
     }));
     const { getDefaultMcpxSidebarSections } = await import(
       "./McpxSidebar.data"
@@ -151,11 +154,58 @@ describe("getDefaultMcpxSidebarSections", () => {
     expect(skillsItem?.icon).toBe(Sparkles);
   });
 
+  it("omits MCP Servers from restructured navigation when the flag is disabled", async () => {
+    vi.doMock("@/config/runtime-config", () => ({
+      isCapabilitiesEnabled: () => false,
+      isSkillsPageEnabled: () => false,
+      isUiSidebarRestructureEnabled: () => true,
+      isMcpServersShown: () => false,
+    }));
+    const { getDefaultMcpxSidebarSections } = await import(
+      "./McpxSidebar.data"
+    );
+
+    const items = getDefaultMcpxSidebarSections().flatMap(
+      (section) => section.items,
+    );
+
+    expect(items).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "mcp-servers" })]),
+    );
+  });
+
+  it("includes MCP Servers in restructured navigation when the flag is enabled", async () => {
+    vi.doMock("@/config/runtime-config", () => ({
+      isCapabilitiesEnabled: () => false,
+      isSkillsPageEnabled: () => false,
+      isUiSidebarRestructureEnabled: () => true,
+      isMcpServersShown: () => true,
+    }));
+    const { getDefaultMcpxSidebarSections } = await import(
+      "./McpxSidebar.data"
+    );
+
+    const items = getDefaultMcpxSidebarSections().flatMap(
+      (section) => section.items,
+    );
+
+    expect(items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "mcp-servers",
+          label: "MCP Servers",
+          url: "/mcp-servers",
+        }),
+      ]),
+    );
+  });
+
   it("points MCP Registry to its dedicated route", async () => {
     vi.doMock("@/config/runtime-config", () => ({
       isCapabilitiesEnabled: () => false,
       isSkillsPageEnabled: () => false,
       isUiSidebarRestructureEnabled: () => true,
+      isMcpServersShown: () => false,
     }));
     const { getDefaultMcpxSidebarSections } = await import(
       "./McpxSidebar.data"

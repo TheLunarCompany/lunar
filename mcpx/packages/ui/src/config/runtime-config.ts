@@ -15,6 +15,7 @@ export interface RuntimeConfig {
   VITE_ADD_SERVER_CHECKBOX: string;
   VITE_SHOW_SKILLS_PAGE: string;
   VITE_UI_SIDEBAR_RESTRUCTURE: string;
+  VITE_SHOW_MCP_SERVERS: string;
 }
 
 let cachedConfig: RuntimeConfig | null = null;
@@ -81,6 +82,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         VITE_SHOW_SKILLS_PAGE: import.meta.env.VITE_SHOW_SKILLS_PAGE || "false",
         VITE_UI_SIDEBAR_RESTRUCTURE:
           import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
+        VITE_SHOW_MCP_SERVERS: import.meta.env.VITE_SHOW_MCP_SERVERS || "false",
       };
 
       cachedConfig = fallbackConfig;
@@ -119,6 +121,7 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_SHOW_SKILLS_PAGE: import.meta.env.VITE_SHOW_SKILLS_PAGE || "false",
     VITE_UI_SIDEBAR_RESTRUCTURE:
       import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
+    VITE_SHOW_MCP_SERVERS: import.meta.env.VITE_SHOW_MCP_SERVERS || "false",
   };
 }
 
@@ -170,4 +173,9 @@ export function isSkillsPageEnabled(): boolean {
 export function isUiSidebarRestructureEnabled(): boolean {
   const config = getRuntimeConfigSync();
   return config.VITE_UI_SIDEBAR_RESTRUCTURE === "true";
+}
+
+export function isMcpServersShown(): boolean {
+  const config = getRuntimeConfigSync();
+  return config.VITE_SHOW_MCP_SERVERS === "true";
 }
