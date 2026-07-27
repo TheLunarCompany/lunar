@@ -13,4 +13,9 @@ export type McpxOAuthProviderI = Omit<OAuthClientProvider, "state"> & {
   getUserCode(): string | null; // Only for device flow
   /** Adds a scope discovered from auth server metadata (e.g. "offline_access") */
   setDiscoveredScope(scope: string): void;
+  /**
+   * Why CIMD is unavailable for this flow, for logging. Only the DCR provider
+   * can use CIMD, so the others leave this unimplemented.
+   */
+  clientMetadataSkipReason?(): string | undefined;
 };

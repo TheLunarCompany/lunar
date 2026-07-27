@@ -47,6 +47,44 @@ function originFallback(url: string): string | undefined {
   }
 }
 
+export interface ClientIdentityLog {
+  identity: string;
+  clientId: string | null;
+  serverSupportsCimd: boolean;
+  cimdUnavailable?: string;
+}
+
+/**
+ * Which client identity the request actually carried, read off the URL rather
+ * than inferred: a stored registration short-circuits the SDK, so capability
+ * alone can say "cimd" for a flow that sent an older DCR client id. Reports
+ * why whenever a server would have taken CIMD and did not get it.
+ */
+export function describeClientIdentity(params: {
+  provider: McpxOAuthProviderI;
+  authorizationUrl: URL;
+  authMeta: AuthorizationServerMeta | undefined;
+}): ClientIdentityLog {
+  const { provider, authorizationUrl, authMeta } = params;
+  const serverSupportsCimd =
+    authMeta?.client_id_metadata_document_supported === true;
+  const clientId = authorizationUrl.searchParams.get("client_id");
+  const usedCimd = Boolean(clientId) && clientId === provider.clientMetadataUrl;
+  return {
+    identity: usedCimd ? "cimd" : provider.type,
+    clientId,
+    serverSupportsCimd,
+    ...(serverSupportsCimd && !usedCimd
+      ? {
+          // Either we could not offer a document, or a stored registration won.
+          cimdUnavailable:
+            provider.clientMetadataSkipReason?.() ??
+            "reusing a stored client registration",
+        }
+      : {}),
+  };
+}
+
 /**
  * Represents a pending OAuth flow waiting for authorization code
  */
@@ -387,7 +425,10 @@ export class OAuthConnectionHandler {
 
     // Discover auth server metadata and request offline_access if supported,
     // so servers that support refresh tokens will issue one.
-    await this.applyDiscoveredScope(targetServer.url, authProvider);
+    const authMeta = await this.applyDiscoveredScope(
+      targetServer.url,
+      authProvider,
+    );
 
     // Create transport with auth provider - this will trigger OAuth flow
     const transport =
@@ -434,6 +475,8 @@ export class OAuthConnectionHandler {
           : `No authorization URL was produced for "${targetServer.name}".`,
       );
     }
+
+    this.logClientIdentity(authProvider, authorizationUrl, authMeta);
 
     // Store for later completion
     const client = buildClient(targetServer.name);
@@ -582,7 +625,7 @@ export class OAuthConnectionHandler {
   private async applyDiscoveredScope(
     serverUrl: string,
     provider: McpxOAuthProviderI,
-  ): Promise<void> {
+  ): Promise<AuthorizationServerMeta | undefined> {
     const { authMeta } = await this.discoverOAuthMetadata(serverUrl);
     if (authMeta?.scopes_supported?.includes("offline_access")) {
       provider.setDiscoveredScope("offline_access");
@@ -591,6 +634,18 @@ export class OAuthConnectionHandler {
         provider: provider.serverName,
       });
     }
+    return authMeta;
+  }
+
+  private logClientIdentity(
+    provider: McpxOAuthProviderI,
+    authorizationUrl: URL,
+    authMeta: AuthorizationServerMeta | undefined,
+  ): void {
+    this.logger.info("Resolved OAuth client identity", {
+      serverName: provider.serverName,
+      ...describeClientIdentity({ provider, authorizationUrl, authMeta }),
+    });
   }
 
   /**

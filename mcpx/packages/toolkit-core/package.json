@@ -44,6 +44,10 @@
     "./http": {
       "import": "./dist/http/index.js",
       "types": "./dist/http/index.d.ts"
+    },
+    "./oauth": {
+      "import": "./dist/oauth/index.js",
+      "types": "./dist/oauth/index.d.ts"
     }
   },
   "scripts": {

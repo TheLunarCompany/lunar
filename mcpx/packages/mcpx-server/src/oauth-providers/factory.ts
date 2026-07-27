@@ -1,4 +1,5 @@
 import { StaticOAuth } from "@mcpx/shared-model";
+import { CLIENT_NAME, CLIENT_URI } from "@mcpx/toolkit-core/oauth";
 import {
   resolveClientId,
   resolveClientCredentials,
@@ -40,9 +41,8 @@ export class OAuthProviderFactory {
     },
   ) {
     this.callbackPath = options.callbackPath || "/oauth/callback";
-    this.clientName = options.clientName || "mcpx-server";
-    this.clientUri =
-      options.clientUri || "https://github.com/lunar-private/mcpx";
+    this.clientName = options.clientName || CLIENT_NAME;
+    this.clientUri = options.clientUri || CLIENT_URI;
     this.softwareId = options.softwareId;
     this.softwareVersion = options.softwareVersion || "1.0.0";
     this.tokenStore = options.tokenStore;

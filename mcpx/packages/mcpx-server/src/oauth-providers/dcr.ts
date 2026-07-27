@@ -3,6 +3,12 @@ import {
   OAuthClientMetadata,
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
+import {
+  CLIENT_METADATA_PATH,
+  CLIENT_NAME,
+  CLIENT_URI,
+  clientRedirectUris,
+} from "@mcpx/toolkit-core/oauth";
 import { randomUUID } from "node:crypto";
 import { Logger } from "winston";
 import { env } from "../env.js";
@@ -44,9 +50,8 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
     this.serverName = options.serverName;
     this.callbackPath = options.callbackPath || "/oauth/callback";
     this.callbackUrl = options.callbackUrl;
-    this.clientName = options.clientName || "mcpx-server";
-    this.clientUri =
-      options.clientUri || "https://github.com/lunar-private/mcpx";
+    this.clientName = options.clientName || CLIENT_NAME;
+    this.clientUri = options.clientUri || CLIENT_URI;
     this.softwareId = options.softwareId || randomUUID();
     this.softwareVersion = options.softwareVersion || "1.0.0";
     this._state = randomUUID();
@@ -59,6 +64,48 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
       this.callbackUrl ||
       `${env.OAUTH_CALLBACK_BASE_URL || `http://127.0.0.1:${env.MCPX_PORT}`}${this.callbackPath}`
     );
+  }
+
+  /**
+   * Not "use CIMD", only "we can honor it if asked". The server decides: the
+   * SDK sends this as the client id only when it advertises
+   * `client_id_metadata_document_supported` (`client/auth.js`,
+   * shouldUseUrlBasedClientId), and runs DCR otherwise.
+   *
+   * Needs MCP SDK >= 1.23.0. `clientMetadataUrl` is optional on
+   * OAuthClientProvider, so an older SDK makes this dead code, not a type error.
+   *
+   * Pure: the call site logs the decision.
+   */
+  get clientMetadataUrl(): string | undefined {
+    return this.clientMetadataDecision().url;
+  }
+
+  /** Why CIMD is unavailable, for the call site to log. Undefined when it is. */
+  clientMetadataSkipReason(): string | undefined {
+    return this.clientMetadataDecision().skipReason;
+  }
+
+  private clientMetadataDecision(): { url?: string; skipReason?: string } {
+    // Only the router serves the document, and it only runs in enterprise.
+    if (!env.IS_ENTERPRISE) {
+      return { skipReason: "not an enterprise instance" };
+    }
+
+    const baseUrl = env.MCPX_SERVER_URL;
+    if (!baseUrl.startsWith("https://")) {
+      return { skipReason: `MCPX_SERVER_URL is not https (${baseUrl})` };
+    }
+
+    // The document lists a fixed callback, so a flow using any other one gets
+    // invalid_redirect_uri. Those keep using DCR.
+    if (!clientRedirectUris(baseUrl).includes(this.redirectUrl)) {
+      return {
+        skipReason: `redirect_uri ${this.redirectUrl} is not in the document`,
+      };
+    }
+
+    return { url: `${baseUrl}${CLIENT_METADATA_PATH}` };
   }
 
   get clientMetadata(): OAuthClientMetadata {
@@ -98,8 +145,12 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   async saveClientInformation(
     clientInformation: OAuthClientInformationFull,
   ): Promise<void> {
+    // On the CIMD path the SDK gives us `{ client_id }` alone. The stores
+    // require redirect_uris on read, so that record is lost and the code
+    // exchange then fails. Backfill our metadata. DCR fields win.
+    const record = { ...this.clientMetadata, ...clientInformation };
     try {
-      await this.tokenStore.saveClientInfo(this.serverName, clientInformation);
+      await this.tokenStore.saveClientInfo(this.serverName, record);
       this.logger.info("Client information saved", {
         serverName: this.serverName,
       });

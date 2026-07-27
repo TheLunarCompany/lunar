@@ -8,11 +8,17 @@ import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
 import { ExtendedClientBuilderI, ExtendedClientI } from "./client-extension.js";
 import { InvalidGrantError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import {
+  describeClientIdentity,
   isAuthenticationError,
   isInvalidGrantError,
   OAuthConnectionHandler,
   OAuthDiscovery,
 } from "./oauth-connection-handler.js";
+import { discoverAuthorizationServerMetadata } from "@modelcontextprotocol/sdk/client/auth.js";
+
+type AuthorizationServerMeta = Awaited<
+  ReturnType<typeof discoverAuthorizationServerMetadata>
+>;
 
 describe("OAuthConnectionHandler", () => {
   describe(".isAuthenticationError", () => {
@@ -792,5 +798,89 @@ describe("OAuthConnectionHandler", () => {
         );
       });
     });
+  });
+});
+
+describe("describeClientIdentity", () => {
+  const CIMD_URL =
+    "https://mcpx.example/.well-known/oauth-client-metadata.json";
+
+  const provider = (
+    overrides: Partial<McpxOAuthProviderI>,
+  ): McpxOAuthProviderI =>
+    ({
+      type: "dcr",
+      serverName: "chili-piper",
+      clientMetadataUrl: undefined,
+      ...overrides,
+    }) as McpxOAuthProviderI;
+
+  const authorizeWith = (clientId: string): URL =>
+    new URL(
+      `https://as.example/authorize?client_id=${encodeURIComponent(clientId)}`,
+    );
+
+  const cimdCapable = {
+    client_id_metadata_document_supported: true,
+  } as unknown as AuthorizationServerMeta;
+
+  it("reports cimd when the request carried the document URL", () => {
+    expect(
+      describeClientIdentity({
+        provider: provider({ clientMetadataUrl: CIMD_URL }),
+        authorizationUrl: authorizeWith(CIMD_URL),
+        authMeta: cimdCapable,
+      }),
+    ).toEqual({
+      identity: "cimd",
+      clientId: CIMD_URL,
+      serverSupportsCimd: true,
+    });
+  });
+
+  it("reports the provider's own scheme when the server never offered CIMD", () => {
+    // No reason field: nothing was declined, the server simply does not do CIMD.
+    expect(
+      describeClientIdentity({
+        provider: provider({ type: "static" }),
+        authorizationUrl: authorizeWith("configured-id"),
+        authMeta: undefined,
+      }),
+    ).toEqual({
+      identity: "static",
+      clientId: "configured-id",
+      serverSupportsCimd: false,
+    });
+  });
+
+  it("explains a gate that declined, when the server would have taken CIMD", () => {
+    const result = describeClientIdentity({
+      provider: provider({
+        clientMetadataUrl: undefined,
+        clientMetadataSkipReason: () => "not an enterprise instance",
+      }),
+      authorizationUrl: authorizeWith("dcr-issued-id"),
+      authMeta: cimdCapable,
+    });
+
+    expect(result.identity).toBe("dcr");
+    expect(result.cimdUnavailable).toBe("not an enterprise instance");
+  });
+
+  it("explains a stored registration winning over an available document", () => {
+    // The gate passed, so a different client id means the SDK reused a stored
+    // registration.
+    const result = describeClientIdentity({
+      provider: provider({
+        clientMetadataUrl: CIMD_URL,
+        clientMetadataSkipReason: () => undefined,
+      }),
+      authorizationUrl: authorizeWith("old-dcr-id"),
+      authMeta: cimdCapable,
+    });
+
+    expect(result.identity).toBe("dcr");
+    expect(result.clientId).toBe("old-dcr-id");
+    expect(result.cimdUnavailable).toBe("reusing a stored client registration");
   });
 });
