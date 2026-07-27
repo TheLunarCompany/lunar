@@ -725,7 +725,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 {activeTab === TABS.ALL && (
                   <div className="my-4">
                     <div className="my-4 text-sm">
-                      Select a server to add to your configuration"
+                      Select a server to add to your configuration
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <SearchInput
