@@ -1,0 +1,14 @@
+name: processor5
+description: processor5 test processor
+exec: processor5.go
+parameters:
+  ParameterKey:
+    type: string
+    description: test
+    default: "ParameterValue"
+    required: false  
+output_streams:
+  - type: StreamTypeRequest
+  - type: StreamTypeResponse
+input_stream:
+  type: StreamTypeRequest
