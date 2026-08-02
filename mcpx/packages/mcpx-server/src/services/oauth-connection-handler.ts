@@ -21,6 +21,11 @@ import { DEVICE_FLOW_COMPLETE } from "../oauth-providers/device-flow.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
 import { ExtendedClientBuilderI, ExtendedClientI } from "./client-extension.js";
 import { buildClient } from "./target-server-connection-factory.js";
+import {
+  clientMetadataDocumentSchema,
+  PublishedClientMetadata,
+} from "@mcpx/toolkit-core/oauth";
+import { env } from "../env.js";
 
 const OAUTH_POLLING_INTERVAL_MS = 1000;
 // The SDK sets no AbortSignal on its fetches, so without this an unresponsive
@@ -130,13 +135,31 @@ type AuthorizationServerMeta = Awaited<
 export interface OAuthDiscovery {
   discoverOAuthProtectedResourceMetadata: typeof discoverOAuthProtectedResourceMetadata;
   discoverAuthorizationServerMetadata: typeof discoverAuthorizationServerMetadata;
+  fetchClientMetadataDocument?: (
+    url: string,
+  ) => Promise<PublishedClientMetadata | undefined>;
   auth?: typeof auth;
   flowTimeoutMs?: number;
+}
+
+/** Fetches the CIMD document. Undefined on any failure → treat as no CIMD. */
+async function fetchClientMetadataDocument(
+  url: string,
+): Promise<PublishedClientMetadata | undefined> {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(env.OAUTH_DISCOVERY_TIMEOUT_MILLIS),
+  }).catch(() => undefined);
+  if (!response?.ok) return undefined;
+
+  const body = await response.json().catch(() => undefined);
+  const parsed = clientMetadataDocumentSchema.safeParse(body);
+  return parsed.success ? parsed.data : undefined;
 }
 
 const DEFAULT_DISCOVERY: OAuthDiscovery = {
   discoverOAuthProtectedResourceMetadata,
   discoverAuthorizationServerMetadata,
+  fetchClientMetadataDocument,
   auth,
 };
 
@@ -429,6 +452,7 @@ export class OAuthConnectionHandler {
       targetServer.url,
       authProvider,
     );
+    await this.settleClientIdentity(authProvider, authMeta);
 
     // Create transport with auth provider - this will trigger OAuth flow
     const transport =
@@ -452,6 +476,8 @@ export class OAuthConnectionHandler {
         url: targetServer.url,
         // Rejected outright by servers enforcing a redirect_uri allowlist.
         redirectUrl: authProvider.redirectUrl,
+        // Settle reason — failure path never reaches logClientIdentity.
+        cimdUnavailable: authProvider.clientMetadataSkipReason?.(),
         error: loggableError(e),
       });
       // Cause first: this reaches a toast that shows a limited number of lines,
@@ -468,6 +494,7 @@ export class OAuthConnectionHandler {
       this.logger.warn("OAuth flow produced no authorization URL", {
         name: targetServer.name,
         result,
+        cimdUnavailable: authProvider.clientMetadataSkipReason?.(),
       });
       throw new Error(
         result === "AUTHORIZED"
@@ -635,6 +662,28 @@ export class OAuthConnectionHandler {
       });
     }
     return authMeta;
+  }
+
+  /** Settles CIMD before auth(); fetches only when the AS advertises support. */
+  private async settleClientIdentity(
+    provider: McpxOAuthProviderI,
+    authMeta: AuthorizationServerMeta | undefined,
+  ): Promise<void> {
+    if (!provider.applyPublishedDocument) return;
+
+    // Don't settle: undefined would look like a failed fetch.
+    if (authMeta?.client_id_metadata_document_supported !== true) return;
+
+    // No URL → let the provider record its own gate reason (no fetch).
+    const url = provider.expectedClientMetadataUrl;
+    if (!url) {
+      provider.applyPublishedDocument(undefined);
+      return;
+    }
+
+    const fetchDocument =
+      this.discovery.fetchClientMetadataDocument ?? fetchClientMetadataDocument;
+    provider.applyPublishedDocument(await fetchDocument(url));
   }
 
   private logClientIdentity(

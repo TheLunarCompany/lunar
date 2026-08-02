@@ -9,7 +9,7 @@ import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 import {
   buildClientMetadataDocument,
   CLIENT_METADATA_PATH,
-  clientRedirectUris,
+  PublishedClientMetadata,
 } from "@mcpx/toolkit-core/oauth";
 import { resetEnv } from "../env.js";
 
@@ -50,8 +50,9 @@ describe("DcrOAuthProvider#redirectToAuthorization", () => {
 const ROUTER = "https://mcpx-stg.lunar.dev";
 // Derived from the shared contract, so a change there fails here too.
 const CIMD_URL = `${ROUTER}${CLIENT_METADATA_PATH}`;
+const WEBSERVER = "https://app-stg.lunar.dev";
 
-describe("DcrOAuthProvider#clientMetadataUrl (CIMD)", () => {
+describe("DcrOAuthProvider#applyPublishedDocument (CIMD)", () => {
   // Touch only the keys under test; the suite's own env stays intact.
   const setEnv = (vars: Record<string, string | undefined>): void => {
     for (const [key, value] of Object.entries(vars)) {
@@ -61,13 +62,26 @@ describe("DcrOAuthProvider#clientMetadataUrl (CIMD)", () => {
     resetEnv();
   };
 
-  const build = (callbackUrl = `${ROUTER}/auth/callback`): DcrOAuthProvider =>
-    new DcrOAuthProvider({
+  // Shared builder — stays in sync with what the router publishes.
+  const published = (webserverPublicUrl?: string): PublishedClientMetadata =>
+    buildClientMetadataDocument({ baseUrl: ROUTER, webserverPublicUrl });
+
+  // undefined document = "could not be read", not a default.
+  const resolve = (
+    params: {
+      callbackUrl?: string;
+      document?: PublishedClientMetadata;
+    } = {},
+  ): DcrOAuthProvider => {
+    const provider = new DcrOAuthProvider({
       serverName: "chili-piper",
-      callbackUrl,
+      callbackUrl: params.callbackUrl ?? `${ROUTER}/auth/callback`,
       logger: noOpLogger,
       tokenStore: stubTokenStore,
     });
+    provider.applyPublishedDocument(params.document);
+    return provider;
+  };
 
   beforeEach(() => {
     setEnv({
@@ -82,53 +96,79 @@ describe("DcrOAuthProvider#clientMetadataUrl (CIMD)", () => {
     setEnv({ INSTANCE_KEY: undefined, MCPX_SERVER_URL: undefined });
   });
 
-  it("points at the router's document over HTTPS in enterprise mode", () => {
-    expect(build().clientMetadataUrl).toBe(CIMD_URL);
+  it("uses the document when it lists this flow's callback", () => {
+    expect(resolve({ document: published() }).clientMetadataUrl).toBe(CIMD_URL);
   });
 
-  it("is undefined when not enterprise (no router serves the file, DCR used)", () => {
-    setEnv({ INSTANCE_KEY: undefined });
-
-    expect(build().clientMetadataUrl).toBeUndefined();
-  });
-
-  it("is undefined when MCPX_SERVER_URL is not HTTPS (enterprise local dev)", () => {
-    setEnv({ MCPX_SERVER_URL: "http://127.0.0.1:9000" });
+  it("uses it for the webserver callback that catalog analysis sends", () => {
+    // Cross-origin callback — only works if the router published it.
+    const document = published(WEBSERVER);
 
     expect(
-      build("http://127.0.0.1:9000/auth/callback").clientMetadataUrl,
-    ).toBeUndefined();
+      resolve({ callbackUrl: `${WEBSERVER}/oauth/callback`, document })
+        .clientMetadataUrl,
+    ).toBe(CIMD_URL);
   });
 
-  it("accepts every callback the document publishes, and only those", () => {
-    // The invariant that used to live in two hand-kept lists.
-    for (const redirectUri of clientRedirectUris(ROUTER)) {
-      expect(build(redirectUri).clientMetadataUrl).toBe(CIMD_URL);
-    }
+  it("declines when the document omits this flow's callback", () => {
+    // invalid_redirect_uri; SDK has no DCR fallback with a client id.
+    const provider = resolve({
+      callbackUrl: `${WEBSERVER}/oauth/callback`,
+      document: published(),
+    });
+
+    expect(provider.clientMetadataUrl).toBeUndefined();
+    expect(provider.clientMetadataSkipReason()).toContain(
+      "does not list redirect_uri",
+    );
   });
 
-  it("reports why CIMD was skipped, for the flow log", () => {
-    // The interesting case is a server that would have accepted CIMD, so the
-    // reason has to say which gate declined rather than just that one did.
+  it("declines when the document could not be read", () => {
+    const provider = resolve();
+
+    expect(provider.clientMetadataUrl).toBeUndefined();
+    expect(provider.clientMetadataSkipReason()).toContain("could not read");
+  });
+
+  it("declines when the document declares a different client_id", () => {
+    // e.g. ingress dropped x-forwarded-proto → invalid_client.
+    const provider = resolve({
+      document: { ...published(), client_id: `http://mcpx-stg.lunar.dev` },
+    });
+
+    expect(provider.clientMetadataUrl).toBeUndefined();
+    expect(provider.clientMetadataSkipReason()).toContain("declares client_id");
+  });
+
+  it("declines when not enterprise, without needing a document", () => {
     setEnv({ INSTANCE_KEY: undefined });
-    expect(build().clientMetadataSkipReason()).toBe(
+    const provider = resolve({ document: published() });
+
+    expect(provider.clientMetadataUrl).toBeUndefined();
+    expect(provider.clientMetadataSkipReason()).toBe(
       "not an enterprise instance",
     );
-
-    setEnv({ INSTANCE_KEY: "space-123" });
-    expect(
-      build("https://app.lunar.dev/oauth/callback").clientMetadataSkipReason(),
-    ).toContain("is not in the document");
-
-    expect(build().clientMetadataSkipReason()).toBeUndefined();
   });
 
-  it("is undefined when the flow's callback is not one the document publishes", () => {
-    // Sandbox analysis starts flows against its own host, so CIMD would fail
-    // invalid_redirect_uri. DCR registers whatever redirect_uri we use.
-    expect(
-      build("https://app.lunar.dev/oauth/callback").clientMetadataUrl,
-    ).toBeUndefined();
+  it("declines when MCPX_SERVER_URL is not https (local dev)", () => {
+    setEnv({ MCPX_SERVER_URL: "http://127.0.0.1:9000" });
+    const provider = resolve({
+      callbackUrl: "http://127.0.0.1:9000/auth/callback",
+      document: published(),
+    });
+
+    expect(provider.clientMetadataUrl).toBeUndefined();
+    expect(provider.clientMetadataSkipReason()).toContain("is not https");
+  });
+
+  it("matches the router's client_id even with a trailing slash on MCPX_SERVER_URL", () => {
+    // hive-controller only guarantees an https:// prefix, not a bare origin
+    // (crds/mcpx.ts). A trailing slash must not surface as "the router
+    // declares a different client_id" — that's a local config issue, not
+    // the router's.
+    setEnv({ MCPX_SERVER_URL: `${ROUTER}/` });
+
+    expect(resolve({ document: published() }).clientMetadataUrl).toBe(CIMD_URL);
   });
 });
 
@@ -194,8 +234,10 @@ describe("the CIMD document shape", () => {
   // toolkit-core has no SDK dependency, so only a package with both can check
   // its shape claim. The assignment is the check: it stops compiling on drift.
   it("stays assignable to the SDK's client metadata", () => {
-    const doc: OAuthClientMetadata = buildClientMetadataDocument(ROUTER);
+    const doc: OAuthClientMetadata = buildClientMetadataDocument({
+      baseUrl: ROUTER,
+    });
 
-    expect(doc.redirect_uris).toEqual(clientRedirectUris(ROUTER));
+    expect(doc.redirect_uris).toEqual([`${ROUTER}/auth/callback`]);
   });
 });

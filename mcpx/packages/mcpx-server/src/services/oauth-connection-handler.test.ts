@@ -15,6 +15,7 @@ import {
   OAuthDiscovery,
 } from "./oauth-connection-handler.js";
 import { discoverAuthorizationServerMetadata } from "@modelcontextprotocol/sdk/client/auth.js";
+import { PublishedClientMetadata } from "@mcpx/toolkit-core/oauth";
 
 type AuthorizationServerMeta = Awaited<
   ReturnType<typeof discoverAuthorizationServerMetadata>
@@ -882,5 +883,116 @@ describe("describeClientIdentity", () => {
     expect(result.identity).toBe("dcr");
     expect(result.clientId).toBe("old-dcr-id");
     expect(result.cimdUnavailable).toBe("reusing a stored client registration");
+  });
+});
+
+describe("settleClientIdentity", () => {
+  // Via initiateOAuth; provider records what settle handed it.
+  const CIMD_URL =
+    "https://mcpx.example/.well-known/oauth-client-metadata.json";
+
+  function buildProvider(): McpxOAuthProviderI & {
+    applied: () => { called: boolean; document: unknown };
+  } {
+    let called = false;
+    let document: unknown;
+    return {
+      type: "dcr" as OAuthProviderType,
+      serverName: "chili-piper",
+      state: () => "state-1",
+      completeAuthorization: () => {},
+      getAuthorizationCode: () => null,
+      getAuthorizationUrl: () => new URL("https://as.example/authorize"),
+      getUserCode: () => null,
+      setDiscoveredScope: () => {},
+      redirectUrl: "https://mcpx.example/auth/callback",
+      clientMetadata: { redirect_uris: ["https://mcpx.example/auth/callback"] },
+      clientInformation: async () => undefined,
+      saveClientInformation: async () => {},
+      tokens: async () => undefined,
+      saveTokens: async () => {},
+      redirectToAuthorization: async () => {},
+      saveCodeVerifier: async () => {},
+      codeVerifier: async () => "verifier",
+      expectedClientMetadataUrl: CIMD_URL,
+      applyPublishedDocument: (doc: PublishedClientMetadata | undefined) => {
+        called = true;
+        document = doc;
+      },
+      applied: () => ({ called, document }),
+    } as unknown as McpxOAuthProviderI & {
+      applied: () => { called: boolean; document: unknown };
+    };
+  }
+
+  const authServer = (
+    supportsCimd: boolean,
+  ): OAuthDiscovery["discoverAuthorizationServerMetadata"] =>
+    (async () => ({
+      issuer: "https://as.example",
+      authorization_endpoint: "https://as.example/authorize",
+      token_endpoint: "https://as.example/token",
+      response_types_supported: ["code"],
+      client_id_metadata_document_supported: supportsCimd,
+    })) as unknown as OAuthDiscovery["discoverAuthorizationServerMetadata"];
+
+  async function run(supportsCimd: boolean): Promise<{
+    fetched: string[];
+    applied: { called: boolean; document: unknown };
+  }> {
+    const fetched: string[] = [];
+    const provider = buildProvider();
+    const handler = new OAuthConnectionHandler(
+      {
+        getOrCreateOAuthProvider: () => provider,
+        startOAuthFlow: () => {},
+        completeOAuthFlow: () => {},
+        getOAuthFlow: () => undefined,
+        getExistingOAuthProvider: () => provider,
+      } as unknown as OAuthSessionManagerI,
+      {
+        build: async () => ({}) as ExtendedClientI,
+      },
+      noOpLogger,
+      {
+        discoverOAuthProtectedResourceMetadata: async () => {
+          throw new Error("no protected-resource metadata");
+        },
+        discoverAuthorizationServerMetadata: authServer(supportsCimd),
+        fetchClientMetadataDocument: async (url) => {
+          fetched.push(url);
+          return {
+            client_id: url,
+            redirect_uris: [String(provider.redirectUrl)],
+          };
+        },
+        auth: (async () => "REDIRECT") as never,
+      },
+    );
+
+    await handler
+      .initiateOAuth({
+        name: "chili-piper",
+        type: "streamable-http",
+        url: "https://mcp.chilipiper.example/mcp",
+      } as never)
+      .catch(() => undefined);
+
+    return { fetched, applied: provider.applied() };
+  }
+
+  it("reads the document for a server that advertises CIMD", async () => {
+    const { fetched, applied } = await run(true);
+
+    expect(fetched).toEqual([CIMD_URL]);
+    expect(applied.document).toMatchObject({ client_id: CIMD_URL });
+  });
+
+  it("leaves the provider alone for a server that does not advertise CIMD", async () => {
+    // No fetch/settle — undefined would look like a failed fetch.
+    const { fetched, applied } = await run(false);
+
+    expect(fetched).toEqual([]);
+    expect(applied).toEqual({ called: false, document: undefined });
   });
 });

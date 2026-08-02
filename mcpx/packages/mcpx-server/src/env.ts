@@ -1,4 +1,5 @@
 import { createEnv } from "@mcpx/toolkit-core/config";
+import { stripTrailingSlash } from "@mcpx/toolkit-core/oauth";
 import dotenv from "dotenv";
 import path from "path";
 import { z } from "zod/v4";
@@ -142,7 +143,11 @@ const envSchema = z
     ENABLE_SKILL_SCOPING: z.stringbool().default(false),
     LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
     LLM_REQUEST_TIMEOUT_MS: z.coerce.number().default(20000),
-    MCPX_SERVER_URL: z.string().default("http://127.0.0.1:9000"),
+    // Trailing slash stripped so consumers can safely append a path.
+    MCPX_SERVER_URL: z
+      .string()
+      .default("http://127.0.0.1:9000")
+      .transform(stripTrailingSlash),
     MCPX_AUTH_JWKS_URI: z
       .string()
       .optional()

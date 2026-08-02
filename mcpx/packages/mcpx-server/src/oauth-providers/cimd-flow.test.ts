@@ -6,6 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { DcrOAuthProvider } from "./dcr.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
+import { buildClientMetadataDocument } from "@mcpx/toolkit-core/oauth";
 import { resetEnv } from "../env.js";
 
 const ROUTER = "https://mcpx-stg.lunar.dev";
@@ -127,6 +128,10 @@ describe("OAuth flow against a CIMD-capable server", () => {
   it("authorizes with the document URL as client id, then exchanges the code", async () => {
     const as = makeAuthServer({ supportsCimd: true });
     const provider = buildProvider("chili-piper", makeStore());
+    // Mirrors settleClientIdentity before auth().
+    provider.applyPublishedDocument(
+      buildClientMetadataDocument({ baseUrl: ROUTER }),
+    );
 
     expect(
       await auth(provider, { serverUrl: SERVER, fetchFn: as.fetchFn }),

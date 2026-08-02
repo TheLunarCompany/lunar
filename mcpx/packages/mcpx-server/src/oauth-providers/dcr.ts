@@ -4,10 +4,10 @@ import {
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import {
+  PublishedClientMetadata,
   CLIENT_METADATA_PATH,
   CLIENT_NAME,
   CLIENT_URI,
-  clientRedirectUris,
 } from "@mcpx/toolkit-core/oauth";
 import { randomUUID } from "node:crypto";
 import { Logger } from "winston";
@@ -35,6 +35,8 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
   private discoveredScope: string | null = null;
+  private _clientMetadataUrl?: string;
+  private _clientMetadataSkipReason?: string;
 
   constructor(options: {
     serverName: string;
@@ -75,37 +77,66 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
    * Needs MCP SDK >= 1.23.0. `clientMetadataUrl` is optional on
    * OAuthClientProvider, so an older SDK makes this dead code, not a type error.
    *
-   * Pure: the call site logs the decision.
+   * Settled by applyPublishedDocument before auth() (SDK reads it sync).
    */
   get clientMetadataUrl(): string | undefined {
-    return this.clientMetadataDecision().url;
+    return this._clientMetadataUrl;
   }
 
-  /** Why CIMD is unavailable, for the call site to log. Undefined when it is. */
+  /** Why CIMD is unavailable, for logging. Undefined when it is available. */
   clientMetadataSkipReason(): string | undefined {
-    return this.clientMetadataDecision().skipReason;
+    return this._clientMetadataSkipReason;
   }
 
-  private clientMetadataDecision(): { url?: string; skipReason?: string } {
-    // Only the router serves the document, and it only runs in enterprise.
+  /** Settles CIMD from the published doc. `undefined` = could not be read. */
+  applyPublishedDocument(document: PublishedClientMetadata | undefined): void {
+    const decision = this.decideClientMetadata(document);
+    this._clientMetadataUrl = decision.url;
+    this._clientMetadataSkipReason = decision.skipReason;
+  }
+
+  /** Expected document URL when enterprise+https gates pass. */
+  get expectedClientMetadataUrl(): string | undefined {
+    return this.clientMetadataTarget().url;
+  }
+
+  /** Enterprise/HTTPS gates — decidable without fetching the document. */
+  private clientMetadataTarget(): { url?: string; skipReason?: string } {
+    // Only the router serves the document, and only in enterprise.
     if (!env.IS_ENTERPRISE) {
       return { skipReason: "not an enterprise instance" };
     }
-
     const baseUrl = env.MCPX_SERVER_URL;
     if (!baseUrl.startsWith("https://")) {
       return { skipReason: `MCPX_SERVER_URL is not https (${baseUrl})` };
     }
+    return { url: `${baseUrl}${CLIENT_METADATA_PATH}` };
+  }
 
-    // The document lists a fixed callback, so a flow using any other one gets
-    // invalid_redirect_uri. Those keep using DCR.
-    if (!clientRedirectUris(baseUrl).includes(this.redirectUrl)) {
+  private decideClientMetadata(document: PublishedClientMetadata | undefined): {
+    url?: string;
+    skipReason?: string;
+  } {
+    const target = this.clientMetadataTarget();
+    const url = target.url;
+    if (!url) return target;
+
+    if (!document) return { skipReason: `could not read ${url}` };
+
+    // Mismatch → invalid_client; decline early.
+    if (document.client_id !== url) {
       return {
-        skipReason: `redirect_uri ${this.redirectUrl} is not in the document`,
+        skipReason: `${url} declares client_id ${document.client_id}`,
+      };
+    }
+    // Omitted redirect_uri → invalid_redirect_uri; SDK has no DCR fallback.
+    if (!document.redirect_uris.includes(this.redirectUrl)) {
+      return {
+        skipReason: `${url} does not list redirect_uri ${this.redirectUrl}`,
       };
     }
 
-    return { url: `${baseUrl}${CLIENT_METADATA_PATH}` };
+    return { url };
   }
 
   get clientMetadata(): OAuthClientMetadata {
