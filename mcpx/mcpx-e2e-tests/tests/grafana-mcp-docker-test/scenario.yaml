@@ -1,0 +1,96 @@
+# Verifies Docker-based Grafana MCP server can be discovered in UI and serve tools.
+# This test requires a running Grafana instance with the Grafana-MCP configured.
+name: "Grafana MCP (via docker)"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+configMount: config
+cleanConfigMount: false
+verboseOutput: false
+
+env: {}
+
+dependentContainers:
+  - name: grafana
+    image: grafana/grafana-oss:11.2.0
+    ports: ["3000:3000"]
+    env:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+
+steps:
+  - name: "Load Control-Plane UI"
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: "http://localhost:5173"
+    expected:
+      mode: contains
+      value: "Page URL: http://localhost:5173/"
+
+  # New: wait for the grafana server tile on the canvas
+  - name: "Wait for grafana tile"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "grafana"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for grafana"
+
+  # New: open the grafana drawer (click the tile instead of using a Tools tab)
+  - name: "Open grafana drawer"
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const click = el => ['pointerdown','mousedown','pointerup','mouseup','click']
+            .forEach(t => el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true })));
+
+          // Find the server tile by its heading text
+          const heading = Array.from(document.querySelectorAll('h1,h2,h3,[role="heading"]'))
+            .find(h => (h.textContent || '').trim().toLowerCase() === 'grafana');
+          if (!heading) return 'grafana-heading-not-found';
+
+          // Try clicking the heading and its likely clickable containers
+          click(heading);
+          if (heading.parentElement) click(heading.parentElement);
+          const maybeBtn = heading.closest('button,[role="button"],[class*="cursor"],[class*="pointer"]');
+          if (maybeBtn) click(maybeBtn);
+
+          return 'grafana-drawer-opened';
+        }
+    expected:
+      mode: regex
+      value: "grafana-drawer-opened"
+  
+  - name: "Verify Grafana tool is visible"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "search_dashboards"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for search_dashboards"
+
+  - name: "Call grafana__generate_deeplink (dashboard)"
+    kind: backend
+    toolName: grafana__generate_deeplink
+    payload:
+      resourceType: "dashboard"      # "dashboard" | "panel" | "explore"
+      dashboardUid: "abc123"
+    expected:
+      mode: regex
+      value: "/d/abc123"
+
+  - name: "Call grafana__generate_deeplink (explore)"
+    kind: backend
+    toolName: grafana__generate_deeplink
+    payload:
+      resourceType: "explore"
+      datasourceUid: "prometheus-uid"
+    expected:
+      mode: regex
+      value: "/explore"
