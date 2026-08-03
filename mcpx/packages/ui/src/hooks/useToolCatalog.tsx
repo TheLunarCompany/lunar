@@ -552,12 +552,15 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     return result;
   }, [baseProviders, searchFilterLower, annotationFilter]);
 
-  // reset add custom tool selection when data changes
+  // Don't clear selectedTools while editing/creating a group, or searching
+  // for a tool to add would wipe out the group's other selected tools.
   useEffect(() => {
     setSelectedCustomToolKey(null);
-    setSelectedTools(new Set());
     setIsAddCustomToolMode(false);
-  }, [toolsList, searchQuery]);
+    if (!isEditMode && !showCreateModal) {
+      setSelectedTools(new Set());
+    }
+  }, [toolsList, searchQuery, isEditMode, showCreateModal]);
 
   // Transform tool groups data for display
   const transformedToolGroups = useMemo(() => {
