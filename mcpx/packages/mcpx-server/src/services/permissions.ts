@@ -1,4 +1,5 @@
 import { ConfigConsumer } from "@mcpx/toolkit-core/config";
+import { normalizeServerName } from "@mcpx/toolkit-core/data";
 import { Logger } from "winston";
 import { Config } from "../model/config/config.js";
 import type {
@@ -90,15 +91,16 @@ class PermissionManagerState {
         );
       }
       Object.entries(toolGroup).forEach(([serviceName, serviceToolGroup]) => {
-        const current = services.get(serviceName);
+        const normalizedServiceName = normalizeServerName(serviceName);
+        const current = services.get(normalizedServiceName);
         if (!current) {
           services.set(
-            serviceName,
+            normalizedServiceName,
             buildServicePermissions(type, serviceToolGroup),
           );
         } else {
           services.set(
-            serviceName,
+            normalizedServiceName,
             mergeServicePermissions(
               current,
               buildServicePermissions(type, serviceToolGroup),

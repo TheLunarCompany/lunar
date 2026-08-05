@@ -254,6 +254,56 @@ describe("PermissionManager#hasPermission", () => {
     });
   });
 
+  describe("when a tool group uses a non-normalized service key", () => {
+    const config: Config = {
+      ...DEFAULT_CONFIG,
+      permissions: {
+        default: {
+          _type: "default-block",
+          allow: [],
+        },
+        consumers: {
+          developers: {
+            _type: "default-block",
+            allow: ["read"],
+          },
+        },
+        clientNames: {},
+      },
+      toolGroups: [
+        { name: "read", services: { "  MyTeamHub  ": ["read-message"] } },
+      ],
+    };
+
+    it("returns true for allowed tool when request uses normalized service name", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
+      expect(
+        permissionManager.hasPermission({
+          capabilityKind: "tools",
+          serviceName: "myteamhub",
+          capabilityName: "read-message",
+          consumerTag: "developers",
+        }),
+      ).toBe(true);
+    });
+
+    it("returns false for a tool not in the group", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
+      expect(
+        permissionManager.hasPermission({
+          capabilityKind: "tools",
+          serviceName: "myteamhub",
+          capabilityName: "send-message",
+          consumerTag: "developers",
+        }),
+      ).toBe(false);
+    });
+  });
+
   describe("when a consumer is blocked via profile", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
