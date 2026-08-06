@@ -1,9 +1,15 @@
 import type { ReactNode } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useAgentDrawerSkillsData } from "@/data/agent-drawer-skills";
 import { isSkillsPageEnabled } from "@/config/runtime-config";
+import { useAgentSkillAssignments } from "@/hooks/useAgentSkillAssignments";
 
 import type { Agent } from "../../types/agent";
 
@@ -18,8 +24,8 @@ vi.mock("react-router-dom", () => ({
   ),
 }));
 
-vi.mock("@/data/agent-drawer-skills", () => ({
-  useAgentDrawerSkillsData: vi.fn(),
+vi.mock("@/hooks/useAgentSkillAssignments", () => ({
+  useAgentSkillAssignments: vi.fn(),
 }));
 
 vi.mock("@/store", () => ({
@@ -175,24 +181,45 @@ const assignedSkill = {
   },
 };
 
-function mockAgentDrawerSkillsData() {
-  vi.mocked(useAgentDrawerSkillsData).mockReturnValue({
-    skills: [assignedSkill],
-    enabledSkills: [
-      {
-        subject: { kind: "consumerTag", value: "agent-consumer" },
-        skillIds: [assignedSkill.id],
-      },
-    ],
-    catalogItems: [],
+const unassignedSkill = {
+  ...assignedSkill,
+  id: "0190a000-0000-7000-8000-000000000002",
+  name: "Debug Incidents",
+  description: "Investigate production incidents.",
+};
+
+function mockAgentSkillAssignments() {
+  vi.mocked(useAgentSkillAssignments).mockReturnValue(
+    agentSkillAssignmentsResult(),
+  );
+}
+
+function agentSkillAssignmentsResult(overrides: Record<string, unknown> = {}) {
+  return {
+    skills: [assignedSkill, unassignedSkill].map((skill) => ({
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      href: `/skills/${skill.id}`,
+      providers: [{ name: "GitHub", isMissingOrInactive: false }],
+      toolsCount: 1,
+      promptsCount: 0,
+    })),
+    selectedSkillIds: new Set([assignedSkill.id]),
+    isDirty: false,
     isLoading: false,
     isError: false,
-  });
+    isSaving: false,
+    isInitialized: true,
+    toggleSkill: vi.fn(),
+    save: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  } as never;
 }
 
 beforeEach(() => {
   vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
-  mockAgentDrawerSkillsData();
+  mockAgentSkillAssignments();
 });
 
 describe("AgentDetailsModal", () => {
@@ -235,17 +262,54 @@ describe("AgentDetailsModal", () => {
     expect(screen.getByText("Unresponsive")).toBeInTheDocument();
   });
 
-  it("renders assigned skills as links to their detail pages", () => {
+  it("renders all skills with their assignment state", () => {
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
     expect(
-      screen.getByRole("heading", { name: "Skills (1)" }),
+      screen.getByRole("heading", { name: "Tools Access" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("All Server Tools (1)")).toBeInTheDocument();
     expect(screen.getByText("Review repository changes.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Investigate production incidents."),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("GitHub")).toHaveLength(2);
     expect(
       screen.getByRole("link", { name: /Review Pull Requests/ }),
     ).toHaveAttribute("href", "/skills/0190a000-0000-7000-8000-000000000001");
+    expect(
+      screen.getByRole("switch", { name: "Use Review Pull Requests" }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "Use Debug Incidents" }),
+    ).not.toBeChecked();
+    expect(
+      screen.queryByText("Version control & issue management"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("saves changed skill assignments for the agent", async () => {
+    const toggleSkill = vi.fn();
+    const save = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useAgentSkillAssignments).mockReturnValue(
+      agentSkillAssignmentsResult({
+        isDirty: true,
+        toggleSkill,
+        save,
+      }),
+    );
+
+    render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
+
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Use Debug Incidents" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(toggleSkill).toHaveBeenCalledWith(unassignedSkill.id, true);
+      expect(save).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("does not render or fetch skills when the Skills feature flag is disabled", () => {
@@ -254,10 +318,14 @@ describe("AgentDetailsModal", () => {
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
     expect(screen.queryByRole("heading", { name: /Skills/ })).toBeNull();
-    expect(useAgentDrawerSkillsData).toHaveBeenCalledWith({ enabled: false });
+    expect(useAgentSkillAssignments).toHaveBeenCalledWith(
+      expect.objectContaining({ agent, enabled: false }),
+    );
+    expect(screen.getByText("Tools Access")).toBeInTheDocument();
   });
 
   it("uses an accessible icon-only caret button for tool group expansion", () => {
+    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
     const expandButton = screen.getByRole("button", {
@@ -272,6 +340,7 @@ describe("AgentDetailsModal", () => {
   });
 
   it("toggles tool group expansion when clicking the card content", () => {
+    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
     expect(screen.queryByText("create_pull_request")).toBeNull();

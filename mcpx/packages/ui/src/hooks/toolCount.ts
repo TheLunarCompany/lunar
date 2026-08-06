@@ -1,8 +1,16 @@
-import type { ConsumerConfig } from "@mcpx/shared-model";
+import {
+  scopeSubjectKey,
+  type ConsumerConfig,
+  type EnabledSkills,
+  type Skill,
+} from "@mcpx/shared-model";
 import { AgentRef } from "@/store";
 
 /** Server shape with name and tools (e.g. from system state targetServers or McpServer[]) */
-type ServerWithTools = { name: string; tools?: unknown[] }[] | null | undefined;
+type ServerWithTools =
+  | { name: string; catalogItemId?: string; tools?: unknown[] }[]
+  | null
+  | undefined;
 
 /** Inactive flags per server name (e.g. appConfig.targetServerAttributes) */
 type TargetServerAttributes =
@@ -175,4 +183,108 @@ export function getAvailableToolsForAgent(params: {
   } catch {
     return totalConnectedTools;
   }
+}
+
+/**
+ * Counts the union of tools exposed by skills assigned to an agent.
+ * Agents with no assigned skills keep the default allow-all behavior.
+ * Explicit selections are counted only for connected, active servers; wildcard
+ * selections resolve against the matching connected server's current tools.
+ */
+export function getSkillToolsForAgent(params: {
+  agent: AgentForTools;
+  connectedClients: ConnectedClientForTools[];
+  skills: Skill[];
+  enabled: EnabledSkills[];
+  targetServers: ServerWithTools;
+  targetServerAttributes?: TargetServerAttributes;
+}): number {
+  const {
+    agent,
+    connectedClients,
+    skills,
+    enabled,
+    targetServers,
+    targetServerAttributes,
+  } = params;
+  const consumerTagBySessionId = new Map(
+    connectedClients.flatMap((client) =>
+      client.sessionId && client.consumerTag
+        ? [[client.sessionId, client.consumerTag] as const]
+        : [],
+    ),
+  );
+  const subjectKeys = new Set<string>();
+
+  for (const sessionId of agent.sessionIds) {
+    const consumerTag = consumerTagBySessionId.get(sessionId);
+    if (consumerTag) {
+      subjectKeys.add(
+        scopeSubjectKey({ kind: "consumerTag", value: consumerTag }),
+      );
+    } else if (agent.identifier) {
+      subjectKeys.add(
+        scopeSubjectKey({ kind: "clientName", value: agent.identifier }),
+      );
+    }
+  }
+
+  const totalConnectedTools = getTotalConnectedTools(
+    targetServers,
+    targetServerAttributes,
+  );
+  if (subjectKeys.size === 0) return totalConnectedTools;
+
+  const assignedSkillIds = new Set(
+    enabled
+      .filter((entry) => subjectKeys.has(scopeSubjectKey(entry.subject)))
+      .flatMap((entry) => entry.skillIds),
+  );
+  if (assignedSkillIds.size === 0) return totalConnectedTools;
+
+  const activeServerByCatalogItemId = new Map(
+    (targetServers ?? []).flatMap((server) => {
+      if (
+        !server.catalogItemId ||
+        targetServerAttributes?.[server.name]?.inactive === true
+      ) {
+        return [];
+      }
+      return [[server.catalogItemId, server] as const];
+    }),
+  );
+  const uniqueToolNames = new Set<string>();
+
+  for (const skill of skills) {
+    if (!assignedSkillIds.has(skill.id)) continue;
+
+    for (const item of skill.capabilityGroup?.items ?? []) {
+      const server = activeServerByCatalogItemId.get(item.catalogItemId);
+      if (!server) continue;
+
+      if (item.tools === "*") {
+        for (const tool of server.tools ?? []) {
+          const name = getToolName(tool);
+          if (name) uniqueToolNames.add(name);
+        }
+      } else {
+        item.tools.forEach((name) => uniqueToolNames.add(name));
+      }
+    }
+  }
+
+  return uniqueToolNames.size;
+}
+
+function getToolName(tool: unknown): string | null {
+  if (typeof tool === "string") return tool;
+  if (
+    typeof tool === "object" &&
+    tool !== null &&
+    "name" in tool &&
+    typeof tool.name === "string"
+  ) {
+    return tool.name;
+  }
+  return null;
 }

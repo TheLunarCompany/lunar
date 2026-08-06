@@ -9,13 +9,58 @@ import { describe, expect, it } from "vitest";
 import type { Agent } from "../types/agent";
 
 import {
+  buildAgentSkillEnablementUpdate,
   buildAgentSkills,
   buildSkillAgentSelection,
   diffScopeSubjects,
+  getAgentSkillSubject,
+  getEnabledSkillIdsForAgent,
 } from "./skill-agents";
 
 const SKILL_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_SKILL_ID = "22222222-2222-4222-8222-222222222222";
+
+describe("agent skill assignment mapping", () => {
+  it("maps agent identities and resolves their enabled skill ids", () => {
+    const agent = consumerTagAgent("engineering");
+    const enabled = [
+      enabledRow({ kind: "consumerTag", value: "engineering" }, [SKILL_ID]),
+      enabledRow({ kind: "clientName", value: "engineering" }, [
+        OTHER_SKILL_ID,
+      ]),
+    ];
+
+    expect(getAgentSkillSubject(agent)).toEqual({
+      kind: "consumerTag",
+      value: "engineering",
+    });
+    expect([...getEnabledSkillIdsForAgent({ agent, enabled })]).toEqual([
+      SKILL_ID,
+    ]);
+  });
+
+  it("builds an enablement update without changing other agents", () => {
+    const agent = consumerTagAgent("engineering");
+    const otherSubject: ScopeSubject = {
+      kind: "clientName",
+      value: "Cursor",
+    };
+    const enabled = [enabledRow(otherSubject, [SKILL_ID])];
+
+    expect(
+      buildAgentSkillEnablementUpdate({
+        agent,
+        enabled,
+        skillId: SKILL_ID,
+        selected: true,
+      }),
+    ).toEqual({
+      skillId: SKILL_ID,
+      previous: [otherSubject],
+      next: [otherSubject, { kind: "consumerTag", value: "engineering" }],
+    });
+  });
+});
 
 describe("buildSkillAgentSelection", () => {
   it("maps a consumer-tag cluster to exactly one consumer-tag option", () => {

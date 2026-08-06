@@ -25,18 +25,16 @@ import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
 import { ChevronDown, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { generatePath, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAccessControlsStore, useSocketStore } from "@/store";
 import { apiClient } from "@/lib/api";
 import { routes } from "@/routes";
-import { useAgentDrawerSkillsData } from "@/data/agent-drawer-skills";
 import type { ConnectionState, ConsumerConfig } from "@mcpx/shared-model";
 import type { AgentProfile, ToolGroup } from "@/store/access-controls";
 import { toast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { deriveAgentDisplay } from "./agent-display";
 import { AgentSkillsSection } from "./AgentSkillsSection";
-import { buildAgentDrawerSkills } from "@/mapping/agent-drawer";
 import { pickRepresentativeClient } from "@/mapping/system-state";
 import {
   PermissionEntriesByName,
@@ -46,6 +44,7 @@ import {
 import { agentsData } from "./constants";
 import { isSkillsPageEnabled } from "@/config/runtime-config";
 import { DomainBadge } from "./DomainBadge";
+import { useAgentSkillAssignments } from "@/hooks/useAgentSkillAssignments";
 
 const CONNECTION_BADGE: Record<
   ConnectionState,
@@ -149,9 +148,6 @@ export const AgentDetailsModal = ({
   );
   const navigate = useNavigate();
   const skillsPageEnabled = isSkillsPageEnabled();
-  const agentDrawerSkillsData = useAgentDrawerSkillsData({
-    enabled: isOpen && skillsPageEnabled,
-  });
 
   const { toolGroups, profiles, setProfiles } = useAccessControlsStore((s) => {
     return {
@@ -171,6 +167,12 @@ export const AgentDetailsModal = ({
     systemState: s.systemState,
     appConfig: s.appConfig,
   }));
+  const agentSkillAssignments = useAgentSkillAssignments({
+    agent,
+    enabled: isOpen && skillsPageEnabled,
+    systemState,
+    targetServerAttributes: appConfig?.targetServerAttributes,
+  });
 
   // The `agent` prop is a snapshot from click time. Re-read the cluster from the
   // live system state so sessions and usage update without a refresh.
@@ -240,27 +242,6 @@ export const AgentDetailsModal = ({
     [agent],
   );
 
-  const agentSkillLinks = useMemo(() => {
-    if (!agent) return [];
-
-    return buildAgentDrawerSkills({
-      agent,
-      enabled: agentDrawerSkillsData.enabledSkills,
-      skills: agentDrawerSkillsData.skills,
-      systemState,
-      catalogItems: agentDrawerSkillsData.catalogItems,
-      targetServerAttributes: appConfig?.targetServerAttributes,
-      skillHref: (id) => generatePath(routes.skillDetail, { id }),
-    });
-  }, [
-    agent,
-    agentDrawerSkillsData.catalogItems,
-    agentDrawerSkillsData.enabledSkills,
-    agentDrawerSkillsData.skills,
-    appConfig?.targetServerAttributes,
-    systemState,
-  ]);
-
   // When there are no tool groups in the system, force "Allow All" and clear selections.
   // Do not touch allowAll when tool groups exist: empty selections can mean "block all" (allowAll false).
   useEffect(() => {
@@ -286,6 +267,10 @@ export const AgentDetailsModal = ({
 
   // Check if there are changes to save
   const hasChanges = useMemo(() => {
+    if (skillsPageEnabled) {
+      return agentSkillAssignments.isDirty;
+    }
+
     if (!agent || !toolGroups) return false;
 
     let selectedToolGroupIds: string[];
@@ -324,6 +309,8 @@ export const AgentDetailsModal = ({
     editedToolGroups,
     originalToolGroups,
     hadOriginalProfile,
+    agentSkillAssignments.isDirty,
+    skillsPageEnabled,
   ]);
 
   // Permission entries for this agent live under either `consumers` or `clientNames`,
@@ -553,6 +540,26 @@ export const AgentDetailsModal = ({
         ? agent.consumerTag
         : agent.clientName;
 
+    if (skillsPageEnabled) {
+      try {
+        await agentSkillAssignments.save();
+
+        toast({
+          title: "Agent skills updated",
+          description: "Skill access changes were saved.",
+        });
+        setTimeout(() => onClose(), 500);
+      } catch (error) {
+        toast({
+          title: "Failed to update agent skills",
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     // Permission CRUD adapter - picks consumers-API vs clientNames-API based on the cluster's identity.
     const consumersApi = {
       getAll: () => apiClient.getPermissionConsumers(),
@@ -763,6 +770,8 @@ export const AgentDetailsModal = ({
     setProfiles,
     allowAll,
     editedToolGroups,
+    skillsPageEnabled,
+    agentSkillAssignments,
     onClose,
     currentAgentData.name,
   ]);
@@ -793,8 +802,11 @@ export const AgentDetailsModal = ({
               {consumerTag || currentAgentData.name || "AI Agent"} Details
             </SheetTitle>
             <SheetDescription>
-              Configure tool access permissions for{" "}
-              {consumerTag || currentAgentData.name || "AI Agent"}
+              Configure{" "}
+              {skillsPageEnabled
+                ? "skill assignments"
+                : "tool access permissions"}{" "}
+              for {consumerTag || currentAgentData.name || "AI Agent"}
             </SheetDescription>
           </VisuallyHidden>
           <div />
@@ -893,181 +905,194 @@ export const AgentDetailsModal = ({
         </div>
 
         {/* Tool Catalog Section */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pt-5">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6">
           {skillsPageEnabled ? (
             <AgentSkillsSection
-              skills={agentSkillLinks}
-              loading={agentDrawerSkillsData.isLoading}
-              error={agentDrawerSkillsData.isError}
+              skills={agentSkillAssignments.skills}
+              totalToolsCount={totalConnectedTools}
+              selectedSkillIds={agentSkillAssignments.selectedSkillIds}
+              onSkillToggle={agentSkillAssignments.toggleSkill}
+              loading={agentSkillAssignments.isLoading}
+              error={agentSkillAssignments.isError}
+              disabled={
+                !agentSkillAssignments.isInitialized ||
+                agentSkillAssignments.isSaving
+              }
             />
           ) : null}
 
-          <Separator className="my-5" />
-          <div className="mb-3 text-base font-semibold leading-6 text-foreground">
-            Tools Access
-          </div>
-
-          <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border border-border bg-muted/20 p-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              All Server Tools ({totalConnectedTools})
-            </h3>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={allowAll}
-                onCheckedChange={handleAllowAllToggle}
-              />
-            </div>
-          </div>
-
-          {/* Tool Groups List */}
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3 pb-4">
-            <div className="mb-3 text-sm font-semibold text-foreground">
-              Tools
-            </div>
-            <SearchInput
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              wrapperClassName="mb-3 flex-1 shrink-0"
-              className="bg-background"
-            />
-            {agentToolGroups.length === 0 ? (
-              <div className="rounded-lg border border-border bg-background px-4 py-8 text-center">
-                <h4 className="mb-2 font-semibold text-foreground">
-                  No Tool Groups Defined
-                </h4>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Create a Tool Group for effective agent control.
-                </p>
-                <p className="mb-4 text-xs text-muted-foreground">
-                  Go to the Tool Catalog area to set this up.
-                </p>
-                <Button onClick={goToToolCatalog}>
-                  Go to Tool Catalog &gt;
-                </Button>
+          {!skillsPageEnabled ? (
+            <>
+              <Separator className="my-5" />
+              <div className="mb-3 text-base font-semibold leading-6 text-foreground">
+                Tools Access
               </div>
-            ) : filteredGroups.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                No tool groups found
-              </div>
-            ) : (
-              filteredGroups.map((group) => {
-                return (
-                  <Card
-                    key={group.id}
-                    className="cursor-pointer gap-3 rounded-lg border-border bg-background py-3 shadow-xs ring-0 transition-colors hover:border-primary/30 hover:bg-muted/20"
-                    onClick={() => toggleGroupExpansion(group.id)}
-                  >
-                    <CardHeader className="px-3 py-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex min-w-0 flex-1 items-start gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            className="mt-0.5 size-5 rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-                            aria-label={
-                              expandedGroups.has(group.id)
-                                ? "Collapse tool group"
-                                : "Expand tool group"
-                            }
-                            aria-expanded={expandedGroups.has(group.id)}
-                            aria-controls={`agent-tool-group-${group.id}-tools`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggleGroupExpansion(group.id);
-                            }}
-                          >
-                            <ChevronDown
-                              className={`size-4 transition-transform ${
-                                expandedGroups.has(group.id) ? "rotate-180" : ""
-                              }`}
-                            />
-                          </Button>
-                          <div className="min-w-0 flex-1">
-                            <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
-                              {group.title}
-                            </CardTitle>
-                            <p className="mt-1 line-clamp-2 cursor-default text-xs leading-4 text-muted-foreground">
-                              {group.description}
-                            </p>
-                          </div>
-                        </div>
-                        <div
-                          className="flex h-full gap-2"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <Switch
-                            checked={
-                              !allowAll && editedToolGroups.has(group.id)
-                            }
-                            onCheckedChange={(checked: boolean) => {
-                              handleToolGroupToggle(group.id, checked);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-3 py-0">
-                      {/* MCPs and Tool Count */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {group.mcpNames.map((mcpName, index) => (
-                          <DomainBadge
-                            key={index}
-                            domain={mcpName}
-                            groupId={group.id}
-                          />
-                        ))}
-                        <span className="text-xs text-muted-foreground">
-                          {group.totalToolCount !== group.toolCount
-                            ? `${group.toolCount}/${group.totalToolCount} tools`
-                            : `${group.toolCount} tools`}
-                        </span>
-                        {group.totalToolCount !== group.toolCount && (
-                          <div className="w-full">
-                            <span className="flex items-center gap-2 text-xs font-medium leading-5 text-badge-warning-fg">
-                              <TriangleAlert
-                                aria-hidden="true"
-                                className="size-4 shrink-0"
-                                strokeWidth={2}
-                              />
-                              Some servers are currently unavailable
-                            </span>
-                          </div>
-                        )}
-                      </div>
 
-                      {/* Expanded Tools View */}
-                      {expandedGroups.has(group.id) && (
-                        <div
-                          id={`agent-tool-group-${group.id}-tools`}
-                          className="max-h-64 overflow-y-auto mt-2"
-                        >
-                          <div className="mb-2 flex flex-wrap items-center gap-2">
-                            {group.allTools.map((tool, index) => (
-                              <Badge
-                                key={index}
-                                variant="outline"
-                                className={
-                                  tool.isUnavailable
-                                    ? "border-badge-warning-border bg-badge-warning-bg text-badge-warning-fg"
-                                    : "border-primary/20 bg-primary/10 text-primary"
+              <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border border-border bg-muted/20 p-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  All Server Tools ({totalConnectedTools})
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={allowAll}
+                    onCheckedChange={handleAllowAllToggle}
+                  />
+                </div>
+              </div>
+
+              {/* Tool Groups List */}
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3 pb-4">
+                <div className="mb-3 text-sm font-semibold text-foreground">
+                  Tools
+                </div>
+                <SearchInput
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  wrapperClassName="mb-3 flex-1 shrink-0"
+                  className="bg-background"
+                />
+                {agentToolGroups.length === 0 ? (
+                  <div className="rounded-lg border border-border bg-background px-4 py-8 text-center">
+                    <h4 className="mb-2 font-semibold text-foreground">
+                      No Tool Groups Defined
+                    </h4>
+                    <p className="mb-4 text-sm text-muted-foreground">
+                      Create a Tool Group for effective agent control.
+                    </p>
+                    <p className="mb-4 text-xs text-muted-foreground">
+                      Go to the Tool Catalog area to set this up.
+                    </p>
+                    <Button onClick={goToToolCatalog}>
+                      Go to Tool Catalog &gt;
+                    </Button>
+                  </div>
+                ) : filteredGroups.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    No tool groups found
+                  </div>
+                ) : (
+                  filteredGroups.map((group) => {
+                    return (
+                      <Card
+                        key={group.id}
+                        className="cursor-pointer gap-3 rounded-lg border-border bg-background py-3 shadow-xs ring-0 transition-colors hover:border-primary/30 hover:bg-muted/20"
+                        onClick={() => toggleGroupExpansion(group.id)}
+                      >
+                        <CardHeader className="px-3 py-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex min-w-0 flex-1 items-start gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-xs"
+                                className="mt-0.5 size-5 rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                aria-label={
+                                  expandedGroups.has(group.id)
+                                    ? "Collapse tool group"
+                                    : "Expand tool group"
                                 }
+                                aria-expanded={expandedGroups.has(group.id)}
+                                aria-controls={`agent-tool-group-${group.id}-tools`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleGroupExpansion(group.id);
+                                }}
                               >
-                                {tool.name}
-                              </Badge>
-                            ))}
+                                <ChevronDown
+                                  className={`size-4 transition-transform ${
+                                    expandedGroups.has(group.id)
+                                      ? "rotate-180"
+                                      : ""
+                                  }`}
+                                />
+                              </Button>
+                              <div className="min-w-0 flex-1">
+                                <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
+                                  {group.title}
+                                </CardTitle>
+                                <p className="mt-1 line-clamp-2 cursor-default text-xs leading-4 text-muted-foreground">
+                                  {group.description}
+                                </p>
+                              </div>
+                            </div>
+                            <div
+                              className="flex h-full gap-2"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <Switch
+                                checked={
+                                  !allowAll && editedToolGroups.has(group.id)
+                                }
+                                onCheckedChange={(checked: boolean) => {
+                                  handleToolGroupToggle(group.id, checked);
+                                }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        </CardHeader>
+                        <CardContent className="px-3 py-0">
+                          {/* MCPs and Tool Count */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {group.mcpNames.map((mcpName, index) => (
+                              <DomainBadge
+                                key={index}
+                                domain={mcpName}
+                                groupId={group.id}
+                              />
+                            ))}
+                            <span className="text-xs text-muted-foreground">
+                              {group.totalToolCount !== group.toolCount
+                                ? `${group.toolCount}/${group.totalToolCount} tools`
+                                : `${group.toolCount} tools`}
+                            </span>
+                            {group.totalToolCount !== group.toolCount && (
+                              <div className="w-full">
+                                <span className="flex items-center gap-2 text-xs font-medium leading-5 text-badge-warning-fg">
+                                  <TriangleAlert
+                                    aria-hidden="true"
+                                    className="size-4 shrink-0"
+                                    strokeWidth={2}
+                                  />
+                                  Some servers are currently unavailable
+                                </span>
+                              </div>
+                            )}
+                          </div>
 
-                      {/* View More/Less Button */}
-                    </CardContent>
-                  </Card>
-                );
-              })
-            )}
-          </div>
+                          {/* Expanded Tools View */}
+                          {expandedGroups.has(group.id) && (
+                            <div
+                              id={`agent-tool-group-${group.id}-tools`}
+                              className="max-h-64 overflow-y-auto mt-2"
+                            >
+                              <div className="mb-2 flex flex-wrap items-center gap-2">
+                                {group.allTools.map((tool, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant="outline"
+                                    className={
+                                      tool.isUnavailable
+                                        ? "border-badge-warning-border bg-badge-warning-bg text-badge-warning-fg"
+                                        : "border-primary/20 bg-primary/10 text-primary"
+                                    }
+                                  >
+                                    {tool.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* View More/Less Button */}
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          ) : null}
         </div>
 
         {/* Footer */}
@@ -1076,7 +1101,7 @@ export const AgentDetailsModal = ({
             <Button
               className="disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
               onClick={saveConfiguration}
-              disabled={!hasChanges}
+              disabled={!hasChanges || agentSkillAssignments.isSaving}
             >
               Save
             </Button>

@@ -71,7 +71,7 @@ describe("getDefaultMcpxSidebarSections", () => {
   });
 
   it.each([false, true])(
-    "includes Tools when the sidebar restructure flag is %s",
+    "includes Tools when Skills is disabled and the sidebar restructure flag is %s",
     async (isSidebarRestructureEnabled) => {
       vi.doMock("@/config/runtime-config", () => ({
         isCapabilitiesEnabled: () => false,
@@ -99,6 +99,29 @@ describe("getDefaultMcpxSidebarSections", () => {
     },
   );
 
+  it.each([false, true])(
+    "omits Tools when Skills is enabled and the sidebar restructure flag is %s",
+    async (isSidebarRestructureEnabled) => {
+      vi.doMock("@/config/runtime-config", () => ({
+        isCapabilitiesEnabled: () => false,
+        isSkillsPageEnabled: () => true,
+        isUiSidebarRestructureEnabled: () => isSidebarRestructureEnabled,
+        isMcpServersShown: () => false,
+      }));
+      const { getDefaultMcpxSidebarSections } = await import(
+        "./McpxSidebar.data"
+      );
+
+      const items = getDefaultMcpxSidebarSections().flatMap(
+        (section) => section.items,
+      );
+
+      expect(items).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: "tools" })]),
+      );
+    },
+  );
+
   it("uses the restructured sections when the sidebar restructure flag is enabled", async () => {
     vi.doMock("@/config/runtime-config", () => ({
       isCapabilitiesEnabled: () => true,
@@ -118,7 +141,6 @@ describe("getDefaultMcpxSidebarSections", () => {
       items: [
         expect.objectContaining({ id: "dashboard", label: "Dashboard" }),
         expect.objectContaining({ id: "mcp-servers", label: "MCP Servers" }),
-        expect.objectContaining({ id: "tools", label: "Tools" }),
         expect.objectContaining({ id: "skills", label: "Skills" }),
         expect.objectContaining({ id: "saved-setups", label: "Saved Setups" }),
         expect.objectContaining({ id: "audit-log", label: "Audit Log" }),

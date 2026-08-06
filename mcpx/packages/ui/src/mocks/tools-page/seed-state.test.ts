@@ -119,6 +119,21 @@ describe("seedToolsPageMockState", () => {
         (group) => Object.keys(group.services).length === 5,
       ),
     ).toHaveLength(3);
+    expect(state.systemState?.connectedClientClusters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          identityType: "clientName",
+          clientName: "cursor",
+          sessionIds: ["cursor-0001"],
+        }),
+      ]),
+    );
+    expect(state.appConfig?.skills.enabled).toEqual([
+      {
+        subject: { kind: "clientName", value: "cursor" },
+        skillIds: ["0190a000-0000-7000-8000-000000000001"],
+      },
+    ]);
     expect(toolsStore.getState().tools).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

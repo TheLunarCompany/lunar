@@ -19,11 +19,18 @@ import {
   RefreshCw,
   Trash2,
   Server,
+  Sparkles,
   Wrench,
 } from "lucide-react";
 import type { SavedSetupItem } from "@mcpx/shared-model";
 import { formatDistanceToNow } from "date-fns";
 import { pluralizeWithCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
+import { isSkillsPageEnabled } from "@/config/runtime-config";
+import { useSkills } from "@/data/skills";
+import { useGetMCPServers } from "@/data/catalog-servers";
+import { buildSkillCardCapabilitySummaryResolver } from "@/mapping/skills";
+import { useSocketStore } from "@/store";
+import { useMemo } from "react";
 
 interface SavedSetupSheetProps {
   isOpen: boolean;
@@ -42,10 +49,43 @@ export function SavedSetupSheet({
   onOverwrite,
   onDelete,
 }: SavedSetupSheetProps) {
+  const skillsPageEnabled = isSkillsPageEnabled();
+  const skillsQuery = useSkills({
+    enabled: skillsPageEnabled && setup !== null,
+  });
+  const catalogServersQuery = useGetMCPServers({
+    enabled: skillsPageEnabled && setup !== null,
+  });
+  const systemState = useSocketStore((state) => state.systemState);
+  const summarizeCapabilities = useMemo(
+    () =>
+      buildSkillCardCapabilitySummaryResolver(
+        systemState,
+        catalogServersQuery.data,
+      ),
+    [catalogServersQuery.data, systemState],
+  );
+
   if (!setup) return null;
 
   const serverNames = Object.keys(setup.targetServers).sort();
   const toolGroups = setup.config.toolGroups ?? [];
+  const skillIds = [
+    ...new Set(
+      setup.config.skills?.enabled.flatMap((entry) => entry.skillIds) ?? [],
+    ),
+  ];
+  const skillsById = new Map(
+    (skillsQuery.data ?? []).map((skill) => [skill.id, skill]),
+  );
+  const savedSkills = skillIds.map((id) => {
+    const skill = skillsById.get(id);
+    return {
+      id,
+      skill,
+      summary: summarizeCapabilities(skill?.capabilityGroup),
+    };
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -171,7 +211,47 @@ export function SavedSetupSheet({
             </div>
           )}
 
-          {toolGroups.length > 0 && (
+          {skillsPageEnabled && savedSkills.length > 0 ? (
+            <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
+              <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-muted-foreground" />
+                Skills
+              </h3>
+              <div className="space-y-2">
+                {savedSkills.map(({ id, skill, summary }) => (
+                  <div
+                    key={id}
+                    className="flex flex-col gap-1 rounded-lg border border-gray-200 bg-white p-3"
+                  >
+                    <p className="font-semibold text-foreground">
+                      {skill?.name ?? id}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {skill?.description ??
+                        (skillsQuery.isLoading
+                          ? "Loading skill details..."
+                          : "Skill is no longer available.")}
+                    </p>
+                    {skill ? (
+                      <p className="text-xs text-gray-400">
+                        {pluralizeWithCount(summary.providers.length, "server")}{" "}
+                        · {pluralizeWithCount(summary.toolsCount, "tool")}
+                        {summary.promptsCount > 0
+                          ? ` · ${pluralizeWithCount(
+                              summary.promptsCount,
+                              "prompt",
+                            )}`
+                          : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              <div className="text-xs text-gray-500">
+                {pluralizeWithCount(savedSkills.length, "skill")} selected
+              </div>
+            </div>
+          ) : !skillsPageEnabled && toolGroups.length > 0 ? (
             <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
               <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-muted-foreground" />
@@ -216,13 +296,16 @@ export function SavedSetupSheet({
                 {pluralizeWithCount(toolGroups.length, "tool group")} selected
               </div>
             </div>
-          )}
+          ) : null}
 
-          {serverNames.length === 0 && toolGroups.length === 0 && (
-            <div className="text-center py-8">
-              <div className="text-gray-500 text-sm">This setup is empty</div>
-            </div>
-          )}
+          {serverNames.length === 0 &&
+            (skillsPageEnabled
+              ? savedSkills.length === 0
+              : toolGroups.length === 0) && (
+              <div className="text-center py-8">
+                <div className="text-gray-500 text-sm">This setup is empty</div>
+              </div>
+            )}
         </div>
       </SheetContent>
     </Sheet>

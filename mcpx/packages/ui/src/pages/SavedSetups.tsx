@@ -31,6 +31,7 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { SavedSetupSheet } from "@/components/saved-setups/SavedSetupSheet";
@@ -38,11 +39,13 @@ import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
 import { Separator } from "@/components/ui/separator";
 import { routes } from "@/routes";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDateTimeLong } from "@/utils";
 import { useSocketStore } from "@/store";
 import { pluralizeWithCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
+import { isSkillsPageEnabled } from "@/config/runtime-config";
+import { useSkills } from "@/data/skills";
 
 type PendingAction =
   | { type: "restore"; setup: SavedSetupItem }
@@ -51,14 +54,20 @@ type PendingAction =
 type CurrentSetupSummary = {
   serverCount: number;
   toolGroupCount: number;
+  skillCount: number;
 };
 
-function formatCurrentSetupSummary(summary: CurrentSetupSummary): string {
+function formatCurrentSetupSummary(
+  summary: CurrentSetupSummary,
+  skillsPageEnabled: boolean,
+): string {
   const parts: string[] = [];
   if (summary.serverCount > 0) {
     parts.push(`${pluralizeWithCount(summary.serverCount, "server")}`);
   }
-  if (summary.toolGroupCount > 0) {
+  if (skillsPageEnabled && summary.skillCount > 0) {
+    parts.push(`${pluralizeWithCount(summary.skillCount, "skill")}`);
+  } else if (!skillsPageEnabled && summary.toolGroupCount > 0) {
     parts.push(`${pluralizeWithCount(summary.toolGroupCount, "tool group")}`);
   }
   return parts.length > 0 ? parts.join(" and ") : "";
@@ -78,8 +87,12 @@ function ServerIconCell({ name }: { name: string }) {
 function getActionConfig(
   action: PendingAction,
   currentSetupSummary: CurrentSetupSummary,
+  skillsPageEnabled: boolean,
 ) {
-  const summaryText = formatCurrentSetupSummary(currentSetupSummary);
+  const summaryText = formatCurrentSetupSummary(
+    currentSetupSummary,
+    skillsPageEnabled,
+  );
   const hasCurrentSetup = summaryText.length > 0;
 
   switch (action.type) {
@@ -106,6 +119,7 @@ function getActionConfig(
 
 export default function SavedSetups() {
   const navigate = useNavigate();
+  const skillsPageEnabled = isSkillsPageEnabled();
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null,
@@ -128,9 +142,17 @@ export default function SavedSetups() {
   const currentSetupSummary: CurrentSetupSummary = {
     serverCount: systemState?.targetServers?.length ?? 0,
     toolGroupCount: appConfig?.toolGroups?.length ?? 0,
+    skillCount: new Set(
+      appConfig?.skills?.enabled.flatMap((entry) => entry.skillIds) ?? [],
+    ).size,
   };
 
   const { data: savedSetups, isLoading, error } = useGetSavedSetups();
+  const skillsQuery = useSkills({ enabled: skillsPageEnabled });
+  const skillsById = useMemo(
+    () => new Map((skillsQuery.data ?? []).map((skill) => [skill.id, skill])),
+    [skillsQuery.data],
+  );
   const saveMutation = useSaveSetup();
   const restoreMutation = useRestoreSavedSetup();
   const deleteMutation = useDeleteSavedSetup();
@@ -289,7 +311,7 @@ export default function SavedSetups() {
 
   const setups = savedSetups?.setups ?? [];
   const actionConfig = pendingAction
-    ? getActionConfig(pendingAction, currentSetupSummary)
+    ? getActionConfig(pendingAction, currentSetupSummary, skillsPageEnabled)
     : null;
 
   return (
@@ -323,6 +345,18 @@ export default function SavedSetups() {
               const toolGroupNames =
                 setup.config.toolGroups?.map((group) => group.name).sort() ??
                 [];
+              const skillIds = [
+                ...new Set(
+                  setup.config.skills?.enabled.flatMap(
+                    (entry) => entry.skillIds,
+                  ) ?? [],
+                ),
+              ];
+              const skillLabels = skillIds.map((id) => ({
+                id,
+                label: skillsById.get(id)?.name ?? id,
+                unavailable: !skillsQuery.isLoading && !skillsById.has(id),
+              }));
               return (
                 <div
                   key={setup.id}
@@ -404,7 +438,47 @@ export default function SavedSetups() {
                       </Tooltip>
                     )}
                   </div>
-                  {toolGroupNames.length > 0 && (
+                  {skillsPageEnabled && skillLabels.length > 0 ? (
+                    <div className="mt-4">
+                      <p className="text-[11px] mb-1 font-bold">SKILLS</p>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {skillLabels.slice(0, 3).map((skill) => (
+                          <div
+                            key={skill.id}
+                            className={`rounded-[4px] flex items-center gap-1 bg-white px-1 py-1 text-xs border border-[#D8DCED] ${
+                              skill.unavailable ? "text-muted-foreground" : ""
+                            }`}
+                            title={
+                              skill.unavailable
+                                ? "Skill is no longer available"
+                                : undefined
+                            }
+                          >
+                            <Sparkles className="w-4 h-4 text-muted-foreground" />
+                            <span className="truncate max-w-[100px]">
+                              {skill.label}
+                            </span>
+                          </div>
+                        ))}
+                        {skillLabels.length > 3 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-[11px]">
+                                +{skillLabels.length - 3}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <ul className="list-disc list-inside">
+                                {skillLabels.slice(3).map((skill) => (
+                                  <li key={skill.id}>{skill.label}</li>
+                                ))}
+                              </ul>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </div>
+                  ) : !skillsPageEnabled && toolGroupNames.length > 0 ? (
                     <div className="mt-4">
                       <p className="text-[11px] mb-1 font-bold">TOOL GROUPS</p>
                       <div className="flex flex-wrap gap-2 items-center">
@@ -437,7 +511,7 @@ export default function SavedSetups() {
                         )}
                       </div>
                     </div>
-                  )}
+                  ) : null}
                   <div className="mt-auto flex flex-col gap-2">
                     <Separator className="mb-2 mt-4" />
                     <Tooltip>

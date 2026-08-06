@@ -1139,6 +1139,24 @@ const mockSystemState: SystemState = {
       connectionState: "connected",
     },
     {
+      sessionId: "cursor-0001",
+      clientId: "c-cursor",
+      usage: {
+        callCount: 9,
+        lastCalledAt: date("2026-05-11T13:14:00.000Z"),
+      },
+      llm: { provider: "openai", modelId: "gpt-5" },
+      clientInfo: {
+        name: "cursor",
+        version: "1.3.0",
+        protocolVersion: "2025-11-25",
+      },
+      dynamicMode: false,
+      visibleTools: [],
+      lastSeenAt: Date.now(),
+      connectionState: "connected",
+    },
+    {
       sessionId: "unresponsive-0001",
       clientId: "c-unresponsive",
       usage: { callCount: 3, lastCalledAt: date("2026-05-11T13:00:00.000Z") },
@@ -1182,6 +1200,15 @@ const mockSystemState: SystemState = {
       usage: {
         callCount: 18,
         lastCalledAt: date("2026-05-11T13:13:11.000Z"),
+      },
+    },
+    {
+      identityType: "clientName",
+      clientName: "cursor",
+      sessionIds: ["cursor-0001"],
+      usage: {
+        callCount: 9,
+        lastCalledAt: date("2026-05-11T13:14:00.000Z"),
       },
     },
     {
@@ -1313,7 +1340,14 @@ const mockAppConfig: AppConfig = {
   toolExtensions: { services: {} },
   targetServerAttributes: {},
   auth: { enabled: false },
-  skills: { enabled: [] },
+  skills: {
+    enabled: [
+      {
+        subject: { kind: "clientName", value: "cursor" },
+        skillIds: ["0190a000-0000-7000-8000-000000000001"],
+      },
+    ],
+  },
 };
 
 export function seedToolsPageMockState(): void {

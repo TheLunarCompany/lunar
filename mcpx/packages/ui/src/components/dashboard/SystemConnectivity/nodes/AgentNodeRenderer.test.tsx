@@ -1,9 +1,10 @@
 import type { NodeProps } from "@xyflow/react";
 import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Agent } from "@/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { isSkillsPageEnabled } from "@/config/runtime-config";
 import AgentNodeRenderer from "./AgentNodeRenderer";
 import type { AgentNode } from "../types";
 
@@ -27,6 +28,13 @@ vi.mock("@/hooks/useToolCount", () => ({
     totalConnectedTools: CONNECTED_TOOLS_COUNT,
   }),
 }));
+vi.mock("@/config/runtime-config", () => ({
+  isSkillsPageEnabled: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+});
 
 function createAgentData(overrides: Partial<Agent> = {}): Agent {
   return {
@@ -57,8 +65,17 @@ function renderNode(data: Agent) {
 
 describe("AgentNodeRenderer", () => {
   it("shows the connected-tools count when not in dynamic mode", () => {
-    const { getByText } = renderNode(createAgentData());
+    const { getByText, getByTitle } = renderNode(createAgentData());
     expect(getByText(String(CONNECTED_TOOLS_COUNT))).toBeInTheDocument();
+    expect(getByTitle("Connected tools")).toBeInTheDocument();
+  });
+
+  it("labels the count as assigned skill tools when Skills is enabled", () => {
+    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+
+    const { getByTitle } = renderNode(createAgentData());
+
+    expect(getByTitle("Tools from assigned skills")).toBeInTheDocument();
   });
 
   it("shows the visible-tools count when in dynamic mode", () => {

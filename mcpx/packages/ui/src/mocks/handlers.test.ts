@@ -188,24 +188,25 @@ describe("MSW handlers", () => {
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
-      skills: Array<{
+      mine: Array<{
         name: string;
         body: string;
         capabilityGroup?: { items: unknown[] };
       }>;
     };
     expect(body).toEqual({
-      skills: expect.arrayContaining([
+      mine: expect.arrayContaining([
         expect.objectContaining({
           name: "review-pull-requests",
           body: expect.stringContaining("# Review pull requests"),
         }),
       ]),
+      others: [],
     });
     expect(
-      body.skills.find((skill) => skill.name === "full-stack-debugging-copilot")
+      body.mine.find((skill) => skill.name === "full-stack-debugging-copilot")
         ?.capabilityGroup?.items,
-    ).toHaveLength(7);
+    ).toHaveLength(8);
   });
 
   it("warns and skips invalid mock skill records instead of throwing", () => {
@@ -269,16 +270,17 @@ describe("MSW handlers", () => {
 
     const listResponse = await fetch("http://localhost:9000/skills");
     await expect(listResponse.json()).resolves.toEqual({
-      skills: expect.arrayContaining([
+      mine: expect.arrayContaining([
         expect.objectContaining({ name: "write-release-notes" }),
       ]),
+      others: [],
     });
   });
 
   it("mocks personal skill updates", async () => {
     const listResponse = await fetch("http://localhost:9000/skills");
-    const { skills } = (await listResponse.json()) as {
-      skills: Array<{ id: string }>;
+    const { mine: skills } = (await listResponse.json()) as {
+      mine: Array<{ id: string }>;
     };
 
     const response = await fetch(
@@ -304,12 +306,13 @@ describe("MSW handlers", () => {
 
     const updatedListResponse = await fetch("http://localhost:9000/skills");
     await expect(updatedListResponse.json()).resolves.toEqual({
-      skills: expect.arrayContaining([
+      mine: expect.arrayContaining([
         expect.objectContaining({
           id: skills[0].id,
           name: "updated-skill",
         }),
       ]),
+      others: [],
     });
   });
 
@@ -336,8 +339,8 @@ describe("MSW handlers", () => {
 
   it("mocks personal skill hard delete", async () => {
     const listResponse = await fetch("http://localhost:9000/skills");
-    const { skills } = (await listResponse.json()) as {
-      skills: Array<{ id: string }>;
+    const { mine: skills } = (await listResponse.json()) as {
+      mine: Array<{ id: string }>;
     };
 
     const deleteResponse = await fetch(
@@ -349,9 +352,10 @@ describe("MSW handlers", () => {
 
     const updatedListResponse = await fetch("http://localhost:9000/skills");
     await expect(updatedListResponse.json()).resolves.toEqual({
-      skills: expect.not.arrayContaining([
+      mine: expect.not.arrayContaining([
         expect.objectContaining({ id: skills[0].id }),
       ]),
+      others: [],
     });
   });
 
@@ -382,8 +386,8 @@ describe("MSW handlers", () => {
     resetMockApiState();
 
     const response = await fetch("http://localhost:9000/skills");
-    const { skills } = (await response.json()) as {
-      skills: Array<{ name: string }>;
+    const { mine: skills } = (await response.json()) as {
+      mine: Array<{ name: string }>;
     };
     expect(skills).toEqual(
       expect.arrayContaining([

@@ -30,8 +30,16 @@ export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
       url: routes.dashboard,
     },
     { id: "catalog", label: "Catalog", icon: Library, url: routes.catalog },
-    { id: "tools", label: "Tools", icon: Hammer, url: routes.tools },
   ];
+
+  if (!isSkillsPageEnabled()) {
+    workspaceItems.push({
+      id: "tools",
+      label: "Tools",
+      icon: Hammer,
+      url: routes.tools,
+    });
+  }
 
   if (isCapabilitiesEnabled()) {
     workspaceItems.push({
@@ -92,12 +100,14 @@ function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
     });
   }
 
-  workspaceItems.push({
-    id: "tools",
-    label: "Tools",
-    icon: Hammer,
-    url: routes.tools,
-  });
+  if (!isSkillsPageEnabled()) {
+    workspaceItems.push({
+      id: "tools",
+      label: "Tools",
+      icon: Hammer,
+      url: routes.tools,
+    });
+  }
 
   if (isSkillsPageEnabled()) {
     workspaceItems.push({

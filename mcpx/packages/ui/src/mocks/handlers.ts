@@ -2,8 +2,11 @@ import { delay, http, HttpResponse } from "msw";
 import type {
   CatalogMCPServerItem,
   CatalogMCPServerList,
+  EnabledSkills,
+  SavedSetupItem,
   Skill,
   SkillInput,
+  ScopeSubject,
 } from "@mcpx/shared-model";
 import { skillSchema } from "@mcpx/shared-model";
 
@@ -156,7 +159,11 @@ const FULL_STACK_DEBUGGING_SKILL_BODY = [
 
 export function parseMockSkills(records: unknown[]): Skill[] {
   return records.flatMap((record) => {
-    const result = skillSchema.safeParse(record);
+    const candidate =
+      typeof record === "object" && record !== null
+        ? { publishedAt: null, ...record }
+        : record;
+    const result = skillSchema.safeParse(candidate);
     if (!result.success) {
       console.warn("Invalid mock skill skipped", result.error);
       return [];
@@ -416,8 +423,104 @@ const initialPersonalSkills: Skill[] = parseMockSkills([
   },
 ]);
 
-let personalSkills = structuredClone(initialPersonalSkills);
+// TEMP: empty skillset so we can verify AgentSkillsSection empty-state UX
+// (full-access switch disabled). Revert to structuredClone(initialPersonalSkills)
+// / initialEnabledSkills when done.
+const USE_EMPTY_SKILLSET = true;
+let personalSkills: Skill[] = USE_EMPTY_SKILLSET
+  ? []
+  : structuredClone(initialPersonalSkills);
 let nextSkillId = 10;
+const initialEnabledSkills: EnabledSkills[] = [
+  {
+    subject: { kind: "clientName", value: "cursor" },
+    skillIds: ["0190a000-0000-7000-8000-000000000001"],
+  },
+];
+let enabledSkills: EnabledSkills[] = USE_EMPTY_SKILLSET
+  ? []
+  : structuredClone(initialEnabledSkills);
+const initialSavedSetups: SavedSetupItem[] = [
+  {
+    id: "0190a000-0000-7000-8000-000000000011",
+    description: "Cursor engineering workflow",
+    savedAt: "2026-07-30T09:15:00.000Z",
+    targetServers: {
+      github: {
+        initiation: {
+          type: "stdio",
+          command: "npx",
+          args: ["-y", "@modelcontextprotocol/server-github"],
+          env: {},
+        },
+        catalogItemId: GITHUB_CATALOG_ITEM_ID,
+      },
+      linear: {
+        initiation: {
+          type: "stdio",
+          command: "npx",
+          args: ["-y", "@modelcontextprotocol/server-linear"],
+          env: {},
+        },
+        catalogItemId: LINEAR_CATALOG_ITEM_ID,
+      },
+    },
+    config: {
+      toolGroups: [
+        {
+          name: "GitHub Triage",
+          description: "Issue triage tools and prompts for GitHub workflows.",
+          services: { github: ["create_issue", "list_issues"] },
+        },
+      ],
+      skills: {
+        enabled: [
+          {
+            subject: { kind: "clientName", value: "cursor" },
+            skillIds: [
+              "0190a000-0000-7000-8000-000000000001",
+              "0190a000-0000-7000-8000-000000000008",
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
+    id: "0190a000-0000-7000-8000-000000000012",
+    description: "Incident response",
+    savedAt: "2026-07-28T16:45:00.000Z",
+    targetServers: {
+      slack: {
+        initiation: {
+          type: "stdio",
+          command: "npx",
+          args: ["-y", "@modelcontextprotocol/server-slack"],
+          env: {},
+        },
+        catalogItemId: SLACK_CATALOG_ITEM_ID,
+      },
+    },
+    config: {
+      toolGroups: [
+        {
+          name: "Incident Coordination",
+          services: { slack: ["search_messages", "post_message"] },
+        },
+      ],
+      skills: {
+        enabled: [
+          {
+            subject: { kind: "consumerTag", value: "team-platform" },
+            skillIds: ["0190a000-0000-7000-8000-000000000003"],
+          },
+        ],
+      },
+    },
+  },
+];
+let savedSetups = structuredClone(initialSavedSetups);
+let nextSavedSetupId = 20;
 
 export const catalogMcpServers: CatalogMCPServerList = [
   {
@@ -877,16 +980,184 @@ function isApprovedCapabilityType(
   return value === "tool" || value === "prompt";
 }
 
+function getSkillSubject(params: {
+  kind?: string | readonly string[];
+  value?: string | readonly string[];
+}): ScopeSubject | null {
+  if (typeof params.kind !== "string" || typeof params.value !== "string") {
+    return null;
+  }
+  const { kind, value } = params;
+  if (!value || (kind !== "consumerTag" && kind !== "clientName")) return null;
+  return { kind, value };
+}
+
+function setMockSkillEnabled(
+  skillId: string,
+  subject: ScopeSubject,
+  selected: boolean,
+) {
+  const existing = enabledSkills.find(
+    (entry) =>
+      entry.subject.kind === subject.kind &&
+      entry.subject.value === subject.value,
+  );
+  const currentSkillIds = existing?.skillIds ?? [];
+  const skillIds = selected
+    ? [...new Set([...currentSkillIds, skillId])]
+    : currentSkillIds.filter((id) => id !== skillId);
+  const otherEntries = enabledSkills.filter((entry) => entry !== existing);
+
+  enabledSkills =
+    skillIds.length > 0
+      ? [...otherEntries, { subject, skillIds }]
+      : otherEntries;
+}
+
 export function resetMockApiState(): void {
   orgApprovedCapabilities = structuredClone(initialApprovedCapabilities);
   curatedApprovedCapabilities = structuredClone(initialApprovedCapabilities);
-  personalSkills = structuredClone(initialPersonalSkills);
+  personalSkills = USE_EMPTY_SKILLSET
+    ? []
+    : structuredClone(initialPersonalSkills);
+  enabledSkills = USE_EMPTY_SKILLSET
+    ? []
+    : structuredClone(initialEnabledSkills);
+  savedSetups = structuredClone(initialSavedSetups);
   nextSkillId = 10;
+  nextSavedSetupId = 20;
 }
 
 export const handlers = [
+  http.get("*/saved-setups", () => {
+    return HttpResponse.json({ setups: savedSetups });
+  }),
+
+  http.post("*/saved-setups", async ({ request }) => {
+    const body = (await request.json()) as { description?: string };
+    const description = body.description?.trim();
+    if (!description) {
+      return HttpResponse.json(
+        { success: false, error: "Description is required" },
+        { status: 400 },
+      );
+    }
+
+    const id = `0190a000-0000-7000-8000-${String(nextSavedSetupId).padStart(12, "0")}`;
+    const savedAt = "2026-08-03T18:00:00.000Z";
+    nextSavedSetupId += 1;
+    savedSetups = [
+      ...savedSetups,
+      {
+        id,
+        description,
+        savedAt,
+        targetServers: structuredClone(
+          initialSavedSetups[0]?.targetServers ?? {},
+        ),
+        config: {
+          toolGroups: structuredClone(
+            initialSavedSetups[0]?.config.toolGroups ?? [],
+          ),
+          skills: { enabled: structuredClone(enabledSkills) },
+        },
+      },
+    ];
+
+    return HttpResponse.json(
+      { success: true, savedSetupId: id, description, savedAt },
+      { status: 201 },
+    );
+  }),
+
+  http.post("*/saved-setups/:id/restore", ({ params }) => {
+    const setup = savedSetups.find((item) => item.id === String(params.id));
+    if (!setup) {
+      return HttpResponse.json(
+        { message: "Saved setup not found" },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json({ message: `Restored "${setup.description}"` });
+  }),
+
+  http.put("*/saved-setups/:id", ({ params }) => {
+    const id = String(params.id);
+    const setup = savedSetups.find((item) => item.id === id);
+    if (!setup) {
+      return HttpResponse.json(
+        { message: "Saved setup not found" },
+        { status: 404 },
+      );
+    }
+
+    savedSetups = savedSetups.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            savedAt: "2026-08-03T18:30:00.000Z",
+            config: {
+              ...item.config,
+              skills: { enabled: structuredClone(enabledSkills) },
+            },
+          }
+        : item,
+    );
+    return HttpResponse.json({ message: `Overwrote "${setup.description}"` });
+  }),
+
+  http.delete("*/saved-setups/:id", ({ params }) => {
+    const id = String(params.id);
+    if (!savedSetups.some((item) => item.id === id)) {
+      return HttpResponse.json(
+        { message: "Saved setup not found" },
+        { status: 404 },
+      );
+    }
+    savedSetups = savedSetups.filter((item) => item.id !== id);
+    return HttpResponse.json({ message: "Saved setup deleted" });
+  }),
+
   http.get("*/skills", () => {
     return HttpResponse.json({ mine: personalSkills, others: [] });
+  }),
+
+  http.get("*/skills/enabled", () => {
+    return HttpResponse.json({ enabled: enabledSkills });
+  }),
+
+  http.put("*/skills/:id/enabled/:kind/:value", ({ params }) => {
+    const skillId = String(params.id);
+    const subject = getSkillSubject(params);
+    if (!personalSkills.some((skill) => skill.id === skillId)) {
+      return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
+    }
+    if (!subject) {
+      return HttpResponse.json(
+        { message: "Invalid skill subject" },
+        { status: 400 },
+      );
+    }
+
+    setMockSkillEnabled(skillId, subject, true);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete("*/skills/:id/enabled/:kind/:value", ({ params }) => {
+    const skillId = String(params.id);
+    const subject = getSkillSubject(params);
+    if (!personalSkills.some((skill) => skill.id === skillId)) {
+      return HttpResponse.json({ message: "Skill not found" }, { status: 404 });
+    }
+    if (!subject) {
+      return HttpResponse.json(
+        { message: "Invalid skill subject" },
+        { status: 400 },
+      );
+    }
+
+    setMockSkillEnabled(skillId, subject, false);
+    return new HttpResponse(null, { status: 204 });
   }),
 
   http.get("*/skills/:id", ({ params }) => {
@@ -1007,6 +1278,10 @@ export const handlers = [
     }
 
     personalSkills = personalSkills.filter((skill) => skill.id !== id);
+    enabledSkills = enabledSkills.flatMap((entry) => {
+      const skillIds = entry.skillIds.filter((skillId) => skillId !== id);
+      return skillIds.length > 0 ? [{ ...entry, skillIds }] : [];
+    });
 
     return new HttpResponse(null, { status: 204 });
   }),

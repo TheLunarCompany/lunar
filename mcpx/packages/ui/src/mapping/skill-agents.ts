@@ -14,6 +14,12 @@ export type SkillAgentOption = {
   connected: boolean;
 };
 
+export type SkillEnablementUpdate = {
+  skillId: string;
+  previous: ScopeSubject[];
+  next: ScopeSubject[];
+};
+
 export function buildAgentSkills({
   agent,
   enabled,
@@ -23,15 +29,7 @@ export function buildAgentSkills({
   enabled: EnabledSkills[];
   skills: Skill[];
 }): Skill[] {
-  const subject = getAgentSkillSubject(agent);
-  if (!subject) return [];
-
-  const subjectKey = scopeSubjectKey(subject);
-  const assignedSkillIds = new Set(
-    enabled
-      .filter((row) => scopeSubjectKey(row.subject) === subjectKey)
-      .flatMap((row) => row.skillIds),
-  );
+  const assignedSkillIds = getEnabledSkillIdsForAgent({ agent, enabled });
 
   return skills
     .filter((skill) => assignedSkillIds.has(skill.id))
@@ -44,6 +42,60 @@ export function buildAgentSkills({
         ? nameComparison
         : compareStrings(a.name, b.name);
     });
+}
+
+export function getEnabledSkillIdsForAgent({
+  agent,
+  enabled,
+}: {
+  agent: Agent;
+  enabled: EnabledSkills[];
+}): Set<string> {
+  const subject = getAgentSkillSubject(agent);
+  if (!subject) return new Set();
+
+  const subjectKey = scopeSubjectKey(subject);
+  return new Set(
+    enabled
+      .filter((row) => scopeSubjectKey(row.subject) === subjectKey)
+      .flatMap((row) => row.skillIds),
+  );
+}
+
+export function buildAgentSkillEnablementUpdate({
+  agent,
+  enabled,
+  skillId,
+  selected,
+}: {
+  agent: Agent;
+  enabled: EnabledSkills[];
+  skillId: string;
+  selected: boolean;
+}): SkillEnablementUpdate | null {
+  const subject = getAgentSkillSubject(agent);
+  if (!subject) return null;
+
+  const previousByKey = new Map<string, ScopeSubject>();
+  for (const row of enabled) {
+    if (row.skillIds.includes(skillId)) {
+      previousByKey.set(scopeSubjectKey(row.subject), row.subject);
+    }
+  }
+
+  const previous = [...previousByKey.values()];
+  const subjectKey = scopeSubjectKey(subject);
+  if (selected) {
+    previousByKey.set(subjectKey, subject);
+  } else {
+    previousByKey.delete(subjectKey);
+  }
+
+  return {
+    skillId,
+    previous,
+    next: [...previousByKey.values()],
+  };
 }
 
 export function buildSkillAgentSelection({
@@ -149,7 +201,7 @@ function compareStrings(a: string, b: string): number {
   return 0;
 }
 
-function getAgentSkillSubject(agent: Agent): ScopeSubject | null {
+export function getAgentSkillSubject(agent: Agent): ScopeSubject | null {
   switch (agent.identityType) {
     case "consumerTag":
       return { kind: "consumerTag", value: agent.consumerTag };

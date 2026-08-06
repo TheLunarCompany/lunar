@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NodeCard, NodeBadge, NodeCardIcon } from "@/components/ui/node-card";
+import { isSkillsPageEnabled } from "@/config/runtime-config";
 
 const AgentNodeRenderer = ({
   data,
@@ -18,6 +19,7 @@ const AgentNodeRenderer = ({
 }: NodeProps<AgentNode>) => {
   const selectedAgent = useModalsStore((s) => s.selectedAgent);
   const selected = isRouteSelected || selectedAgent?.id === data.id;
+  const skillsPageEnabled = isSkillsPageEnabled();
 
   const display = deriveAgentDisplay(data);
 
@@ -51,7 +53,11 @@ const AgentNodeRenderer = ({
             className="absolute -top-2 -right-4 flex items-center rounded-full px-1 py-0.5 min-w-7 justify-center
                bg-size-[100%_100%] bg-[linear-gradient(180deg,#F9FAFD_0%,#E6E6ED_100%)]
                shadow-[0_4px_4px_0_rgba(97,71,209,0.15)] border border-[#C3B4F3]"
-            title="Connected tools"
+            title={
+              skillsPageEnabled
+                ? "Tools from assigned skills"
+                : "Connected tools"
+            }
           >
             <Hammer
               className="h-3 w-3 shrink-0 text-[var(--colors-gray-500)]"

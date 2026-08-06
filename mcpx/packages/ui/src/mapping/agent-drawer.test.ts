@@ -7,6 +7,7 @@ import type { Agent } from "../types/agent";
 import { buildAgentDrawerSkills } from "./agent-drawer";
 
 const SKILL_ID = "11111111-1111-4111-8111-111111111111";
+const UNASSIGNED_SKILL_ID = "22222222-2222-4222-8222-222222222222";
 
 describe("buildAgentDrawerSkills", () => {
   it("maps assigned skills into drawer links with provider availability", () => {
@@ -42,6 +43,8 @@ describe("buildAgentDrawerSkills", () => {
           { name: "GitHub", isMissingOrInactive: true },
           { name: "Coda", isMissingOrInactive: true },
         ],
+        toolsCount: 2,
+        promptsCount: 0,
       },
     ]);
   });
@@ -60,6 +63,19 @@ describe("buildAgentDrawerSkills", () => {
         skillHref: (id) => `/skills/${id}`,
       }),
     ).toEqual([]);
+  });
+
+  it("includes unassigned skills when building assignment controls", () => {
+    const result = buildAgentDrawerSkills({
+      agent: consumerTagAgent("engineering"),
+      enabled: [enabledRow("engineering", [SKILL_ID])],
+      skills: [skill(SKILL_ID), skill(UNASSIGNED_SKILL_ID)],
+      systemState: systemStateWithTargetServers([]),
+      skillHref: (id) => `/skills/${id}`,
+      includeUnassigned: true,
+    });
+
+    expect(result.map(({ id }) => id)).toEqual([SKILL_ID, UNASSIGNED_SKILL_ID]);
   });
 });
 

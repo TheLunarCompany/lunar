@@ -2,6 +2,7 @@ import z from "zod/v4";
 import { authSchema } from "../config/config.js";
 import {
   permissionsSchema,
+  skillsConfigSchema,
   staticOAuthSchema,
   targetServerAttributesSchema,
   toolExtensionsSchema,
@@ -26,6 +27,7 @@ export const savedSetupConfigSchema = z.object({
   toolExtensions: toolExtensionsSchema,
   targetServerAttributes: targetServerAttributesSchema,
   staticOauth: staticOAuthSchema,
+  skills: skillsConfigSchema,
 });
 
 // Saved setup item

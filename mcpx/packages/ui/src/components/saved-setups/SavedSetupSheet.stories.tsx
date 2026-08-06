@@ -43,6 +43,29 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+export const WithSkills: Story = {
+  args: {
+    setup: {
+      ...mockSetup,
+      description: "Cursor engineering workflow",
+      config: {
+        ...mockSetup.config,
+        skills: {
+          enabled: [
+            {
+              subject: { kind: "clientName", value: "cursor" },
+              skillIds: [
+                "0190a000-0000-7000-8000-000000000001",
+                "0190a000-0000-7000-8000-000000000008",
+              ],
+            },
+          ],
+        },
+      },
+    } as unknown as SavedSetupItem,
+  },
+};
+
 export const EmptySetup: Story = {
   args: {
     setup: {
