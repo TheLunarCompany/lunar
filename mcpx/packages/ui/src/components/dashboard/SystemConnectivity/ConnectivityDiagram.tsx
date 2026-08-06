@@ -43,6 +43,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+const CANVAS_TOOLTIP_DELAY_MS = 650;
 
 /** Fits view once after React Flow measures its initial nodes; does not resize on add/remove node. */
 const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
@@ -393,71 +396,73 @@ const ConnectivityDiagramComponent = ({
       <AddButtonActionsProvider
         value={{ onAddAgent: handleAddAgent, onAddServer: handleAddServer }}
       >
-        <ReactFlow
-          key="system-connectivity"
-          colorMode="system"
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          proOptions={{ hideAttribution: true }}
-          minZoom={0.1}
-          maxZoom={2}
-          translateExtent={translateExtent}
-          deleteKeyCode={null}
-          selectionKeyCode={null}
-          multiSelectionKeyCode={null}
-          nodesConnectable={false}
-          nodesDraggable={false}
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onNodeClick={(_event: React.MouseEvent, node: Node) =>
-            onItemClick(node)
-          }
-          onNodeContextMenu={onNodeContextMenu}
-          onPaneClick={handlePaneClick}
-          fitView={false}
-          className="bg-[#fbfbfe]"
-        >
-          <AutoFitView nodes={nodes} />
-          <Controls showInteractive={false} />
-          <MiniMap />
-          <Panel position="top-left" className="w-full">
-            <div className="flex w-full items-start justify-between gap-2 pr-7">
-              <div className="min-w-0" />
-              <div className="flex shrink-0 items-center gap-2">
-                {!isEditingSpaceOnBehalf && (
-                  <Button variant="node-card" onClick={handleAddAgent}>
+        <TooltipProvider delayDuration={CANVAS_TOOLTIP_DELAY_MS}>
+          <ReactFlow
+            key="system-connectivity"
+            colorMode="system"
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            proOptions={{ hideAttribution: true }}
+            minZoom={0.1}
+            maxZoom={2}
+            translateExtent={translateExtent}
+            deleteKeyCode={null}
+            selectionKeyCode={null}
+            multiSelectionKeyCode={null}
+            nodesConnectable={false}
+            nodesDraggable={false}
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={(_event: React.MouseEvent, node: Node) =>
+              onItemClick(node)
+            }
+            onNodeContextMenu={onNodeContextMenu}
+            onPaneClick={handlePaneClick}
+            fitView={false}
+            className="bg-[#fbfbfe]"
+          >
+            <AutoFitView nodes={nodes} />
+            <Controls showInteractive={false} />
+            <MiniMap />
+            <Panel position="top-left" className="w-full pointer-events-none">
+              <div className="flex w-full items-start justify-between gap-2 pr-7">
+                <div className="min-w-0" />
+                <div className="flex shrink-0 items-center gap-2 pointer-events-auto">
+                  {!isEditingSpaceOnBehalf && (
+                    <Button variant="node-card" onClick={handleAddAgent}>
+                      <Plus data-icon="inline-start" />
+                      Add Agent
+                    </Button>
+                  )}
+                  <Button variant="node-card" onClick={handleAddServer}>
                     <Plus data-icon="inline-start" />
-                    Add Agent
+                    Add Server
                   </Button>
-                )}
-                <Button variant="node-card" onClick={handleAddServer}>
-                  <Plus data-icon="inline-start" />
-                  Add Server
-                </Button>
+                </div>
               </div>
-            </div>
-          </Panel>
-          {contextMenu && (
-            <ServerContextMenu
-              isInactive={contextMenu.isInactive}
-              canEdit={
-                canEditServers &&
-                contextMenu.serverData.status !== SERVER_STATUS.connecting
-              }
-              top={contextMenu.top}
-              left={contextMenu.left}
-              right={contextMenu.right}
-              bottom={contextMenu.bottom}
-              onDetails={handleContextDetails}
-              onEdit={handleContextEdit}
-              onToggleInactive={handleContextToggleInactive}
-              onDelete={handleContextDelete}
-              onClick={closeContextMenu}
-            />
-          )}
-        </ReactFlow>
+            </Panel>
+            {contextMenu && (
+              <ServerContextMenu
+                isInactive={contextMenu.isInactive}
+                canEdit={
+                  canEditServers &&
+                  contextMenu.serverData.status !== SERVER_STATUS.connecting
+                }
+                top={contextMenu.top}
+                left={contextMenu.left}
+                right={contextMenu.right}
+                bottom={contextMenu.bottom}
+                onDetails={handleContextDetails}
+                onEdit={handleContextEdit}
+                onToggleInactive={handleContextToggleInactive}
+                onDelete={handleContextDelete}
+                onClick={closeContextMenu}
+              />
+            )}
+          </ReactFlow>
+        </TooltipProvider>
       </AddButtonActionsProvider>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
