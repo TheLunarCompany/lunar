@@ -1,0 +1,19 @@
+quotas:
+  - id: 25aa703b-7836-4c68-b06b-22b3f7c8370d
+    filter:
+      url: "*"
+    strategy:
+      fixed_window:
+        max: 55
+        interval: 30
+        interval_unit: second
+
+  - id: 26aa703b-7837-4c68-b06b-22b3f7c8370d
+    filter:
+      filter:
+        url: webz.io/*
+    strategy:
+      fixed_window:
+        max: 22
+        interval: 30
+        interval_unit: second
