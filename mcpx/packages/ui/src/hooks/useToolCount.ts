@@ -6,7 +6,7 @@ import {
   getSkillToolsForAgent,
   getTotalConnectedTools,
 } from "./toolCount";
-import { isSkillsPageEnabled } from "@/config/runtime-config";
+import { useSkillsFeatureEnabled } from "@/data/skills";
 import { useEnabledSkills, useSkills } from "@/data/skills";
 
 export interface UseToolCountOptions {
@@ -20,7 +20,7 @@ export interface UseToolCountOptions {
  * Reads toolGroups, appConfig, connectedClients, targetServers from stores.
  */
 export function useToolCount(options?: UseToolCountOptions) {
-  const skillsPageEnabled = isSkillsPageEnabled();
+  const skillsFeatureEnabled = useSkillsFeatureEnabled().data ?? false;
   const toolGroups = useAccessControlsStore((s) => s.toolGroups);
   const appConfig = useSocketStore((s) => s.appConfig);
   const connectedClients = useSocketStore(
@@ -28,10 +28,10 @@ export function useToolCount(options?: UseToolCountOptions) {
   );
   const targetServers = useSocketStore((s) => s.systemState?.targetServers);
   const skillsQuery = useSkills({
-    enabled: skillsPageEnabled && options?.agent != null,
+    enabled: skillsFeatureEnabled && options?.agent != null,
   });
   const enabledSkillsQuery = useEnabledSkills({
-    enabled: skillsPageEnabled && options?.agent != null,
+    enabled: skillsFeatureEnabled && options?.agent != null,
   });
 
   const totalConnectedTools = useMemo(
@@ -46,7 +46,7 @@ export function useToolCount(options?: UseToolCountOptions) {
   const availableTools = useMemo(() => {
     if (options?.agent == null) return totalConnectedTools;
 
-    if (!skillsPageEnabled) {
+    if (!skillsFeatureEnabled) {
       return getAvailableToolsForAgent({
         agent: options.agent,
         connectedClients,
@@ -79,7 +79,7 @@ export function useToolCount(options?: UseToolCountOptions) {
     appConfig?.permissions?.clientNames,
     appConfig?.skills?.enabled,
     appConfig?.targetServerAttributes,
-    skillsPageEnabled,
+    skillsFeatureEnabled,
     enabledSkillsQuery.data,
     skillsQuery.data,
     toolGroups,

@@ -24,6 +24,7 @@ import type {
   SkillInput,
   EnabledSkills,
   ScopeSubject,
+  FeatureEnabledResponse,
 } from "@mcpx/shared-model";
 import {
   singleToolGroupSchema,
@@ -42,6 +43,7 @@ import {
   skillDraftOverlaySchema,
   skillSchema,
   enabledSkillsResponseSchema,
+  skillsFeatureEnabledSchema,
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getAdminWebserverURL, getMcpxServerURL } from "@/config/api-config";
@@ -650,6 +652,11 @@ class ApiClient {
   // ==================== SKILLS ====================
 
   // The catalog also carries others' published skills; current pages only show mine.
+
+  // TODO: remove in RND-988
+  async getSkillsFeatureEnabled(): Promise<FeatureEnabledResponse> {
+    return this.request("/skills/feature-enabled", skillsFeatureEnabledSchema);
+  }
   async getSkills(): Promise<Skill[]> {
     const { mine } = await this.request(
       "/skills",

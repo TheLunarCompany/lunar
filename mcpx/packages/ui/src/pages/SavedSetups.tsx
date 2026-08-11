@@ -44,7 +44,7 @@ import { useNavigate } from "react-router-dom";
 import { formatDateTimeLong } from "@/utils";
 import { useSocketStore } from "@/store";
 import { pluralizeWithCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
-import { isSkillsPageEnabled } from "@/config/runtime-config";
+import { useSkillsFeatureEnabled } from "@/data/skills";
 import { useSkills } from "@/data/skills";
 
 type PendingAction =
@@ -59,15 +59,15 @@ type CurrentSetupSummary = {
 
 function formatCurrentSetupSummary(
   summary: CurrentSetupSummary,
-  skillsPageEnabled: boolean,
+  skillsFeatureEnabled: boolean,
 ): string {
   const parts: string[] = [];
   if (summary.serverCount > 0) {
     parts.push(`${pluralizeWithCount(summary.serverCount, "server")}`);
   }
-  if (skillsPageEnabled && summary.skillCount > 0) {
+  if (skillsFeatureEnabled && summary.skillCount > 0) {
     parts.push(`${pluralizeWithCount(summary.skillCount, "skill")}`);
-  } else if (!skillsPageEnabled && summary.toolGroupCount > 0) {
+  } else if (!skillsFeatureEnabled && summary.toolGroupCount > 0) {
     parts.push(`${pluralizeWithCount(summary.toolGroupCount, "tool group")}`);
   }
   return parts.length > 0 ? parts.join(" and ") : "";
@@ -87,11 +87,11 @@ function ServerIconCell({ name }: { name: string }) {
 function getActionConfig(
   action: PendingAction,
   currentSetupSummary: CurrentSetupSummary,
-  skillsPageEnabled: boolean,
+  skillsFeatureEnabled: boolean,
 ) {
   const summaryText = formatCurrentSetupSummary(
     currentSetupSummary,
-    skillsPageEnabled,
+    skillsFeatureEnabled,
   );
   const hasCurrentSetup = summaryText.length > 0;
 
@@ -119,7 +119,7 @@ function getActionConfig(
 
 export default function SavedSetups() {
   const navigate = useNavigate();
-  const skillsPageEnabled = isSkillsPageEnabled();
+  const skillsFeatureEnabled = useSkillsFeatureEnabled().data ?? false;
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null,
@@ -148,7 +148,7 @@ export default function SavedSetups() {
   };
 
   const { data: savedSetups, isLoading, error } = useGetSavedSetups();
-  const skillsQuery = useSkills({ enabled: skillsPageEnabled });
+  const skillsQuery = useSkills({ enabled: skillsFeatureEnabled });
   const skillsById = useMemo(
     () => new Map((skillsQuery.data ?? []).map((skill) => [skill.id, skill])),
     [skillsQuery.data],
@@ -311,7 +311,7 @@ export default function SavedSetups() {
 
   const setups = savedSetups?.setups ?? [];
   const actionConfig = pendingAction
-    ? getActionConfig(pendingAction, currentSetupSummary, skillsPageEnabled)
+    ? getActionConfig(pendingAction, currentSetupSummary, skillsFeatureEnabled)
     : null;
 
   return (
@@ -438,7 +438,7 @@ export default function SavedSetups() {
                       </Tooltip>
                     )}
                   </div>
-                  {skillsPageEnabled && skillLabels.length > 0 ? (
+                  {skillsFeatureEnabled && skillLabels.length > 0 ? (
                     <div className="mt-4">
                       <p className="text-[11px] mb-1 font-bold">SKILLS</p>
                       <div className="flex flex-wrap gap-2 items-center">
@@ -478,7 +478,7 @@ export default function SavedSetups() {
                         )}
                       </div>
                     </div>
-                  ) : !skillsPageEnabled && toolGroupNames.length > 0 ? (
+                  ) : !skillsFeatureEnabled && toolGroupNames.length > 0 ? (
                     <div className="mt-4">
                       <p className="text-[11px] mb-1 font-bold">TOOL GROUPS</p>
                       <div className="flex flex-wrap gap-2 items-center">

@@ -1,5 +1,6 @@
 import {
   EnabledSkillsResponse,
+  FeatureEnabledResponse,
   saveSkillDraftRequestSchema,
   scopeSubjectSchema,
   Skill,
@@ -16,6 +17,7 @@ import { Logger } from "winston";
 import z from "zod/v4";
 import { Services } from "../services/services.js";
 import { StaleDraftBaseError } from "../services/skills/skill-store.js";
+import { env } from "../env.js";
 
 export function buildSkillsRouter(
   authGuard: express.RequestHandler,
@@ -27,6 +29,15 @@ export function buildSkillsRouter(
   router.get("/", authGuard, (_req, res) => {
     const { mine, others } = services.skills.store.getCatalog();
     res.status(200).json({ mine, others } satisfies SkillCatalogResponse);
+  });
+
+  // TODO: remove in RND-988
+  // Registered before /:id so the literal path isn't captured as an id.
+  router.get("/feature-enabled", authGuard, (_req, res) => {
+    const enabled = env.ENABLE_SKILL_SCOPING;
+    res
+      .status(200)
+      .json({ featureEnabled: enabled } satisfies FeatureEnabledResponse);
   });
 
   // Registered before /:id so the literal path isn't captured as an id.

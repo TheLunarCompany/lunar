@@ -81,6 +81,12 @@ export const saveSkillDraftRequestSchema = z.object({
   draft: skillDraftOverlaySchema,
   baseUpdatedAt: z.coerce.date(),
 });
+// TODO: temp schema, remove in RND-988
+export const skillsFeatureEnabledSchema = z.object({
+  featureEnabled: z.boolean(),
+});
+// TODO: temp schema, remove in RND-988
+export type FeatureEnabledResponse = z.infer<typeof skillsFeatureEnabledSchema>;
 export type SaveSkillDraftRequest = z.input<typeof saveSkillDraftRequestSchema>;
 
 export const upsertSkillRequestSchema = skillInputSchema;

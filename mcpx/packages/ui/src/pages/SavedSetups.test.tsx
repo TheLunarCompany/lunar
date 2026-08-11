@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isSkillsPageEnabled } from "@/config/runtime-config";
 import {
   useDeleteSavedSetup,
   useGetSavedSetups,
@@ -10,15 +9,12 @@ import {
   useRestoreSavedSetup,
   useSaveSetup,
 } from "@/data/saved-setups";
-import { useSkills } from "@/data/skills";
+import { useSkills, useSkillsFeatureEnabled } from "@/data/skills";
 import type { SavedSetupItem, Skill } from "@mcpx/shared-model";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import SavedSetups from "./SavedSetups";
 
-vi.mock("@/config/runtime-config", () => ({
-  isSkillsPageEnabled: vi.fn(),
-}));
 vi.mock("@/data/saved-setups", () => ({
   useDeleteSavedSetup: vi.fn(),
   useGetSavedSetups: vi.fn(),
@@ -28,6 +24,7 @@ vi.mock("@/data/saved-setups", () => ({
 }));
 vi.mock("@/data/skills", () => ({
   useSkills: vi.fn(),
+  useSkillsFeatureEnabled: vi.fn(),
 }));
 vi.mock("@/hooks/useDomainIcon", () => ({
   useDomainIcon: () => "/server.svg",
@@ -139,7 +136,7 @@ beforeEach(() => {
 
 describe("SavedSetups", () => {
   it("shows unique saved skills instead of tool groups when Skills is enabled", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
 
     renderPage();
 
@@ -151,7 +148,7 @@ describe("SavedSetups", () => {
   });
 
   it("keeps the tool groups card when Skills is disabled", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
 
     renderPage();
 
@@ -162,7 +159,7 @@ describe("SavedSetups", () => {
   });
 
   it("keeps an unavailable saved skill visible by id", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
     vi.mocked(useSkills).mockReturnValue({
       data: [skills[0]],
       isLoading: false,
@@ -177,7 +174,7 @@ describe("SavedSetups", () => {
   });
 
   it("uses the unique skill count in the restore summary", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
 
     renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));

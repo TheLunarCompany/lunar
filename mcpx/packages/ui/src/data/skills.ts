@@ -19,6 +19,19 @@ type SkillQueryOptions = {
   enabled?: boolean;
 };
 
+// TODO: remove in RND-988
+export function useSkillsFeatureEnabled() {
+  return useQuery<boolean, Error>({
+    queryKey: ["skill-feature-enabled"],
+    queryFn: async () => {
+      const response = await apiClient.getSkillsFeatureEnabled();
+      return response.featureEnabled;
+    },
+    // stale time of 5 minutes, in order not to pull at every time the hook is called
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useSkills({ enabled = true }: SkillQueryOptions = {}) {
   return useQuery({
     queryKey: skillsQueryKey.all,

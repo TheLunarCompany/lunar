@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
+import { useSkillsFeatureEnabled } from "@/data/skills";
 
 type SidebarIcon = ElementType<{ className?: string }>;
 
@@ -125,11 +126,17 @@ export type McpxSidebarProps = ComponentPropsWithoutRef<typeof Sidebar> & {
 
 export function McpxSidebar({
   activeItemId,
-  sections = getDefaultMcpxSidebarSections(),
+  sections,
   children,
   className,
   ...props
 }: McpxSidebarProps) {
+  const { data: skillsFeatureEnabled } = useSkillsFeatureEnabled();
+  const resolvedSections =
+    sections ??
+    getDefaultMcpxSidebarSections({
+      skillsFeatureEnabled: skillsFeatureEnabled ?? false,
+    });
   return (
     <Sidebar className={className} {...props}>
       <div
@@ -147,7 +154,7 @@ export function McpxSidebar({
           <SidebarBrand />
         </SidebarHeader>
         <SidebarContent className="gap-5 pt-2">
-          {sections.map((section) => (
+          {resolvedSections.map((section) => (
             <Fragment key={section.title}>
               {section.title === "Catalogs" && (
                 <SidebarSeparator className="mx-auto w-[calc(100%-2rem)] bg-white/20" />

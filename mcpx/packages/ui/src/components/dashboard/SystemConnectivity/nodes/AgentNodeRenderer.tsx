@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NodeCard, NodeBadge, NodeCardIcon } from "@/components/ui/node-card";
-import { isSkillsPageEnabled } from "@/config/runtime-config";
+import { useSkillsFeatureEnabled } from "@/data/skills";
 
 const AgentNodeRenderer = ({
   data,
@@ -19,7 +19,7 @@ const AgentNodeRenderer = ({
 }: NodeProps<AgentNode>) => {
   const selectedAgent = useModalsStore((s) => s.selectedAgent);
   const selected = isRouteSelected || selectedAgent?.id === data.id;
-  const skillsPageEnabled = isSkillsPageEnabled();
+  const skillsFeatureEnabled = useSkillsFeatureEnabled().data ?? false;
 
   const display = deriveAgentDisplay(data);
 
@@ -54,7 +54,7 @@ const AgentNodeRenderer = ({
                bg-size-[100%_100%] bg-[linear-gradient(180deg,#F9FAFD_0%,#E6E6ED_100%)]
                shadow-[0_4px_4px_0_rgba(97,71,209,0.15)] border border-[#C3B4F3]"
             title={
-              skillsPageEnabled
+              skillsFeatureEnabled
                 ? "Tools from assigned skills"
                 : "Connected tools"
             }

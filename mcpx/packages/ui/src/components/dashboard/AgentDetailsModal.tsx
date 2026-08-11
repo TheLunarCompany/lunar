@@ -42,9 +42,9 @@ import {
   getConsumerToolAccess,
 } from "@/hooks/toolCount";
 import { agentsData } from "./constants";
-import { isSkillsPageEnabled } from "@/config/runtime-config";
 import { DomainBadge } from "./DomainBadge";
 import { useAgentSkillAssignments } from "@/hooks/useAgentSkillAssignments";
+import { useSkillsFeatureEnabled } from "@/data/skills";
 
 const CONNECTION_BADGE: Record<
   ConnectionState,
@@ -147,7 +147,7 @@ export const AgentDetailsModal = ({
     new Set(),
   );
   const navigate = useNavigate();
-  const skillsPageEnabled = isSkillsPageEnabled();
+  const skillsFeatureEnabled = useSkillsFeatureEnabled().data ?? false;
 
   const { toolGroups, profiles, setProfiles } = useAccessControlsStore((s) => {
     return {
@@ -169,7 +169,7 @@ export const AgentDetailsModal = ({
   }));
   const agentSkillAssignments = useAgentSkillAssignments({
     agent,
-    enabled: isOpen && skillsPageEnabled,
+    enabled: isOpen && skillsFeatureEnabled,
     systemState,
     targetServerAttributes: appConfig?.targetServerAttributes,
   });
@@ -267,7 +267,7 @@ export const AgentDetailsModal = ({
 
   // Check if there are changes to save
   const hasChanges = useMemo(() => {
-    if (skillsPageEnabled) {
+    if (skillsFeatureEnabled) {
       return agentSkillAssignments.isDirty;
     }
 
@@ -310,7 +310,7 @@ export const AgentDetailsModal = ({
     originalToolGroups,
     hadOriginalProfile,
     agentSkillAssignments.isDirty,
-    skillsPageEnabled,
+    skillsFeatureEnabled,
   ]);
 
   // Permission entries for this agent live under either `consumers` or `clientNames`,
@@ -540,7 +540,7 @@ export const AgentDetailsModal = ({
         ? agent.consumerTag
         : agent.clientName;
 
-    if (skillsPageEnabled) {
+    if (skillsFeatureEnabled) {
       try {
         await agentSkillAssignments.save();
 
@@ -770,7 +770,7 @@ export const AgentDetailsModal = ({
     setProfiles,
     allowAll,
     editedToolGroups,
-    skillsPageEnabled,
+    skillsFeatureEnabled,
     agentSkillAssignments,
     onClose,
     currentAgentData.name,
@@ -803,7 +803,7 @@ export const AgentDetailsModal = ({
             </SheetTitle>
             <SheetDescription>
               Configure{" "}
-              {skillsPageEnabled
+              {skillsFeatureEnabled
                 ? "skill assignments"
                 : "tool access permissions"}{" "}
               for {consumerTag || currentAgentData.name || "AI Agent"}
@@ -905,8 +905,8 @@ export const AgentDetailsModal = ({
         </div>
 
         {/* Tool Catalog Section */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6">
-          {skillsPageEnabled ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pt-5">
+          {skillsFeatureEnabled ? (
             <AgentSkillsSection
               skills={agentSkillAssignments.skills}
               totalToolsCount={totalConnectedTools}
@@ -921,7 +921,7 @@ export const AgentDetailsModal = ({
             />
           ) : null}
 
-          {!skillsPageEnabled ? (
+          {!skillsFeatureEnabled ? (
             <>
               <Separator className="my-5" />
               <div className="mb-3 text-base font-semibold leading-6 text-foreground">

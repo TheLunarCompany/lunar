@@ -8,9 +8,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isSkillsPageEnabled } from "@/config/runtime-config";
-import { useAgentSkillAssignments } from "@/hooks/useAgentSkillAssignments";
-
+import { useSkillsFeatureEnabled } from "@/data/skills";
 import type { Agent } from "../../types/agent";
 
 import { AgentDetailsModal } from "./AgentDetailsModal";
@@ -139,8 +137,8 @@ vi.mock("@/hooks/useDomainIcon", () => ({
   useDomainIcon: () => null,
 }));
 
-vi.mock("@/config/runtime-config", () => ({
-  isSkillsPageEnabled: vi.fn(() => true),
+vi.mock("@/data/skills", () => ({
+  useSkillsFeatureEnabled: vi.fn(() => ({ data: true })),
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -218,8 +216,8 @@ function agentSkillAssignmentsResult(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
-  mockAgentSkillAssignments();
+  vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+  mockAgentDrawerSkillsData();
 });
 
 describe("AgentDetailsModal", () => {
@@ -313,7 +311,7 @@ describe("AgentDetailsModal", () => {
   });
 
   it("does not render or fetch skills when the Skills feature flag is disabled", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
 
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
@@ -325,7 +323,7 @@ describe("AgentDetailsModal", () => {
   });
 
   it("uses an accessible icon-only caret button for tool group expansion", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
     const expandButton = screen.getByRole("button", {
@@ -340,7 +338,7 @@ describe("AgentDetailsModal", () => {
   });
 
   it("toggles tool group expansion when clicking the card content", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
     expect(screen.queryByText("create_pull_request")).toBeNull();

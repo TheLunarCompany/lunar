@@ -3,10 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import { createAppRoutes } from "@/pages/app-routes";
 import { routes } from "@/routes";
 
-vi.mock("@/config/runtime-config", () => ({
-  isSkillsPageEnabled: () => true,
-}));
-
 vi.mock("@/pages/AuditLog", () => ({ default: () => null }));
 vi.mock("@/pages/Dashboard", () => ({ default: () => null }));
 vi.mock("@/pages/Tools", () => ({ default: () => null }));

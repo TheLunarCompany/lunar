@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Agent } from "@/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isSkillsPageEnabled } from "@/config/runtime-config";
+import { useSkillsFeatureEnabled } from "@/data/skills";
+
 import AgentNodeRenderer from "./AgentNodeRenderer";
 import type { AgentNode } from "../types";
 
@@ -28,12 +29,9 @@ vi.mock("@/hooks/useToolCount", () => ({
     totalConnectedTools: CONNECTED_TOOLS_COUNT,
   }),
 }));
-vi.mock("@/config/runtime-config", () => ({
-  isSkillsPageEnabled: vi.fn(),
-}));
 
 beforeEach(() => {
-  vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+  vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
 });
 
 function createAgentData(overrides: Partial<Agent> = {}): Agent {
@@ -71,7 +69,7 @@ describe("AgentNodeRenderer", () => {
   });
 
   it("labels the count as assigned skill tools when Skills is enabled", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
 
     const { getByTitle } = renderNode(createAgentData());
 

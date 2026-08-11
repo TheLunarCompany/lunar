@@ -11,15 +11,17 @@ import {
 import {
   isCapabilitiesEnabled,
   isMcpServersShown,
-  isSkillsPageEnabled,
   isUiSidebarRestructureEnabled,
 } from "@/config/runtime-config";
 import { routes } from "@/routes";
 import type { McpxSidebarSection } from "./McpxSidebar";
 
-export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
+export function getDefaultMcpxSidebarSections(options?: {
+  skillsFeatureEnabled?: boolean;
+}): McpxSidebarSection[] {
+  const skillsFeatureEnabled = options?.skillsFeatureEnabled ?? false;
   if (isUiSidebarRestructureEnabled()) {
-    return getRestructuredMcpxSidebarSections();
+    return getRestructuredMcpxSidebarSections({ skillsFeatureEnabled });
   }
 
   const workspaceItems: McpxSidebarSection["items"] = [
@@ -32,7 +34,7 @@ export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
     { id: "catalog", label: "Catalog", icon: Library, url: routes.catalog },
   ];
 
-  if (!isSkillsPageEnabled()) {
+  if (!skillsFeatureEnabled) {
     workspaceItems.push({
       id: "tools",
       label: "Tools",
@@ -50,7 +52,7 @@ export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
     });
   }
 
-  if (isSkillsPageEnabled()) {
+  if (skillsFeatureEnabled) {
     workspaceItems.push({
       id: "skills",
       label: "Skills",
@@ -81,7 +83,10 @@ export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
   ];
 }
 
-function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
+function getRestructuredMcpxSidebarSections(options?: {
+  skillsFeatureEnabled?: boolean;
+}): McpxSidebarSection[] {
+  const skillsFeatureEnabled = options?.skillsFeatureEnabled ?? false;
   const workspaceItems: McpxSidebarSection["items"] = [
     {
       id: "dashboard",
@@ -100,7 +105,7 @@ function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
     });
   }
 
-  if (!isSkillsPageEnabled()) {
+  if (!skillsFeatureEnabled) {
     workspaceItems.push({
       id: "tools",
       label: "Tools",
@@ -109,7 +114,7 @@ function getRestructuredMcpxSidebarSections(): McpxSidebarSection[] {
     });
   }
 
-  if (isSkillsPageEnabled()) {
+  if (skillsFeatureEnabled) {
     workspaceItems.push({
       id: "skills",
       label: "Skills",

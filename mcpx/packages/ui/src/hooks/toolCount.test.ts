@@ -2,8 +2,11 @@ import type { EnabledSkills, Skill } from "@mcpx/shared-model";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isSkillsPageEnabled } from "@/config/runtime-config";
-import { useEnabledSkills, useSkills } from "@/data/skills";
+import {
+  useEnabledSkills,
+  useSkills,
+  useSkillsFeatureEnabled,
+} from "@/data/skills";
 
 import { getSkillToolsForAgent } from "./toolCount";
 import { useToolCount } from "./useToolCount";
@@ -55,10 +58,8 @@ const hookState = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/config/runtime-config", () => ({
-  isSkillsPageEnabled: vi.fn(),
-}));
 vi.mock("@/data/skills", () => ({
+  useSkillsFeatureEnabled: vi.fn(),
   useEnabledSkills: vi.fn(),
   useSkills: vi.fn(),
 }));
@@ -163,7 +164,7 @@ describe("useToolCount", () => {
   });
 
   it("uses assigned skill tools instead of tool groups when Skills is enabled", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
 
     const { result } = renderHook(() =>
       useToolCount({
@@ -177,7 +178,7 @@ describe("useToolCount", () => {
   });
 
   it("keeps tool-group counting when Skills is disabled", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
 
     const { result } = renderHook(() =>
       useToolCount({
@@ -191,7 +192,7 @@ describe("useToolCount", () => {
   });
 
   it("uses assigned skills even when legacy permissions are unrestricted", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
     delete (
       hookState.appConfig.permissions.clientNames as Partial<
         typeof hookState.appConfig.permissions.clientNames
@@ -208,7 +209,7 @@ describe("useToolCount", () => {
   });
 
   it("shows all available tools when the agent has no assigned skills", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
     hookState.appConfig.skills.enabled = [];
     vi.mocked(useEnabledSkills).mockReturnValue({ data: [] } as never);
 
@@ -222,7 +223,7 @@ describe("useToolCount", () => {
   });
 
   it("shows the full connected count while skills are still loading", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
     vi.mocked(useSkills).mockReturnValue({ data: undefined } as never);
 
     const { result } = renderHook(() =>

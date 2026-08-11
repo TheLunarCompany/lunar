@@ -8,36 +8,6 @@ describe("runtime config feature helpers", () => {
     vi.unstubAllEnvs();
   });
 
-  it("enables the skills page when the runtime flag is true", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          VITE_MCPX_SERVER_URL: "http://localhost:9000",
-          VITE_SHOW_SKILLS_PAGE: "true",
-        }),
-      ),
-    );
-    const { isSkillsPageEnabled, loadRuntimeConfig } = await import(
-      "./runtime-config"
-    );
-
-    await loadRuntimeConfig();
-
-    expect(isSkillsPageEnabled()).toBe(true);
-  });
-
-  it("disables the skills page by default", async () => {
-    vi.stubEnv("VITE_SHOW_SKILLS_PAGE", "false");
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("missing"));
-    const { isSkillsPageEnabled, loadRuntimeConfig } = await import(
-      "./runtime-config"
-    );
-
-    await loadRuntimeConfig();
-
-    expect(isSkillsPageEnabled()).toBe(false);
-  });
-
   it("shows MCP Servers when the runtime flag is true", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(

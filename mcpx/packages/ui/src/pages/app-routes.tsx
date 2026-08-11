@@ -25,7 +25,6 @@ import {
   RootRoute,
 } from "@/pages/app-route-components";
 import { routes } from "@/routes";
-import { isSkillsPageEnabled } from "@/config/runtime-config";
 
 export function createAppRouter() {
   return createBrowserRouter(createAppRoutes());
@@ -40,21 +39,17 @@ export function createAppRoutes() {
         <Route path={routes.capabilities} element={<Capabilities />} />
         <Route path={routes.mcpServers} element={<McpServers />} />
         <Route path={routes.mcpServerAdd} element={<McpServerAdd />} />
-        {isSkillsPageEnabled() ? (
-          <>
-            <Route path={routes.skills} element={<Skills />} />
-            <Route path={routes.skillNew} element={<SkillCreateStart />} />
-            <Route path={routes.skillNewUpload} element={<SkillEditor />} />
-            <Route path={routes.skillNewBlank} element={<SkillEditor />} />
-            <Route path={routes.skillDetail} element={<SkillDetail />} />
-            <Route path={routes.skillEditor} element={<SkillEditor />} />
-            <Route
-              path={routes.skillCapabilities}
-              element={<SkillCapabilitiesEditor />}
-            />
-            <Route path={routes.skillAgents} element={<SkillAgentsEditor />} />
-          </>
-        ) : null}
+        <Route path={routes.skills} element={<Skills />} />
+        <Route path={routes.skillNew} element={<SkillCreateStart />} />
+        <Route path={routes.skillNewUpload} element={<SkillEditor />} />
+        <Route path={routes.skillNewBlank} element={<SkillEditor />} />
+        <Route path={routes.skillDetail} element={<SkillDetail />} />
+        <Route path={routes.skillEditor} element={<SkillEditor />} />
+        <Route
+          path={routes.skillCapabilities}
+          element={<SkillCapabilitiesEditor />}
+        />
+        <Route path={routes.skillAgents} element={<SkillAgentsEditor />} />
         <Route path={routes.tools} element={<Tools />} />
         <Route path={routes.catalog} element={<Catalog />} />
         <Route path={routes.mcpRegistry} element={<McpRegistry />} />

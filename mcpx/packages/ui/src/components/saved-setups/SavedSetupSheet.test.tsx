@@ -3,17 +3,14 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isSkillsPageEnabled } from "@/config/runtime-config";
 import { useGetMCPServers } from "@/data/catalog-servers";
-import { useSkills } from "@/data/skills";
+import { useSkills, useSkillsFeatureEnabled } from "@/data/skills";
 import type { SavedSetupItem, Skill } from "@mcpx/shared-model";
 
 import { SavedSetupSheet } from "./SavedSetupSheet";
 
-vi.mock("@/config/runtime-config", () => ({
-  isSkillsPageEnabled: vi.fn(),
-}));
 vi.mock("@/data/skills", () => ({
+  useSkillsFeatureEnabled: vi.fn(),
   useSkills: vi.fn(),
 }));
 vi.mock("@/data/catalog-servers", () => ({
@@ -115,7 +112,7 @@ beforeEach(() => {
 
 describe("SavedSetupSheet", () => {
   it("shows skill details instead of tool groups when Skills is enabled", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
 
     renderSheet();
 
@@ -131,7 +128,7 @@ describe("SavedSetupSheet", () => {
   });
 
   it("keeps tool group details when Skills is disabled", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(false);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
 
     renderSheet();
 
@@ -144,7 +141,7 @@ describe("SavedSetupSheet", () => {
   });
 
   it("keeps unavailable saved skills visible by id", () => {
-    vi.mocked(isSkillsPageEnabled).mockReturnValue(true);
+    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
     vi.mocked(useSkills).mockReturnValue({
       data: [],
       isLoading: false,

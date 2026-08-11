@@ -13,7 +13,6 @@ export interface RuntimeConfig {
   VITE_ENABLE_PERMISSIONS: string;
   VITE_ENABLE_CAPABILITIES_UI: string;
   VITE_ADD_SERVER_CHECKBOX: string;
-  VITE_SHOW_SKILLS_PAGE: string;
   VITE_UI_SIDEBAR_RESTRUCTURE: string;
   VITE_SHOW_MCP_SERVERS: string;
 }
@@ -79,7 +78,6 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
           import.meta.env.VITE_ENABLE_CAPABILITIES_UI || "false",
         VITE_ADD_SERVER_CHECKBOX:
           import.meta.env.VITE_ADD_SERVER_CHECKBOX || undefined,
-        VITE_SHOW_SKILLS_PAGE: import.meta.env.VITE_SHOW_SKILLS_PAGE || "false",
         VITE_UI_SIDEBAR_RESTRUCTURE:
           import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
         VITE_SHOW_MCP_SERVERS: import.meta.env.VITE_SHOW_MCP_SERVERS || "false",
@@ -118,7 +116,6 @@ export function getRuntimeConfigSync(): RuntimeConfig {
       import.meta.env.VITE_ENABLE_CAPABILITIES_UI || "false",
     VITE_ADD_SERVER_CHECKBOX:
       import.meta.env.VITE_ADD_SERVER_CHECKBOX || undefined,
-    VITE_SHOW_SKILLS_PAGE: import.meta.env.VITE_SHOW_SKILLS_PAGE || "false",
     VITE_UI_SIDEBAR_RESTRUCTURE:
       import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
     VITE_SHOW_MCP_SERVERS: import.meta.env.VITE_SHOW_MCP_SERVERS || "false",
@@ -163,11 +160,6 @@ export function getAuthBffUrl(): string | null {
   const config = getRuntimeConfigSync();
   const url = (config.VITE_AUTH_BFF_URL || "").trim();
   return url.length > 0 ? url : null;
-}
-
-export function isSkillsPageEnabled(): boolean {
-  const config = getRuntimeConfigSync();
-  return config.VITE_SHOW_SKILLS_PAGE === "true";
 }
 
 export function isUiSidebarRestructureEnabled(): boolean {

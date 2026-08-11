@@ -25,7 +25,7 @@ import {
 import type { SavedSetupItem } from "@mcpx/shared-model";
 import { formatDistanceToNow } from "date-fns";
 import { pluralizeWithCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
-import { isSkillsPageEnabled } from "@/config/runtime-config";
+import { useSkillsFeatureEnabled } from "@/data/skills";
 import { useSkills } from "@/data/skills";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { buildSkillCardCapabilitySummaryResolver } from "@/mapping/skills";
@@ -49,12 +49,12 @@ export function SavedSetupSheet({
   onOverwrite,
   onDelete,
 }: SavedSetupSheetProps) {
-  const skillsPageEnabled = isSkillsPageEnabled();
+  const skillsFeatureEnabled = useSkillsFeatureEnabled().data ?? false;
   const skillsQuery = useSkills({
-    enabled: skillsPageEnabled && setup !== null,
+    enabled: skillsFeatureEnabled && setup !== null,
   });
   const catalogServersQuery = useGetMCPServers({
-    enabled: skillsPageEnabled && setup !== null,
+    enabled: skillsFeatureEnabled && setup !== null,
   });
   const systemState = useSocketStore((state) => state.systemState);
   const summarizeCapabilities = useMemo(
@@ -211,7 +211,7 @@ export function SavedSetupSheet({
             </div>
           )}
 
-          {skillsPageEnabled && savedSkills.length > 0 ? (
+          {skillsFeatureEnabled && savedSkills.length > 0 ? (
             <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
               <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-muted-foreground" />
@@ -251,7 +251,7 @@ export function SavedSetupSheet({
                 {pluralizeWithCount(savedSkills.length, "skill")} selected
               </div>
             </div>
-          ) : !skillsPageEnabled && toolGroups.length > 0 ? (
+          ) : !skillsFeatureEnabled && toolGroups.length > 0 ? (
             <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
               <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-muted-foreground" />
@@ -299,7 +299,7 @@ export function SavedSetupSheet({
           ) : null}
 
           {serverNames.length === 0 &&
-            (skillsPageEnabled
+            (skillsFeatureEnabled
               ? savedSkills.length === 0
               : toolGroups.length === 0) && (
               <div className="text-center py-8">
