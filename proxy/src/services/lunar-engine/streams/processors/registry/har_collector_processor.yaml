@@ -1,0 +1,32 @@
+name: HARCollector
+description: Captures HTTP transaction data, including headers, bodies, and query parameters.
+exec: har_metrics_collector.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
+parameters:
+  exporter_id:
+    type: string
+    description:  ID of the File Exporter defined in gateway_config.yaml
+    required: true
+  transaction_max_size_bytes:
+    type: number
+    description: Maximum size (in bytes) for each HTTP transaction to be logged (in bytes)
+    default: 32768 # 32KB
+    required: false
+  obfuscate_enabled:
+    type: boolean
+    description: Enables or disables obfuscation of sensitive data in the logs.
+    default: false
+    required: false
+  obfuscate_exclusions:
+    type: list_of_strings
+    description: List of json paths of transaction components to exclude from obfuscation. For example, ['$.response.header["Retry-after"]', '$.request.body.user.name']
+    default: []
+    required: false
+   
+output_streams:
+  - type: StreamTypeResponse    
+input_stream:  
+  type: StreamTypeResponse
