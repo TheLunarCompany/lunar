@@ -1,3 +1,5 @@
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2FTheLunarCompany%2Flunar.svg)](https://mcptoplist.com/server/glama%2FTheLunarCompany%2Flunar)
+
 <div align="center">
 <img src="readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
 <img src="readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
