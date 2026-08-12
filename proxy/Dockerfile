@@ -197,16 +197,18 @@ ENV DD_API_KEY=${DD_API_KEY}
 
 # --- Base OS Setup and Package Installation (as root) ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bc=1.07.1-3build1 \
-    logrotate=3.19.0-1ubuntu1.1 \
-    gnupg=2.2.27-3ubuntu2.4 \
-    squid=5.9-0ubuntu0.22.04.4 \
-    xz-utils=5.2.5-2ubuntu1 \
-    socat=1.7.4.1-3ubuntu4 \
-    software-properties-common=0.99.22.9 \
-    net-tools=1.60+git20181103.0eebece-1ubuntu5 \
-    wget=1.21.2-2ubuntu1 \
-    jq=1.6-2.1ubuntu3.1 \
+    # No exact version pins: jammy point releases rot on every security
+    # update; the ubuntu:22.04 base already fixes the major versions
+    bc \
+    logrotate \
+    gnupg \
+    squid \
+    xz-utils \
+    socat \
+    software-properties-common \
+    net-tools \
+    wget \
+    jq \
     ca-certificates \
     # Add haproxy repo and install haproxy 3.0
     && add-apt-repository ppa:vbernat/haproxy-3.0 -y \
