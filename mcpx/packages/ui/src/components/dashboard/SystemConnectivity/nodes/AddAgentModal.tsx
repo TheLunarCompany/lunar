@@ -78,8 +78,8 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-6xl h-[830px] flex flex-col bg-white border border-gray-200 rounded-lg p-0 [&>button]:top-6">
-        <DialogHeader className="border-b border-gray-200 px-6 pt-6 pb-4">
+      <DialogContent className="flex h-[830px] max-h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white p-0 sm:max-w-6xl [&>button]:top-6">
+        <DialogHeader className="shrink-0 border-b border-gray-200 px-6 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-xl font-semibold  text-gray-900">
@@ -88,13 +88,13 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
             </div>
           </div>
         </DialogHeader>
-        <div className="px-6  text-sm text-[#1E1B4B]">
+        <div className="shrink-0 px-6 text-sm text-[#1E1B4B]">
           Select your agent type and copy the configuration{" "}
           {isToml ? "TOML" : "JSON"} to get started.
         </div>
 
-        <div className="flex m-6 mt-0 flex-1 border border-[#D8DCED] rounded-[8px] overflow-hidden">
-          <div className="w-64 border-r bg-white border-gray-200 bg-gray-50 p-4 overflow-y-auto">
+        <div className="m-6 mt-0 flex min-h-0 flex-1 overflow-hidden rounded-[8px] border border-[#D8DCED]">
+          <div className="min-h-0 w-64 overflow-y-auto border-r border-gray-200 bg-gray-50 p-4">
             <div className="space-y-2">
               {AGENT_TYPES.map((type) => (
                 <button
@@ -117,9 +117,9 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 flex flex-col overflow-hidden ">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {selectedConfig && (
-              <div className="flex-1 flex flex-col p-6 overflow-hidden">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
                 <div className="mb-4">
                   <h3
                     className="font-semibold"
@@ -131,7 +131,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                 <CustomTabs
                   value={activeTab}
                   onValueChange={setActiveTab}
-                  className="flex-1 flex flex-col"
+                  className="flex min-h-0 flex-1 flex-col"
                 >
                   <CustomTabsList>
                     <CustomTabsTrigger
@@ -148,7 +148,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                   </CustomTabsList>
                   <CustomTabsContent
                     value="json"
-                    className="flex-1 flex flex-col mt-0 pt-4 pb-0 px-0 overflow-hidden"
+                    className="mt-0 flex min-h-0 flex-1 flex-col overflow-y-auto px-0 pt-4 pb-0"
                   >
                     <div className="relative  flex-col">
                       <div className="absolute top-3 right-3 z-10">
@@ -176,7 +176,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
                   <CustomTabsContent
                     value="instructions"
-                    className="pt-4 pb-0 px-0 pr-2 overflow-y-auto h-[530px]"
+                    className="min-h-0 flex-1 overflow-y-auto px-0 pt-4 pr-2 pb-0"
                   >
                     <AgentInstructions agentType={selectedConfig.value} />
                   </CustomTabsContent>
