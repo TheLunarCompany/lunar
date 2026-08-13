@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "entry": ["src/main.tsx"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "paths": {
+    "@/*": ["./src/*"]
+  },
+  "ignoreDependencies": ["immer", "@mcpx/shared-model", "@mcpx/toolkit-ui"],
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "playwright": {
+    "entry": ["e2e/**/*.spec.ts"]
+  }
+}
