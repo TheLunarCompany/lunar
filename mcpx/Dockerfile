@@ -157,7 +157,7 @@ RUN echo "Building on: $BUILDPLATFORM for: $TARGETPLATFORM" && \
     echo "Kernel: $(uname -r)"
 
 RUN apk add --no-cache \
-    python3=3.12.13-r0 \
+    python3=3.12.14-r0 \
     py3-pip=25.1.1-r0 \
     uv=0.7.22-r0 \
     ca-certificates=20260611-r0 \
