@@ -30,7 +30,7 @@ describe("MultiSelectFilterDropdown", () => {
     const searchInput = screen.getByRole("textbox", {
       name: "Search agents...",
     });
-    expect(searchInput).toHaveClass("rounded-md");
+    expect(searchInput).toHaveClass("rounded");
     await user.type(searchInput, "cursor");
 
     expect(

@@ -1,10 +1,14 @@
 import { Gauge } from "lucide-react";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { McpxSidebar, SidebarAvatar, SidebarBrand } from "./McpxSidebar";
+
+vi.mock("@/data/skills", () => ({
+  useSkillsFeatureEnabled: () => ({ data: true }),
+}));
 
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {

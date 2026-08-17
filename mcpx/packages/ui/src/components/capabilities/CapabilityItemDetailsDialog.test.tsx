@@ -1,7 +1,27 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as renderWithTestingLibrary,
+  screen,
+} from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CapabilityItemDetailsDialog } from "./CapabilityItemDetailsDialog";
+
+vi.mock("@/hooks/useDomainIcon", () => ({
+  useDomainIcon: (name: string) => `/icons/${name}.png`,
+}));
+
+function render(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return renderWithTestingLibrary(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 describe("CapabilityItemDetailsDialog", () => {
   afterEach(() => cleanup());

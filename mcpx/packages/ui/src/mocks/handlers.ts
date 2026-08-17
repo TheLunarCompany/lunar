@@ -423,13 +423,7 @@ const initialPersonalSkills: Skill[] = parseMockSkills([
   },
 ]);
 
-// TEMP: empty skillset so we can verify AgentSkillsSection empty-state UX
-// (full-access switch disabled). Revert to structuredClone(initialPersonalSkills)
-// / initialEnabledSkills when done.
-const USE_EMPTY_SKILLSET = true;
-let personalSkills: Skill[] = USE_EMPTY_SKILLSET
-  ? []
-  : structuredClone(initialPersonalSkills);
+let personalSkills: Skill[] = structuredClone(initialPersonalSkills);
 let nextSkillId = 10;
 const initialEnabledSkills: EnabledSkills[] = [
   {
@@ -437,9 +431,7 @@ const initialEnabledSkills: EnabledSkills[] = [
     skillIds: ["0190a000-0000-7000-8000-000000000001"],
   },
 ];
-let enabledSkills: EnabledSkills[] = USE_EMPTY_SKILLSET
-  ? []
-  : structuredClone(initialEnabledSkills);
+let enabledSkills: EnabledSkills[] = structuredClone(initialEnabledSkills);
 const initialSavedSetups: SavedSetupItem[] = [
   {
     id: "0190a000-0000-7000-8000-000000000011",
@@ -1017,12 +1009,8 @@ function setMockSkillEnabled(
 export function resetMockApiState(): void {
   orgApprovedCapabilities = structuredClone(initialApprovedCapabilities);
   curatedApprovedCapabilities = structuredClone(initialApprovedCapabilities);
-  personalSkills = USE_EMPTY_SKILLSET
-    ? []
-    : structuredClone(initialPersonalSkills);
-  enabledSkills = USE_EMPTY_SKILLSET
-    ? []
-    : structuredClone(initialEnabledSkills);
+  personalSkills = structuredClone(initialPersonalSkills);
+  enabledSkills = structuredClone(initialEnabledSkills);
   savedSetups = structuredClone(initialSavedSetups);
   nextSkillId = 10;
   nextSavedSetupId = 20;

@@ -112,7 +112,9 @@ beforeEach(() => {
 
 describe("SavedSetupSheet", () => {
   it("shows skill details instead of tool groups when Skills is enabled", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
 
     renderSheet();
 
@@ -128,7 +130,9 @@ describe("SavedSetupSheet", () => {
   });
 
   it("keeps tool group details when Skills is disabled", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: false,
+    });
 
     renderSheet();
 
@@ -141,7 +145,9 @@ describe("SavedSetupSheet", () => {
   });
 
   it("keeps unavailable saved skills visible by id", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
     vi.mocked(useSkills).mockReturnValue({
       data: [],
       isLoading: false,

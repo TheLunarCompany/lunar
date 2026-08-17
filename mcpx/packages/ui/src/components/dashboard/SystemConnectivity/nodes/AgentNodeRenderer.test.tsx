@@ -30,8 +30,14 @@ vi.mock("@/hooks/useToolCount", () => ({
   }),
 }));
 
+vi.mock("@/data/skills", () => ({
+  useSkillsFeatureEnabled: vi.fn(),
+}));
+
 beforeEach(() => {
-  vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
+  vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+    data: false,
+  });
 });
 
 function createAgentData(overrides: Partial<Agent> = {}): Agent {
@@ -69,7 +75,9 @@ describe("AgentNodeRenderer", () => {
   });
 
   it("labels the count as assigned skill tools when Skills is enabled", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
 
     const { getByTitle } = renderNode(createAgentData());
 

@@ -13,6 +13,10 @@ vi.mock("@/data/identity", () => ({
   getSpaceName: () => undefined,
 }));
 
+vi.mock("@/data/skills", () => ({
+  useSkillsFeatureEnabled: () => ({ data: true }),
+}));
+
 vi.mock("@/components/dashboard/AddServerModal", () => ({
   AddServerModal: () => null,
 }));

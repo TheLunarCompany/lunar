@@ -136,7 +136,9 @@ beforeEach(() => {
 
 describe("SavedSetups", () => {
   it("shows unique saved skills instead of tool groups when Skills is enabled", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
 
     renderPage();
 
@@ -148,7 +150,9 @@ describe("SavedSetups", () => {
   });
 
   it("keeps the tool groups card when Skills is disabled", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: false,
+    });
 
     renderPage();
 
@@ -159,7 +163,9 @@ describe("SavedSetups", () => {
   });
 
   it("keeps an unavailable saved skill visible by id", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
     vi.mocked(useSkills).mockReturnValue({
       data: [skills[0]],
       isLoading: false,
@@ -174,7 +180,9 @@ describe("SavedSetups", () => {
   });
 
   it("uses the unique skill count in the restore summary", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
 
     renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));

@@ -107,9 +107,9 @@ describe("getDefaultMcpxSidebarSections", () => {
         "./McpxSidebar.data"
       );
 
-      const items = getDefaultMcpxSidebarSections().flatMap(
-        (section) => section.items,
-      );
+      const items = getDefaultMcpxSidebarSections({
+        skillsFeatureEnabled: true,
+      }).flatMap((section) => section.items);
 
       expect(items).not.toEqual(
         expect.arrayContaining([expect.objectContaining({ id: "tools" })]),

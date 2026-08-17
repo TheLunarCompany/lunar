@@ -9,6 +9,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSkillsFeatureEnabled } from "@/data/skills";
+import { useAgentSkillAssignments } from "@/hooks/useAgentSkillAssignments";
 import type { Agent } from "../../types/agent";
 
 import { AgentDetailsModal } from "./AgentDetailsModal";
@@ -216,8 +217,10 @@ function agentSkillAssignmentsResult(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
-  mockAgentDrawerSkillsData();
+  vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+    data: true,
+  });
+  mockAgentSkillAssignments();
 });
 
 describe("AgentDetailsModal", () => {
@@ -311,7 +314,9 @@ describe("AgentDetailsModal", () => {
   });
 
   it("does not render or fetch skills when the Skills feature flag is disabled", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: false,
+    });
 
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
@@ -323,7 +328,9 @@ describe("AgentDetailsModal", () => {
   });
 
   it("uses an accessible icon-only caret button for tool group expansion", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: false,
+    });
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
     const expandButton = screen.getByRole("button", {
@@ -338,7 +345,9 @@ describe("AgentDetailsModal", () => {
   });
 
   it("toggles tool group expansion when clicking the card content", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: false,
+    });
     render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
     expect(screen.queryByText("create_pull_request")).toBeNull();

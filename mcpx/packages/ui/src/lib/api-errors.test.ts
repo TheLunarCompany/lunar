@@ -57,6 +57,7 @@ describe("mcpx API errors", () => {
                 displayName: "Amir",
               },
               updatedAt: "2026-07-09T18:00:00.000Z",
+              publishedAt: null,
             }),
             {
               status: 201,

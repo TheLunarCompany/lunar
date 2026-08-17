@@ -164,7 +164,9 @@ describe("useToolCount", () => {
   });
 
   it("uses assigned skill tools instead of tool groups when Skills is enabled", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
 
     const { result } = renderHook(() =>
       useToolCount({
@@ -178,7 +180,9 @@ describe("useToolCount", () => {
   });
 
   it("keeps tool-group counting when Skills is disabled", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: false });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: false,
+    });
 
     const { result } = renderHook(() =>
       useToolCount({
@@ -192,7 +196,9 @@ describe("useToolCount", () => {
   });
 
   it("uses assigned skills even when legacy permissions are unrestricted", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
     delete (
       hookState.appConfig.permissions.clientNames as Partial<
         typeof hookState.appConfig.permissions.clientNames
@@ -209,7 +215,9 @@ describe("useToolCount", () => {
   });
 
   it("shows all available tools when the agent has no assigned skills", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
     hookState.appConfig.skills.enabled = [];
     vi.mocked(useEnabledSkills).mockReturnValue({ data: [] } as never);
 
@@ -223,7 +231,9 @@ describe("useToolCount", () => {
   });
 
   it("shows the full connected count while skills are still loading", () => {
-    vi.mocked(useSkillsFeatureEnabled).mockReturnValue({ data: true });
+    vi.mocked(useSkillsFeatureEnabled, { partial: true }).mockReturnValue({
+      data: true,
+    });
     vi.mocked(useSkills).mockReturnValue({ data: undefined } as never);
 
     const { result } = renderHook(() =>
