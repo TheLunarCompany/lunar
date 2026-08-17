@@ -29,7 +29,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
     config: {
       type: "stdio",
       command: "uvx",
-      args: ["mcp-server-time"],
+      args: ["--with", "mcp<2.0.0", "mcp-server-time"],
       env: {},
     },
   },
