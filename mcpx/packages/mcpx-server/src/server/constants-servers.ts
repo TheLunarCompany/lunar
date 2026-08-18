@@ -1005,6 +1005,163 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       headers: { Authorization: "Bearer Token {{YOUR_TOKEN_HERE}}" },
     },
   },
+  {
+    name: "wix",
+    displayName: "Wix",
+    description:
+      "Website builder and hosting platform with a built-in CMS and e-commerce. Build and manage sites, edit content and collections, and work with store and booking data. OAuth. Read+write on your sites.",
+    doc: "https://dev.wix.com/docs/sdk/articles/use-the-wix-mcp/about-the-wix-mcp",
+    config: { type: "streamable-http", url: "https://mcp.wix.com/mcp" },
+  },
+  {
+    name: "huggingface",
+    displayName: "HuggingFace",
+    description:
+      "Open-source AI platform hosting models, datasets and demo apps - the central hub for the ML community. Search and explore models, datasets, papers and Spaces, and reach Gradio-hosted MCP servers.",
+    doc: "https://huggingface.co/docs/hub/en/agents-mcp",
+    config: {
+      type: "streamable-http",
+      url: "https://huggingface.co/mcp",
+      headers: { Authorization: "Bearer {{HF_TOKEN}}" },
+    },
+  },
+  {
+    name: "x-docs",
+    displayName: "X.com Docs",
+    description:
+      "Developer documentation for the X API - endpoint references, authentication guides and code examples. Two tools: search across the documentation, and retrieve a full page by path. No authentication. Read-only, no account access.",
+    doc: "https://docs.x.com/tools/mcp",
+    config: { type: "streamable-http", url: "https://docs.x.com/mcp" },
+  },
+  {
+    name: "stripe",
+    displayName: "Stripe",
+    description:
+      "Payment processing platform for online businesses - payments, subscriptions, invoicing, and payouts. Query and manage customers, charges, subscriptions, products and pricing. Read+write on live payment data.",
+    doc: "https://docs.stripe.com/mcp",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.stripe.com",
+      headers: {
+        Authorization: "Bearer {{rk_.....}}",
+        "Stripe-Account": { fromEnv: "CONSUMER-acct_xxxxxxxxx" },
+      },
+    },
+  },
+  {
+    name: "semrush",
+    displayName: "SEMrush",
+    description:
+      "SEO and competitive marketing intelligence - keyword research, backlink analysis, rank tracking and competitor traffic estimates.",
+    doc: "https://developer.semrush.com/api/v4/introduction/semrush-mcp/",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.semrush.com/v2/mcp",
+      headers: { Authorization: "Apikey {{YOUR_API_KEY}}" },
+    },
+  },
+  {
+    name: "apify",
+    displayName: "Apify",
+    description:
+      "A marketplace of pre-built scrapers called Actors, plus the infrastructure to run them. The agent can run a scraper against a site and get structured data back, rather than parsing HTML itself. Covers the common targets (search results, social, maps, e-commerce) without you writing extraction code. Read+write, since runs cost credits.",
+    doc: "https://mcp.apify.com/",
+    config: { type: "streamable-http", url: "https://mcp.apify.com" },
+  },
+  {
+    name: "axiom",
+    displayName: "Axiom",
+    description:
+      "Log and event analytics with its own query language (APL). The agent runs queries over ingested logs and events. Broader and cheaper than Honeycomb for plain log search; less specialised for tracing. Read-only.",
+    doc: "https://axiomdecisions.com/docs/reference/agent-intergration",
+    config: { type: "streamable-http", url: "https://mcp.axiom.co/mcp" },
+  },
+  {
+    name: "prisma",
+    displayName: "Prisma",
+    description:
+      "The TypeScript ORM, plus Prisma Postgres, their managed database. The server goes beyond docs: an agent can spin up new database instances and run schema migrations. Worth flagging in your catalog that this provisions real infrastructure. Read+write.",
+    doc: "https://www.prisma.io/docs/ai/tools/mcp-server",
+    config: { type: "streamable-http", url: "https://mcp.prisma.io/mcp" },
+  },
+  {
+    name: "sanity",
+    displayName: "Sanity",
+    description:
+      "Headless CMS built on a structured content lake rather than fixed page templates. The agent can create and query content, and manage datasets, schemas and releases - meaning it can change the content model, not just the content. Read+write.",
+    doc: "https://www.sanity.io/docs/ai/mcp-server",
+    config: { type: "streamable-http", url: "https://mcp.sanity.io" },
+  },
+  {
+    name: "statsig",
+    displayName: "Statsig",
+    description:
+      "Feature flags and experimentation. The agent can read and manage gates and experiments, and pull results. The useful pairing is shipping a change behind a flag and then reading its own experiment readout. Read+write.",
+    doc: "https://docs.statsig.com/integrations/mcp/overview",
+    config: { type: "streamable-http", url: "https://api.statsig.com/v1/mcp" },
+  },
+  {
+    name: "replicate",
+    displayName: "Replicate",
+    description:
+      "Run open-source models through a hosted API - image generation, transcription, upscaling, and so on. The agent can search and compare models and actually invoke them, so it's a capability extension rather than a data source. Read+write, and runs cost money per call.",
+    doc: "https://mcp.replicate.com",
+    config: { type: "sse", url: "https://mcp.replicate.com/sse" },
+  },
+  {
+    name: "microsoft-learn-docs",
+    displayName: "Microsoft Learn",
+    description:
+      "Official Microsoft documentation for Azure, .NET, C#, Microsoft 365 and SQL Server. Documentation search only - no access to your Azure resources or tenant. No auth required.",
+    doc: "https://learn.microsoft.com/en-us/training/support/mcp",
+    config: {
+      type: "streamable-http",
+      url: "https://learn.microsoft.com/api/mcp",
+    },
+  },
+  {
+    name: "render",
+    displayName: "Render",
+    description:
+      "Managed cloud hosting for web services, static sites, workers, cron jobs and Postgres. Inspect services, check deploy status, read build and runtime logs. Requires an API key. Read+write on your infrastructure.",
+    doc: "https://render.com/docs/mcp-server",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.render.com/mcp",
+      headers: { Authorization: "Bearer {{YOUR_API_KEY}}" },
+    },
+  },
+  {
+    name: "zapier",
+    displayName: "Zapier",
+    description:
+      "Workflow automation platform connecting 8,000+ apps with 30,000+ actions. Trigger actions across your connected apps - create records, send messages, update spreadsheets - without building integrations. Each user generates their own scoped URL. Read+write on connected apps.",
+    doc: "https://docs.zapier.com/mcp/home",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.zapier.com/api/v1/connect",
+    },
+  },
+  {
+    name: "clay",
+    displayName: "Clay",
+    description:
+      "Find and enrich people and companies across 150+ data providers, run AI research agents, and trigger your team's approved Clay workflows - via Clay's official hosted MCP server.",
+    doc: "https://university.clay.com/docs/connect-to-clay-mcp",
+    config: { type: "streamable-http", url: "https://api.clay.com/v3/mcp" },
+  },
+  {
+    name: "hygraph",
+    displayName: "HyGraph",
+    description:
+      "Instead of setting up everything manually in Studio, you describe what you want in plain language. Tasks that previously required a developer, such as bulk content updates, schema creation, and cross-environment migrations, can now be done with a single prompt.",
+    doc: "https://hygraph.com/docs/hygraph-ai/mcp-server",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp-{REGION}.hygraph.com/{PROJECT_ID}/{ENVIRONMENT}/mcp",
+      headers: { Authorization: "Bearer {{HYGRAPH_TOKEN}}" },
+    },
+  },
 ];
 
 export const backendDefaultServers: CatalogMCPServerItem[] =

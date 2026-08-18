@@ -18,11 +18,13 @@ import { AgentIconEntry, ServerIconEntry } from "./icons-utils";
 export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
   airtable: { kind: "base" },
   amplitude: { kind: "base", withIcon: true },
+  apify: { kind: "custom", iconifyId: "devicon:apify" },
   appdynamics: { kind: "base" },
   apolloio: { kind: "local" },
   asana: { kind: "base", withIcon: true },
   atlassian: { kind: "base" },
   aws: { kind: "base" },
+  axiom: { kind: "custom", iconifyId: "thesvg-color:axiom-light" },
   azuredevops: {
     kind: "custom",
     iconifyId: "simple-icons:azuredevops",
@@ -38,6 +40,7 @@ export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
   bitbucket: { kind: "base" },
   brave: { kind: "base" },
   canva: { kind: "custom", iconifyId: "devicon:canva" },
+  clay: { kind: "local" },
   clarity: { kind: "custom", iconifyId: "arcticons:microsoft-clarity" },
   calendly: {
     kind: "custom",
@@ -90,6 +93,11 @@ export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
     iconifyId: "simple-icons:hubspot",
     color: "#f8761f",
   },
+  huggingface: {
+    kind: "custom",
+    iconifyId: "devicon:huggingface",
+  },
+  hygraph: { kind: "local" },
   instacart: { kind: "local" },
   intercom: { kind: "base", withIcon: true },
   jenkins: { kind: "base" },
@@ -98,6 +106,7 @@ export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
   launchdarkly: { kind: "base", withIcon: true },
   linear: { kind: "base", withIcon: true },
   loadmill: { kind: "local" },
+  microsoft: { kind: "base", withIcon: true },
   microsoftdynamics: {
     kind: "custom",
     iconifyId: "simple-icons:dynamics365",
@@ -122,6 +131,11 @@ export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
   postgres: { kind: "custom", iconifyId: "logos:postgresql" },
   posthog: { kind: "base", withIcon: true },
   postgresql: { kind: "base" },
+  prisma: {
+    kind: "custom",
+    iconifyId: "simple-icons:prisma",
+    color: "#00bfa5",
+  },
   prometheus: { kind: "base" },
   puppeteer: { kind: "base" },
   "qa-envtest": {
@@ -130,12 +144,20 @@ export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
     color: "#5147E4",
   },
   redis: { kind: "custom", iconifyId: "simple-icons:redis", color: "#c6302b" },
+  render: { kind: "custom", iconifyId: "simple-icons:render" },
+  replicate: { kind: "custom", iconifyId: "simple-icons:replicate" },
   rollbar: {
     kind: "custom",
     iconifyId: "simple-icons:rollbar",
     color: "#EC4A28",
   },
   salesforce: { kind: "base" },
+  sanity: { kind: "custom", iconifyId: "simple-icons:sanity" },
+  semrush: {
+    kind: "custom",
+    iconifyId: "simple-icons:semrush",
+    color: "#ff642d",
+  },
   sentry: { kind: "base", withIcon: true },
   slack: { kind: "base", withIcon: true },
   snowflake: { kind: "base", withIcon: true },
@@ -145,6 +167,8 @@ export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
     color: "#FF6600",
   },
   splunk: { kind: "base" },
+  statsig: { kind: "local" },
+  stripe: { kind: "base" },
   supabase: { kind: "base", withIcon: true },
   terraform: { kind: "base", withIcon: true },
   time: { kind: "custom", iconifyId: "hugeicons:time-02" },
@@ -160,7 +184,14 @@ export const SERVER_ICON_REGISTRY: Record<string, ServerIconEntry> = {
     color: "#3e63dd",
   },
   webex: { kind: "custom", iconifyId: "simple-icons:webex" },
+  wix: { kind: "custom", iconifyId: "simple-icons:wix", color: "#0c6efc" },
   wiz: { kind: "local" },
+  x: { kind: "custom", iconifyId: "devicon:twitter" },
+  zapier: {
+    kind: "custom",
+    iconifyId: "simple-icons:zapier",
+    color: "#ff4f00",
+  },
   zoho: { kind: "custom", iconifyId: "simple-icons:zoho", color: "#E42527" },
   zoom: { kind: "base", withIcon: true },
 };
