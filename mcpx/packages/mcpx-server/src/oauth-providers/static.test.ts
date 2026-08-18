@@ -56,6 +56,18 @@ describe("StaticOAuthProvider#redirectToAuthorization", () => {
     );
   });
 
+  it("appends select_account to an existing prompt param without overriding it", async () => {
+    const provider = makeProvider();
+    const authUrl = new URL("https://github.com/login/oauth/authorize");
+    authUrl.searchParams.set("prompt", "login");
+
+    await provider.redirectToAuthorization(authUrl);
+
+    expect(provider.getAuthorizationUrl()?.searchParams.get("prompt")).toBe(
+      "login select_account",
+    );
+  });
+
   it("clears the stored URL when authorization completes", async () => {
     const provider = makeProvider();
     await provider.redirectToAuthorization(

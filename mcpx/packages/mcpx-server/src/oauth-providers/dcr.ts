@@ -15,6 +15,7 @@ import { env } from "../env.js";
 import { McpxOAuthProviderI, OAuthProviderType } from "./model.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
+import { appendToQueryParam } from "@mcpx/toolkit-core/http";
 
 /**
  * Generic static OAuth provider for Dynamic Client Registration (DCR) flow.
@@ -231,7 +232,12 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   // user who may never come back.
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
     // Force account selection so users can switch accounts via delete+re-add
-    authorizationUrl.searchParams.set("prompt", "select_account");
+    appendToQueryParam({
+      searchParams: authorizationUrl.searchParams,
+      paramName: "prompt",
+      valueToAppend: "select_account",
+      delimiter: " ", // prompt is Space-delimited (reference in OpenId Connect Core docs)
+    });
     this.authorizationUrl = authorizationUrl;
 
     this.logger.info("OAuth authorization required", {
