@@ -8,10 +8,8 @@ import { useEffect } from "react";
 import "./App.css";
 import { initMonaco } from "./monaco/init-monaco";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ConnectionManager } from "@/components/ConnectionManager";
 import { DevIndicators } from "@/components/DevIndicators";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isToolsPageMockEnabled } from "@/mocks/tools-page/config";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +20,6 @@ function App() {
 
   return (
     <AuthProvider>
-      <ConnectionManager enabled={!isToolsPageMockEnabled} />
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ReactFlowProvider>

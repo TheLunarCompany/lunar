@@ -23,6 +23,8 @@ import {
 import { cn } from "@/lib/utils";
 import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
 import { useSkillsFeatureEnabled } from "@/data/skills";
+import { InstanceStatusRow } from "@/components/instance-status/InstanceStatusRow";
+import type { InstanceStatus } from "@/model/instance-status";
 
 type SidebarIcon = ElementType<{ className?: string }>;
 
@@ -121,12 +123,14 @@ export function SidebarAvatar({
 export type McpxSidebarProps = ComponentPropsWithoutRef<typeof Sidebar> & {
   activeItemId?: string;
   sections?: McpxSidebarSection[];
+  instanceStatus?: InstanceStatus;
   children?: ReactNode;
 };
 
 export function McpxSidebar({
   activeItemId,
   sections,
+  instanceStatus,
   children,
   className,
   ...props
@@ -176,7 +180,12 @@ export function McpxSidebar({
             </Fragment>
           ))}
         </SidebarContent>
-        <SidebarFooter className="px-4 pb-4">{children}</SidebarFooter>
+        <SidebarFooter className="p-0">
+          {instanceStatus ? (
+            <InstanceStatusRow status={instanceStatus} className="mx-4 mb-3" />
+          ) : null}
+          {children}
+        </SidebarFooter>
       </div>
     </Sidebar>
   );

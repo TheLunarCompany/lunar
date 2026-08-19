@@ -15,6 +15,8 @@ import {
   type McpxSidebarSection,
 } from "./McpxSidebar";
 import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
+import { InstanceStatusRow } from "@/components/instance-status/InstanceStatusRow";
+import type { InstanceStatus } from "@/model/instance-status";
 
 const sidebarGradient =
   "bg-[radial-gradient(circle_at_0%_0%,#3221c9_0%,#5c2595_30%,#872960_60%,#542071_80%,#201681_100%)]";
@@ -179,4 +181,29 @@ export const EmptyNavigation: Story = {
     sections: [],
   },
   render: renderSidebarShell,
+};
+
+export const AllStatusStates: Story = {
+  parameters: {
+    layout: "centered",
+  },
+  render: () => {
+    const statuses: InstanceStatus[] = [
+      "initializing",
+      "idle",
+      "working",
+      "error",
+      "offline",
+    ];
+
+    return (
+      <div className={`w-64 rounded-[12px] p-4 ${sidebarGradient}`}>
+        <div className="space-y-3">
+          {statuses.map((status) => (
+            <InstanceStatusRow key={status} status={status} />
+          ))}
+        </div>
+      </div>
+    );
+  },
 };

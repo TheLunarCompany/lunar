@@ -22,6 +22,10 @@ export type SetDynamicCapabilitiesPayload = z.infer<
   typeof setDynamicCapabilitiesPayloadSchema
 >;
 
+export type ActiveCallCountChangedPayload = {
+  activeCallCount: number;
+};
+
 // Messages from MCPX server to UI
 export enum UI_ClientBoundMessage {
   AppConfig = "appConfig",
@@ -31,4 +35,5 @@ export enum UI_ClientBoundMessage {
   GetSystemStateFailed = "getSystemStateFailed",
 
   IdentityChanged = "identityChanged",
+  ActiveCallCountChanged = "activeCallCountChanged",
 }

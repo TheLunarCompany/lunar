@@ -62,6 +62,7 @@ function SocketStoreInitializer({
 }: {
   children: React.ReactNode;
   overrides: {
+    activeCallCount?: number;
     isConnected?: boolean;
     isPending?: boolean;
     connectError?: boolean;
@@ -69,6 +70,7 @@ function SocketStoreInitializer({
 }) {
   useEffect(() => {
     socketStore.setState({
+      activeCallCount: overrides.activeCallCount ?? 0,
       isConnected: overrides.isConnected ?? true,
       isPending: overrides.isPending ?? false,
       connectError: overrides.connectError ?? false,
@@ -81,6 +83,7 @@ function SocketStoreInitializer({
 
 export function withSocketStore(
   overrides: {
+    activeCallCount?: number;
     isConnected?: boolean;
     isPending?: boolean;
     connectError?: boolean;
@@ -116,6 +119,7 @@ export const withToaster: Decorator = (Story) => (
 function AppShellWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     socketStore.setState({
+      activeCallCount: 0,
       isConnected: true,
       isPending: false,
       connectError: false,

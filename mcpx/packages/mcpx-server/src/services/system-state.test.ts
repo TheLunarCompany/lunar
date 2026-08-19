@@ -10,8 +10,70 @@ describe("MetricRecorder", () => {
     const metrics = recorder.export();
     expect(metrics.usage.callCount).toBe(0);
     expect(metrics.usage.lastCalledAt).toBeUndefined();
+    expect(metrics.activeCallCount).toBe(0);
     expect(Object.keys(metrics.connectedClients).length).toBe(0);
     expect(Object.keys(metrics.targetServers).length).toBe(0);
+  });
+
+  it("publishes active counts without notifying full-state subscribers", async () => {
+    const recorder = new SystemStateTracker(new ManualClock(), noOpLogger);
+    let resolveCall!: (value: string) => void;
+    const call = new Promise<string>((resolve) => {
+      resolveCall = resolve;
+    });
+    const fullStateCounts: number[] = [];
+    const activityCounts: number[] = [];
+
+    recorder.subscribe((snapshot) => {
+      fullStateCounts.push(snapshot.activeCallCount ?? 0);
+    });
+    recorder.subscribeToActiveCallCountUpdates((activeCallCount) => {
+      activityCounts.push(activeCallCount);
+    });
+
+    const tracked = recorder.trackActiveCall(() => call);
+
+    expect(recorder.export().activeCallCount).toBe(1);
+    resolveCall("done");
+    await expect(tracked).resolves.toBe("done");
+    expect(recorder.export().activeCallCount).toBe(0);
+    expect(fullStateCounts).toEqual([0]);
+    expect(activityCounts).toEqual([1, 0]);
+  });
+
+  it("keeps overlapping calls active until the last call settles", async () => {
+    const recorder = new SystemStateTracker(new ManualClock(), noOpLogger);
+    let resolveFirst!: () => void;
+    let resolveSecond!: () => void;
+    const first = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const second = new Promise<void>((resolve) => {
+      resolveSecond = resolve;
+    });
+
+    const firstTracked = recorder.trackActiveCall(() => first);
+    const secondTracked = recorder.trackActiveCall(() => second);
+
+    expect(recorder.export().activeCallCount).toBe(2);
+    resolveFirst();
+    await firstTracked;
+    expect(recorder.export().activeCallCount).toBe(1);
+    resolveSecond();
+    await secondTracked;
+    expect(recorder.export().activeCallCount).toBe(0);
+  });
+
+  it("cleans up active calls when the operation rejects", async () => {
+    const recorder = new SystemStateTracker(new ManualClock(), noOpLogger);
+
+    await expect(
+      recorder.trackActiveCall(async () => {
+        throw new Error("tool failed");
+      }),
+    ).rejects.toThrow("tool failed");
+
+    expect(recorder.export().activeCallCount).toBe(0);
   });
 
   it("should record client connection", () => {

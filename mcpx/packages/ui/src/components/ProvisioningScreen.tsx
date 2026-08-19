@@ -6,32 +6,43 @@ type ProvisioningScreenProps = {
 
 export function ProvisioningScreen(_props: ProvisioningScreenProps) {
   return (
-    <div className="w-full h-full flex items-center justify-center px-4 py-12 bg-[#F8FAFC]">
-      <div className="max-w-xl w-full bg-white/90 backdrop-blur-sm shadow-2xl rounded-2xl p-10 border border-slate-100 space-y-6 text-center">
-        <div className="flex justify-center">
-          <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-300">
-            <Server className="w-7 h-7" />
-          </div>
+    <section
+      aria-label="Awaiting approval"
+      className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-instance-status-panel-background p-6 text-center sm:p-8"
+      data-instance-status="approval-pending"
+      data-testid="approval-pending-screen"
+    >
+      <div className="flex w-full max-w-2xl flex-col items-center gap-6 rounded-3xl border border-instance-status-panel-border bg-instance-status-panel-surface px-6 py-12 shadow-[0_12px_32px_rgb(30_27_75_/_0.06)] sm:px-10 sm:py-16">
+        <div
+          aria-hidden="true"
+          className="grid size-24 shrink-0 place-items-center rounded-full bg-instance-status-initializing-artwork text-instance-status-initializing sm:size-[104px]"
+        >
+          <Server className="size-10 stroke-[1.8]" />
         </div>
-
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-[0.3em]">
-            Provisioning
-          </p>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Preparing your MCPX workspace
+        <span
+          className="rounded-full bg-instance-status-initializing-artwork px-3 py-1 text-[11px] font-bold leading-none tracking-[0.12em] text-instance-status-initializing"
+          data-testid="approval-pending-badge"
+        >
+          AWAITING APPROVAL
+        </span>
+        <div className="flex max-w-prose flex-col gap-3">
+          <h1 className="m-0 text-xl font-semibold leading-tight text-instance-status-panel-heading sm:text-2xl">
+            Your MCPX request is awaiting approval
           </h1>
-          <p className="text-gray-600 text-sm leading-relaxed">
-            We’re requesting your dedicated MCPX instance. Once the admin has
-            approved your request, your session will connect automatically.
+          <p className="m-0 text-sm leading-6 text-instance-status-panel-description sm:text-base sm:leading-7">
+            An administrator needs to approve your request before we can create
+            your workspace. We’ll connect you automatically once it’s ready.
           </p>
         </div>
-
-        <div className="flex items-center justify-center gap-3 text-slate-700">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm font-medium"></span>
+        <div
+          aria-live="polite"
+          className="flex items-center justify-center gap-3 text-instance-status-panel-description"
+          role="status"
+        >
+          <Loader2 className="size-5 animate-spin" />
+          <span className="text-sm font-medium">Checking for approval</span>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

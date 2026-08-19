@@ -440,32 +440,34 @@ async function executeToolCall(options: {
   }
   const { entry } = resolved;
 
-  if (entry.origin === "internal") {
-    return services.internalCapabilities
-      .dispatchTool(entry, request.params.arguments ?? {}, {
-        consumerTag,
-        clientName,
-      })
-      .catch((e: unknown) => {
-        if (
-          e instanceof HiddenInternalCapabilityError ||
-          e instanceof UnknownInternalCapabilityError
-        ) {
-          throw makeUnavailableError("Tool", request.params.name, "unknown");
-        }
-        throw e;
-      });
-  }
+  return services.systemStateTracker.trackActiveCall(() => {
+    if (entry.origin === "internal") {
+      return services.internalCapabilities
+        .dispatchTool(entry, request.params.arguments ?? {}, {
+          consumerTag,
+          clientName,
+        })
+        .catch((e: unknown) => {
+          if (
+            e instanceof HiddenInternalCapabilityError ||
+            e instanceof UnknownInternalCapabilityError
+          ) {
+            throw makeUnavailableError("Tool", request.params.name, "unknown");
+          }
+          throw e;
+        });
+    }
 
-  return executeUpstreamToolCall({
-    services,
-    sessionId,
-    request,
-    serverName: entry.serverName,
-    capabilityName: entry.capabilityName,
-    clientName,
-    consumerTag,
-    authorization,
+    return executeUpstreamToolCall({
+      services,
+      sessionId,
+      request,
+      serverName: entry.serverName,
+      capabilityName: entry.capabilityName,
+      clientName,
+      consumerTag,
+      authorization,
+    });
   });
 }
 

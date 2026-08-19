@@ -77,6 +77,12 @@ export class ControlPlaneService {
     return this.systemState.subscribe(callback);
   }
 
+  subscribeToActiveCallCountUpdates(
+    callback: (activeCallCount: number) => void,
+  ): () => void {
+    return this.systemState.subscribeToActiveCallCountUpdates(callback);
+  }
+
   getSystemState(): SystemState {
     this.logger.debug("Received GetSystemState event from Control Plane");
     return this.systemState.export();

@@ -58,6 +58,15 @@ export function bindUIWebsocket(
         socket.emit(UI_ClientBoundMessage.SystemState, systemState);
       });
 
+    const activeCallCountCallback =
+      services.controlPlane.subscribeToActiveCallCountUpdates(
+        (activeCallCount) => {
+          socket.emit(UI_ClientBoundMessage.ActiveCallCountChanged, {
+            activeCallCount,
+          });
+        },
+      );
+
     const appConfigCallback = services.controlPlane.subscribeToAppConfigUpdates(
       (configSnapshot: ConfigSnapshot) => {
         // Convert ConfigSnapshot to SerializedAppConfig
@@ -80,6 +89,7 @@ export function bindUIWebsocket(
       new UIConnection(
         socket,
         systemStateCallback,
+        activeCallCountCallback,
         appConfigCallback,
         identityCallback,
       ),

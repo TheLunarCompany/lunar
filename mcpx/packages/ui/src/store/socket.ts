@@ -1,4 +1,5 @@
 import {
+  type ActiveCallCountChangedPayload,
   AppConfig,
   appConfigSchema,
   SerializedAppConfig,
@@ -20,6 +21,7 @@ import { debounce } from "../utils";
 
 export type SocketStore = {
   // Socket State
+  activeCallCount: number;
   appConfig: AppConfig | null;
   connectError: boolean;
   connectionRejectedHubRequired: boolean;
@@ -53,14 +55,24 @@ export const socketStore = create<SocketStore>()(
 
       const debouncedSystemStateUpdate = debounce(systemStateUpdate, 1000);
 
+      function beginBootstrap() {
+        pendingAppConfig = true;
+        pendingSystemState = true;
+        set({ isPending: true });
+        emitGetAppConfig();
+        emitGetSystemState();
+      }
+
       function setupEventListeners() {
         if (!socket || listenersBound) return;
         listenersBound = true;
 
-        socket.on("disconnect", () => set({ isConnected: false }));
-        socket.on("connect_failed", () =>
-          set({ connectError: true, isConnected: false }),
-        );
+        socket.on("disconnect", () => {
+          set({ activeCallCount: 0, isConnected: false });
+        });
+        socket.on("connect_failed", () => {
+          set({ activeCallCount: 0, connectError: true, isConnected: false });
+        });
 
         socket.on(
           UI_ClientBoundMessage.AppConfig,
@@ -106,15 +118,23 @@ export const socketStore = create<SocketStore>()(
             return;
           }
 
+          set({ activeCallCount: payload.activeCallCount ?? 0 });
           const currentState = get().systemState;
           pendingSystemState = false;
           if (!currentState) {
             set({ systemState: payload });
-            if (!pendingAppConfig && get().isPending) set({ isPending: false });
           } else {
             debouncedSystemStateUpdate(payload);
           }
+          if (!pendingAppConfig && get().isPending) set({ isPending: false });
         });
+
+        socket.on(
+          UI_ClientBoundMessage.ActiveCallCountChanged,
+          ({ activeCallCount }: ActiveCallCountChangedPayload) => {
+            set({ activeCallCount });
+          },
+        );
       }
 
       let isConnecting = false;
@@ -123,7 +143,7 @@ export const socketStore = create<SocketStore>()(
         if (socket?.connected) return;
 
         isConnecting = true;
-        set({ isPending: true, connectError: false });
+        set({ activeCallCount: 0, isPending: true, connectError: false });
         pendingAppConfig = true;
         pendingSystemState = true;
 
@@ -175,40 +195,54 @@ export const socketStore = create<SocketStore>()(
         set({ socket });
 
         socket.on("connect", () => {
-          set({ isConnected: true, connectError: false, isPending: false });
+          set({ isConnected: true, connectError: false });
           // Only reset isConnecting after successful connection
           isConnecting = false;
-          emitGetAppConfig();
-          emitGetSystemState();
+          beginBootstrap();
         });
 
         socket.on("connect_error", (error) => {
           console.error("WebSocket connection error:", error);
           if (error.message === WS_CONNECTION_ERROR.HUB_NOT_CONNECTED) {
             set({
+              activeCallCount: 0,
               connectionRejectedHubRequired: true,
               isConnected: false,
               isPending: false,
             });
           } else {
-            set({ connectError: true, isConnected: false, isPending: false });
+            set({
+              activeCallCount: 0,
+              connectError: true,
+              isConnected: false,
+              isPending: false,
+            });
           }
         });
 
         socket.on("reconnect", () => {
-          set({ isConnected: true, connectError: false, isPending: false });
-          emitGetAppConfig();
-          emitGetSystemState();
+          set({ isConnected: true, connectError: false });
+          beginBootstrap();
         });
 
         socket.on("reconnect_error", (error) => {
           console.error("WebSocket reconnection error:", error);
-          set({ connectError: true, isConnected: false, isPending: false });
+          set({
+            activeCallCount: 0,
+            connectError: true,
+            isConnected: false,
+            isPending: false,
+          });
         });
 
         socket.on("reconnect_failed", () => {
           console.error("WebSocket reconnection failed");
-          set({ connectError: true, isConnected: false, isPending: false });
+          set({
+            activeCallCount: 0,
+            connectError: true,
+            isConnected: false,
+            isPending: false,
+          });
         });
 
         setupEventListeners();
@@ -228,6 +262,7 @@ export const socketStore = create<SocketStore>()(
 
         socket.off(UI_ClientBoundMessage.AppConfig);
         socket.off(UI_ClientBoundMessage.SystemState);
+        socket.off(UI_ClientBoundMessage.ActiveCallCountChanged);
       }
 
       function disconnect() {
@@ -236,7 +271,12 @@ export const socketStore = create<SocketStore>()(
           socket.disconnect();
           socket = null;
         }
-        set({ isConnected: false, connectError: false, isPending: false });
+        set({
+          activeCallCount: 0,
+          isConnected: false,
+          connectError: false,
+          isPending: false,
+        });
       }
 
       function safeEmit(message: UI_ServerBoundMessage, data?: unknown) {
@@ -255,6 +295,7 @@ export const socketStore = create<SocketStore>()(
       }
 
       return {
+        activeCallCount: 0,
         appConfig: null,
         connect,
         disconnect,

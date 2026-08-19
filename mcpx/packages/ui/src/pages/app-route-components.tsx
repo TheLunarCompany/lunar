@@ -1,12 +1,15 @@
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { Layout } from "@/components/layout/Layout";
-import { useEnterpriseAuth } from "@/components/EnterpriseAuthCheck";
+import { useMcpxProbe } from "@/hooks/useMcpxProbe";
 import LoadingScreen from "@/components/LoadingScreen";
-import UnauthorizedScreen from "@/components/UnauthorizedScreen";
 import EnterpriseLoginScreen from "@/components/EnterpriseLoginScreen";
+import UnauthorizedScreen from "@/components/UnauthorizedScreen";
 import { useAuth } from "@/contexts/useAuth";
-import { ProvisioningScreen } from "@/components/ProvisioningScreen";
+import { ConnectionManager } from "@/components/ConnectionManager";
+import { isToolsPageMockEnabled } from "@/mocks/tools-page/config";
+import { useSocketStore } from "@/store";
 
 export function RootRoute() {
   return (
@@ -17,16 +20,22 @@ export function RootRoute() {
 }
 
 export function AuthenticatedLayoutRoute() {
+  const hasTransportError = useSocketStore((state) => state.connectError);
   const {
     loginRequired,
     isAuthenticated: isUserAuthenticated,
     loading: authLoading,
   } = useAuth();
 
-  const { isLoading, isAuthenticated, error, isPendingAllocation } =
-    useEnterpriseAuth({
-      enabled: !loginRequired || isUserAuthenticated,
-    });
+  const { state: probeState, refresh } = useMcpxProbe({
+    enabled: !loginRequired || isUserAuthenticated,
+  });
+
+  useEffect(() => {
+    if (hasTransportError) {
+      refresh();
+    }
+  }, [hasTransportError, refresh]);
 
   if (loginRequired) {
     if (authLoading) {
@@ -38,25 +47,18 @@ export function AuthenticatedLayoutRoute() {
     }
   }
 
-  if (isLoading) {
-    return <LoadingScreen />;
+  if (probeState.type === "unauthorized") {
+    return <UnauthorizedScreen message={probeState.message} />;
   }
 
-  if (isPendingAllocation) {
-    return (
-      <Layout enableConnection={false}>
-        <ProvisioningScreen message={error || undefined} />
-      </Layout>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <UnauthorizedScreen message={error || undefined} />;
-  }
+  const isProbeReady = probeState.type === "ready";
 
   return (
-    <Layout>
-      <Outlet />
-    </Layout>
+    <>
+      <ConnectionManager enabled={isProbeReady && !isToolsPageMockEnabled} />
+      <Layout probeState={probeState} enableConnection={isProbeReady}>
+        <Outlet />
+      </Layout>
+    </>
   );
 }

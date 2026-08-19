@@ -1354,6 +1354,7 @@ export function seedToolsPageMockState(): void {
   window.__MCPX_TEST_MODE__ = true;
 
   socketStore.setState({
+    activeCallCount: 0,
     appConfig: mockAppConfig,
     connectError: false,
     connectionRejectedHubRequired: false,

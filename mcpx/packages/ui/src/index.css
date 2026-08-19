@@ -95,6 +95,20 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  --color-instance-status-initializing: #6147d1;
+  --color-instance-status-idle: #5fb878;
+  --color-instance-status-working: #1f8a3d;
+  --color-instance-status-error: #d9481c;
+  --color-instance-status-offline: rgb(154 150 180);
+  --color-instance-status-initializing-artwork: rgb(241 238 255);
+  --color-instance-status-panel-background: rgb(246 245 250);
+  --color-instance-status-panel-surface: rgb(255 255 255);
+  --color-instance-status-panel-border: rgb(226 225 234);
+  --color-instance-status-panel-heading: rgb(30 27 75);
+  --color-instance-status-panel-description: rgb(91 88 121);
+  --color-instance-status-artwork: rgb(238 237 243);
+  --color-instance-status-error-artwork: #fce9e2;
+
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
@@ -436,3 +450,14 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 */
+
+@keyframes mcpxStatusPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}

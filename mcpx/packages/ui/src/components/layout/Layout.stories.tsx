@@ -8,6 +8,7 @@ const meta = {
   decorators: [withAppShell],
   args: {
     enableConnection: false,
+    probeState: { type: "ready" },
     children: (
       <div className="p-8">
         <h1 className="text-2xl font-bold">Page Content</h1>

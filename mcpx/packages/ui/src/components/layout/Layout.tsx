@@ -1,12 +1,12 @@
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
-import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
+import { InstanceStatusScreen } from "@/components/instance-status/InstanceStatusScreen";
 import { ProvisioningScreen } from "@/components/ProvisioningScreen";
 // import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
 import { McpxSidebar } from "@/components/layout/sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { FC, PropsWithChildren } from "react";
+import { type FC, type PropsWithChildren } from "react";
 import { useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
 import { OboEditBanner } from "@/components/OboEditBanner";
@@ -17,6 +17,8 @@ import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { routes } from "@/routes";
 import { useModalsStore, useSocketStore } from "@/store";
 import { SystemState } from "@mcpx/shared-model";
+import type { McpxProbeState } from "@/hooks/useMcpxProbe";
+import type { InstanceStatus, PanelStatus } from "@/model/instance-status";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -29,16 +31,18 @@ const getConfigurationError = (systemState: SystemState | null) => {
 
 type LayoutProps = PropsWithChildren<{
   enableConnection?: boolean;
+  probeState: McpxProbeState;
 }>;
 export const Layout: FC<LayoutProps> = ({
   children,
   enableConnection = true,
+  probeState,
 }) => {
   const location = useLocation();
   const { user, loginRequired, login } = useAuth();
 
   // Connect to mcpx-server when authenticated
-  useMcpxConnection(enableConnection);
+  useMcpxConnection(enableConnection && probeState.type === "ready");
   // Keep cached identity in sync with hub-pushed changes (e.g. OBO start/finish)
   useIdentityLiveSync();
 
@@ -59,6 +63,7 @@ export const Layout: FC<LayoutProps> = ({
     selectedServerName: s.selectedServerName,
   }));
   const {
+    activeCallCount,
     connectError: isMcpxConnectError,
     connectionRejectedHubRequired,
     isConnected,
@@ -66,6 +71,7 @@ export const Layout: FC<LayoutProps> = ({
     serializedAppConfig,
     systemState,
   } = useSocketStore((s) => ({
+    activeCallCount: s.activeCallCount,
     connectError: s.connectError,
     connectionRejectedHubRequired: s.connectionRejectedHubRequired,
     isConnected: s.isConnected,
@@ -75,6 +81,18 @@ export const Layout: FC<LayoutProps> = ({
   }));
   const isEditConfigurationDisabled = !isConnected || !serializedAppConfig;
   const isAddServerModalDisabled = !isConnected || !systemState;
+  const approvalPending = probeState.type === "approval-pending";
+  const probeStatus = getProbeStatus(probeState);
+  const panelStatus = resolvePanelStatus({
+    approvalPending,
+    probeStatus,
+    hasConnectionError: connectionRejectedHubRequired || isMcpxConnectError,
+    isPending,
+    isConnected,
+  });
+  const instanceStatus: InstanceStatus =
+    panelStatus ?? (activeCallCount > 0 ? "working" : "idle");
+
   // const [showMcpRemoteWarning, setShowMcpRemoteWarning] = useState(false);
   // useEffect(() => {
   //   if (
@@ -89,7 +107,10 @@ export const Layout: FC<LayoutProps> = ({
   // }, [systemState]);
   const activeItemId = getActiveSidebarItemId(location.pathname);
 
-  const systemStateError = getConfigurationError(systemState);
+  const systemStateError =
+    probeState.type === "ready" && panelStatus === null
+      ? getConfigurationError(systemState)
+      : null;
   return systemStateError ? (
     <McpxConfigError message={systemStateError} />
   ) : (
@@ -106,6 +127,7 @@ export const Layout: FC<LayoutProps> = ({
               activeItemId={activeItemId}
               collapsible="none"
               className="min-h-0 overflow-hidden rounded-xl"
+              instanceStatus={instanceStatus}
             >
               {loginRequired ? (
                 user ? (
@@ -123,15 +145,10 @@ export const Layout: FC<LayoutProps> = ({
 
             <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[12px] bg-white">
               <div className="flex min-h-0 flex-1 bg-white">
-                {connectionRejectedHubRequired ? (
-                  <McpxConfigError
-                    message="Hub not connected"
-                    fullScreen={false}
-                  />
-                ) : isMcpxConnectError ? (
-                  <McpxNotConnected fullScreen={false} />
-                ) : isPending ? (
+                {approvalPending ? (
                   <ProvisioningScreen />
+                ) : panelStatus ? (
+                  <InstanceStatusScreen status={panelStatus} />
                 ) : isEditConfigurationDisabled ? (
                   <McpxConfigError message={null} fullScreen={false} />
                 ) : (
@@ -166,6 +183,41 @@ export const Layout: FC<LayoutProps> = ({
     </>
   );
 };
+
+function getProbeStatus(probeState: McpxProbeState): PanelStatus | null {
+  switch (probeState.type) {
+    case "checking":
+      return "initializing";
+    case "instance":
+      return probeState.status;
+    case "gateway-unavailable":
+      return "offline";
+    case "approval-pending":
+    case "ready":
+    case "unauthorized":
+      return null;
+  }
+}
+
+function resolvePanelStatus({
+  approvalPending,
+  probeStatus,
+  hasConnectionError,
+  isPending,
+  isConnected,
+}: {
+  approvalPending: boolean;
+  probeStatus: PanelStatus | null;
+  hasConnectionError: boolean;
+  isPending: boolean;
+  isConnected: boolean;
+}): PanelStatus | null {
+  if (approvalPending) return "initializing";
+  if (probeStatus) return probeStatus;
+  if (hasConnectionError) return "offline";
+  if (isPending || !isConnected) return "initializing";
+  return null;
+}
 
 const sidebarRouteMatches: Array<{ path: string; id: string }> = [
   { path: routes.dashboard, id: "dashboard" },

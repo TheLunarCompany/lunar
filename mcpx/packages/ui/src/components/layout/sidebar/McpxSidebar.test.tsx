@@ -1,13 +1,15 @@
 import { Gauge } from "lucide-react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { McpxSidebar, SidebarAvatar, SidebarBrand } from "./McpxSidebar";
 
+const harness = vi.hoisted(() => ({ skillsFeatureEnabled: true }));
+
 vi.mock("@/data/skills", () => ({
-  useSkillsFeatureEnabled: () => ({ data: true }),
+  useSkillsFeatureEnabled: () => ({ data: harness.skillsFeatureEnabled }),
 }));
 
 beforeAll(() => {
@@ -53,6 +55,23 @@ describe("SidebarAvatar", () => {
 });
 
 describe("McpxSidebar", () => {
+  it("uses the Skills-enabled default sections when sections are omitted", () => {
+    render(
+      <MemoryRouter>
+        <TooltipProvider>
+          <SidebarProvider>
+            <McpxSidebar />
+          </SidebarProvider>
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "Skills" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Tools" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders sections and highlights the active item", () => {
     const { container } = render(
       <MemoryRouter>

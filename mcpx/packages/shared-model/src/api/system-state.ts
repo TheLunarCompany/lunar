@@ -11,6 +11,9 @@ export interface SystemState {
   connectedClients: ConnectedClient[];
   connectedClientClusters: ConnectedClientCluster[];
   usage: Usage;
+  // Number of actual tool executions currently in flight. Optional so older
+  // pods can continue to send SystemState during a rolling deployment.
+  activeCallCount?: number;
   lastUpdatedAt: Date;
   configError?: string; // Error message if configuration validation failed
   mcpxVersion?: string; // MCPX server version from Docker/container

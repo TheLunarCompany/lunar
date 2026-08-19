@@ -4,17 +4,20 @@ import { Logger } from "winston";
 export class UIConnection {
   private _socket: Socket;
   private _cleanupSystemState: () => void;
+  private _cleanupActiveCallCount: () => void;
   private _cleanAppConfig: () => void;
   private _cleanupIdentity: () => void;
 
   constructor(
     socket: Socket,
     systemStateCallback: () => void,
+    activeCallCountCallback: () => void,
     appConfigCallback: () => void,
     identityCallback: () => void,
   ) {
     this._socket = socket;
     this._cleanupSystemState = systemStateCallback;
+    this._cleanupActiveCallCount = activeCallCountCallback;
     this._cleanAppConfig = appConfigCallback;
     this._cleanupIdentity = identityCallback;
   }
@@ -25,6 +28,7 @@ export class UIConnection {
 
   disconnect(): void {
     this._cleanupSystemState();
+    this._cleanupActiveCallCount();
     this._cleanAppConfig();
     this._cleanupIdentity();
     this._socket.disconnect(true);

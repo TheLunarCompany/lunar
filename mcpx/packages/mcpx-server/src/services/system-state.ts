@@ -46,6 +46,7 @@ interface InternalMcpxInstance {
   targetServersByName_new: Map<string, InternalTargetServerNew>;
   connectedClientsBySessionId: Map<string, InternalConnectedClient>;
   usage: InternalUsage;
+  activeCallCount: number;
   lastUpdatedAt: Date;
   configError?: string;
   mcpxVersion?: string;
@@ -167,6 +168,9 @@ export class SystemStateTracker {
   private clock: Clock;
   private state: InternalMcpxInstance;
   private listeners = new Set<(snapshot: SystemState) => void>();
+  private activeCallCountListeners = new Set<
+    (activeCallCount: number) => void
+  >();
   private logger: Logger;
   // How long an offline client shows before pruning. Infinity = never.
   private disconnectedRetentionMs: number;
@@ -186,6 +190,7 @@ export class SystemStateTracker {
       targetServersByName_new: new Map(),
       connectedClientsBySessionId: new Map(),
       usage: new InternalUsage(),
+      activeCallCount: 0,
       lastUpdatedAt: this.clock.now(),
       configError: undefined,
       mcpxVersion: undefined,
@@ -201,6 +206,37 @@ export class SystemStateTracker {
     return () => this.listeners.delete(cb);
   }
 
+  subscribeToActiveCallCountUpdates(
+    callback: (activeCallCount: number) => void,
+  ): () => void {
+    this.activeCallCountListeners.add(callback);
+    return () => this.activeCallCountListeners.delete(callback);
+  }
+
+  trackActiveCall<T>(operation: () => Promise<T>): Promise<T> {
+    this.state.activeCallCount += 1;
+    this.state.lastUpdatedAt = this.clock.now();
+    this.notifyActiveCallCountListeners();
+
+    return Promise.resolve()
+      .then(operation)
+      .finally(() => {
+        if (this.state.activeCallCount === 0) {
+          this.logger.warn("Active call count underflow prevented");
+        } else {
+          this.state.activeCallCount -= 1;
+        }
+        this.state.lastUpdatedAt = this.clock.now();
+        this.notifyActiveCallCountListeners();
+      });
+  }
+
+  private notifyActiveCallCountListeners(): void {
+    this.activeCallCountListeners.forEach((callback) =>
+      callback(this.state.activeCallCount),
+    );
+  }
+
   private notifyListeners(): void {
     const snapshot = this.export();
     this.listeners.forEach((cb) => cb(snapshot));
@@ -212,6 +248,7 @@ export class SystemStateTracker {
       connectedClients: this.exportConnectedClients(),
       connectedClientClusters: this.exportConnectedClientClusters(),
       usage: this.state.usage,
+      activeCallCount: this.state.activeCallCount,
       lastUpdatedAt: this.state.lastUpdatedAt,
       configError: this.state.configError,
       mcpxVersion: this.state.mcpxVersion,
