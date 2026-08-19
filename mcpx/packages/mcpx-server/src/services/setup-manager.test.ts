@@ -269,6 +269,79 @@ describe("SetupManager", () => {
       expect(result?.config?.toolGroups?.[0]?.name).toBe("hub-group");
     });
   });
+
+  describe("#applySetup", () => {
+    // `servers` reflects real addClient/removeClient calls, so a rollback
+    // (removeClient) is distinguishable from a server never being added.
+    function createFakeUpstreamHandler() {
+      let connected: TargetServer[] = [];
+      const addClient = jest.fn(async (server: TargetServer) => {
+        if (server.name === "Duplicate") {
+          throw new Error('Server "Duplicate" already exists');
+        }
+        connected = [...connected, server];
+      });
+      const removeClient = jest.fn(async (name: string) => {
+        connected = connected.filter((s) => s.name !== name);
+      });
+      return {
+        get servers() {
+          return connected;
+        },
+        addClient,
+        removeClient,
+      };
+    }
+
+    function createFakeConfigService() {
+      return {
+        getConfig: jest.fn(() => structuredClone(DEFAULT_CONFIG)),
+        withLock: jest.fn(async (fn: () => Promise<unknown>) => fn()),
+        updateConfig: jest.fn(async () => true),
+      };
+    }
+
+    it("keeps servers that were added successfully when another server in the same batch fails to add", async () => {
+      const upstreamHandler = createFakeUpstreamHandler();
+      const configService = createFakeConfigService();
+      const manager = new SetupManager(
+        upstreamHandler as unknown as UpstreamHandler,
+        configService as unknown as ConfigService,
+        noOpLogger,
+      );
+
+      // `initiation` has no `name` field (the record key is the name) -
+      // using inline entries here to avoid it.
+      const result = await manager.applySetup({
+        source: "user",
+        setupId: "setup-1",
+        targetServers: {
+          "echo-service": {
+            initiation: {
+              type: "stdio",
+              command: "node",
+              args: ["echo.js"],
+              env: {},
+            },
+          },
+          Duplicate: {
+            initiation: {
+              type: "stdio",
+              command: "node",
+              args: ["calc.js"],
+              env: {},
+            },
+          },
+        },
+        config: {},
+      });
+
+      // The failing add is dropped, but the successful one is NOT rolled back.
+      expect(upstreamHandler.removeClient).not.toHaveBeenCalled();
+      expect(result.targetServers).toHaveProperty("echo-service");
+      expect(result.targetServers).not.toHaveProperty("Duplicate");
+    });
+  });
 });
 
 describe("diffTargetServers", () => {

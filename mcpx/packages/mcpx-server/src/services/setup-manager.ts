@@ -437,14 +437,17 @@ export class SetupManager implements SetupManagerI {
         name: server.name,
         reason: makeError(result.reason).message,
       }));
-      this.logger.error("Failed to add some target servers", {
-        failures: failureDetails,
-        failureCount: failures.length,
-        totalCount: toAdd.length,
-      });
-      throw new Error(
-        `Failed to add ${failures.length}/${toAdd.length} target servers: ${failureDetails.map((f) => f.name).join(", ")}`,
+      // Don't throw - would make applySetup roll back the whole batch,
+      // including servers that already succeeded.
+      this.logger.error(
+        "Failed to add some target servers; keeping successes",
+        {
+          failures: failureDetails,
+          failureCount: failures.length,
+          totalCount: toAdd.length,
+        },
       );
+      return;
     }
 
     this.logger.info("Target servers applied successfully");
