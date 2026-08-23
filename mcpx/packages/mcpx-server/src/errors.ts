@@ -20,6 +20,9 @@ export class NotAllowedError extends Error {
 // and logs report the same reason.
 export const STDIO_SERVERS_DISABLED_MESSAGE =
   "This organization does not allow STDIO MCP servers. Contact your administrator for access.";
+export const DIND_DISABLED_MESSAGE =
+  "Docker in Docker is not enabled. Cannot start docker mcp server. Please try to run MCPX server with '--privileged' access and try again.";
+
 export class FailedToConnectToTargetServer extends Error {
   constructor(message = "Failed to connect to target server") {
     super(message);

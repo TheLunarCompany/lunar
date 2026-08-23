@@ -15,6 +15,11 @@ import type { TargetServer } from "../src/model/target-servers.js";
 import { EnvVarManager } from "../src/services/env-var-manager.js";
 import { MockHubServer } from "./mock-hub-server.js";
 import { getMcpxLogger } from "./utils.js";
+import {
+  BehaviorServiceI,
+  HubSourcedMcpxBehaviors,
+} from "../src/services/behavior-service.js";
+import { McpxBehaviorSettings } from "@mcpx/webapp-protocol/messages";
 
 // Minimal test doubles for dependencies not relevant to Hub connection tests
 class StubSetupManager implements SetupManagerI {
@@ -112,6 +117,20 @@ class StubIdentityService implements IdentityServiceI {
   }
 }
 
+class StubBehaviorService implements BehaviorServiceI {
+  applyBehaviorSettings(_params: {
+    newValues: McpxBehaviorSettings;
+    timestamp: number;
+  }) {
+    return true;
+  }
+  get(
+    _setting: keyof HubSourcedMcpxBehaviors,
+  ): HubSourcedMcpxBehaviors[keyof HubSourcedMcpxBehaviors] {
+    return true;
+  }
+}
+
 class StubConfigService implements ConfigServiceForHub {
   registerPostCommitHook() {}
 }
@@ -186,6 +205,7 @@ describe("HubService", () => {
   const stubCatalogManager = new StubCatalogManager();
   const stubConfigService = new StubConfigService();
   const stubIdentityService = new StubIdentityService();
+  const stubBehaviorService = new StubBehaviorService();
   const stubTargetClients = new StubTargetClients();
   const stubEnvVarManager = new EnvVarManager(logger);
   const stubGetUsageStats = () => ({ agents: [], targetServers: [] });
@@ -198,6 +218,7 @@ describe("HubService", () => {
       stubEnvVarManager,
       stubConfigService,
       stubIdentityService,
+      stubBehaviorService,
       stubTargetClients,
       stubGetUsageStats,
       { hubUrl: HUB_URL, ...options },
@@ -239,6 +260,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -267,6 +289,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -295,6 +318,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -321,6 +345,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -352,6 +377,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -392,6 +418,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -434,6 +461,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -467,6 +495,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -507,6 +536,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -582,6 +612,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         { hubUrl: HUB_URL, connectionTimeout: 5000 },
@@ -689,6 +720,7 @@ describe("HubService", () => {
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
+        stubBehaviorService,
         stubTargetClients,
         stubGetUsageStats,
         {

@@ -7,6 +7,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { Logger } from "winston";
 import {
+  DIND_DISABLED_MESSAGE,
   FailedToConnectToTargetServer,
   PendingInputError,
   STDIO_SERVERS_DISABLED_MESSAGE,
@@ -31,6 +32,7 @@ import {
   resolveEnv,
   resolveHeadersValues,
 } from "./target-server-env-resolution.js";
+import { BehaviorServiceI, BehaviorSetting } from "./behavior-service.js";
 
 /**
  * Factory for creating connections to different types of target MCP servers
@@ -40,6 +42,7 @@ export class TargetServerConnectionFactory {
     private extendedClientBuilder: ExtendedClientBuilder,
     private logger: Logger,
     private identityService: IdentityServiceI,
+    private behaviorService: BehaviorServiceI,
     private envVars: TargetServerEnvSource,
   ) {
     this.logger = logger.child({ component: "ConnectionFactory" });
@@ -75,9 +78,17 @@ export class TargetServerConnectionFactory {
   ): Promise<ExtendedClientI> {
     // Backstop for the config-validation gate: blocks any stdio spawn (incl.
     // servers applied from the Hub setup) when the policy flag is off.
-    if (!env.ENABLE_STDIO_MCP_SERVERS) {
+    if (!this.behaviorService.get(BehaviorSetting.ENABLE_STDIO_MCP_SERVERS)) {
       return Promise.reject(
         new FailedToConnectToTargetServer(STDIO_SERVERS_DISABLED_MESSAGE),
+      );
+    }
+    if (
+      targetServer.command === "docker" &&
+      !this.behaviorService.get(BehaviorSetting.DIND_ENABLED)
+    ) {
+      return Promise.reject(
+        new FailedToConnectToTargetServer(DIND_DISABLED_MESSAGE),
       );
     }
 

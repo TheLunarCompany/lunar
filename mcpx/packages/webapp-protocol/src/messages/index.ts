@@ -79,6 +79,7 @@ export type {
   OboEditingTarget,
   SpaceKind,
 } from "./mcpx-bound/set-identity.js";
+export type { McpxBehaviorSettings } from "./mcpx-bound/set-mcpx-behavior.js";
 export { toolCallErrorType } from "./webapp-bound/tool-call-batch.js";
 export type {
   ToolCallErrorType,

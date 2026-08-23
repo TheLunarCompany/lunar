@@ -15,13 +15,13 @@ import {
   NotFoundError,
   STDIO_SERVERS_DISABLED_MESSAGE,
 } from "../errors.js";
-import { env } from "../env.js";
 import { TargetServer } from "../model/target-servers.js";
 import { AuditLogService } from "./audit-log/audit-log-service.js";
 import { ControlPlaneConfigService } from "./control-plane-config-service.js";
 import { redactEnv } from "./redact.js";
 import { SystemStateTracker } from "./system-state.js";
 import { UpstreamHandler } from "./upstream-handler.js";
+import { BehaviorService, BehaviorSetting } from "./behavior-service.js";
 
 export function sanitizeTargetServerForTelemetry(
   server: TargetServerRequest | TargetServer,
@@ -44,6 +44,7 @@ export class ControlPlaneService {
   private systemState: SystemStateTracker;
   private upstreamHandler: UpstreamHandler;
   private configService: ConfigService; // Dependency in deprecation - use this.config
+  private behaviorService: BehaviorService;
   private auditLog: AuditLogService;
   private logger: LunarLogger;
   public config: ControlPlaneConfigService;
@@ -52,6 +53,7 @@ export class ControlPlaneService {
     metricRecorder: SystemStateTracker,
     upstreamHandler: UpstreamHandler,
     configService: ConfigService,
+    behaviorService: BehaviorService,
     auditLog: AuditLogService,
     logger: LunarLogger,
   ) {
@@ -59,6 +61,7 @@ export class ControlPlaneService {
     this.upstreamHandler = upstreamHandler;
     this.configService = configService;
     this.auditLog = auditLog;
+    this.behaviorService = behaviorService;
     this.config = new ControlPlaneConfigService(configService, logger);
     this.logger = logger.child({ component: "ControlPlaneService" });
   }
@@ -134,7 +137,10 @@ export class ControlPlaneService {
   async addTargetServer(
     payload: TargetServer,
   ): Promise<TargetServer | undefined> {
-    if (payload.type === "stdio" && !env.ENABLE_STDIO_MCP_SERVERS) {
+    if (
+      payload.type === "stdio" &&
+      !this.behaviorService.get(BehaviorSetting.ENABLE_STDIO_MCP_SERVERS)
+    ) {
       throw new NotAllowedError(STDIO_SERVERS_DISABLED_MESSAGE);
     }
     // Do not include env vars in logs when adding server (any type)
@@ -177,7 +183,10 @@ export class ControlPlaneService {
   async updateTargetServer(
     payload: TargetServer,
   ): Promise<TargetServer | undefined> {
-    if (payload.type === "stdio" && !env.ENABLE_STDIO_MCP_SERVERS) {
+    if (
+      payload.type === "stdio" &&
+      !this.behaviorService.get(BehaviorSetting.ENABLE_STDIO_MCP_SERVERS)
+    ) {
       throw new NotAllowedError(STDIO_SERVERS_DISABLED_MESSAGE);
     }
     this.logger.info("Received UpdateTargetServer event from Control Plane");

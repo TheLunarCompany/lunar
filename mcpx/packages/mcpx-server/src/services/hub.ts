@@ -24,6 +24,7 @@ import { TargetServer } from "../model/target-servers.js";
 import { CatalogManagerI } from "./catalog-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { SetupManagerI } from "./setup-manager.js";
+import { BehaviorServiceI } from "./behavior-service.js";
 import { EnvVarManager } from "./env-var-manager.js";
 import {
   UpstreamHandlerOAuthHandler,
@@ -87,13 +88,14 @@ const PHASE_STEP: Record<BootPhase, number> = {
   disconnected: 0,
   connected: 1,
   "identity-received": 2,
-  "catalog-received": 3,
-  "personal-skills-received": 4,
-  "published-skills-received": 4,
-  "profile-secrets-received": 5,
-  "oauth-credentials-received": 5,
-  "setup-received": 6,
-  "boot-complete": 7,
+  "behavior-received": 3,
+  "catalog-received": 4,
+  "personal-skills-received": 5,
+  "published-skills-received": 5,
+  "profile-secrets-received": 6,
+  "oauth-credentials-received": 6,
+  "setup-received": 7,
+  "boot-complete": 8,
 };
 
 // Phases that must have been touched by the end of boot: each phase maps to
@@ -103,6 +105,7 @@ const BOOT_PHASE_REQUIREMENT: { [P in BootPhase]: P | null } = {
   disconnected: null,
   connected: "connected",
   "identity-received": "identity-received",
+  "behavior-received": "behavior-received",
   "catalog-received": "catalog-received",
   "personal-skills-received": "personal-skills-received",
   "published-skills-received": "published-skills-received",
@@ -148,6 +151,10 @@ const envelopedSetIdentitySafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.setIdentity,
 );
 
+const envelopedSetBehaviorSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setMcpxBehavior,
+);
+
 const envelopedSetProfileSecretsSafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.setProfileSecrets,
 );
@@ -176,6 +183,7 @@ export type BootPhase =
   | "disconnected"
   | "connected"
   | "identity-received"
+  | "behavior-received"
   | "catalog-received"
   | "profile-secrets-received"
   | "oauth-credentials-received"
@@ -220,6 +228,7 @@ export class HubService {
   private readonly envVarManager: EnvVarManager;
   private readonly configService: ConfigServiceForHub;
   private readonly identityService: IdentityServiceI;
+  private readonly behaviorService: BehaviorServiceI;
   private readonly upstreamHandler: TargetServerChangeNotifier &
     UpstreamHandlerOAuthHandler;
   private readonly personalSkillsListeners = new Set<
@@ -237,6 +246,7 @@ export class HubService {
     envVarManager: EnvVarManager,
     configService: ConfigServiceForHub,
     identityService: IdentityServiceI,
+    behaviorService: BehaviorServiceI,
     upstreamHandler: TargetServerChangeNotifier & UpstreamHandlerOAuthHandler,
     getUsageStats: () => WebappBoundPayloadOf<"usage-stats">,
     options: HubServiceOptions = {},
@@ -247,6 +257,7 @@ export class HubService {
     this.envVarManager = envVarManager;
     this.configService = configService;
     this.identityService = identityService;
+    this.behaviorService = behaviorService;
     this.upstreamHandler = upstreamHandler;
     this.hubUrl = options.hubUrl ?? env.HUB_WS_URL;
     this.connectionTimeout =
@@ -678,6 +689,54 @@ export class HubService {
             envelope,
           });
           ack?.({ ok: false });
+        }
+      },
+    );
+
+    this.socket.on(
+      "set-mcpx-behavior",
+      (envelope, ack?: (res: Ack) => void) => {
+        try {
+          const parseResult = envelopedSetBehaviorSafeParse(envelope);
+          if (!parseResult.success) {
+            this.logger.error("Failed to parse set-mcpx-behavior message", {
+              error: parseResult.error,
+              envelope,
+            });
+            ack?.({
+              ok: false,
+              failureMessage: `Failed to parse set-mcpx-behavior envelope: ${parseResult.error.message}`,
+            } satisfies Ack);
+            return;
+          }
+          const message = parseResult.data.payload;
+          this.logger.info("Received set-mcpx-behavior message from Hub", {
+            featureFlags: Object.keys(
+              message.mcpxBehaviorSettings.featureFlags,
+            ),
+            policies: Object.keys(message.mcpxBehaviorSettings.policies),
+            messageTimestamp: message.timestamp,
+          });
+          const isLiveUpdate = this.bootPhaseHistory.some(
+            (e) => e.phase === "behavior-received",
+          );
+          const applied = this.behaviorService.applyBehaviorSettings({
+            newValues: message.mcpxBehaviorSettings,
+            timestamp: message.timestamp,
+          });
+          if (applied && !isLiveUpdate) {
+            this.transitionBootPhase("behavior-received");
+          }
+          ack?.({ ok: true } satisfies Ack);
+        } catch (e) {
+          this.logger.error("Failed to handle set-mcpx-behavior", {
+            ...loggableError(e),
+            envelope,
+          });
+          ack?.({
+            ok: false,
+            failureMessage: makeError(e).message,
+          } satisfies Ack);
         }
       },
     );

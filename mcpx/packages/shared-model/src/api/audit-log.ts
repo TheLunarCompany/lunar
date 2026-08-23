@@ -8,6 +8,17 @@ export const auditLogEventTypeSchema = z.enum([
   "target_server_removed",
   "agent_permission_updated",
   "catalog_updated",
+  "behavior_updated",
+]);
+
+const auditLogLevelSchema = z.enum([
+  "error",
+  "warn",
+  "info",
+  "http",
+  "verbose",
+  "debug",
+  "silly",
 ]);
 
 export type AuditLogEventType = z.infer<typeof auditLogEventTypeSchema>;
@@ -82,6 +93,22 @@ export const auditLogEntrySchema = z.discriminatedUnion("eventType", [
       // Optional with a default so audit logs persisted before prompt support
       // (which lack this field) still parse on read.
       approvedPromptsChanges: z.array(approvedPromptsChangeSchema).default([]),
+    }),
+  }),
+  baseAuditLogSchema.extend({
+    eventType: z.literal("behavior_updated"),
+    payload: z.object({
+      featureFlags: z.object({
+        strictnessRequired: z.boolean(),
+        enableResourceCapability: z.boolean(),
+        enablePromptCapability: z.boolean(),
+        enableSkillScoping: z.boolean(),
+      }),
+      policies: z.object({
+        logLevel: auditLogLevelSchema,
+        stdioServersEnabled: z.boolean(),
+        dockerInDockerEnabled: z.boolean(),
+      }),
     }),
   }),
 ]);

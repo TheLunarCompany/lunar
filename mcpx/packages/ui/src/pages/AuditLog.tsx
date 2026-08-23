@@ -29,6 +29,7 @@ const ALL_EVENT_TYPES: AuditLogEventType[] = [
   "tool_used",
   "prompt_used",
   "resource_read",
+  "behavior_updated",
 ];
 
 const EVENT_LABEL: Record<AuditLogEventType, string> = {
@@ -36,6 +37,7 @@ const EVENT_LABEL: Record<AuditLogEventType, string> = {
   target_server_removed: "MCP removed",
   agent_permission_updated: "Agent permission updated",
   catalog_updated: "Catalog updated",
+  behavior_updated: "Behavior updated",
   tool_used: "Tool used",
   prompt_used: "Prompt used",
   resource_read: "Resource read",
@@ -54,6 +56,11 @@ const EVENT_BADGE: Record<
     variant: "outline",
     className:
       "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-800",
+  },
+  behavior_updated: {
+    variant: "outline",
+    className:
+      "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800",
   },
   tool_used: {
     variant: "outline",
@@ -169,6 +176,9 @@ function summarize(entry: AuditLogEntry): React.ReactNode {
           {entry.payload.consumerTag ? ` by ${entry.payload.consumerTag}` : ""}
         </>
       );
+    case "behavior_updated": {
+      return <>Behavior updated - feature flags & policies</>;
+    }
   }
 }
 

@@ -20,6 +20,8 @@ import {
   enabledCapabilityKinds,
 } from "./capability-registry.js";
 import { ConsumerContext } from "./capability-resolver.js";
+import { env } from "../env.js";
+import { BehaviorServiceI, BehaviorSetting } from "./behavior-service.js";
 
 export { CloseSessionReason, TouchSource };
 
@@ -43,6 +45,7 @@ export class SessionsManager {
   private systemState: SystemStateTracker;
   private logger: Logger;
   private config: SessionsManagerConfig;
+  private behaviorService: BehaviorServiceI;
   private liveness: SessionLivenessManager;
   private sessionStore: DownstreamSessionStore;
   private clock: Clock;
@@ -53,6 +56,7 @@ export class SessionsManager {
 
   constructor(
     config: SessionsManagerConfig,
+    behaviorService: BehaviorServiceI,
     metricRecorder: SystemStateTracker,
     logger: Logger,
     clock: Clock,
@@ -62,6 +66,7 @@ export class SessionsManager {
     this.systemState = metricRecorder;
     this.logger = logger.child({ component: "SessionsManager" });
     this.config = config;
+    this.behaviorService = behaviorService;
     this.sessionStore = sessionStore;
     this.clock = clock;
     this.liveness = new SessionLivenessManager(
@@ -287,7 +292,13 @@ export class SessionsManager {
   // per-consumer visibility without moving the resolver's active set (e.g.
   // permissions, which gate tools and prompts alike).
   scheduleBroadcastAllListChanged(): void {
-    for (const kind of enabledCapabilityKinds()) {
+    for (const kind of enabledCapabilityKinds({
+      enableSkillScoping: env.ENABLE_SKILL_SCOPING,
+      enablePromptCapability: env.ENABLE_PROMPT_CAPABILITY,
+      enableResourceCapability: this.behaviorService.get(
+        BehaviorSetting.ENABLE_RESOURCE_CAPABILITY,
+      ),
+    })) {
       this.scheduleBroadcastListChanged(kind);
     }
   }

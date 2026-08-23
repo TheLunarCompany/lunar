@@ -5,7 +5,6 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
-import { env } from "../env.js";
 import { safeEmit } from "./capability-notifications.js";
 
 // "internal": handled in-process by mcpx (e.g. dynamic-capabilities, OAuth
@@ -16,17 +15,24 @@ import { safeEmit } from "./capability-notifications.js";
 export type CapabilityOrigin = "internal" | "upstream";
 
 export type CapabilityKind = "tools" | "prompts" | "resources";
+export type CapabilityFlags = {
+  enableSkillScoping: boolean;
+  enablePromptCapability: boolean;
+  enableResourceCapability: boolean;
+};
 
 // Single source of truth for which capability kinds mcpx speaks to clients:
 // advertised capabilities, gateway handlers and list-changed broadcasts all
 // derive from this. `tools` is always on. A kind flag turns on upstream
 // serving of its kind; skill scoping serves internal-origin prompts and
 // resources regardless of them.
-export function enabledCapabilityKinds(): CapabilityKind[] {
-  if (env.ENABLE_SKILL_SCOPING) return ["tools", "prompts", "resources"];
+export function enabledCapabilityKinds(
+  flags: CapabilityFlags,
+): CapabilityKind[] {
+  if (flags.enableSkillScoping) return ["tools", "prompts", "resources"];
   const kinds: CapabilityKind[] = ["tools"];
-  if (env.ENABLE_PROMPT_CAPABILITY) kinds.push("prompts");
-  if (env.ENABLE_RESOURCE_CAPABILITY) kinds.push("resources");
+  if (flags.enablePromptCapability) kinds.push("prompts");
+  if (flags.enableResourceCapability) kinds.push("resources");
   return kinds;
 }
 

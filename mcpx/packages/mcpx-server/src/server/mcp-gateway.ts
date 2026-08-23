@@ -37,6 +37,7 @@ import {
   HiddenInternalCapabilityError,
   UnknownInternalCapabilityError,
 } from "../services/internal-capabilities-service.js";
+import { BehaviorSetting } from "../services/behavior-service.js";
 const MIN_PROTOCOL_VERSION_FOR_KEEPALIVE = "2025-11-25";
 const MAX_KEEPALIVE_TIMEOUT_RATIO = 0.8;
 type RequestHandler = Parameters<Server["setRequestHandler"]>[1];
@@ -54,7 +55,13 @@ export async function getServer(
   logger: Logger,
   shouldReturnEmptyServer: boolean,
 ): Promise<Server> {
-  const enabledKinds = enabledCapabilityKinds();
+  const enabledKinds = enabledCapabilityKinds({
+    enableSkillScoping: env.ENABLE_SKILL_SCOPING,
+    enablePromptCapability: env.ENABLE_PROMPT_CAPABILITY,
+    enableResourceCapability: services.behaviorService.get(
+      BehaviorSetting.ENABLE_RESOURCE_CAPABILITY,
+    ),
+  });
   const capabilities: ServerCapabilities = {};
   for (const kind of enabledKinds) {
     capabilities[kind] = { listChanged: true };

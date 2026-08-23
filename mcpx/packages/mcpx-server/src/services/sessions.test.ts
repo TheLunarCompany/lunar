@@ -11,6 +11,7 @@ import {
   DownstreamSessionStore,
   PersistedDownstreamSessionEntry,
 } from "./downstream-session-store.js";
+import { stubBehaviorService } from "./behavior-service.stub.js";
 
 const noopSessionStore: DownstreamSessionStore = {
   store: async () => {},
@@ -44,6 +45,7 @@ describe("SessionsManager", () => {
     const sessionId = "test-session";
     sessionsManager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -61,6 +63,7 @@ describe("SessionsManager", () => {
     const sessionId = "identity-session";
     sessionsManager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -82,6 +85,7 @@ describe("SessionsManager", () => {
   it("getConsumerContext returns an empty context for an unknown session", async () => {
     sessionsManager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -97,6 +101,7 @@ describe("SessionsManager", () => {
     const sessionId = "test-session";
     sessionsManager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -123,6 +128,7 @@ describe("SessionsManager", () => {
         sessionTtlMin: 0.0001,
         sessionSweepIntervalMin: 0.0005,
       },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -147,6 +153,7 @@ describe("SessionsManager", () => {
         sessionTtlMin: 0.0001,
         sessionSweepIntervalMin: 0.0005,
       },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -171,6 +178,7 @@ describe("SessionsManager", () => {
         sessionTtlMin: 0.001,
         sessionSweepIntervalMin: 0.0005,
       },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -200,6 +208,7 @@ describe("SessionsManager", () => {
   it("broadcasts tool list changes to all connected sessions", async () => {
     sessionsManager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -229,6 +238,7 @@ describe("SessionsManager", () => {
   it("continues broadcasting when a single session notification fails", async () => {
     sessionsManager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -260,6 +270,7 @@ describe("SessionsManager", () => {
   it("closes a session after consecutive ping failures", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 3 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -284,6 +295,7 @@ describe("SessionsManager", () => {
   it("closes a session after consecutive ping timeouts", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 3 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -309,6 +321,7 @@ describe("SessionsManager", () => {
   it("keeps a session open when the client does not support ping", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 3 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -336,6 +349,7 @@ describe("SessionsManager", () => {
   it("stops pinging once the session is closed (no leaked ping loop)", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 1000 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -368,6 +382,7 @@ describe("SessionsManager", () => {
   it("stops pinging every session on shutdown", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 1000 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -399,6 +414,7 @@ describe("SessionsManager", () => {
         pingIntervalMs: 0,
         probeClientsGraceLivenessPeriodMs: 40,
       },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -424,6 +440,7 @@ describe("SessionsManager", () => {
     sessionsManager = new SessionsManager(
       // High threshold so it survives long enough to observe flip + recovery.
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 1000 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -457,6 +474,7 @@ describe("SessionsManager", () => {
   it("markSessionUnresponsive flips state via the liveness path, cleared by activity", async () => {
     sessionsManager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -487,6 +505,7 @@ describe("SessionsManager", () => {
   it("does not reap an actively-touched session even when pings fail", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 2 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -512,6 +531,7 @@ describe("SessionsManager", () => {
   it("keeps a session open when the ping result has an invalid shape", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 2 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -535,6 +555,7 @@ describe("SessionsManager", () => {
   it("does not ping-reap a streamable client without ping support", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 2 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -561,6 +582,7 @@ describe("SessionsManager", () => {
   it("ping-reaps a streamable client that advertises ping support", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 2 },
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -595,6 +617,7 @@ describe("SessionsManager.loadPersistedDownstreamSession", () => {
     };
     const manager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       new SystemStateTracker(new ManualClock(), noOpLogger),
       noOpLogger,
       new ManualClock(),
@@ -611,6 +634,7 @@ describe("SessionsManager.loadPersistedDownstreamSession", () => {
   it("returns undefined when the store has no session", async () => {
     const manager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       new SystemStateTracker(new ManualClock(), noOpLogger),
       noOpLogger,
       new ManualClock(),
@@ -635,6 +659,7 @@ describe("SessionsManager.loadPersistedDownstreamSession", () => {
     };
     const manager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       new SystemStateTracker(new ManualClock(), noOpLogger),
       noOpLogger,
       new ManualClock(),
@@ -674,6 +699,7 @@ describe("SessionsManager recovery", () => {
     };
     const manager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -724,6 +750,7 @@ describe("SessionsManager recovery", () => {
     };
     const manager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -770,6 +797,7 @@ describe("SessionsManager recovery", () => {
     };
     const manager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -791,6 +819,7 @@ describe("SessionsManager recovery", () => {
     });
     const manager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,
@@ -841,6 +870,7 @@ describe("SessionsManager recovery", () => {
     };
     const manager = new SessionsManager(
       baseConfig,
+      stubBehaviorService(),
       systemState,
       noOpLogger,
       clock,

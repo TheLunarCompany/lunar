@@ -12,6 +12,7 @@ import {
   setPublishedSkillsPayloadSchema,
 } from "./set-skills.js";
 import { bootCompletePayloadSchema } from "./boot-complete.js";
+import { setMcpxBehaviorPayloadSchema } from "./set-mcpx-behavior.js";
 
 // Raw payload schemas
 export const McpxBoundPayloads = {
@@ -20,6 +21,7 @@ export const McpxBoundPayloads = {
   setProfileSecrets: setProfileSecretsPayloadSchema,
   setOauthCredentials: setOauthCredentialsPayloadSchema,
   setIdentity: setIdentityPayloadSchema,
+  setMcpxBehavior: setMcpxBehaviorPayloadSchema,
   initiateOAuth: initiateOAuthPayloadSchema,
   completeOAuth: completeOAuthPayloadSchema,
   setPersonalSkills: setPersonalSkillsPayloadSchema,
@@ -36,6 +38,7 @@ export const MCPX_BOUND_EVENTS = {
   SET_PROFILE_SECRETS: "set-profile-secrets",
   SET_OAUTH_CREDENTIALS: "set-oauth-credentials",
   SET_IDENTITY: "set-identity",
+  SET_MCPX_BEHAVIOR: "set-mcpx-behavior",
   INITIATE_OAUTH: "initiate-oauth",
   COMPLETE_OAUTH: "complete-oauth",
   SET_PERSONAL_SKILLS: "set-personal-skills",
@@ -54,6 +57,7 @@ export const mcpxBoundSchemasByEvent = {
   [MCPX_BOUND_EVENTS.SET_PROFILE_SECRETS]: setProfileSecretsPayloadSchema,
   [MCPX_BOUND_EVENTS.SET_OAUTH_CREDENTIALS]: setOauthCredentialsPayloadSchema,
   [MCPX_BOUND_EVENTS.SET_IDENTITY]: setIdentityPayloadSchema,
+  [MCPX_BOUND_EVENTS.SET_MCPX_BEHAVIOR]: setMcpxBehaviorPayloadSchema,
   [MCPX_BOUND_EVENTS.INITIATE_OAUTH]: initiateOAuthPayloadSchema,
   [MCPX_BOUND_EVENTS.COMPLETE_OAUTH]: completeOAuthPayloadSchema,
   [MCPX_BOUND_EVENTS.SET_PERSONAL_SKILLS]: setPersonalSkillsPayloadSchema,

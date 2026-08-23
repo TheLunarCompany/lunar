@@ -52,7 +52,7 @@ const commaSeparatedStringArraySchema = z
     "Values must be strings",
   );
 
-const logLevelSchema = z.enum([
+export const logLevelSchema = z.enum([
   "error",
   "warn",
   "info",

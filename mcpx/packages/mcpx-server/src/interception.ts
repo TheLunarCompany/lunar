@@ -1,5 +1,4 @@
 import { findForbiddenArg } from "./command-policy.js";
-import { env } from "./env.js";
 import { FailedToConnectToTargetServer } from "./errors.js";
 import { StdioTargetServer } from "./model/target-servers.js";
 import { injectEnvIntoDockerArgs } from "./services/docker-helpers.js";
@@ -40,13 +39,6 @@ export async function prepareCommand(
     case "node":
       return { command, args };
     case "docker": {
-      if (!env.DIND_ENABLED) {
-        return Promise.reject(
-          new FailedToConnectToTargetServer(
-            "Docker in Docker is not enabled. Cannot start docker mcp server. Please try to run MCPX server with '--privileged' access and try again.",
-          ),
-        );
-      }
       // Spawned via the SDK's StdioClientTransport with shell:false, so the
       // image and args are passed as an argv array (no host shell). We only
       // forward the resolved env into the container as -e KEY=VALUE flags.

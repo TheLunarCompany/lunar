@@ -3,8 +3,8 @@ import {
   FailedToConnectToTargetServer,
   PendingInputError,
   STDIO_SERVERS_DISABLED_MESSAGE,
+  DIND_DISABLED_MESSAGE,
 } from "../errors.js";
-import { resetEnv } from "../env.js";
 import { TargetServer } from "../model/target-servers.js";
 import { ExtendedClientBuilder } from "./client-extension.js";
 import {
@@ -16,17 +16,25 @@ import {
   resolveRemoteHeaders,
   TargetServerConnectionFactory,
 } from "./target-server-connection-factory.js";
+import {
+  McpxBehaviorFeatureFlags,
+  McpxBehaviorPolicies,
+} from "./behavior-service.js";
+import { stubBehaviorService } from "./behavior-service.stub.js";
 
 const processEnvResolver: TargetServerEnvResolver = {
   resolveTargetServerEnv: (name) => process.env[name],
 };
 
 // The gate short-circuits before any dependency is touched, so stubs suffice.
-function buildFactory(): TargetServerConnectionFactory {
+function buildFactory(
+  overrides: Partial<McpxBehaviorFeatureFlags & McpxBehaviorPolicies> = {},
+): TargetServerConnectionFactory {
   return new TargetServerConnectionFactory(
     {} as unknown as ExtendedClientBuilder,
     noOpLogger,
     {} as unknown as IdentityServiceI,
+    stubBehaviorService(overrides),
     {} as unknown as TargetServerEnvSource,
   );
 }
@@ -34,7 +42,7 @@ function buildFactory(): TargetServerConnectionFactory {
 const stdioServer = {
   name: "probe",
   type: "stdio",
-  command: "npx",
+  command: "docker",
   args: ["-y", "some-server"],
 } as TargetServer;
 
@@ -140,40 +148,42 @@ describe("resolveRemoteHeaders", () => {
 });
 
 describe("TargetServerConnectionFactory — ENABLE_STDIO_MCP_SERVERS gate", () => {
-  const originalEnv = { ...process.env };
-
-  afterEach(() => {
-    process.env = { ...originalEnv, VERSION: "1.0.0", INSTANCE_ID: "0" };
-    resetEnv();
-  });
-
   it("refuses to start a stdio server when the flag is false", async () => {
-    process.env = {
-      ...originalEnv,
-      VERSION: "1.0.0",
-      INSTANCE_ID: "0",
-      ENABLE_STDIO_MCP_SERVERS: "false",
-    };
-    resetEnv();
-
-    const promise = buildFactory().createConnection(stdioServer, undefined);
+    const promise = buildFactory({
+      stdioServersEnabled: false,
+    }).createConnection(stdioServer, undefined);
     await expect(promise).rejects.toBeInstanceOf(FailedToConnectToTargetServer);
     await expect(promise).rejects.toThrow(STDIO_SERVERS_DISABLED_MESSAGE);
   });
 
   it("does not block stdio when the flag is explicitly true", async () => {
-    process.env = {
-      ...originalEnv,
-      VERSION: "1.0.0",
-      INSTANCE_ID: "0",
-      ENABLE_STDIO_MCP_SERVERS: "true",
-    };
-    resetEnv();
-
     // With the gate open the connection proceeds past the guard and fails for
     // other reasons (stub deps) - it must NOT be the "disabled" rejection.
     await expect(
-      buildFactory().createConnection(stdioServer, undefined),
+      buildFactory({ stdioServersEnabled: true }).createConnection(
+        stdioServer,
+        undefined,
+      ),
     ).rejects.not.toThrow(STDIO_SERVERS_DISABLED_MESSAGE);
+  });
+});
+
+describe("TargetServerConnectionFactory — ENABLE_DIND gate", () => {
+  it("refuses docker when DIND is disabled", async () => {
+    const promise = buildFactory({
+      stdioServersEnabled: true,
+      dockerInDockerEnabled: false,
+    }).createConnection(stdioServer, undefined);
+    await expect(promise).rejects.toBeInstanceOf(FailedToConnectToTargetServer);
+    await expect(promise).rejects.toThrow(DIND_DISABLED_MESSAGE);
+  });
+
+  it("does not block docker when DIND is enabled", async () => {
+    await expect(
+      buildFactory({
+        stdioServersEnabled: true,
+        dockerInDockerEnabled: true,
+      }).createConnection(stdioServer, undefined),
+    ).rejects.not.toThrow(DIND_DISABLED_MESSAGE);
   });
 });

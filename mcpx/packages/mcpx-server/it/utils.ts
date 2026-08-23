@@ -29,7 +29,11 @@ import {
   TESTKIT_SERVER_CALCULATOR,
   TESTKIT_SERVER_ECHO,
 } from "../src/testkit/root.js";
-import { MockHubServer, SetCatalogPayload } from "./mock-hub-server.js";
+import {
+  MockHubServer,
+  SetCatalogPayload,
+  SetMcpxBehaviorPayload,
+} from "./mock-hub-server.js";
 import {
   wrapInEnvelope,
   SetIdentityPayload,
@@ -329,6 +333,7 @@ interface TestHarnessProps {
   catalogItems?: CatalogMCPServerItem[];
   mcpxPort?: number;
   hubPort?: number;
+  behaviorPayload?: SetMcpxBehaviorPayload;
 }
 function defaultTestHarnessProps(): Required<TestHarnessProps> {
   return {
@@ -340,6 +345,13 @@ function defaultTestHarnessProps(): Required<TestHarnessProps> {
     catalogItems: stdioCatalogItems,
     mcpxPort: MCPX_PORT,
     hubPort: 0,
+    behaviorPayload: {
+      mcpxBehaviorSettings: {
+        featureFlags: { enableResourceCapability: false },
+        policies: { stdioServersEnabled: true, dockerInDockerEnabled: false },
+      },
+      timestamp: 0,
+    },
   };
 }
 export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
@@ -353,6 +365,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     catalogItems,
     mcpxPort,
     hubPort: requestedHubPort,
+    behaviorPayload,
   } = {
     ...defaultTestHarnessProps(),
     ...props,
@@ -411,6 +424,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     port: hubPort,
     logger: testLogger,
     catalogPayload: catalogItemsToPayload(catalogItems),
+    behaviorPayload,
   });
   // Accept the test instance ID from .it.env
   mockHubServer.setValidTokens(["it-run"]);

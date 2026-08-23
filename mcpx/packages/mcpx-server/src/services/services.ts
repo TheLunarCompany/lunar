@@ -51,6 +51,7 @@ import {
   DeferredPermissionCheck,
 } from "./capability-resolver.js";
 import { buildSkillServices, SkillServices } from "./skills/index.js";
+import { BehaviorService } from "./behavior-service.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -70,6 +71,7 @@ export class Services {
   private _setupManager: SetupManager;
   private _catalogManager: CatalogManager;
   private _identityService: IdentityService;
+  private _behaviorService: BehaviorService;
   private _envVarManager: EnvVarManager;
   private _dynamicCapabilities: DynamicCapabilitiesService;
   private _oauthTools: OAuthToolsService;
@@ -138,11 +140,42 @@ export class Services {
       extendedClientBuilder,
       logger.child({ component: "OAuthConnectionHandler" }),
     );
+    const auditLogPersistence = new FileAuditLogPersistence(
+      env.AUDIT_LOG_DIR,
+      env.AUDIT_LOG_RETENTION_HOURS,
+      systemClock,
+      logger.child({ component: "AuditLogPersistence" }),
+    );
+
+    this._auditLogService = new AuditLogService(
+      systemClock,
+      logger.child({ component: "AuditLogService" }),
+      auditLogPersistence,
+    );
+
+    this._behaviorService = new BehaviorService(
+      this._auditLogService,
+      {
+        featureFlags: {
+          strictnessRequired: env.STRICTNESS_REQUIRED,
+          enableResourceCapability: env.ENABLE_RESOURCE_CAPABILITY,
+          enablePromptCapability: env.ENABLE_PROMPT_CAPABILITY,
+          enableSkillScoping: env.ENABLE_SKILL_SCOPING,
+        },
+        policies: {
+          logLevel: env.LOG_LEVEL,
+          stdioServersEnabled: env.ENABLE_STDIO_MCP_SERVERS,
+          dockerInDockerEnabled: env.DIND_ENABLED,
+        },
+      },
+      logger,
+    );
 
     const connectionFactory = new TargetServerConnectionFactory(
       extendedClientBuilder,
       logger.child({ component: "ConnectionFactory" }),
       this._identityService,
+      this._behaviorService,
       this._envVarManager,
     );
 
@@ -200,6 +233,7 @@ export class Services {
       this._envVarManager,
       config,
       this._identityService,
+      this._behaviorService,
       upstreamHandler,
       extractUsageStats,
       {
@@ -223,6 +257,7 @@ export class Services {
         sessionSweepIntervalMin: env.KEEPALIVE_SWEEP_INTERVAL_MIN,
         pingMaxConsecutiveTimeouts: env.PING_MAX_CONSECUTIVE_TIMEOUTS,
       },
+      this._behaviorService,
       systemStateTracker,
       logger,
       systemClock,
@@ -234,23 +269,11 @@ export class Services {
       this._identityService.getDisplayName(),
     );
 
-    const auditLogPersistence = new FileAuditLogPersistence(
-      env.AUDIT_LOG_DIR,
-      env.AUDIT_LOG_RETENTION_HOURS,
-      systemClock,
-      logger.child({ component: "AuditLogPersistence" }),
-    );
-
-    this._auditLogService = new AuditLogService(
-      systemClock,
-      logger.child({ component: "AuditLogService" }),
-      auditLogPersistence,
-    );
-
     this._controlPlane = new ControlPlaneService(
       systemStateTracker,
       upstreamHandler,
       config,
+      this._behaviorService,
       this._auditLogService,
       logger,
     );
@@ -556,6 +579,11 @@ export class Services {
   get identityService(): IdentityService {
     this.ensureInitialized();
     return this._identityService;
+  }
+
+  get behaviorService(): BehaviorService {
+    this.ensureInitialized();
+    return this._behaviorService;
   }
 
   get config(): ConfigService {

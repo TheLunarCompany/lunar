@@ -1,3 +1,8 @@
+import {
+  McpxBehaviorFeatureFlags,
+  McpxBehaviorPolicies,
+} from "../services/behavior-service.js";
+
 export type ToolUsedPayload = {
   toolName: string;
   targetServerName: string;
@@ -54,6 +59,10 @@ export type CatalogUpdatedPayload = {
   approvedToolsChanges: ApprovedToolsChangePayload[];
   approvedPromptsChanges: ApprovedPromptsChangePayload[];
 };
+export type BehaviorUpdatedPayload = {
+  featureFlags: McpxBehaviorFeatureFlags;
+  policies: McpxBehaviorPolicies;
+};
 
 export interface ToolUsedEvent {
   eventType: "tool_used";
@@ -89,6 +98,10 @@ export interface CatalogUpdatedEvent {
   eventType: "catalog_updated";
   payload: CatalogUpdatedPayload;
 }
+export interface BehaviorUpdatedEvent {
+  eventType: "behavior_updated";
+  payload: BehaviorUpdatedPayload;
+}
 
 export type AuditLogEvent =
   | ToolUsedEvent
@@ -97,6 +110,7 @@ export type AuditLogEvent =
   | TargetServerAddedEvent
   | TargetServerRemovedEvent
   | AgentPermissionUpdatedEvent
-  | CatalogUpdatedEvent;
+  | CatalogUpdatedEvent
+  | BehaviorUpdatedEvent;
 
 export type AuditLog = { timestamp: Date; createdAt?: Date } & AuditLogEvent;

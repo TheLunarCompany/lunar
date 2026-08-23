@@ -5,6 +5,7 @@ import {
   McpxBoundPayloads,
   SetIdentityPayload,
   savedSetupItemSchema,
+  MCPX_BOUND_EVENTS,
   WEBAPP_BOUND_EVENTS,
   DynamicCapabilitiesMatchingPayload,
   DynamicCapabilitiesMatchingAck,
@@ -19,6 +20,7 @@ import {
   SkillWriteAck,
   DeleteSkillAck,
 } from "@mcpx/webapp-protocol/messages";
+
 import { Skill, SkillWithDraft } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { v7 as uuidv7 } from "uuid";
@@ -37,12 +39,16 @@ function skillAuthorOf(socket: Socket): {
 
 export type SetCatalogPayload = z.input<typeof McpxBoundPayloads.setCatalog>;
 export type SavedSetupItem = z.infer<typeof savedSetupItemSchema>;
+export type SetMcpxBehaviorPayload = z.input<
+  typeof McpxBoundPayloads.setMcpxBehavior
+>;
 
 export interface MockHubServerOptions {
   port: number;
   logger: Logger;
   catalogPayload?: SetCatalogPayload;
   identityPayload?: SetIdentityPayload;
+  behaviorPayload?: SetMcpxBehaviorPayload;
 }
 
 export class MockHubServer {
@@ -61,6 +67,7 @@ export class MockHubServer {
   private toolCallBatchResolvers: ((message: unknown) => void)[] = [];
   private catalogPayload: SetCatalogPayload | undefined;
   private identityPayload: SetIdentityPayload;
+  private behaviorPayload: SetMcpxBehaviorPayload | undefined;
   private savedSetups: Map<string, SavedSetupItem> = new Map();
   private skills: Map<string, SkillWithDraft> = new Map();
   private downstreamSessions: Map<string, PersistedDownstreamSessionDataWire> =
@@ -71,8 +78,10 @@ export class MockHubServer {
   };
 
   constructor(options: MockHubServerOptions) {
-    const { port, logger, catalogPayload, identityPayload } = options;
+    const { port, logger, catalogPayload, identityPayload, behaviorPayload } =
+      options;
     this.catalogPayload = catalogPayload;
+    this.behaviorPayload = behaviorPayload;
     // Default to member user if not specified
     this.identityPayload = identityPayload ?? {
       entityType: "user",
@@ -172,6 +181,31 @@ export class MockHubServer {
         socketId,
         count: skills.length,
       });
+    });
+  }
+
+  emitBehaviorWithAck(
+    socketId: string,
+    payload: SetMcpxBehaviorPayload,
+  ): Promise<{ ok: boolean }> {
+    const socket = this.connectedSockets.get(socketId);
+    if (!socket) {
+      return Promise.reject(new Error(`No client ${socketId} was found`));
+    }
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Timeout waiting for behavior ack"));
+      }, 5000);
+      socket.emit(
+        MCPX_BOUND_EVENTS.SET_MCPX_BEHAVIOR,
+        { metadata: { id: "mock-behavior-with-ack" }, payload },
+        (ackResult: { ok: boolean }) => {
+          clearTimeout(timeout);
+          this.logger.info("Received behavior ack", { socketId, ackResult });
+          resolve(ackResult);
+        },
+      );
+      this.logger.info("Emitted set-mcpx-behavior with ack", { socketId });
     });
   }
 
@@ -378,6 +412,16 @@ export class MockHubServer {
         socketId: socket.id,
         entityType: this.identityPayload.entityType,
       });
+
+      if (this.behaviorPayload) {
+        socket.emit(MCPX_BOUND_EVENTS.SET_MCPX_BEHAVIOR, {
+          metadata: { id: "mock-behavior-init" },
+          payload: this.behaviorPayload,
+        });
+        this.logger.info("Emitted set-mcpx-behavior on connection", {
+          socketId: socket.id,
+        });
+      }
 
       if (this.catalogPayload) {
         socket.emit("set-catalog", {
