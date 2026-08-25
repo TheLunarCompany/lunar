@@ -5,7 +5,10 @@ import {
   toProcessEnvKey,
 } from "./catalog-manager.js";
 import { CatalogItemWire } from "@mcpx/webapp-protocol/messages";
-import { EnvRequirements } from "@mcpx/shared-model";
+import {
+  ClientCredentialsOauthProvider,
+  EnvRequirements,
+} from "@mcpx/shared-model";
 import { EnvVarManager } from "./env-var-manager.js";
 import {
   IdentityServiceI,
@@ -78,6 +81,32 @@ describe("CatalogManager", () => {
 
   function makeCatalog(...items: CatalogItemWire[]) {
     return { items };
+  }
+
+  const BASE_CATALOG_OAUTH_CONFIG: ClientCredentialsOauthProvider = {
+    authMethod: "client_credentials",
+    credentials: {
+      clientId: { type: "literal", value: "client-id-123" },
+      clientSecret: { type: "literal", value: "secret-abc" },
+    },
+    scopes: ["read"],
+    tokenAuthMethod: "client_secret_basic",
+  };
+
+  function createCatalogItemWithOAuth(
+    name: string,
+    id: string,
+    oauthConfig: ClientCredentialsOauthProvider = BASE_CATALOG_OAUTH_CONFIG,
+  ): CatalogItemWire {
+    return {
+      server: {
+        id,
+        name,
+        displayName: name,
+        config: { type: "stdio", command: "npx", args: ["-y", name], env: {} },
+      },
+      adminConfig: { staticOauthConfig: oauthConfig },
+    };
   }
 
   describe("strictness based on identity", () => {
@@ -472,10 +501,7 @@ describe("CatalogManager", () => {
       const catalog = manager.getCatalog();
 
       expect(catalog).toHaveLength(2);
-      expect(catalog.map((c) => c.server.name).sort()).toEqual([
-        "github",
-        "slack",
-      ]);
+      expect(catalog.map((c) => c.name).sort()).toEqual(["github", "slack"]);
     });
 
     it("returns a clone (not the original)", () => {
@@ -487,6 +513,48 @@ describe("CatalogManager", () => {
 
       expect(catalog1).not.toBe(catalog2);
       expect(catalog1[0]).not.toBe(catalog2[0]);
+    });
+  });
+
+  describe("#setCatalog — perCatalogItemOAuth", () => {
+    it("populates perCatalogItemOAuth for items that have staticOauthConfig", () => {
+      const manager = createCatalogManager();
+      const itemId = uuidv7();
+
+      manager.setCatalog(
+        makeCatalog(createCatalogItemWithOAuth("slack", itemId)),
+      );
+
+      expect(manager.getPerCatalogItemOAuth(itemId)).toEqual(
+        BASE_CATALOG_OAUTH_CONFIG,
+      );
+    });
+
+    it("returns undefined for an id not present in the catalog", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(createCatalogItemWithOAuth("slack", uuidv7())),
+      );
+
+      expect(manager.getPerCatalogItemOAuth("non-existent-id")).toBeUndefined();
+    });
+
+    it("replaces the map entirely on a second setCatalog — no stale entries survive", () => {
+      const manager = createCatalogManager();
+      const oldId = uuidv7();
+      const newId = uuidv7();
+
+      manager.setCatalog(
+        makeCatalog(createCatalogItemWithOAuth("slack", oldId)),
+      );
+      expect(manager.getPerCatalogItemOAuth(oldId)).toBeDefined();
+
+      manager.setCatalog(
+        makeCatalog(createCatalogItemWithOAuth("github", newId)),
+      );
+
+      expect(manager.getPerCatalogItemOAuth(oldId)).toBeUndefined();
+      expect(manager.getPerCatalogItemOAuth(newId)).toBeDefined();
     });
   });
 
@@ -531,11 +599,16 @@ describe("CatalogManager", () => {
       );
 
       const catalog = manager.getCatalog();
-      const config = catalog[0]!.server.config;
+      const server = catalog[0];
+      expect(server).toBeDefined();
+      if (!server) return;
+      const config = server.config;
       expect(config.type).toBe("stdio");
       if (config.type !== "stdio") return;
 
-      const requirement = config.env!["API_KEY"]!;
+      const requirement = config.env?.["API_KEY"];
+      expect(requirement).toBeDefined();
+      if (!requirement) return;
       const expectedKey = toProcessEnvKey("my-server", "API_KEY");
       expect(requirement.prefilled).toEqual({ fromEnv: expectedKey }); // The original prefilled literal is gone!
       expect(envVarManager.resolveTargetServerEnv(expectedKey)).toBe(
@@ -558,10 +631,16 @@ describe("CatalogManager", () => {
       );
 
       const catalog = manager.getCatalog();
-      const config = catalog[0]!.server.config;
+      const server = catalog[0];
+      expect(server).toBeDefined();
+      if (!server) return;
+      const config = server.config;
       if (config.type !== "stdio") return;
 
-      expect(config.env!["PORT"]!.prefilled).toBe("8080"); // not a secret? prefilled literal is unchanged
+      const portReq = config.env?.["PORT"];
+      expect(portReq).toBeDefined();
+      if (!portReq) return;
+      expect(portReq.prefilled).toBe("8080"); // not a secret? prefilled literal is unchanged
     });
 
     it("does not touch secret prefilled that is already fromEnv", () => {
@@ -579,12 +658,16 @@ describe("CatalogManager", () => {
       );
 
       const catalog = manager.getCatalog();
-      const config = catalog[0]!.server.config;
+      const server = catalog[0];
+      expect(server).toBeDefined();
+      if (!server) return;
+      const config = server.config;
       if (config.type !== "stdio") return;
 
-      expect(config.env!["API_KEY"]!.prefilled).toEqual({
-        fromEnv: "EXISTING_ENV_VAR",
-      });
+      const apiKeyReq = config.env?.["API_KEY"];
+      expect(apiKeyReq).toBeDefined();
+      if (!apiKeyReq) return;
+      expect(apiKeyReq.prefilled).toEqual({ fromEnv: "EXISTING_ENV_VAR" });
     });
 
     it("does not touch secret env vars without prefilled value", () => {
@@ -601,10 +684,16 @@ describe("CatalogManager", () => {
       );
 
       const catalog = manager.getCatalog();
-      const config = catalog[0]!.server.config;
+      const server = catalog[0];
+      expect(server).toBeDefined();
+      if (!server) return;
+      const config = server.config;
       if (config.type !== "stdio") return;
 
-      expect(config.env!["API_KEY"]!.prefilled).toBeUndefined();
+      const apiKeyReq = config.env?.["API_KEY"];
+      expect(apiKeyReq).toBeDefined();
+      if (!apiKeyReq) return;
+      expect(apiKeyReq.prefilled).toBeUndefined();
     });
 
     it("handles multiple env vars, protecting only secret literals", () => {
@@ -632,14 +721,24 @@ describe("CatalogManager", () => {
       );
 
       const catalog = manager.getCatalog();
-      const config = catalog[0]!.server.config;
+      const server = catalog[0];
+      expect(server).toBeDefined();
+      if (!server) return;
+      const config = server.config;
       if (config.type !== "stdio") return;
 
-      expect(config.env!["SECRET_KEY"]!.prefilled).toEqual({
+      const secretKeyReq = config.env?.["SECRET_KEY"];
+      const publicPortReq = config.env?.["PUBLIC_PORT"];
+      const optionalSecretReq = config.env?.["OPTIONAL_SECRET"];
+      expect(secretKeyReq).toBeDefined();
+      expect(publicPortReq).toBeDefined();
+      expect(optionalSecretReq).toBeDefined();
+      if (!secretKeyReq || !publicPortReq || !optionalSecretReq) return;
+      expect(secretKeyReq.prefilled).toEqual({
         fromEnv: toProcessEnvKey("my-server", "SECRET_KEY"),
       });
-      expect(config.env!["PUBLIC_PORT"]!.prefilled).toBe("3000");
-      expect(config.env!["OPTIONAL_SECRET"]!.prefilled).toEqual({
+      expect(publicPortReq.prefilled).toBe("3000");
+      expect(optionalSecretReq.prefilled).toEqual({
         fromEnv: toProcessEnvKey("my-server", "OPTIONAL_SECRET"),
       });
     });
@@ -661,7 +760,10 @@ describe("CatalogManager", () => {
       manager.setCatalog(makeCatalog(sseItem));
 
       const catalog = manager.getCatalog();
-      expect(catalog[0]!.server.config.type).toBe("sse");
+      const server = catalog[0];
+      expect(server).toBeDefined();
+      if (!server) return;
+      expect(server.config.type).toBe("sse");
     });
   });
 });

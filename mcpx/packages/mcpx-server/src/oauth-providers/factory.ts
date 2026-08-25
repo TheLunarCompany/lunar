@@ -1,4 +1,7 @@
-import { StaticOAuth } from "@mcpx/shared-model";
+import {
+  ClientCredentialsOauthProvider,
+  StaticOAuth,
+} from "@mcpx/shared-model";
 import { CLIENT_NAME, CLIENT_URI } from "@mcpx/toolkit-core/oauth";
 import {
   resolveClientId,
@@ -235,5 +238,33 @@ export class OAuthProviderFactory {
         });
       }
     }
+  }
+
+  createFromLiteralConfig(
+    config: ClientCredentialsOauthProvider,
+    options: { serverName: string; serverUrl: string; callbackUrl?: string },
+  ): StaticOAuthProvider {
+    const { serverName, callbackUrl } = options;
+    const resolved = resolveClientCredentials(config.credentials, this.envVars);
+    if (!resolved) {
+      this.logger.warn(
+        `Missing client credentials for catalog item server ${serverName}. Skipping Static OAuth provider creation.`,
+      );
+      if (!resolved) {
+        throw new Error(
+          `Missing client credentials for catalog item server ${serverName}`,
+        );
+      }
+    }
+    return new StaticOAuthProvider({
+      serverName,
+      config,
+      clientId: resolved.clientId,
+      clientSecret: resolved.clientSecret,
+      callbackPath: this.callbackPath,
+      callbackUrl,
+      logger: this.logger,
+      tokenStore: this.tokenStore,
+    });
   }
 }

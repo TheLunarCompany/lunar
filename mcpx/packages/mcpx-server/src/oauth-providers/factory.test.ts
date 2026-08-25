@@ -7,6 +7,7 @@ import {
   StoredTokens,
 } from "../services/oauth-token-store.js";
 import { OauthCredentialResolver } from "../services/env-var-manager.js";
+import { ClientCredentialsOauthProvider } from "@mcpx/shared-model";
 
 const emptyEnvVarResolver: OauthCredentialResolver = {
   resolveOauthCredential: () => undefined,
@@ -102,6 +103,33 @@ describe("OAuthProviderFactory", () => {
         "other-tok",
       );
     });
+  });
+});
+
+describe("OAuthProviderFactory.createFromLiteralConfig", () => {
+  it("returns a StaticOAuthProvider for a valid client_credentials config with literal credentials", () => {
+    const factory = new OAuthProviderFactory(noOpLogger, {
+      tokenStore: makeMemoryStore(),
+      envVars: emptyEnvVarResolver,
+    });
+
+    const config: ClientCredentialsOauthProvider = {
+      authMethod: "client_credentials",
+      credentials: {
+        clientId: { type: "literal", value: "my-client-id" },
+        clientSecret: { type: "literal", value: "my-secret" },
+      },
+      scopes: ["read"],
+      tokenAuthMethod: "client_secret_basic",
+    };
+
+    const provider = factory.createFromLiteralConfig(config, {
+      serverName: "my-server",
+      serverUrl: "https://api.example.com/mcp",
+    });
+
+    expect(provider).toBeDefined();
+    expect(provider?.type).toBe("static");
   });
 });
 

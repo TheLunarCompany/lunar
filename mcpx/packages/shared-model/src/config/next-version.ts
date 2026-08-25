@@ -218,7 +218,7 @@ const effectiveClientIdOnlyCredentialsSchema = z.union([
 ]);
 
 // Client credentials flow (traditional OAuth with client secret)
-const clientCredentialsProviderSchema = z.object({
+export const clientCredentialsProviderSchema = z.object({
   authMethod: z.literal("client_credentials"),
   credentials: effectiveClientCredentialsSchema,
   scopes: z.array(z.string()),
@@ -283,6 +283,7 @@ export type CreatePermissionConsumerRequest = z.infer<
   typeof createPermissionConsumerRequestSchema
 >;
 export type StaticOAuthProvider = z.infer<typeof staticOAuthProviderSchema>;
+export type ClientCredentialsOauthProvider = z.infer<typeof clientCredentialsProviderSchema>;
 export type StaticOAuth = z.infer<typeof staticOAuthSchema>;
 export type CredentialField = z.infer<typeof credentialFieldSchema>;
 

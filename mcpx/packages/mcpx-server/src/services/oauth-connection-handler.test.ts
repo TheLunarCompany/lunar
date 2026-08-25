@@ -175,6 +175,7 @@ describe("OAuthConnectionHandler", () => {
         deleteOAuthTokensForServer: async (_serverName) => {},
         hasOAuthProvider: (_serverName) => false,
         hasStaticOAuthForUrl: (_serverUrl) => false,
+        hasCatalogItemOAuth: (_catalogItemId) => false,
         getExistingOAuthProvider: (_serverName) => undefined,
         hasPersistedOAuthTokens: async () => false,
       };
@@ -240,6 +241,24 @@ describe("OAuthConnectionHandler", () => {
         ).rejects.toThrow(
           `No pending OAuth flow for server: ${TEST_SERVER_NAME}`,
         );
+      });
+    });
+
+    describe(".hasCatalogItemOAuth", () => {
+      it("delegates to the session manager and returns true/false accordingly", () => {
+        const provider = createMockProvider();
+        const sessionManager: OAuthSessionManagerI = {
+          ...createMockSessionManager(provider),
+          hasCatalogItemOAuth: (id) => id === "item-with-oauth",
+        };
+        const handler = new OAuthConnectionHandler(
+          sessionManager,
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+        );
+
+        expect(handler.hasCatalogItemOAuth("item-with-oauth")).toBe(true);
+        expect(handler.hasCatalogItemOAuth("item-without-oauth")).toBe(false);
       });
     });
 

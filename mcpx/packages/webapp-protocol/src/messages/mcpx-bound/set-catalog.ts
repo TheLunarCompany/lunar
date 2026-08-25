@@ -1,5 +1,8 @@
 import z from "zod/v4";
-import { catalogMCPServerSchema } from "@mcpx/shared-model";
+import {
+  catalogMCPServerSchema,
+  clientCredentialsProviderSchema,
+} from "@mcpx/shared-model";
 
 // Admin-only "watermark" header MCPX injects into requests to remote servers, so the
 // server can verify the request came through MCPX. Never exposed in any user-facing API.
@@ -9,7 +12,9 @@ export const privateHeadersSchema = z.object({
   value: z.string().min(1),
 });
 export type PrivateHeaders = z.infer<typeof privateHeadersSchema>;
-
+export type CatalogItemStaticOauthConfig = z.infer<
+  typeof clientCredentialsProviderSchema
+>;
 // ============ Admin Config ============
 // Admin-managed configuration that travels with catalog items.
 // Contains settings like approved tools that mcpx-server translates into permissions.
@@ -20,6 +25,8 @@ export const catalogItemAdminConfigSchema = z.object({
   approvedPrompts: z.array(z.string()).optional(),
   // Admin-only headers injected into requests to remote servers (see privateHeadersSchema).
   privateHeaders: privateHeadersSchema.optional(),
+  // Catalog items can have staticOauth from type of clientCredentials (literals only) attached to them directly
+  staticOauthConfig: clientCredentialsProviderSchema.optional(),
 });
 
 // ============ Catalog Item Wire Format ============

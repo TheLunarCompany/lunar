@@ -1,11 +1,13 @@
 import { StaticOAuth } from "@mcpx/shared-model";
 import { ConfigConsumer } from "@mcpx/toolkit-core/config";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
 import { OAuthProviderFactory } from "../oauth-providers/factory.js";
 import { McpxOAuthProviderI } from "../oauth-providers/model.js";
 import { Config } from "../model/config/config.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 import { OauthCredentialResolver } from "../services/env-var-manager.js";
+import { CatalogManagerI } from "../services/catalog-manager.js";
 
 // Time between OAuth flow creation and expiration
 // This is not the token expiration time, but the flow state expiration time
@@ -23,8 +25,10 @@ export interface OAuthSessionManagerI {
     serverName: string;
     serverUrl: string;
     callbackUrl?: string;
+    catalogItemId?: string;
   }): McpxOAuthProviderI;
   hasOAuthProvider(serverName: string): boolean; // Runtime: is a provider already instantiated for this server name?
+  hasCatalogItemOAuth(catalogItemId: string): boolean;
   hasStaticOAuthForUrl(serverUrl: string): boolean; // Config: is static OAuth configured for this server's host?
   getExistingOAuthProvider(serverName: string): McpxOAuthProviderI | undefined;
   hasPersistedOAuthTokens(serverName: string): Promise<boolean>;
@@ -44,6 +48,7 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
   private logger: Logger;
   private tokenStore: OAuthTokenStoreI;
   private envVars: OauthCredentialResolver;
+  private catalogManager: CatalogManagerI;
   private providerFactory: OAuthProviderFactory;
   private nextFactory: OAuthProviderFactory | null = null;
 
@@ -51,12 +56,14 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
     logger: Logger,
     tokenStore: OAuthTokenStoreI,
     envVars: OauthCredentialResolver,
+    catalogManager: CatalogManagerI,
     staticOauthConfig?: StaticOAuth,
     providerFactory?: OAuthProviderFactory,
   ) {
     this.logger = logger;
     this.tokenStore = tokenStore;
     this.envVars = envVars;
+    this.catalogManager = catalogManager;
     this.providerFactory =
       providerFactory ||
       new OAuthProviderFactory(logger, {
@@ -64,6 +71,21 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
         envVars,
         staticOauthConfig,
       });
+    // subscribe to catalog changes to keep the Oauth cached data updated
+    this.catalogManager.subscribe(async (change) => {
+      try {
+        for (const serverName of [
+          ...change.staticOauthPerServersChange,
+          ...change.removedServers,
+        ]) {
+          await this.deleteOAuthTokensForServer(serverName);
+        }
+      } catch (e) {
+        this.logger.error("Failed to delete OAuth tokens on catalog change", {
+          error: loggableError(e),
+        });
+      }
+    });
   }
 
   prepareConfig(newConfig: Config): Promise<void> {
@@ -102,8 +124,9 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
     serverName: string;
     serverUrl: string;
     callbackUrl?: string;
+    catalogItemId?: string;
   }): McpxOAuthProviderI {
-    const { serverName, serverUrl, callbackUrl } = options;
+    const { serverName, serverUrl, callbackUrl, catalogItemId } = options;
 
     let provider = this.oauthProviders.get(serverName);
     if (
@@ -111,11 +134,13 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
       (callbackUrl &&
         callbackUrl !== provider?.getAuthorizationUrl()?.toString())
     ) {
-      provider = this.providerFactory.createProvider({
+      provider = this.createProvider({
         serverName,
         serverUrl,
         callbackUrl,
+        catalogItemId,
       });
+
       this.oauthProviders.set(serverName, provider);
       this.logger.info("Created OAuth provider for server", {
         serverName,
@@ -127,8 +152,42 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
     return provider;
   }
 
+  private createProvider(options: {
+    serverName: string;
+    serverUrl: string;
+    callbackUrl?: string;
+    catalogItemId?: string;
+  }): McpxOAuthProviderI {
+    const { serverName, serverUrl, callbackUrl, catalogItemId } = options;
+
+    // Priority 1: per-catalog-item static OAuth
+    if (catalogItemId) {
+      const itemOauthConfig =
+        this.catalogManager.getPerCatalogItemOAuth(catalogItemId);
+      if (itemOauthConfig) {
+        this.logger.debug(`Got catalog item oauth for ${serverName} server`);
+        return this.providerFactory.createFromLiteralConfig(itemOauthConfig, {
+          serverName,
+          serverUrl,
+          callbackUrl,
+        });
+      }
+    }
+
+    // Priority 2: static OAuth by URL mapping, or dynamic OAuth fallback
+    return this.providerFactory.createProvider({
+      serverName,
+      serverUrl,
+      callbackUrl,
+    });
+  }
+
   hasOAuthProvider(serverName: string): boolean {
     return this.oauthProviders.has(serverName);
+  }
+
+  hasCatalogItemOAuth(catalogItemId: string): boolean {
+    return !!this.catalogManager.getPerCatalogItemOAuth(catalogItemId);
   }
 
   hasStaticOAuthForUrl(serverUrl: string): boolean {

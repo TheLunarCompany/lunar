@@ -87,6 +87,9 @@ class StubCatalogManager implements CatalogManagerI {
   subscribe() {
     return () => {};
   }
+  getPerCatalogItemOAuth() {
+    return undefined;
+  }
 }
 
 class StubIdentityService implements IdentityServiceI {

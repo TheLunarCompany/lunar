@@ -5,8 +5,11 @@ import {
   McpxBoundPayloads,
   CatalogItemWire,
 } from "@mcpx/webapp-protocol/messages";
-import { normalizeServerName } from "@mcpx/toolkit-core/data";
-import { EnvRequirement } from "@mcpx/shared-model";
+import { normalizeServerName, stringifyEq } from "@mcpx/toolkit-core/data";
+import {
+  ClientCredentialsOauthProvider,
+  EnvRequirement,
+} from "@mcpx/shared-model";
 import { EnvVarManager } from "./env-var-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { CapabilityKind } from "./capability-registry.js";
@@ -57,16 +60,20 @@ export interface CatalogChange {
   removedServers: string[];
   approvedToolsChanges: ApprovedNamesChange[];
   approvedPromptsChanges: ApprovedNamesChange[];
+  staticOauthPerServersChange: string[];
   strictnessChanged: boolean;
 }
 
 export interface CatalogManagerI {
   setCatalog(payload: SetCatalogPayload): void;
-  getCatalog(): CatalogItemWire[];
+  getCatalog(): CatalogItemWire["server"][];
   isStrict(): boolean;
   setAdminStrictnessOverride(override: boolean): void;
   getAdminStrictnessOverride(): boolean;
   getById(id: string): CatalogItemWire | undefined;
+  getPerCatalogItemOAuth(
+    id: string,
+  ): ClientCredentialsOauthProvider | undefined;
   isServerApproved(serviceName: string): boolean;
   isToolApproved(serviceName: string, toolName: string): boolean;
   isPromptApproved(serviceName: string, promptName: string): boolean;
@@ -78,6 +85,8 @@ export interface CatalogManagerI {
 // Admin can set override to bypass strictness for debugging.
 export class CatalogManager implements CatalogManagerI {
   private catalogByName: Map<string, CatalogItemWire>;
+  private perCatalogItemOAuth: Map<string, ClientCredentialsOauthProvider> =
+    new Map();
   private logger: Logger;
   private listeners = new Set<(change: CatalogChange) => void>();
   private identityService: IdentityServiceI;
@@ -109,8 +118,10 @@ export class CatalogManager implements CatalogManagerI {
     this.listeners.forEach((cb) => cb(change));
   }
 
-  getCatalog(): CatalogItemWire[] {
-    return structuredClone(Array.from(this.catalogByName.values()));
+  getCatalog(): CatalogItemWire["server"][] {
+    return structuredClone(
+      Array.from(this.catalogByName.values()).map((item) => item.server),
+    );
   }
 
   isStrict(): boolean {
@@ -135,6 +146,12 @@ export class CatalogManager implements CatalogManagerI {
     return undefined;
   }
 
+  getPerCatalogItemOAuth(
+    id: string,
+  ): ClientCredentialsOauthProvider | undefined {
+    return this.perCatalogItemOAuth.get(id);
+  }
+
   private deriveStrictnessFromIdentity(): boolean {
     const identity = this.identityService.getIdentity();
     if (identity.mode === "personal") {
@@ -155,6 +172,7 @@ export class CatalogManager implements CatalogManagerI {
       removedServers: [],
       approvedToolsChanges: [],
       approvedPromptsChanges: [],
+      staticOauthPerServersChange: [],
       strictnessChanged: true,
     });
   }
@@ -189,9 +207,22 @@ export class CatalogManager implements CatalogManagerI {
         name: i.server.name,
         approvedTools: getApprovedNames(i, "tools"),
         approvedPrompts: getApprovedNames(i, "prompts"),
+        perCatalogOauth: !!i.adminConfig?.staticOauthConfig,
       })),
     });
-
+    // rebuild the oauth per item map
+    this.perCatalogItemOAuth = new Map();
+    normalizedPayload.items.forEach((item) => {
+      if (item.adminConfig?.staticOauthConfig) {
+        this.perCatalogItemOAuth.set(
+          item.server.id,
+          item.adminConfig.staticOauthConfig,
+        );
+      }
+    });
+    this.logger.debug(
+      `Got ${this.perCatalogItemOAuth.size} item with per catalog items oauth`,
+    );
     const change = this.computeChange(normalizedPayload);
     this.catalogByName = new Map(
       normalizedPayload.items.map((item) => [item.server.name, item]),
@@ -250,12 +281,26 @@ export class CatalogManager implements CatalogManagerI {
       (name) => !newNames.has(name),
     );
 
+    const staticOauthPerServersChange: string[] = [];
+    for (const item of payload.items) {
+      const oldItem = this.catalogByName.get(item.server.name);
+      if (
+        !stringifyEq(
+          oldItem?.adminConfig?.staticOauthConfig,
+          item.adminConfig?.staticOauthConfig,
+        )
+      ) {
+        staticOauthPerServersChange.push(item.server.name);
+      }
+    }
+
     return {
       addedServers,
       removedServers,
       approvedToolsChanges: this.computeApprovedChanges(payload, "tools"),
       approvedPromptsChanges: this.computeApprovedChanges(payload, "prompts"),
       strictnessChanged: false,
+      staticOauthPerServersChange,
     };
   }
 

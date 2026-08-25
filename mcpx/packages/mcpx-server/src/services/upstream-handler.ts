@@ -444,11 +444,9 @@ export class UpstreamHandler
       // try to find if the server matches a catalog server and we get retrieve it's Id
       const matchingCatalogItem = this.catalogManager
         .getCatalog()
-        .find(
-          (item) => normalizeServerName(item.server.name) === normalizedName,
-        );
+        .find((item) => normalizeServerName(item.name) === normalizedName);
       if (matchingCatalogItem) {
-        return { ...server, catalogItemId: matchingCatalogItem.server.id };
+        return { ...server, catalogItemId: matchingCatalogItem.id };
       }
     }
     return server;
@@ -1120,6 +1118,18 @@ export class UpstreamHandler
     return Promise.reject(new NotFoundError("Client is not pendingAuth"));
   }
 
+  private hasStaticOauthConfigured(targetServer: RemoteTargetServer): boolean {
+    if (
+      targetServer.catalogItemId &&
+      this.oauthConnectionHandler.hasCatalogItemOAuth(
+        targetServer.catalogItemId,
+      )
+    ) {
+      return true;
+    }
+    return this.oauthConnectionHandler.hasStaticOAuthForUrl(targetServer.url);
+  }
+
   // A method to safely initiate a client connection.
   // Should always return a resolved Promise.
   private async safeInitiateClient(
@@ -1157,7 +1167,7 @@ export class UpstreamHandler
     if (
       (targetServer.type === "sse" ||
         targetServer.type === "streamable-http") &&
-      this.oauthConnectionHandler.hasStaticOAuthForUrl(targetServer.url)
+      this.hasStaticOauthConfigured(targetServer)
     ) {
       this.logger.debug(
         "Static OAuth configuration found for server, attempting OAuth flow",

@@ -281,6 +281,7 @@ export class OAuthConnectionHandler {
       authProvider = this.oauthSessionManager.getOrCreateOAuthProvider({
         serverName: targetServer.name,
         serverUrl: targetServer.url,
+        catalogItemId: targetServer.catalogItemId,
       });
     }
 
@@ -432,6 +433,7 @@ export class OAuthConnectionHandler {
       serverName: targetServer.name,
       serverUrl: targetServer.url,
       callbackUrl,
+      catalogItemId: targetServer.catalogItemId,
     });
 
     const state = authProvider.state();
@@ -781,6 +783,12 @@ export class OAuthConnectionHandler {
   // isOAuthServer, this reads config, so it answers before any provider exists.
   hasStaticOAuthForUrl(serverUrl: string): boolean {
     return this.oauthSessionManager.hasStaticOAuthForUrl(serverUrl);
+  }
+
+  // True when static OAuth is configured for the server's catalog item. Unlike
+  // isOAuthServer, this reads the catalog manager state, so it answers before any provider exists.
+  hasCatalogItemOAuth(catalogItemId: string): boolean {
+    return this.oauthSessionManager.hasCatalogItemOAuth(catalogItemId);
   }
 
   /**

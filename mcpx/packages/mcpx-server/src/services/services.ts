@@ -124,6 +124,7 @@ export class Services {
       logger.child({ component: "OAuthSessionManager" }),
       hubTokenStore,
       this._envVarManager,
+      this._catalogManager,
       config.getConfig().staticOauth,
     );
     const oauthSessionManager = this._oauthSessionManager;

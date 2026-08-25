@@ -71,6 +71,7 @@ const NOOP_CHANGE: CatalogChange = {
   removedServers: [],
   approvedToolsChanges: [],
   approvedPromptsChanges: [],
+  staticOauthPerServersChange: [],
   strictnessChanged: false,
 };
 

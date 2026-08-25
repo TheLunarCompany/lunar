@@ -34,6 +34,7 @@ export type {
   CatalogItemWire,
   CatalogItemAdminConfig,
   PrivateHeaders,
+  CatalogItemStaticOauthConfig,
 } from "./mcpx-bound/set-catalog.js";
 export { privateHeadersSchema } from "./mcpx-bound/set-catalog.js";
 export {
