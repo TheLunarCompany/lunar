@@ -1,0 +1,70 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+describe("runtime config feature helpers", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+    vi.unstubAllEnvs();
+  });
+
+  it("shows MCP Servers when the runtime flag is true", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          VITE_MCPX_SERVER_URL: "http://localhost:9000",
+          VITE_SHOW_MCP_SERVERS: "true",
+        }),
+      ),
+    );
+    const { isMcpServersShown, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isMcpServersShown()).toBe(true);
+  });
+
+  it("hides MCP Servers by default", async () => {
+    vi.stubEnv("VITE_SHOW_MCP_SERVERS", "false");
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("missing"));
+    const { isMcpServersShown, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isMcpServersShown()).toBe(false);
+  });
+
+  it("enables the sidebar restructure when the runtime flag is true", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          VITE_MCPX_SERVER_URL: "http://localhost:9000",
+          VITE_UI_SIDEBAR_RESTRUCTURE: "true",
+        }),
+      ),
+    );
+    const { isUiSidebarRestructureEnabled, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isUiSidebarRestructureEnabled()).toBe(true);
+  });
+
+  it("disables the sidebar restructure by default", async () => {
+    vi.stubEnv("VITE_UI_SIDEBAR_RESTRUCTURE", "false");
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("missing"));
+    const { isUiSidebarRestructureEnabled, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isUiSidebarRestructureEnabled()).toBe(false);
+  });
+});
