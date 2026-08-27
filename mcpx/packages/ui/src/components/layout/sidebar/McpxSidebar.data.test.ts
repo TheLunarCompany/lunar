@@ -1,63 +1,54 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { Sparkles } from "lucide-react";
+
+import {
+  getDefaultMcpxSidebarSections,
+  type McpxSidebarFeatureOptions,
+} from "./McpxSidebar.data";
+
+function getSections(overrides: Partial<McpxSidebarFeatureOptions> = {}) {
+  return getDefaultMcpxSidebarSections({
+    skillsFeatureEnabled: false,
+    capabilitiesEnabled: false,
+    mcpServersShown: false,
+    sidebarRestructureEnabled: false,
+    ...overrides,
+  });
+}
+
+function getItems(overrides: Partial<McpxSidebarFeatureOptions> = {}) {
+  return getSections(overrides).flatMap((section) => section.items);
+}
 
 describe("getDefaultMcpxSidebarSections", () => {
-  afterEach(() => {
-    vi.resetModules();
-    vi.restoreAllMocks();
-  });
-
-  it("includes Skills when the skills page flag is enabled", async () => {
-    vi.doMock("@/config/runtime-config", () => ({
-      isCapabilitiesEnabled: () => false,
-      isUiSidebarRestructureEnabled: () => false,
-    }));
-    const { getDefaultMcpxSidebarSections } = await import(
-      "./McpxSidebar.data"
-    );
-
-    const items = getDefaultMcpxSidebarSections({
-      skillsFeatureEnabled: true,
-    }).flatMap((section) => section.items);
+  it("includes Skills and omits Tools when the skills flag is enabled", () => {
+    const items = getItems({ skillsFeatureEnabled: true });
 
     expect(items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "skills", label: "Skills" }),
       ]),
     );
+    expect(items).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "tools" })]),
+    );
   });
 
-  it("omits Skills when the skills page flag is disabled", async () => {
-    vi.doMock("@/config/runtime-config", () => ({
-      isCapabilitiesEnabled: () => false,
-      isUiSidebarRestructureEnabled: () => false,
-    }));
-    const { getDefaultMcpxSidebarSections } = await import(
-      "./McpxSidebar.data"
-    );
-
-    const items = getDefaultMcpxSidebarSections({
-      skillsFeatureEnabled: false,
-    }).flatMap((section) => section.items);
+  it("omits Skills and includes Tools when the skills flag is disabled", () => {
+    const items = getItems({ skillsFeatureEnabled: false });
 
     expect(items).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "skills" })]),
     );
+    expect(items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "tools", label: "Tools", url: "/tools" }),
+      ]),
+    );
   });
 
-  it("includes Capabilities in the default sections when the capabilities flag is enabled", async () => {
-    vi.doMock("@/config/runtime-config", () => ({
-      isCapabilitiesEnabled: () => true,
-      isUiSidebarRestructureEnabled: () => false,
-    }));
-    const { getDefaultMcpxSidebarSections } = await import(
-      "./McpxSidebar.data"
-    );
-
-    const items = getDefaultMcpxSidebarSections({
-      skillsFeatureEnabled: false,
-    }).flatMap((section) => section.items);
-
-    expect(items).toEqual(
+  it("uses the explicit capabilities value", () => {
+    expect(getItems({ capabilitiesEnabled: true })).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: "capabilities",
@@ -65,70 +56,16 @@ describe("getDefaultMcpxSidebarSections", () => {
         }),
       ]),
     );
+    expect(getItems({ capabilitiesEnabled: false })).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "capabilities" })]),
+    );
   });
 
-  it.each([false, true])(
-    "includes Tools when Skills is disabled and the sidebar restructure flag is %s",
-    async (isSidebarRestructureEnabled) => {
-      vi.doMock("@/config/runtime-config", () => ({
-        isCapabilitiesEnabled: () => false,
-        isUiSidebarRestructureEnabled: () => isSidebarRestructureEnabled,
-        isMcpServersShown: () => false,
-      }));
-      const { getDefaultMcpxSidebarSections } = await import(
-        "./McpxSidebar.data"
-      );
-
-      const items = getDefaultMcpxSidebarSections({
-        skillsFeatureEnabled: false,
-      }).flatMap((section) => section.items);
-
-      expect(items).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: "tools",
-            label: "Tools",
-            url: "/tools",
-          }),
-        ]),
-      );
-    },
-  );
-
-  it.each([false, true])(
-    "omits Tools when Skills is enabled and the sidebar restructure flag is %s",
-    async (isSidebarRestructureEnabled) => {
-      vi.doMock("@/config/runtime-config", () => ({
-        isCapabilitiesEnabled: () => false,
-        isUiSidebarRestructureEnabled: () => isSidebarRestructureEnabled,
-        isMcpServersShown: () => false,
-      }));
-      const { getDefaultMcpxSidebarSections } = await import(
-        "./McpxSidebar.data"
-      );
-
-      const items = getDefaultMcpxSidebarSections({
-        skillsFeatureEnabled: true,
-      }).flatMap((section) => section.items);
-
-      expect(items).not.toEqual(
-        expect.arrayContaining([expect.objectContaining({ id: "tools" })]),
-      );
-    },
-  );
-
-  it("uses the restructured sections when the sidebar restructure flag is enabled", async () => {
-    vi.doMock("@/config/runtime-config", () => ({
-      isCapabilitiesEnabled: () => true,
-      isUiSidebarRestructureEnabled: () => true,
-      isMcpServersShown: () => true,
-    }));
-    const { getDefaultMcpxSidebarSections } = await import(
-      "./McpxSidebar.data"
-    );
-
-    const sections = getDefaultMcpxSidebarSections({
+  it("uses restructured sections when explicitly enabled", () => {
+    const sections = getSections({
       skillsFeatureEnabled: true,
+      mcpServersShown: true,
+      sidebarRestructureEnabled: true,
     });
 
     expect(sections).toHaveLength(2);
@@ -153,60 +90,30 @@ describe("getDefaultMcpxSidebarSections", () => {
     });
   });
 
-  it("uses the Sparkles icon for Skills in the restructured sections", async () => {
-    vi.doMock("@/config/runtime-config", () => ({
-      isCapabilitiesEnabled: () => false,
-      isUiSidebarRestructureEnabled: () => true,
-      isMcpServersShown: () => false,
-    }));
-    const { getDefaultMcpxSidebarSections } = await import(
-      "./McpxSidebar.data"
-    );
-    const { Sparkles } = await import("lucide-react");
-
-    const skillsItem = getDefaultMcpxSidebarSections({
+  it("uses the Sparkles icon for Skills in restructured sections", () => {
+    const skillsItem = getItems({
       skillsFeatureEnabled: true,
-    })
-      .flatMap((section) => section.items)
-      .find((item) => item.id === "skills");
+      sidebarRestructureEnabled: true,
+    }).find((item) => item.id === "skills");
 
     expect(skillsItem?.icon).toBe(Sparkles);
   });
 
-  it("omits MCP Servers from restructured navigation when the flag is disabled", async () => {
-    vi.doMock("@/config/runtime-config", () => ({
-      isCapabilitiesEnabled: () => false,
-      isUiSidebarRestructureEnabled: () => true,
-      isMcpServersShown: () => false,
-    }));
-    const { getDefaultMcpxSidebarSections } = await import(
-      "./McpxSidebar.data"
-    );
-
-    const items = getDefaultMcpxSidebarSections({
-      skillsFeatureEnabled: false,
-    }).flatMap((section) => section.items);
-
-    expect(items).not.toEqual(
+  it("uses the explicit MCP Servers value in restructured sections", () => {
+    expect(
+      getItems({
+        mcpServersShown: false,
+        sidebarRestructureEnabled: true,
+      }),
+    ).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "mcp-servers" })]),
     );
-  });
-
-  it("includes MCP Servers in restructured navigation when the flag is enabled", async () => {
-    vi.doMock("@/config/runtime-config", () => ({
-      isCapabilitiesEnabled: () => false,
-      isUiSidebarRestructureEnabled: () => true,
-      isMcpServersShown: () => true,
-    }));
-    const { getDefaultMcpxSidebarSections } = await import(
-      "./McpxSidebar.data"
-    );
-
-    const items = getDefaultMcpxSidebarSections({
-      skillsFeatureEnabled: false,
-    }).flatMap((section) => section.items);
-
-    expect(items).toEqual(
+    expect(
+      getItems({
+        mcpServersShown: true,
+        sidebarRestructureEnabled: true,
+      }),
+    ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: "mcp-servers",
@@ -217,21 +124,10 @@ describe("getDefaultMcpxSidebarSections", () => {
     );
   });
 
-  it("points MCP Registry to its dedicated route", async () => {
-    vi.doMock("@/config/runtime-config", () => ({
-      isCapabilitiesEnabled: () => false,
-      isUiSidebarRestructureEnabled: () => true,
-      isMcpServersShown: () => false,
-    }));
-    const { getDefaultMcpxSidebarSections } = await import(
-      "./McpxSidebar.data"
-    );
-
-    const registryItem = getDefaultMcpxSidebarSections({
-      skillsFeatureEnabled: false,
-    })
-      .flatMap((section) => section.items)
-      .find((item) => item.id === "mcp-registry");
+  it("points MCP Registry to its dedicated route", () => {
+    const registryItem = getItems({
+      sidebarRestructureEnabled: true,
+    }).find((item) => item.id === "mcp-registry");
 
     expect(registryItem).toEqual(
       expect.objectContaining({ label: "MCP Registry", url: "/mcp-registry" }),

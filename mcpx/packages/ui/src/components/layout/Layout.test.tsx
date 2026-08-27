@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { McpxProbeState } from "@/hooks/useMcpxProbe";
+import { FeatureFlagsProvider } from "@/contexts/FeatureFlagsContext";
 import { Layout } from "./Layout";
 
 const harness = vi.hoisted(() => ({
@@ -153,11 +154,13 @@ function renderLayout(probeState: McpxProbeState) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={["/dashboard"]}>
-        <TooltipProvider>
-          <Layout probeState={probeState}>
-            <div>Page content</div>
-          </Layout>
-        </TooltipProvider>
+        <FeatureFlagsProvider>
+          <TooltipProvider>
+            <Layout probeState={probeState}>
+              <div>Page content</div>
+            </Layout>
+          </TooltipProvider>
+        </FeatureFlagsProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );

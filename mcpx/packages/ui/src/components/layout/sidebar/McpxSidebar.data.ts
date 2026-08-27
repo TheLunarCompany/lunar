@@ -8,20 +8,27 @@ import {
   SlidersHorizontal,
   Zap,
 } from "lucide-react";
-import {
-  isCapabilitiesEnabled,
-  isMcpServersShown,
-  isUiSidebarRestructureEnabled,
-} from "@/config/runtime-config";
 import { routes } from "@/routes";
 import type { McpxSidebarSection } from "./McpxSidebar";
 
-export function getDefaultMcpxSidebarSections(options?: {
-  skillsFeatureEnabled?: boolean;
-}): McpxSidebarSection[] {
-  const skillsFeatureEnabled = options?.skillsFeatureEnabled ?? false;
-  if (isUiSidebarRestructureEnabled()) {
-    return getRestructuredMcpxSidebarSections({ skillsFeatureEnabled });
+export type McpxSidebarFeatureOptions = {
+  skillsFeatureEnabled: boolean;
+  capabilitiesEnabled: boolean;
+  mcpServersShown: boolean;
+  sidebarRestructureEnabled: boolean;
+};
+
+export function getDefaultMcpxSidebarSections({
+  skillsFeatureEnabled,
+  capabilitiesEnabled,
+  mcpServersShown,
+  sidebarRestructureEnabled,
+}: McpxSidebarFeatureOptions): McpxSidebarSection[] {
+  if (sidebarRestructureEnabled) {
+    return getRestructuredMcpxSidebarSections({
+      skillsFeatureEnabled,
+      mcpServersShown,
+    });
   }
 
   const workspaceItems: McpxSidebarSection["items"] = [
@@ -43,7 +50,7 @@ export function getDefaultMcpxSidebarSections(options?: {
     });
   }
 
-  if (isCapabilitiesEnabled()) {
+  if (capabilitiesEnabled) {
     workspaceItems.push({
       id: "capabilities",
       label: "Capabilities",
@@ -83,10 +90,13 @@ export function getDefaultMcpxSidebarSections(options?: {
   ];
 }
 
-function getRestructuredMcpxSidebarSections(options?: {
-  skillsFeatureEnabled?: boolean;
+function getRestructuredMcpxSidebarSections({
+  skillsFeatureEnabled,
+  mcpServersShown,
+}: {
+  skillsFeatureEnabled: boolean;
+  mcpServersShown: boolean;
 }): McpxSidebarSection[] {
-  const skillsFeatureEnabled = options?.skillsFeatureEnabled ?? false;
   const workspaceItems: McpxSidebarSection["items"] = [
     {
       id: "dashboard",
@@ -96,7 +106,7 @@ function getRestructuredMcpxSidebarSections(options?: {
     },
   ];
 
-  if (isMcpServersShown()) {
+  if (mcpServersShown) {
     workspaceItems.push({
       id: "mcp-servers",
       label: "MCP Servers",

@@ -58,7 +58,7 @@ import {
 } from "./ServerStateCards";
 import { ServerStatusBadge } from "./ServerStatusBadge";
 import { ServerPromptsList } from "./ServerToolsList";
-import { isCapabilitiesEnabled } from "@/config/runtime-config";
+import { useFeatureFlag } from "@/contexts/feature-flags";
 
 const DRAWER_SHEET_CLASS_NAME =
   "w-[600px]! max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden";
@@ -68,7 +68,7 @@ export function ServerCapabilitiesSections({
 }: {
   server: McpServer;
 }): React.JSX.Element {
-  const showPrompts = isCapabilitiesEnabled();
+  const showPrompts = useFeatureFlag("VITE_ENABLE_CAPABILITIES_UI");
 
   return (
     <>

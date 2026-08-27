@@ -25,6 +25,7 @@ import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
 import { useSkillsFeatureEnabled } from "@/data/skills";
 import { InstanceStatusRow } from "@/components/instance-status/InstanceStatusRow";
 import type { InstanceStatus } from "@/model/instance-status";
+import { useFeatureFlag } from "@/contexts/feature-flags";
 
 type SidebarIcon = ElementType<{ className?: string }>;
 
@@ -136,10 +137,18 @@ export function McpxSidebar({
   ...props
 }: McpxSidebarProps) {
   const { data: skillsFeatureEnabled } = useSkillsFeatureEnabled();
+  const capabilitiesEnabled = useFeatureFlag("VITE_ENABLE_CAPABILITIES_UI");
+  const mcpServersShown = useFeatureFlag("VITE_SHOW_MCP_SERVERS");
+  const sidebarRestructureEnabled = useFeatureFlag(
+    "VITE_UI_SIDEBAR_RESTRUCTURE",
+  );
   const resolvedSections =
     sections ??
     getDefaultMcpxSidebarSections({
       skillsFeatureEnabled: skillsFeatureEnabled ?? false,
+      capabilitiesEnabled,
+      mcpServersShown,
+      sidebarRestructureEnabled,
     });
   return (
     <Sidebar className={className} {...props}>

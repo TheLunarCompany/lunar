@@ -10,6 +10,8 @@ import { initMonaco } from "./monaco/init-monaco";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DevIndicators } from "@/components/DevIndicators";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { FeatureFlagsProvider } from "@/contexts/FeatureFlagsContext";
+import { FeatureFlagOverridePanel } from "@/components/FeatureFlagOverridePanel";
 
 const queryClient = new QueryClient();
 
@@ -19,17 +21,20 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <ReactFlowProvider>
-            <Pages />
-            <Toaster />
-            <DevIndicators />
-          </ReactFlowProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+    <FeatureFlagsProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <ReactFlowProvider>
+              <Pages />
+              <Toaster />
+              <DevIndicators />
+              <FeatureFlagOverridePanel />
+            </ReactFlowProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </FeatureFlagsProvider>
   );
 }
 

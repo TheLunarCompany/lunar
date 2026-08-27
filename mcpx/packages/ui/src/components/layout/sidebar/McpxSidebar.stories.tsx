@@ -17,9 +17,17 @@ import {
 import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
 import { InstanceStatusRow } from "@/components/instance-status/InstanceStatusRow";
 import type { InstanceStatus } from "@/model/instance-status";
+import { FeatureFlagsProvider } from "@/contexts/FeatureFlagsContext";
 
 const sidebarGradient =
   "bg-[radial-gradient(circle_at_0%_0%,#3221c9_0%,#5c2595_30%,#872960_60%,#542071_80%,#201681_100%)]";
+
+const defaultSidebarSections = getDefaultMcpxSidebarSections({
+  skillsFeatureEnabled: false,
+  capabilitiesEnabled: true,
+  mcpServersShown: false,
+  sidebarRestructureEnabled: false,
+});
 
 const typographySections: McpxSidebarSection[] = [
   {
@@ -44,7 +52,7 @@ const typographySections: McpxSidebarSection[] = [
 ];
 
 const multiSectionNavigation: McpxSidebarSection[] = [
-  ...getDefaultMcpxSidebarSections(),
+  ...defaultSidebarSections,
   {
     title: "Admin",
     items: [
@@ -70,7 +78,9 @@ const meta = {
   decorators: [
     (Story) => (
       <MemoryRouter>
-        <Story />
+        <FeatureFlagsProvider>
+          <Story />
+        </FeatureFlagsProvider>
       </MemoryRouter>
     ),
   ],
@@ -135,7 +145,7 @@ export const FullSidebar: Story = {
   },
   args: {
     activeItemId: "dashboard",
-    sections: getDefaultMcpxSidebarSections(),
+    sections: defaultSidebarSections,
   },
   render: renderSidebarShell,
 };
@@ -146,7 +156,7 @@ export const ActiveCatalog: Story = {
   },
   args: {
     activeItemId: "catalog",
-    sections: getDefaultMcpxSidebarSections(),
+    sections: defaultSidebarSections,
   },
   render: renderSidebarShell,
 };
