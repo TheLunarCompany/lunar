@@ -1,4 +1,42 @@
-import { sanitizeFilename } from "./string-sanitation.js";
+import { sanitizeFilename, slugifyServerName } from "./string-sanitation.js";
+
+describe("slugifyServerName", () => {
+  it("lowercases and keeps already-valid names", () => {
+    expect(slugifyServerName("Zulip")).toBe("zulip");
+    expect(slugifyServerName("my_server-1")).toBe("my_server-1");
+  });
+
+  it("converts whitespace to dashes", () => {
+    expect(slugifyServerName("bbc nitro")).toBe("bbc-nitro");
+    expect(slugifyServerName("  a   b\tc  ")).toBe("a-b-c");
+  });
+
+  it("strips invalid characters", () => {
+    expect(slugifyServerName("Aha!")).toBe("aha");
+    expect(slugifyServerName("Café & Friends")).toBe("caf-friends");
+  });
+
+  it("collapses and trims dashes left by stripping", () => {
+    expect(slugifyServerName("a -- b")).toBe("a-b");
+    expect(slugifyServerName("!wow!")).toBe("wow");
+  });
+
+  it("returns undefined when nothing valid remains", () => {
+    expect(slugifyServerName("")).toBeUndefined();
+    expect(slugifyServerName("   ")).toBeUndefined();
+    expect(slugifyServerName("!!!")).toBeUndefined();
+  });
+
+  // Proves that f(f(x)) = f(x)
+  it("is idempotent", () => {
+    const inputs = ["Aha!", "bbc nitro", "  a   b\tc  ", "my_server-1"];
+    for (const s of inputs) {
+      const once = slugifyServerName(s);
+      expect(once).toBeDefined();
+      expect(slugifyServerName(once!)).toBe(once);
+    }
+  });
+});
 
 describe("sanitizeFilename", () => {
   it("replaces invalid characters with underscore", () => {

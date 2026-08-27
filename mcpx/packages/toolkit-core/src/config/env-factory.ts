@@ -32,13 +32,7 @@ export function createEnv<S extends z.ZodType<any>>(
 
   /** Redact every property except those in nonSecretKeys. */
   function redactEnv<T extends Record<string, unknown>>(obj: T): T {
-    return Object.fromEntries(
-      Object.entries(obj).map(([k, v]) =>
-        (nonSecretKeys as readonly (keyof T)[]).includes(k)
-          ? [k, v]
-          : [k, "***REDACTED***"]
-      )
-    ) as T;
+    return redactExcept(obj, nonSecretKeys as readonly (keyof T)[]);
   }
 
   /** Proxy so callers can keep writing `env.X` without running getEnv first. */
@@ -55,4 +49,40 @@ export function createEnv<S extends z.ZodType<any>>(
   });
 
   return { env, getEnv, resetEnv, redactEnv };
+}
+
+/** Redact every property of an env-like object except the allow-listed keys. */
+export function redactExcept<T extends Record<string, unknown>>(
+  obj: T,
+  nonSecretKeys: readonly (keyof T)[]
+): T {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) =>
+      nonSecretKeys.includes(k) ? [k, v] : [k, "***REDACTED***"]
+    )
+  ) as T;
+}
+
+// A group of env vars that only applies when a feature flag is on.
+// When enabled, the group parses per its schema (each field as required or
+// optional as declared there) and bad config fails boot with the flag named;
+// when disabled, the group is undefined and its vars are ignored entirely.
+// Consumers narrow once on the group instead of per-field.
+// ZodType (not ZodObject) so groups may pipe/transform, e.g. deriving
+// values from a raw var while validating it.
+export function parseGatedEnvGroup<S extends z.ZodType>(params: {
+  enabled: boolean;
+  flagName: string;
+  schema: S;
+  vars?: NodeJS.ProcessEnv;
+}): z.infer<S> | undefined {
+  const { enabled, flagName, schema, vars = process.env } = params;
+  if (!enabled) return undefined;
+  const parsed = schema.safeParse(vars);
+  if (!parsed.success) {
+    throw new Error(
+      `${flagName} is enabled but its env vars are invalid: ${z.prettifyError(parsed.error)}`,
+    );
+  }
+  return parsed.data;
 }

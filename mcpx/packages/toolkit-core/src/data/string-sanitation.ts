@@ -7,6 +7,22 @@ export function normalizeServerName(name: string): string {
 }
 
 /**
+ * Coerces a free-form display name into a valid server name
+ * (`/^[a-zA-Z0-9_-]+$/`, the charset the UI enforces on manual creation).
+ * Returns undefined when nothing valid remains.
+ */
+export function slugifyServerName(name: string): string | undefined {
+  const slug = name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || undefined;
+}
+
+/**
  * Simple, stable filename sanitizer.
  * Covers common invalid chars, trims, avoids hidden files.
  */
