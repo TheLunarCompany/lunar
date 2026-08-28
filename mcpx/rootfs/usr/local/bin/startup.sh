@@ -22,18 +22,27 @@ generate_config() {
 
 # Replace the current (sub)shell with the UI static file server. `-s` rewrites
 # unknown routes to index.html for the single-page app. Any prefix passed in
-# (e.g. `su-exec lunar`) runs the server under it; the UI-only image has no
-# su-exec and already runs as lunar, so it passes no prefix.
+# (e.g. the DROP_PRIV su-exec prefix) runs the server under it; the UI-only
+# image has no su-exec and already runs as lunar, so it passes no prefix.
 exec_ui() {
     exec "$@" serve "${UI_DIR}" -s -p "${UI_PORT}"
 }
 
-# Replace the current (sub)shell with mcpx-server, dropped to the unprivileged
-# lunar user. The container runs as root so the in-pod dockerd can start;
-# su-exec hands the process off to lunar.
+# When started as root (needed for the in-pod dockerd), su-exec hands child
+# processes off to the unprivileged lunar user. Under a restricted pod
+# securityContext the container already starts non-root and su-exec would
+# crash on setgroups, so no prefix is used.
+if [ "$(id -u)" -eq 0 ]; then
+    DROP_PRIV="su-exec ${LUNAR_USER}"
+else
+    DROP_PRIV=""
+fi
+
+# Replace the current (sub)shell with mcpx-server, running as lunar.
 exec_server() {
     cd "${SERVER_DIR}"
-    exec su-exec "${LUNAR_USER}" node dist/index.js
+    # shellcheck disable=SC2086 # intentional word splitting of the prefix
+    exec ${DROP_PRIV} node dist/index.js
 }
 
 case "${BUILD_SCOPE}" in
@@ -51,7 +60,8 @@ case "${BUILD_SCOPE}" in
         log "starting MCPX server + UI"
         generate_config
 
-        exec_ui su-exec "${LUNAR_USER}" &
+        # shellcheck disable=SC2086 # intentional word splitting of the prefix
+        exec_ui ${DROP_PRIV} &
         ui_pid=$!
 
         exec_server &
