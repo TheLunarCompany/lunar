@@ -43,7 +43,8 @@ import { buildAdminRouter } from "../src/server/admin.js";
 import { buildIdentityRouter } from "../src/server/identity.js";
 import { buildSkillsRouter } from "../src/server/skills.js";
 
-const MCPX_PORT = 9000;
+const MCPX_PORT = 9523;
+export const MCPX_BASE_URL = `http://localhost:${MCPX_PORT}`;
 let nextHubPort = 3030; // Start from 3030 and increment for each harness
 
 // Track all created loggers for cleanup

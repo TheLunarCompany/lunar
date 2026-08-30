@@ -129,9 +129,9 @@ describe("OAuthConnectionHandler", () => {
         getAuthorizationCode: () => null,
         getAuthorizationUrl: () => TEST_AUTH_URL,
         getUserCode: () => null,
-        redirectUrl: "http://localhost:9000/oauth/callback",
+        redirectUrl: "http://localhost:9523/oauth/callback",
         clientMetadata: {
-          redirect_uris: ["http://localhost:9000/oauth/callback"],
+          redirect_uris: ["http://localhost:9523/oauth/callback"],
         },
         clientInformation: async () => undefined,
         tokens: async () => undefined,

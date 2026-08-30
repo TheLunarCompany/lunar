@@ -6,10 +6,9 @@ import {
   stdioCatalogItems,
   echoTargetServer,
   calculatorTargetServer,
+  MCPX_BASE_URL,
 } from "./utils.js";
 import { CatalogMCPServerItem, CatalogMCPServerList } from "@mcpx/shared-model";
-
-const MCPX_BASE_URL = "http://localhost:9000";
 
 async function getCatalogServers() {
   return await fetch(`${MCPX_BASE_URL}/catalog/mcp-servers`, {

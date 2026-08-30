@@ -22,7 +22,7 @@ export default defineConfig(({ command, mode }) => {
           VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
           VITE_ENABLE_ENTERPRISE: process.env.VITE_ENABLE_ENTERPRISE || "false",
           VITE_MCPX_SERVER_URL: process.env.VITE_MCPX_SERVER_URL || undefined,
-          VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
+          VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9523",
           VITE_AUTH_BFF_URL:
             process.env.VITE_AUTH_BFF_URL || "http://localhost:3002",
           VITE_ENABLE_PERMISSIONS:

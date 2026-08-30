@@ -15,6 +15,7 @@ const server = setupServer(...handlers);
 const slackCatalogItemId = "018f6f21-5f3e-7b40-a84d-c276df5b9d91";
 const playwrightCatalogItemId = "018f6f21-668f-7357-b1e5-7b3ba814d195";
 const slackAnalysisId = "10000000-0000-4000-a000-000000000001";
+const MCPX_BASE_URL = "${MCPX_BASE_URL}";
 
 describe("MSW handlers", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -24,7 +25,7 @@ describe("MSW handlers", () => {
 
   it("mocks approved capability reads with tools and prompts", async () => {
     const response = await fetch(
-      `http://localhost:9000/catalog-items/${slackCatalogItemId}/approved-capabilities`,
+      `${MCPX_BASE_URL}/catalog-items/${slackCatalogItemId}/approved-capabilities`,
     );
 
     expect(response.status).toBe(200);
@@ -37,7 +38,7 @@ describe("MSW handlers", () => {
 
   it("mocks approved capability replacement with omitted-key no-op semantics", async () => {
     const putResponse = await fetch(
-      `http://localhost:9000/catalog-items/${slackCatalogItemId}/approved-capabilities`,
+      `${MCPX_BASE_URL}/catalog-items/${slackCatalogItemId}/approved-capabilities`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -55,7 +56,7 @@ describe("MSW handlers", () => {
 
   it("mocks single-add and delete capability mutations", async () => {
     const addResponse = await fetch(
-      `http://localhost:9000/catalog-items/${slackCatalogItemId}/approved-capabilities`,
+      `${MCPX_BASE_URL}/catalog-items/${slackCatalogItemId}/approved-capabilities`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,7 +70,7 @@ describe("MSW handlers", () => {
     });
 
     const deleteResponse = await fetch(
-      `http://localhost:9000/catalog-items/${slackCatalogItemId}/approved-capabilities/prompt/triage-incident`,
+      `${MCPX_BASE_URL}/catalog-items/${slackCatalogItemId}/approved-capabilities/prompt/triage-incident`,
       { method: "DELETE" },
     );
 
@@ -81,7 +82,7 @@ describe("MSW handlers", () => {
 
   it("mocks stdio-disabled target server creation for visual error testing", async () => {
     const response = await fetch(
-      `http://localhost:9000/catalog-item/${playwrightCatalogItemId}/target-server`,
+      `${MCPX_BASE_URL}/catalog-item/${playwrightCatalogItemId}/target-server`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,10 +104,10 @@ describe("MSW handlers", () => {
 
   it("mocks prompt-aware sandbox analysis and enriched catalog item responses", async () => {
     const analysisResponse = await fetch(
-      `http://localhost:9000/sandbox-analysis/${slackAnalysisId}`,
+      `${MCPX_BASE_URL}/sandbox-analysis/${slackAnalysisId}`,
     );
     const defaultCatalogResponse = await fetch(
-      "http://localhost:9000/default-catalog/items",
+      `${MCPX_BASE_URL}/default-catalog/items`,
     );
 
     expect(analysisResponse.status).toBe(200);
@@ -142,10 +143,10 @@ describe("MSW handlers", () => {
 
   it("mocks list response wrappers from the implemented webserver schemas", async () => {
     const analysisListResponse = await fetch(
-      "http://localhost:9000/sandbox-analysis",
+      `${MCPX_BASE_URL}/sandbox-analysis`,
     );
     const subCatalogItemsResponse = await fetch(
-      "http://localhost:9000/sub-catalogs/00000000-0000-4000-a000-000000000001/items",
+      `${MCPX_BASE_URL}/sub-catalogs/00000000-0000-4000-a000-000000000001/items`,
     );
 
     expect(analysisListResponse.status).toBe(200);
@@ -165,7 +166,7 @@ describe("MSW handlers", () => {
 
   it("mocks catalog-level validation for curated catalog approved capabilities", async () => {
     const response = await fetch(
-      `http://localhost:9000/default-catalog/items/${slackCatalogItemId}/approved-capabilities`,
+      `${MCPX_BASE_URL}/default-catalog/items/${slackCatalogItemId}/approved-capabilities`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -184,7 +185,7 @@ describe("MSW handlers", () => {
   });
 
   it("mocks personal skill reads", async () => {
-    const response = await fetch("http://localhost:9000/skills");
+    const response = await fetch(`${MCPX_BASE_URL}/skills`);
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
@@ -249,7 +250,7 @@ describe("MSW handlers", () => {
   });
 
   it("mocks personal skill creation with valid skill metadata", async () => {
-    const response = await fetch("http://localhost:9000/skills", {
+    const response = await fetch(`${MCPX_BASE_URL}/skills`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -268,7 +269,7 @@ describe("MSW handlers", () => {
       author: { displayName: "Mock User" },
     });
 
-    const listResponse = await fetch("http://localhost:9000/skills");
+    const listResponse = await fetch(`${MCPX_BASE_URL}/skills`);
     await expect(listResponse.json()).resolves.toEqual({
       mine: expect.arrayContaining([
         expect.objectContaining({ name: "write-release-notes" }),
@@ -278,24 +279,21 @@ describe("MSW handlers", () => {
   });
 
   it("mocks personal skill updates", async () => {
-    const listResponse = await fetch("http://localhost:9000/skills");
+    const listResponse = await fetch(`${MCPX_BASE_URL}/skills`);
     const { mine: skills } = (await listResponse.json()) as {
       mine: Array<{ id: string }>;
     };
 
-    const response = await fetch(
-      `http://localhost:9000/skills/${skills[0].id}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "updated-skill",
-          description: "Updated description.",
-          body: "# Updated",
-          exposeAsPrompt: false,
-        }),
-      },
-    );
+    const response = await fetch(`${MCPX_BASE_URL}/skills/${skills[0].id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "updated-skill",
+        description: "Updated description.",
+        body: "# Updated",
+        exposeAsPrompt: false,
+      }),
+    });
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
@@ -304,7 +302,7 @@ describe("MSW handlers", () => {
       exposeAsPrompt: false,
     });
 
-    const updatedListResponse = await fetch("http://localhost:9000/skills");
+    const updatedListResponse = await fetch(`${MCPX_BASE_URL}/skills`);
     await expect(updatedListResponse.json()).resolves.toEqual({
       mine: expect.arrayContaining([
         expect.objectContaining({
@@ -318,7 +316,7 @@ describe("MSW handlers", () => {
 
   it("mocks missing skill updates as 404", async () => {
     const response = await fetch(
-      "http://localhost:9000/skills/0190a000-0000-7000-8000-000000000099",
+      `${MCPX_BASE_URL}/skills/0190a000-0000-7000-8000-000000000099`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -338,19 +336,19 @@ describe("MSW handlers", () => {
   });
 
   it("mocks personal skill hard delete", async () => {
-    const listResponse = await fetch("http://localhost:9000/skills");
+    const listResponse = await fetch(`${MCPX_BASE_URL}/skills`);
     const { mine: skills } = (await listResponse.json()) as {
       mine: Array<{ id: string }>;
     };
 
     const deleteResponse = await fetch(
-      `http://localhost:9000/skills/${skills[0].id}`,
+      `${MCPX_BASE_URL}/skills/${skills[0].id}`,
       { method: "DELETE" },
     );
 
     expect(deleteResponse.status).toBe(204);
 
-    const updatedListResponse = await fetch("http://localhost:9000/skills");
+    const updatedListResponse = await fetch(`${MCPX_BASE_URL}/skills`);
     await expect(updatedListResponse.json()).resolves.toEqual({
       mine: expect.not.arrayContaining([
         expect.objectContaining({ id: skills[0].id }),
@@ -361,7 +359,7 @@ describe("MSW handlers", () => {
 
   it("mocks missing skill deletes as 404", async () => {
     const response = await fetch(
-      "http://localhost:9000/skills/0190a000-0000-7000-8000-000000000099",
+      `${MCPX_BASE_URL}/skills/0190a000-0000-7000-8000-000000000099`,
       { method: "DELETE" },
     );
 
@@ -372,7 +370,7 @@ describe("MSW handlers", () => {
   });
 
   it("resets mocked personal skills", async () => {
-    await fetch("http://localhost:9000/skills", {
+    await fetch(`${MCPX_BASE_URL}/skills`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -385,7 +383,7 @@ describe("MSW handlers", () => {
 
     resetMockApiState();
 
-    const response = await fetch("http://localhost:9000/skills");
+    const response = await fetch(`${MCPX_BASE_URL}/skills`);
     const { mine: skills } = (await response.json()) as {
       mine: Array<{ name: string }>;
     };

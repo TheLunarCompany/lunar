@@ -151,9 +151,9 @@ describe("DcrOAuthProvider#applyPublishedDocument (CIMD)", () => {
   });
 
   it("declines when MCPX_SERVER_URL is not https (local dev)", () => {
-    setEnv({ MCPX_SERVER_URL: "http://127.0.0.1:9000" });
+    setEnv({ MCPX_SERVER_URL: "http://127.0.0.1:9523" });
     const provider = resolve({
-      callbackUrl: "http://127.0.0.1:9000/auth/callback",
+      callbackUrl: "http://127.0.0.1:9523/auth/callback",
       document: published(),
     });
 

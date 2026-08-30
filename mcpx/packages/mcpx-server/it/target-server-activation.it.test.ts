@@ -1,6 +1,4 @@
-import { getTestHarness, stdioTargetServers } from "./utils.js";
-
-const MCPX_BASE_URL = "http://localhost:9000";
+import { getTestHarness, MCPX_BASE_URL, stdioTargetServers } from "./utils.js";
 
 describe("Target Server Activation", () => {
   const harness = getTestHarness({ targetServers: [] });

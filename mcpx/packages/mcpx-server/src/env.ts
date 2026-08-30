@@ -73,7 +73,7 @@ const envSchema = z
       z.array(z.enum(AllowedLogHideTagsEnum)).parse(array || []),
     ),
     AUTH_KEY: z.string().optional(),
-    MCPX_PORT: z.coerce.number().default(9000),
+    MCPX_PORT: z.coerce.number().default(9523),
     PING_INTERVAL_MS: z.coerce.number().default(5000),
     DOWNSTREAM_KEEPALIVE_INTERVAL_MS: z.coerce.number().default(25000),
     TOOL_CALL_CACHE_TTL_MS: z.coerce.number().default(5 * 60_000),
@@ -146,7 +146,7 @@ const envSchema = z
     // Trailing slash stripped so consumers can safely append a path.
     MCPX_SERVER_URL: z
       .string()
-      .default("http://127.0.0.1:9000")
+      .default("http://127.0.0.1:9523")
       .transform(stripTrailingSlash),
     MCPX_AUTH_JWKS_URI: z
       .string()

@@ -1,6 +1,4 @@
-import { getTestHarness, TestHarness } from "./utils.js";
-
-const MCPX_BASE_URL = "http://localhost:9000";
+import { getTestHarness, MCPX_BASE_URL, TestHarness } from "./utils.js";
 
 describe("GET /identity when ENABLE_STRICT_PERMISSIONS=true ", () => {
   let harness: TestHarness;

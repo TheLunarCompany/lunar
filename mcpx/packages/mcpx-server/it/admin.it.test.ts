@@ -1,7 +1,5 @@
 import { resetEnv } from "../src/env.js";
-import { getTestHarness, TestHarness } from "./utils.js";
-
-const MCPX_BASE_URL = "http://localhost:9000";
+import { getTestHarness, MCPX_BASE_URL, TestHarness } from "./utils.js";
 
 describe("Admin Endpoints when permissions enabled", () => {
   let harness: TestHarness;

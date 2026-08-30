@@ -1,6 +1,10 @@
-import { echoTargetServer, getTestHarness, TestHarness } from "./utils.js";
+import {
+  echoTargetServer,
+  getTestHarness,
+  MCPX_BASE_URL,
+  TestHarness,
+} from "./utils.js";
 
-const MCPX_BASE_URL = "http://localhost:9000";
 const INITIAL_TIMESTAMP = 1000;
 
 describe("Behavior flags gate server operations", () => {

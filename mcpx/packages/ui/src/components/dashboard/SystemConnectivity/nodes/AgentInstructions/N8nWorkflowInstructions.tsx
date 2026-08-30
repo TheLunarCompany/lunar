@@ -32,7 +32,7 @@ export const N8nWorkflowInstructions: React.FC = () => {
                 <span className="font-semibold">MCP Endpoint URL: </span>
                 {mcpxUrl.includes("localhost") ? (
                   <code className="bg-gray-100 px-1 rounded">
-                    http://host.docker.internal:9000/mcp
+                    {`http://host.docker.internal:${new URL(mcpxUrl).port}/mcp`}
                   </code>
                 ) : (
                   <code className="bg-gray-100 px-1 rounded">{`${mcpxUrl}/mcp`}</code>

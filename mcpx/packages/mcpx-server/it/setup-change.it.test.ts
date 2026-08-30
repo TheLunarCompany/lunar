@@ -1,6 +1,9 @@
-import { echoTargetServer, getTestHarness, TestHarness } from "./utils.js";
-
-const MCPX_BASE_URL = "http://localhost:9000";
+import {
+  echoTargetServer,
+  getTestHarness,
+  MCPX_BASE_URL,
+  TestHarness,
+} from "./utils.js";
 
 describe("Setup Change on Target Server Changes", () => {
   let harness: TestHarness;

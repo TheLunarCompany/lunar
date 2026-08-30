@@ -1,10 +1,9 @@
 import { v7 as uuidv7 } from "uuid";
 import { resetEnv } from "../src/env.js";
 import { TESTKIT_SERVER_ENV_READER } from "../src/testkit/root.js";
-import { getTestHarness } from "./utils.js";
+import { getTestHarness, MCPX_BASE_URL } from "./utils.js";
 import { EnvRequirements, EnvValue } from "@mcpx/shared-model";
 
-const MCPX_BASE_URL = "http://localhost:9000";
 const RECOVERY_ENV_VAR_NAME = "IT_TEST_RECOVERY_VAR";
 const RECOVERY_ENV_VALUE = "recovered-value";
 

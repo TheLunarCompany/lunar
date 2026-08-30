@@ -4,11 +4,8 @@ import {
   SkillWithDraft,
 } from "@mcpx/shared-model";
 import { withAsyncPolling } from "@mcpx/toolkit-core/time";
-import { getTestHarness, TestHarness } from "./utils.js";
+import { getTestHarness, MCPX_BASE_URL, TestHarness } from "./utils.js";
 
-const MCPX_PORT = 19000;
-const MCPX_BASE_URL = `http://localhost:${MCPX_PORT}`;
-const HUB_PORT = 19001;
 const seedSkill: Skill = {
   id: "0190a000-0000-7000-8000-000000000001",
   name: "review-pull-requests",
@@ -30,8 +27,6 @@ describe("Skills endpoints", () => {
   beforeEach(async () => {
     harness = getTestHarness({
       targetServers: [],
-      mcpxPort: MCPX_PORT,
-      hubPort: HUB_PORT,
     });
     await harness.initialize("StreamableHTTP");
     harness.services.skills.store.applyPersonalSkills({ skills: [seedSkill] });

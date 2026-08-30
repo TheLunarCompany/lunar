@@ -1,7 +1,7 @@
 import { Config } from "../src/model/config/config.js";
-import { getTestHarness } from "./utils.js";
+import { getTestHarness, MCPX_BASE_URL } from "./utils.js";
 
-const CONFIG_BASE = "http://localhost:9000/config";
+export const CONFIG_BASE = `${MCPX_BASE_URL}/config`;
 
 const post = (url: string, body: unknown) =>
   fetch(url, {

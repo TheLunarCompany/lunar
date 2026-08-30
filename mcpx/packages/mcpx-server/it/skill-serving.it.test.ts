@@ -5,10 +5,9 @@ import {
   echoCatalogItem,
   echoTargetServer,
   getTestHarness,
+  MCPX_BASE_URL,
   TestHarness,
 } from "./utils.js";
-
-const MCPX_BASE_URL = "http://localhost:9000";
 
 const ENABLED_TAG = "skill-consumer";
 const OTHER_TAG = "other-consumer";

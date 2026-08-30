@@ -12,7 +12,7 @@ describe("runtime config feature helpers", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          VITE_MCPX_SERVER_URL: "http://localhost:9000",
+          VITE_MCPX_SERVER_URL: "http://localhost:9523",
           VITE_SHOW_MCP_SERVERS: "true",
         }),
       ),
@@ -42,7 +42,7 @@ describe("runtime config feature helpers", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          VITE_MCPX_SERVER_URL: "http://localhost:9000",
+          VITE_MCPX_SERVER_URL: "http://localhost:9523",
           VITE_UI_SIDEBAR_RESTRUCTURE: "true",
         }),
       ),
