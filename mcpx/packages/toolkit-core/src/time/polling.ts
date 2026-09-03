@@ -15,7 +15,8 @@ export class PollingAbortedError extends Error {
 export async function withAsyncPolling<T, S extends T>(props: {
   maxAttempts: number;
   sleepTimeMs: number;
-  getValue: () => Promise<T>;
+  // Receives the 0-based attempt number; callbacks may ignore it.
+  getValue: (attempt: number) => Promise<T>;
   found: (value: T) => value is S;
   signal?: AbortSignal;
 }): Promise<S> {
@@ -28,7 +29,7 @@ export async function withAsyncPolling<T, S extends T>(props: {
       return Promise.reject(new PollingAbortedError());
     }
 
-    value = await getValue();
+    value = await getValue(attempts);
     if (found(value)) {
       return value;
     }
@@ -44,12 +45,12 @@ export async function withAsyncPolling<T, S extends T>(props: {
 export async function withPolling<T, S extends T>(props: {
   maxAttempts: number;
   sleepTimeMs: number;
-  getValue: () => T;
+  getValue: (attempt: number) => T;
   found: (value: T) => value is S;
   signal?: AbortSignal;
 }): Promise<S> {
   return withAsyncPolling({
     ...props,
-    getValue: async () => props.getValue(),
+    getValue: async (attempt) => props.getValue(attempt),
   });
 }

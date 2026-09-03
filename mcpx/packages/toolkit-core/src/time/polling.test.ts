@@ -24,6 +24,21 @@ describe("withAsyncPolling", () => {
       expect(callCount).toBe(3);
     });
 
+    it("passes the 0-based attempt number to getValue", async () => {
+      const attempts: number[] = [];
+      await withAsyncPolling({
+        maxAttempts: 5,
+        sleepTimeMs: 1,
+        getValue: async (attempt): Promise<number> => {
+          attempts.push(attempt);
+          return attempt;
+        },
+        found: (value): value is number => value === 2,
+      });
+
+      expect(attempts).toEqual([0, 1, 2]);
+    });
+
     it("returns immediately if first value matches", async () => {
       let callCount = 0;
       const result = await withAsyncPolling({
@@ -145,6 +160,21 @@ describe("withPolling", () => {
 
     expect(result).toBe("sync-found");
     expect(callCount).toBe(2);
+  });
+
+  it("passes the attempt number through to the sync getValue", async () => {
+    const attempts: number[] = [];
+    await withPolling({
+      maxAttempts: 3,
+      sleepTimeMs: 1,
+      getValue: (attempt): number => {
+        attempts.push(attempt);
+        return attempt;
+      },
+      found: (value): value is number => value === 1,
+    });
+
+    expect(attempts).toEqual([0, 1]);
   });
 
   it("supports abort signal", async () => {
