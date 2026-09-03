@@ -201,4 +201,48 @@ describe("BatchBuffer", () => {
       expect(flushCalls[1]).toEqual([3]);
     });
   });
+
+  describe("flush failure handling", () => {
+    it("drops a failed batch and continues with fresh items on the next flush", async () => {
+      const flushed: number[][] = [];
+      const failLatch = createLatch();
+      const okLatch = createLatch();
+      const state = { fail: true };
+      const { buf } = makeBuffer<number>({
+        maxBufferSize: 2,
+        onFlush: async (items) => {
+          if (state.fail) {
+            failLatch.resolve();
+            throw new Error("boom");
+          }
+          flushed.push([...items]);
+          okLatch.resolve();
+        },
+      });
+
+      buf.start();
+      buf.add([1, 2]); // flush fails - batch dropped, not re-queued
+      await failLatch.promise;
+
+      state.fail = false;
+      buf.add([3, 4]); // next flush carries only the fresh items
+      await okLatch.promise;
+      buf.stop();
+
+      expect(flushed).toEqual([[3, 4]]);
+    });
+
+    it("shutdown resolves even when the final flush fails", async () => {
+      const { buf } = makeBuffer<number>({
+        onFlush: async () => {
+          throw new Error("boom");
+        },
+      });
+
+      buf.start();
+      buf.add([1]);
+
+      await expect(buf.shutdown()).resolves.toBeUndefined();
+    });
+  });
 });
