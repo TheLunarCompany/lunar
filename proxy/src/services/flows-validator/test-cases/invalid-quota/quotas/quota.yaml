@@ -1,0 +1,15 @@
+
+
+internal_limits:
+  - id: MyLimitResourceProd
+    parent_id: MyLimitResource
+
+    filter:
+      url: httpbin.org/get
+      method: 
+        - GET
+    strategy:
+      fixed_window:
+        max: 1
+        interval: 10
+        interval_unit: second
