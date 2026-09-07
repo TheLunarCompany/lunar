@@ -1,0 +1,20 @@
+name: ReadCache
+description: processor reading request from the cache
+exec: read_cache_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
+parameters:
+  caching_key_parts:
+    type: list_of_strings
+    description: list of keys to be used to generate the cache key    
+    required: true  
+
+output_streams:  
+  - name: cache_hit
+    type: StreamTypeResponse
+  - name: cache_miss
+    type: StreamTypeRequest
+input_stream:  
+  type: StreamTypeRequest
