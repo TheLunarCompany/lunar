@@ -1,7 +1,10 @@
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/useAuth";
 
 export default function EnterpriseLoginScreen() {
   const { login, loading, error } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isAccessDenied = searchParams.get("error") === "access_denied";
 
   return (
     <div className="min-h-screen bg-linear-to-br from-pink-50 via-white to-pink-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -31,6 +34,12 @@ export default function EnterpriseLoginScreen() {
             <p className="text-sm text-gray-600 mb-8">
               Sign in to access your MCPX control plane dashboard
             </p>
+
+            {isAccessDenied && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-6">
+                Access denied
+              </p>
+            )}
 
             <button
               onClick={() => login()}
