@@ -1,0 +1,10 @@
+global:
+    remedies: []
+    diagnosis: []
+endpoints: []
+accounts: {}
+exporters:
+    file: null
+    s3: null
+    s3_minio: null
+    prometheus: null
