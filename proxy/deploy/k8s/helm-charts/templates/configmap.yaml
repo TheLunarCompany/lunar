@@ -1,0 +1,20 @@
+{{- if .Values.policies }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: policies.yaml
+  namespace: {{ default .Release.Namespace }}
+  labels:
+    app: "{{ include "lunar-proxy.fullname" . }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+data:
+  policies.yaml: |
+
+    ---
+    {{- toYaml .Values.policies | nindent 4 }}
+
+immutable: false
+{{- end -}}

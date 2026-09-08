@@ -1,0 +1,21 @@
+name: MockProcessor
+description: A mock processor that does nothing
+exec: mock_processor.go
+parameters:
+  arg1:
+    type: number
+    description: A mock parameter
+    default: 1
+    required: false
+  arg2:
+    type: string
+    description: Another mock parameter
+    default: "mock"
+    required: false
+output_streams:
+  - name: output_1
+    type: StreamTypeAny
+  - name: output_2
+    type: StreamTypeAny
+input_stream:  
+  type: StreamTypeAny
