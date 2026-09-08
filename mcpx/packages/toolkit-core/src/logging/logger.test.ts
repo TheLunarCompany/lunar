@@ -1,11 +1,15 @@
+import { EventEmitter } from "node:events";
 import { Writable } from "node:stream";
 import { transports } from "winston";
 import {
+  accessLogFor,
   buildLogger,
   DEFAULT_REDACT_KEYS,
+  LogFormat,
   redactObject,
   redactUrl,
 } from "./logger.js";
+import { runWithRequestId } from "./request-context.js";
 
 describe("redactObject", () => {
   it("redacts top-level keys", () => {
@@ -340,32 +344,34 @@ describe("DEFAULT_REDACT_KEYS", () => {
   });
 });
 
-describe("buildLogger redaction (end-to-end)", () => {
-  // Route the logger through a Stream transport to exercise the real
-  // metadata -> redact -> printf chain end-to-end.
-  async function captureOutput(
-    log: (logger: ReturnType<typeof buildLogger>) => void,
-    redactKeys?: Set<string>,
-  ): Promise<string> {
-    const chunks: string[] = [];
-    const stream = new Writable({
-      write(chunk, _encoding, callback): void {
-        chunks.push(chunk.toString());
-        callback();
-      },
-    });
-    const logger = buildLogger({
-      logLevel: "silly",
-      label: "test",
-      redactKeys,
-    });
-    logger.clear(); // drop the Console transport
-    logger.add(new transports.Stream({ stream }));
-    log(logger);
-    await new Promise((resolve) => setImmediate(resolve));
-    return chunks.join("");
-  }
+// Route the logger through a Stream transport to exercise the real
+// metadata -> redact -> format chain end-to-end.
+async function captureOutput(
+  log: (logger: ReturnType<typeof buildLogger>) => void,
+  opts: { redactKeys?: Set<string>; format?: LogFormat } = {},
+): Promise<string> {
+  const { redactKeys, format } = opts;
+  const chunks: string[] = [];
+  const stream = new Writable({
+    write(chunk, _encoding, callback): void {
+      chunks.push(chunk.toString());
+      callback();
+    },
+  });
+  const logger = buildLogger({
+    logLevel: "silly",
+    label: "test",
+    redactKeys,
+    format,
+  });
+  logger.clear(); // drop the Console transport
+  logger.add(new transports.Stream({ stream }));
+  log(logger);
+  await new Promise((resolve) => setImmediate(resolve));
+  return chunks.join("");
+}
 
+describe("buildLogger redaction (end-to-end)", () => {
   it("redacts default-sensitive keys (incl. nested) without any config", async () => {
     const output = await captureOutput((logger) =>
       logger.info("request done", {
@@ -399,9 +405,226 @@ describe("buildLogger redaction (end-to-end)", () => {
           customField: "redact-this",
           token: "and-this-default",
         }),
-      new Set(["customField"]),
+      { redactKeys: new Set(["customField"]) },
     );
     expect(output).not.toContain("redact-this");
     expect(output).not.toContain("and-this-default");
+  });
+});
+
+describe("buildLogger output format", () => {
+  it("defaults to the pretty printf format", async () => {
+    const output = await captureOutput((logger) =>
+      logger.info("User login", { userId: "u-42" }),
+    );
+    expect(output).toContain('INFO: User login userId="u-42"');
+    expect(() => JSON.parse(output)).toThrow();
+  });
+
+  it("emits structured JSON lines when format is json", async () => {
+    const output = await captureOutput(
+      (logger) =>
+        logger.info("User login", { userId: "u-42", method: "oauth" }),
+      { format: "json" },
+    );
+    const parsed = JSON.parse(output);
+    expect(parsed).toMatchObject({
+      level: "info",
+      message: "User login",
+      label: "test",
+      metadata: { userId: "u-42", method: "oauth" },
+    });
+    expect(typeof parsed.timestamp).toBe("string");
+  });
+
+  it("still redacts sensitive metadata in json format", async () => {
+    const output = await captureOutput(
+      (logger) => logger.info("auth", { authorization: "Bearer leak-me" }),
+      { format: "json" },
+    );
+    expect(output).not.toContain("leak-me");
+    const parsed = JSON.parse(output);
+    expect(parsed.metadata.authorization).toBe("[REDACTED]");
+  });
+});
+
+describe("accessLogFor", () => {
+  interface FakeResponse extends EventEmitter {
+    statusCode: number;
+    headers: Record<string, string>;
+    setHeader: (name: string, value: string) => void;
+  }
+
+  function buildFakeResponse(): FakeResponse {
+    const headers: Record<string, string> = {};
+    return Object.assign(new EventEmitter(), {
+      statusCode: 200,
+      headers,
+      setHeader: (name: string, value: string): void => {
+        headers[name] = value;
+      },
+    });
+  }
+
+  async function captureAccessLog(params: {
+    requestHeaders: Record<string, string>;
+  }): Promise<{ parsed: Record<string, unknown>; res: FakeResponse }> {
+    const { requestHeaders } = params;
+    const chunks: string[] = [];
+    const stream = new Writable({
+      write(chunk, _encoding, callback): void {
+        chunks.push(chunk.toString());
+        callback();
+      },
+    });
+    const logger = buildLogger({
+      logLevel: "silly",
+      label: "test",
+      format: "json",
+    });
+    logger.clear();
+    logger.add(new transports.Stream({ stream }));
+
+    const middleware = accessLogFor(logger);
+    const req = {
+      method: "GET",
+      originalUrl: "/api/v1/thing?page=2",
+      headers: requestHeaders,
+    };
+    const res = buildFakeResponse();
+    // Handcrafted stubs cover the express surface accessLogFor touches.
+    middleware(req as never, res as never, () => {});
+    res.emit("finish");
+    await new Promise((resolve) => setImmediate(resolve));
+    return { parsed: JSON.parse(chunks.join("")), res };
+  }
+
+  it("logs structured request fields and generates a request id", async () => {
+    const { parsed, res } = await captureAccessLog({ requestHeaders: {} });
+    expect(parsed["metadata"]).toMatchObject({
+      method: "GET",
+      requestUri: "/api/v1/thing?page=2",
+      responseCode: 200,
+    });
+    const metadata = parsed["metadata"] as Record<string, unknown>;
+    expect(typeof metadata["duration"]).toBe("number");
+    expect(typeof metadata["requestId"]).toBe("string");
+    expect(res.headers["x-request-id"]).toBe(metadata["requestId"]);
+  });
+
+  it("propagates an incoming x-request-id header", async () => {
+    const { parsed, res } = await captureAccessLog({
+      requestHeaders: { "x-request-id": "req-abc" },
+    });
+    const metadata = parsed["metadata"] as Record<string, unknown>;
+    expect(metadata["requestId"]).toBe("req-abc");
+    expect(res.headers["x-request-id"]).toBe("req-abc");
+  });
+
+  it("threads the request id through ignored routes without an access-log line", async () => {
+    const chunks: string[] = [];
+    const stream = new Writable({
+      write(chunk, _encoding, callback): void {
+        chunks.push(chunk.toString());
+        callback();
+      },
+    });
+    const logger = buildLogger({
+      logLevel: "silly",
+      label: "test",
+      format: "json",
+    });
+    logger.clear();
+    logger.add(new transports.Stream({ stream }));
+
+    const middleware = accessLogFor(logger, [{ method: "POST", path: "/mcp" }]);
+    const req = {
+      method: "POST",
+      originalUrl: "/mcp",
+      headers: { "x-request-id": "req-ignored" },
+    };
+    const res = buildFakeResponse();
+    middleware(req as never, res as never, () => {
+      logger.info("inside ignored route");
+    });
+    res.emit("finish");
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const lines = chunks.join("").trim().split("\n");
+    expect(lines).toHaveLength(1); // no access-log line, just the route's own
+    const parsed = JSON.parse(lines[0] ?? "");
+    expect(parsed.message).toBe("inside ignored route");
+    expect(parsed.metadata.requestId).toBe("req-ignored");
+    expect(res.headers["x-request-id"]).toBe("req-ignored");
+  });
+
+  it("threads the request id to logs emitted downstream of the middleware", async () => {
+    const chunks: string[] = [];
+    const stream = new Writable({
+      write(chunk, _encoding, callback): void {
+        chunks.push(chunk.toString());
+        callback();
+      },
+    });
+    const logger = buildLogger({
+      logLevel: "silly",
+      label: "test",
+      format: "json",
+    });
+    logger.clear();
+    logger.add(new transports.Stream({ stream }));
+
+    const middleware = accessLogFor(logger);
+    const req = {
+      method: "GET",
+      originalUrl: "/thing",
+      headers: { "x-request-id": "req-threaded" },
+    };
+    const downstream = new Promise<void>((resolve) => {
+      middleware(req as never, buildFakeResponse() as never, () => {
+        // Simulates a route handler: async hop, then a plain logger call.
+        setImmediate(() => {
+          logger.info("deep in the request");
+          resolve();
+        });
+      });
+    });
+    await downstream;
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const parsed = JSON.parse(chunks.join(""));
+    expect(parsed.message).toBe("deep in the request");
+    expect(parsed.metadata.requestId).toBe("req-threaded");
+  });
+});
+
+describe("request context (ambient requestId)", () => {
+  it("stamps the ambient request id on log lines inside the context", async () => {
+    const output = await captureOutput(
+      (logger) => runWithRequestId("req-ctx-1", () => logger.info("inside")),
+      { format: "json" },
+    );
+    const parsed = JSON.parse(output);
+    expect(parsed.metadata.requestId).toBe("req-ctx-1");
+  });
+
+  it("lets an explicitly passed requestId win over the ambient one", async () => {
+    const output = await captureOutput(
+      (logger) =>
+        runWithRequestId("ambient", () =>
+          logger.info("explicit", { requestId: "explicit-wins" }),
+        ),
+      { format: "json" },
+    );
+    const parsed = JSON.parse(output);
+    expect(parsed.metadata.requestId).toBe("explicit-wins");
+  });
+
+  it("adds no requestId outside a request context", async () => {
+    const output = await captureOutput((logger) => logger.info("no context"), {
+      format: "json",
+    });
+    const parsed = JSON.parse(output);
+    expect(parsed.metadata.requestId).toBeUndefined();
   });
 });

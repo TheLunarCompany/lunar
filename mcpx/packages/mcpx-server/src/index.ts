@@ -9,7 +9,11 @@ import { env, redactEnv } from "./env.js";
 import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
 import { startMetricsEndpoint } from "./server/prometheus.js";
-import { buildLogger, loggableError } from "@mcpx/toolkit-core/logging";
+import {
+  buildLogger,
+  loggableError,
+  logFormatForEnv,
+} from "@mcpx/toolkit-core/logging";
 import { GracefulShutdown } from "@mcpx/toolkit-core/app";
 import { compileRanges } from "@mcpx/toolkit-core/ip-access";
 
@@ -53,19 +57,17 @@ async function logStatusSummary(
 
   const uiConnected = await checkUIReadiness();
 
-  const summary = [
-    "Lunar MCPX Status Summary",
-    "MCPX:",
-    `\tInstance ID: ${env.INSTANCE_ID}`,
-    `\tVersion: ${env.VERSION}`,
-    `\tLog Level: ${env.LOG_LEVEL}`,
-    `\tMCPX Port: ${env.MCPX_PORT}`,
-    `\tUI Port: ${env.UI_PORT ?? "N/A"}`,
-    `\tAPI Key: ${apiKeyStatus}`,
-    `\tUI Status: ${uiConnected ? "Connected" : "Not Connected"}`,
-  ].join("\n");
-  logger.info(summary);
-  logger.telemetry.info(summary);
+  const summaryFields = {
+    instanceId: env.INSTANCE_ID,
+    version: env.VERSION,
+    logLevel: env.LOG_LEVEL,
+    mcpxPort: env.MCPX_PORT,
+    uiPort: env.UI_PORT ?? "N/A",
+    apiKey: apiKeyStatus,
+    uiStatus: uiConnected ? "Connected" : "Not Connected",
+  };
+  logger.info("Lunar MCPX Status Summary", summaryFields);
+  logger.telemetry.info("Lunar MCPX Status Summary", summaryFields);
 
   if (uiConnected && env.UI_PORT) {
     const url = `http://localhost:${env.UI_PORT}`;
@@ -92,6 +94,7 @@ async function main(): Promise<void> {
   const logger = buildLogger({
     logLevel: LOG_LEVEL,
     label: "mcpx",
+    format: logFormatForEnv(env.NODE_ENV),
     telemetry,
     redactKeys: new Set(env.LOG_REDACT_KEYS),
   });

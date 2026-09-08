@@ -1,3 +1,4 @@
+import { v7 as uuidv7 } from "uuid";
 import { format, Logger, transports, createLogger } from "winston";
 import { Format } from "logform";
 import {
@@ -8,6 +9,7 @@ import {
 } from "express";
 
 import LokiTransport from "winston-loki";
+import { currentRequestId, runWithRequestId } from "./request-context.js";
 
 export type LogLevel =
   | "error"
@@ -143,6 +145,21 @@ export function redactObject(
   return redactObjectInternal(obj, normalizedKeys, new WeakSet(), 0);
 }
 
+// Stamps the ambient request id (entered by accessLogFor) on every log line
+// emitted within that request's async chain. An explicitly passed requestId
+// wins over the ambient one.
+const injectRequestId: Format = format((info) => {
+  const requestId = currentRequestId();
+  if (
+    requestId &&
+    isPlainObject(info["metadata"]) &&
+    info["metadata"]["requestId"] === undefined
+  ) {
+    info["metadata"]["requestId"] = requestId;
+  }
+  return info;
+})();
+
 function redactSensitiveFields(normalizedKeys: ReadonlySet<string>): Format {
   return format((info) => {
     if (isPlainObject(info["metadata"])) {
@@ -179,14 +196,25 @@ export interface LunarTelemetryOptions {
   minTelemetryMirrorLevel?: LogLevel;
 }
 
-const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
-  const metaString = metadata
-    ? Object.entries(metadata)
-        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
-        .join(" ")
-    : "";
-  return `${timestamp} [${label}] ${level.toUpperCase()}: ${message} ${metaString}`;
-});
+// Output shape of the final formatter: human-readable lines for local
+// development, JSON objects for production log aggregation.
+export type LogFormat = "pretty" | "json";
+
+// Callers pass their own NODE_ENV — toolkit-core never reads process.env.
+export function logFormatForEnv(nodeEnv: string): LogFormat {
+  return nodeEnv === "production" ? "json" : "pretty";
+}
+
+const prettyLogFormat = printf(
+  ({ level, message, label, metadata, timestamp }) => {
+    const metaString = metadata
+      ? Object.entries(metadata)
+          .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+          .join(" ")
+      : "";
+    return `${timestamp} [${label}] ${level.toUpperCase()}: ${message} ${metaString}`;
+  },
+);
 
 const noOpTelemetryLogger = createLogger({ silent: true });
 
@@ -203,9 +231,14 @@ export function buildLogger(
     label?: string;
     telemetry?: LunarTelemetryOptions;
     redactKeys?: Set<string>;
+    format?: LogFormat;
   } = { logLevel: "info" },
 ): LunarLogger {
   const { logLevel, label: loggerLabel, redactKeys } = props;
+  const outputFormat =
+    props.format === "json"
+      ? format.json({ deterministic: false })
+      : prettyLogFormat;
   // Always on: defaults plus any caller keys, normalized once here.
   const effectiveRedactKeys = new Set(DEFAULT_REDACT_KEYS);
   for (const key of redactKeys ?? []) {
@@ -216,8 +249,9 @@ export function buildLogger(
     timestamp(),
     splat(),
     metadata({ fillExcept: ["message", "level", "timestamp", "label"] }),
+    injectRequestId,
     redactSensitiveFields(effectiveRedactKeys),
-    logFormat,
+    outputFormat,
   ];
   const combinedFormat = combine(...formats);
 
@@ -307,6 +341,14 @@ export function redactUrl(url: string): string {
   return redacted ? `${path}?${params.toString()}` : url;
 }
 
+export const REQUEST_ID_HEADER = "x-request-id";
+
+function extractRequestId(req: ExpressRequest): string {
+  const header = req.headers[REQUEST_ID_HEADER];
+  const value = Array.isArray(header) ? header[0] : header;
+  return value || uuidv7();
+}
+
 // Middleware to log requests and responses
 export function accessLogFor(
   logger: Logger,
@@ -319,22 +361,35 @@ export function accessLogFor(
     next: NextFunction,
   ): void {
     const { method, originalUrl } = req;
+    const requestId = extractRequestId(req);
+    res.setHeader(REQUEST_ID_HEADER, requestId);
+
+    // Ignored routes skip only the access-log line — the request id context
+    // still wraps them so their downstream logs stay correlated.
     const primitiveIgnore = new Set(
       ignore.map((i) => `${i.method}:::${i.path}`),
     );
     if (primitiveIgnore.has(`${method}:::${originalUrl}`)) {
-      return next();
+      return runWithRequestId(requestId, next);
     }
 
     const start = Date.now();
 
     res.on("finish", () => {
       const duration = Date.now() - start;
+      const requestUri = redactUrl(originalUrl);
       logger[level](
-        `[access-log] ${method} ${redactUrl(originalUrl)} ${res.statusCode} - ${duration}ms`,
+        `${method} ${requestUri} ${res.statusCode} - ${duration}ms`,
+        {
+          method,
+          requestUri,
+          responseCode: res.statusCode,
+          duration,
+          requestId,
+        },
       );
     });
 
-    next();
+    runWithRequestId(requestId, next);
   };
 }

@@ -67,6 +67,9 @@ export const logLevelSchema = z.enum([
  */
 const envSchema = z
   .object({
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
     LOG_LEVEL: logLevelSchema.default("info"),
     ACCESS_LOG_LEVEL: logLevelSchema.default("debug"),
     LOG_HIDE_TAGS: commaSeparatedStringArraySchema.transform((array) =>
