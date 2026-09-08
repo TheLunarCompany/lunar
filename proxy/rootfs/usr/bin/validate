@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -e
+
+wget -q --content-on-error --post-data '' -O - http://localhost:$ENGINE_ADMIN_PORT/validate_policies 2>&1

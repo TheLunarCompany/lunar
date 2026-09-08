@@ -1,0 +1,87 @@
+# This test verifies that the MCPX UI can start without any configuration files.
+# It starts MCPX without configuration, verifies that no servers are connected,
+# opens access controls, and checks the default permissions.
+name: "Init with no config files test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+env: {}
+dependentContainers: []
+configMount: config
+cleanConfigMount: false
+verboseOutput: false
+disableTest: false
+
+steps:
+  - name: Load Control-Plane UI without config
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for “Waiting for server connection…” message
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Waiting for server connection..."
+      time: 25
+    expected:
+      mode: contains
+      value: "Waited for Waiting for server connection..."
+
+  - name: Open Access Controls page
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173/access-controls
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for “Agent Profiles” header
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Agent Profile Permissions"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Agent Profile Permissions"
+
+  - name: Verify default profile row is present
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const table = document.querySelector('table');
+          const prefix = '__RESULT__::';
+          const ok = `${prefix}ok-default-row`;
+          const noTable = `${prefix}error::no-table`;
+          if (!table) return noTable;
+          const rows = Array.from(table.querySelectorAll('tr')).slice(1); // skip header
+          for (const tr of rows) {
+            const profileInput = tr.querySelector('input[disabled], input');
+            const profileVal = (profileInput?.value || '').trim().toLowerCase();
+
+            const rowText = (tr.innerText || tr.textContent || '').toLowerCase();
+            const hasAnyAgent = rowText.includes('any agent');
+            const hasAllowAll = rowText.includes('allow all') ||
+              (tr.querySelector('[role="combobox"]')?.innerText || '').toLowerCase().includes('allow all');
+            const hasAllTools = rowText.includes('all tools');
+
+            if (profileVal === 'default' && hasAnyAgent && hasAllowAll && hasAllTools) {
+              return ok;
+            }
+          }
+          // Debug info if not found
+          const details = {
+            inputs: Array.from(table.querySelectorAll('input')).map(i => i.value),
+            rows: rows.length
+          };
+          return `${prefix}error::${JSON.stringify(details)}`;
+        }
+    expected:
+      mode: contains
+      value: __RESULT__::ok-default-row

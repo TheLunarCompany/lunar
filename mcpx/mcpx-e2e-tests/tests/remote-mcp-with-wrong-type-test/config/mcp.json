@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "notion": {    
+      "type": "xxx",  
+      "url": "https://mcp.notion.com/mcp"
+    }
+  }
+}
