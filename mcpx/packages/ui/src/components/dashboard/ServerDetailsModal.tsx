@@ -450,7 +450,9 @@ export const ServerDetailsModal = ({
         className={DRAWER_SHEET_CLASS_NAME}
       >
         <VisuallyHidden>
-          <SheetTitle>{currentServer.name}</SheetTitle>
+          <SheetTitle>
+            {currentServer.displayName ?? currentServer.name}
+          </SheetTitle>
         </VisuallyHidden>
         <ConfirmDeleteDialog
           isOpen={isDeleteConfirmOpen}
@@ -503,9 +505,11 @@ export const ServerDetailsModal = ({
                     alt="Domain Icon"
                     className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
                   />
-                  <span className="text-2xl font-medium capitalize">
+                  <span
+                    className={`text-2xl font-medium ${!currentServer.displayName ? "capitalize" : ""}`}
+                  >
                     {" "}
-                    {currentServer.name}
+                    {currentServer.displayName ?? currentServer.name}
                   </span>
 
                   <p className="text-[11px] w-fit text-muted-foreground border border-muted-foreground rounded-[4px] px-1 py-1 m-0 leading-none">

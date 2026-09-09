@@ -17,6 +17,7 @@ export const serversEqual = (prev: McpServer[], next: McpServer[]): boolean => {
     return (
       nextServer &&
       nextServer.name === prevServer.name &&
+      nextServer.displayName === prevServer.displayName &&
       nextServer.status === prevServer.status &&
       nextServer.icon === prevServer.icon &&
       nextServer.tools.length === prevServer.tools.length &&

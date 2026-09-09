@@ -434,7 +434,8 @@ function catalogChangeAffectsApprovals(change: CatalogChange): boolean {
     change.addedServers.length > 0 ||
     change.removedServers.length > 0 ||
     change.approvedToolsChanges.length > 0 ||
-    change.approvedPromptsChanges.length > 0
+    change.approvedPromptsChanges.length > 0 ||
+    change.displayNameChanges.length > 0
   );
 }
 

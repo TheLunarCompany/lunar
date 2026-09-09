@@ -69,6 +69,7 @@ type CatalogState = {
 const NOOP_CHANGE: CatalogChange = {
   addedServers: [],
   removedServers: [],
+  displayNameChanges: [],
   approvedToolsChanges: [],
   approvedPromptsChanges: [],
   staticOauthPerServersChange: [],

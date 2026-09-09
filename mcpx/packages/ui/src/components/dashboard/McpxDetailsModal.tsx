@@ -106,6 +106,7 @@ export const McpxDetailsModal = ({
     return systemState.targetServers
       .map((server) => ({
         name: server.name,
+        displayName: server.displayName,
         toolsCount: server.tools?.length || 0,
         icon: server.icon,
         status: getMcpServerStatusFromTargetServer(server),

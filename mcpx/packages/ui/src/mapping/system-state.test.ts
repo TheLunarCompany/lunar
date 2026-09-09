@@ -35,6 +35,7 @@ describe("system-state mapping", () => {
         env: { GITHUB_TOKEN: { fromSecret: "github-token" } },
         icon: "#111827",
         name: "github",
+        displayName: "GitHub",
         originalTools: [],
         state: { type: "connected" },
         tools: [
@@ -75,6 +76,7 @@ describe("system-state mapping", () => {
     expect(server).toMatchObject({
       args: ["-y", "@modelcontextprotocol/server-github"],
       catalogItemId: "github",
+      displayName: "GitHub",
       command: "npx",
       env: { GITHUB_TOKEN: { fromSecret: "github-token" } },
       icon: "#111827",

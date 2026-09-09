@@ -12,7 +12,11 @@ import {
   TargetServerToolParameter,
   Usage,
 } from "@mcpx/shared-model/api";
-import { compact, distinct } from "@mcpx/toolkit-core/data";
+import {
+  compact,
+  distinct,
+  normalizeServerName,
+} from "@mcpx/toolkit-core/data";
 import { Clock } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";
 import {
@@ -20,6 +24,7 @@ import {
   Tool as McpTool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { EnvValue, Tool } from "../model/target-servers.js";
+import { DisplayNameChange } from "./catalog-manager.js";
 
 class InternalUsage {
   callCount: number;
@@ -66,6 +71,7 @@ interface InternalStdioTargetServer {
   _type: "stdio";
   state: TargetServerState;
   catalogItemId?: string;
+  displayName?: string;
   command: string;
   args?: string[];
   env?: Record<string, EnvValue>;
@@ -80,6 +86,7 @@ interface InternalStdioTargetServer {
 interface InternalRemoteTargetServer {
   state: TargetServerState;
   catalogItemId?: string;
+  displayName?: string;
   url: string;
   headers?: Record<string, EnvValue>;
   icon?: string;
@@ -294,6 +301,44 @@ export class SystemStateTracker {
     this.state.targetServersByName_new.delete(targetServer.name);
     this.state.lastUpdatedAt = this.clock.now();
     this.notifyListeners();
+  }
+
+  updateTargetServerDisplayNames(changes: DisplayNameChange[]): void {
+    let changed = false;
+    const displayNamesByCatalogItemId = new Map(
+      changes.map((change) => [change.catalogItemId, change.displayName]),
+    );
+    const displayNamesByName = new Map(
+      changes.map((change) => [
+        normalizeServerName(change.serverName),
+        change.displayName,
+      ]),
+    );
+
+    for (const [name, server] of this.state.targetServersByName_new) {
+      const normalizedName = normalizeServerName(name);
+      const catalogItemId = server.catalogItemId;
+      const hasCatalogIdChange =
+        catalogItemId !== undefined &&
+        displayNamesByCatalogItemId.has(catalogItemId);
+      const hasNameChange =
+        catalogItemId === undefined && displayNamesByName.has(normalizedName);
+
+      if (!hasCatalogIdChange && !hasNameChange) continue;
+
+      const displayName = hasCatalogIdChange
+        ? displayNamesByCatalogItemId.get(catalogItemId)
+        : displayNamesByName.get(normalizedName);
+
+      if (server.displayName === displayName) continue;
+      server.displayName = displayName;
+      changed = true;
+    }
+
+    if (changed) {
+      this.state.lastUpdatedAt = this.clock.now();
+      this.notifyListeners();
+    }
   }
 
   updateTargetServerTools(props: {
@@ -553,6 +598,7 @@ export class SystemStateTracker {
               state: server.state,
               name,
               catalogItemId: server.catalogItemId,
+              displayName: server.displayName,
               command: server.command,
               args: server.args,
               env: server.env,
@@ -570,6 +616,7 @@ export class SystemStateTracker {
               state: server.state,
               name,
               catalogItemId: server.catalogItemId,
+              displayName: server.displayName,
               url: server.url,
               headers: server.headers,
               icon: server.icon,
@@ -724,6 +771,7 @@ export class SystemStateTracker {
       _type: targetServer._type,
       state: targetServer.state,
       catalogItemId: targetServer.catalogItemId,
+      displayName: targetServer.displayName,
       url: targetServer.url,
       headers: targetServer.headers,
       icon: targetServer.icon,
@@ -741,6 +789,7 @@ export class SystemStateTracker {
       _type: "stdio",
       state: targetServer.state,
       catalogItemId: targetServer.catalogItemId,
+      displayName: targetServer.displayName,
       command: targetServer.command,
       args: targetServer.args,
       env: targetServer.env,

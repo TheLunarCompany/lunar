@@ -15,6 +15,7 @@ import {
 export interface McpxServerCardProps {
   server: {
     name: string;
+    displayName?: string;
     toolsCount: number;
     icon?: string;
     status?: McpServerStatus;
@@ -89,8 +90,10 @@ export const McpxServerCard = ({
             />
           </div>
           <div className="flex-1 flex-row min-w-0">
-            <h3 className="capitalize font-semibold text-foreground mb-0 text-sm truncate">
-              {server.name}
+            <h3
+              className={`${!server.displayName ? "capitalize" : ""} font-semibold text-foreground mb-0 text-sm truncate`}
+            >
+              {server.displayName ?? server.name}
             </h3>
             <div className={"flex mt-1 items-center"}>
               <p className="text-[10px] font-semibold text-muted-foreground">

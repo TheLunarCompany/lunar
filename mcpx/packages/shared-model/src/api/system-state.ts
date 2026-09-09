@@ -49,6 +49,7 @@ export interface StdioTargetServer {
   prompts?: TargetServerPrompt[];
   originalPrompts?: Prompt[];
   usage: Usage;
+  displayName?: string;
 }
 
 interface RemoteTargetServer {
@@ -63,6 +64,7 @@ interface RemoteTargetServer {
   prompts?: TargetServerPrompt[];
   originalPrompts?: Prompt[];
   usage: Usage;
+  displayName?: string;
 }
 
 export type SSETargetServer = RemoteTargetServer & { _type: "sse" };

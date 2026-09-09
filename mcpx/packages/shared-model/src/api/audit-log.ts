@@ -40,6 +40,12 @@ const approvedPromptsChangeSchema = z.object({
   removedPrompts: z.array(z.string()),
 });
 
+const displayChangesSchema = z.object({
+  catalogItemId: z.string(),
+  serverName: z.string(),
+  displayName: z.string(),
+});
+
 export const auditLogEntrySchema = z.discriminatedUnion("eventType", [
   baseAuditLogSchema.extend({
     eventType: z.literal("tool_used"),
@@ -93,6 +99,7 @@ export const auditLogEntrySchema = z.discriminatedUnion("eventType", [
       // Optional with a default so audit logs persisted before prompt support
       // (which lack this field) still parse on read.
       approvedPromptsChanges: z.array(approvedPromptsChangeSchema).default([]),
+      displayNameChanges: z.array(displayChangesSchema).default([]),
     }),
   }),
   baseAuditLogSchema.extend({

@@ -816,6 +816,14 @@ export class UpstreamHandler
       this.capabilityRegistry.unregisterServer(normalizedName);
     }
 
+    const displayName = newTargetClient.targetServer.catalogItemId
+      ? this.catalogManager.getDisplayNameById(
+          newTargetClient.targetServer.catalogItemId,
+        )
+      : this.catalogManager.getDisplayNameByName(
+          newTargetClient.targetServer.name,
+        );
+
     // Approvals are discarded for "connecting" state; skip the lookup.
     const skipApprovals = newTargetClient._state === "connecting";
     const approvedTools = skipApprovals
@@ -840,6 +848,7 @@ export class UpstreamHandler
       approvedPrompts,
       upstreamPrompts,
       registryEntry?.promptMessages,
+      displayName,
     );
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
 
@@ -1515,6 +1524,7 @@ export class UpstreamHandler
     approvedPrompts: Prompt[] = [],
     originalPrompts?: Prompt[],
     promptMessages?: Record<string, PromptMessage[]>,
+    displayName?: string,
   ): TargetServerNewWithoutUsage {
     return prepareForSystemState(
       targetClient,
@@ -1524,6 +1534,7 @@ export class UpstreamHandler
       approvedPrompts,
       originalPrompts,
       promptMessages,
+      displayName,
     );
   }
 }

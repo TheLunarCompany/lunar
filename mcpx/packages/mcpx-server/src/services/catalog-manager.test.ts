@@ -392,6 +392,41 @@ describe("CatalogManager", () => {
       expect(changes[0]?.approvedToolsChanges).toEqual([]);
     });
 
+    it("detects display name changes by catalog item ID", () => {
+      const manager = createCatalogManager();
+      const item = createCatalogItem("atlassin");
+      manager.setCatalog(makeCatalog(item));
+
+      const changes: CatalogChange[] = [];
+      manager.subscribe((change) => changes.push(change));
+      manager.setCatalog(
+        makeCatalog({
+          ...item,
+          server: { ...item.server, displayName: "Atlassin MCP" },
+        }),
+      );
+
+      expect(changes[0]?.displayNameChanges).toEqual([
+        {
+          catalogItemId: item.server.id,
+          serverName: item.server.name,
+          displayName: "Atlassin MCP",
+        },
+      ]);
+    });
+
+    it("does not report an unchanged display name", () => {
+      const manager = createCatalogManager();
+      const item = createCatalogItem("atlassin");
+      manager.setCatalog(makeCatalog(item));
+
+      const changes: CatalogChange[] = [];
+      manager.subscribe((change) => changes.push(change));
+      manager.setCatalog(makeCatalog(item));
+
+      expect(changes[0]?.displayNameChanges).toEqual([]);
+    });
+
     it("notifies with empty change when approved tools are same but different order", () => {
       const manager = createCatalogManager();
       manager.setCatalog(
@@ -513,6 +548,26 @@ describe("CatalogManager", () => {
 
       expect(catalog1).not.toBe(catalog2);
       expect(catalog1[0]).not.toBe(catalog2[0]);
+    });
+  });
+
+  describe("#getDisplayNameById and #getDisplayNameByName", () => {
+    it("returns display names without requiring a catalog snapshot", () => {
+      const manager = createCatalogManager();
+      const item = createCatalogItem("slack");
+      item.server.displayName = "Slack MCP";
+      manager.setCatalog(makeCatalog(item));
+
+      expect(manager.getDisplayNameById(item.server.id)).toBe("Slack MCP");
+      expect(manager.getDisplayNameByName("SLACK")).toBe("Slack MCP");
+    });
+
+    it("returns undefined when no matching item exists", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
+
+      expect(manager.getDisplayNameById("missing-id")).toBeUndefined();
+      expect(manager.getDisplayNameByName("missing-server")).toBeUndefined();
     });
   });
 

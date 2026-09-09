@@ -2,6 +2,7 @@ import {
   McpxBehaviorFeatureFlags,
   McpxBehaviorPolicies,
 } from "../services/behavior-service.js";
+import { DisplayNameChange } from "../services/catalog-manager.js";
 
 export type ToolUsedPayload = {
   toolName: string;
@@ -58,6 +59,7 @@ export type CatalogUpdatedPayload = {
   removedServers: string[];
   approvedToolsChanges: ApprovedToolsChangePayload[];
   approvedPromptsChanges: ApprovedPromptsChangePayload[];
+  displayNameChanges: DisplayNameChange[];
 };
 export type BehaviorUpdatedPayload = {
   featureFlags: McpxBehaviorFeatureFlags;

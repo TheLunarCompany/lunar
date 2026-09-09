@@ -68,6 +68,12 @@ class StubCatalogManager implements CatalogManagerI {
   getById() {
     return undefined;
   }
+  getDisplayNameById() {
+    return undefined;
+  }
+  getDisplayNameByName() {
+    return undefined;
+  }
   isStrict() {
     return true;
   }

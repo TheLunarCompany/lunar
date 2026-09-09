@@ -182,6 +182,57 @@ describe("MetricRecorder", () => {
     expect(metrics.usage.lastCalledAt).toBeUndefined();
   });
 
+  it("updates target server display names by catalog item ID", () => {
+    const clock = new ManualClock();
+    const recorder = new SystemStateTracker(clock, noOpLogger);
+    recorder.recordTargetServerConnection({
+      _type: "stdio",
+      state: { type: "connected" },
+      command: "start-server",
+      name: "atlassin",
+      catalogItemId: "catalog-1",
+      displayName: "Old label",
+      originalTools: [],
+      prompts: [],
+      originalPrompts: [],
+      tools: [],
+    });
+
+    const snapshots: ReturnType<typeof recorder.export>[] = [];
+    recorder.subscribe((snapshot) => snapshots.push(snapshot));
+    recorder.updateTargetServerDisplayNames([
+      {
+        catalogItemId: "catalog-1",
+        serverName: "atlassin",
+        displayName: "New label",
+      },
+    ]);
+
+    expect(snapshots).toHaveLength(2);
+    expect(recorder.export().targetServers[0]).toMatchObject({
+      name: "atlassin",
+      catalogItemId: "catalog-1",
+      displayName: "New label",
+      state: { type: "connected" },
+    });
+  });
+
+  it("does not notify when no target server matches a display name change", () => {
+    const recorder = new SystemStateTracker(new ManualClock(), noOpLogger);
+    const snapshots: ReturnType<typeof recorder.export>[] = [];
+    recorder.subscribe((snapshot) => snapshots.push(snapshot));
+
+    recorder.updateTargetServerDisplayNames([
+      {
+        catalogItemId: "missing",
+        serverName: "missing",
+        displayName: "New label",
+      },
+    ]);
+
+    expect(snapshots).toHaveLength(1);
+  });
+
   it("should record target server disconnection", () => {
     const clock = new ManualClock();
     const recorder = new SystemStateTracker(clock, noOpLogger);

@@ -67,6 +67,7 @@ export function mapTargetServerToMcpServer(server: TargetServer): McpServer {
     usage: server.usage,
     type: server._type,
     url: "url" in server ? server.url : "",
+    displayName: server.displayName,
   };
 }
 

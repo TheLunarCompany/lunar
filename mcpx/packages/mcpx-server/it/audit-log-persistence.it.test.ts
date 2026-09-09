@@ -52,6 +52,7 @@ describe("AuditLogService with FileAuditLogPersistence (integration)", () => {
       payload: {
         addedServers: ["jira"],
         removedServers: [],
+        displayNameChanges: [],
         approvedToolsChanges: [
           {
             serverName: "github",

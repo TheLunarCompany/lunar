@@ -51,6 +51,21 @@ describe("prepareForSystemState", () => {
       });
     });
 
+    it("includes the catalog display name when provided", () => {
+      const result = prepareForSystemState(
+        { _state: "connecting", targetServer: stdioServer },
+        stubEstimateTokens,
+        [],
+        [],
+        [],
+        [],
+        undefined,
+        "Updated label",
+      );
+
+      expect(result).toMatchObject({ displayName: "Updated label" });
+    });
+
     it("produces connecting state for sse", () => {
       const result = prepareForSystemState(
         { _state: "connecting", targetServer: sseServer },
@@ -264,12 +279,19 @@ describe("prepareForSystemState", () => {
           missingEnvVars,
         },
         stubEstimateTokens,
+        [],
+        [],
+        [],
+        [],
+        undefined,
+        "Input Server",
       );
 
       expect(result.state).toEqual({
         type: "pending-input",
         missingEnvVars,
       });
+      expect(result.displayName).toBe("Input Server");
       expect(result.tools).toEqual([]);
     });
   });

@@ -55,12 +55,16 @@ export function prepareForSystemState(
   approvedPrompts: Prompt[] = [],
   originalPrompts: Prompt[] = [],
   promptMessages?: Record<string, PromptMessage[]>,
+  displayName?: string,
 ): TargetServerNewWithoutUsage {
   switch (targetClient._state) {
     case "connecting":
-      return buildSystemStateEntry(targetClient.targetServer, {
-        type: "connecting",
-      });
+      return buildSystemStateEntry(
+        targetClient.targetServer,
+        { type: "connecting" },
+        undefined,
+        displayName,
+      );
     case "connected":
     case "pending-auth":
       return buildSystemStateEntry(
@@ -78,17 +82,28 @@ export function prepareForSystemState(
             promptMessages,
           ),
         },
+        displayName,
       );
     case "pending-input":
-      return buildSystemStateEntry(targetClient.targetServer, {
-        type: "pending-input",
-        missingEnvVars: targetClient.missingEnvVars,
-      });
+      return buildSystemStateEntry(
+        targetClient.targetServer,
+        {
+          type: "pending-input",
+          missingEnvVars: targetClient.missingEnvVars,
+        },
+        undefined,
+        displayName,
+      );
     case "connection-failed":
-      return buildSystemStateEntry(targetClient.targetServer, {
-        type: "connection-failed",
-        error: prepareError(targetClient.error),
-      });
+      return buildSystemStateEntry(
+        targetClient.targetServer,
+        {
+          type: "connection-failed",
+          error: prepareError(targetClient.error),
+        },
+        undefined,
+        displayName,
+      );
   }
 }
 
@@ -101,6 +116,7 @@ function buildSystemStateEntry(
     prompts: TargetServerNewWithoutUsage["prompts"];
     originalPrompts: TargetServerNewWithoutUsage["originalPrompts"];
   },
+  displayName?: string,
 ): TargetServerNewWithoutUsage {
   const common = {
     state,
@@ -108,6 +124,7 @@ function buildSystemStateEntry(
     originalTools: overrides?.originalTools ?? [],
     prompts: overrides?.prompts ?? [],
     originalPrompts: overrides?.originalPrompts ?? [],
+    ...(displayName === undefined ? {} : { displayName }),
   };
   // Per-branch construction (not a cast) so each server type is checked against
   // its own member: a new required field fails to compile until it's set here.

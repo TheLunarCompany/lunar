@@ -118,16 +118,19 @@ const McpServerNodeRenderer = ({
                   <TooltipTrigger asChild>
                     <span
                       className={cn(
-                        "text-sm font-semibold capitalize truncate",
+                        "text-sm font-semibold truncate",
                         isInactive
                           ? "text-[var(--colors-gray-500)]"
                           : "text-[var(--colors-gray-950)]",
+                        !data.displayName ? "capitalize" : "",
                       )}
                     >
-                      {data.name}
+                      {data.displayName ?? data.name}
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent>{data.name}</TooltipContent>
+                  <TooltipContent>
+                    {data.displayName ?? data.name}
+                  </TooltipContent>
                 </Tooltip>
                 {(isConnected || isPendingAuth) && (
                   <span className="text-xs font-semibold text-[var(--colors-gray-500)]">

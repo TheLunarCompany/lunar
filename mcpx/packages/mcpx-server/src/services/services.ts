@@ -201,6 +201,12 @@ export class Services {
     );
     this._capabilityResolver = capabilityResolver;
 
+    this._catalogManager.subscribe((change) => {
+      this._systemStateTracker.updateTargetServerDisplayNames(
+        change.displayNameChanges,
+      );
+    });
+
     const upstreamHandler = new UpstreamHandler(
       this._systemStateTracker,
       serverConfigManager,
@@ -433,12 +439,14 @@ export class Services {
         removedServers,
         approvedToolsChanges,
         approvedPromptsChanges,
+        displayNameChanges,
       } = change;
       if (
         addedServers.length === 0 &&
         removedServers.length === 0 &&
         approvedToolsChanges.length === 0 &&
-        approvedPromptsChanges.length === 0
+        approvedPromptsChanges.length === 0 &&
+        displayNameChanges.length === 0
       ) {
         return;
       }
@@ -457,6 +465,7 @@ export class Services {
             addedPrompts: c.added,
             removedPrompts: c.removed,
           })),
+          displayNameChanges,
         },
       });
     });

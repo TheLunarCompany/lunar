@@ -55,9 +55,16 @@ export interface ApprovedNamesChange {
   removed: string[];
 }
 
+export interface DisplayNameChange {
+  catalogItemId: string;
+  serverName: string;
+  displayName?: string;
+}
+
 export interface CatalogChange {
   addedServers: string[];
   removedServers: string[];
+  displayNameChanges: DisplayNameChange[];
   approvedToolsChanges: ApprovedNamesChange[];
   approvedPromptsChanges: ApprovedNamesChange[];
   staticOauthPerServersChange: string[];
@@ -71,6 +78,8 @@ export interface CatalogManagerI {
   setAdminStrictnessOverride(override: boolean): void;
   getAdminStrictnessOverride(): boolean;
   getById(id: string): CatalogItemWire | undefined;
+  getDisplayNameById(id: string): string | undefined;
+  getDisplayNameByName(name: string): string | undefined;
   getPerCatalogItemOAuth(
     id: string,
   ): ClientCredentialsOauthProvider | undefined;
@@ -146,6 +155,18 @@ export class CatalogManager implements CatalogManagerI {
     return undefined;
   }
 
+  getDisplayNameById(id: string): string | undefined {
+    for (const item of this.catalogByName.values()) {
+      if (item.server.id === id) return item.server.displayName;
+    }
+    return undefined;
+  }
+
+  getDisplayNameByName(name: string): string | undefined {
+    return this.catalogByName.get(normalizeServerName(name))?.server
+      .displayName;
+  }
+
   getPerCatalogItemOAuth(
     id: string,
   ): ClientCredentialsOauthProvider | undefined {
@@ -170,6 +191,7 @@ export class CatalogManager implements CatalogManagerI {
     this.notifyListeners({
       addedServers: [],
       removedServers: [],
+      displayNameChanges: [],
       approvedToolsChanges: [],
       approvedPromptsChanges: [],
       staticOauthPerServersChange: [],
@@ -297,11 +319,40 @@ export class CatalogManager implements CatalogManagerI {
     return {
       addedServers,
       removedServers,
+      displayNameChanges: this.computeDisplayNameChanges(payload),
       approvedToolsChanges: this.computeApprovedChanges(payload, "tools"),
       approvedPromptsChanges: this.computeApprovedChanges(payload, "prompts"),
       strictnessChanged: false,
       staticOauthPerServersChange,
     };
+  }
+
+  // computeDisplayNameChanges differs from computeApprovedChanges
+  // computeDisplayNameChanges uses catalog ID to find the changed catalog display name
+  // computeApprovedChanges uses catalog name to find the changed catalog item
+  private computeDisplayNameChanges(
+    payload: SetCatalogPayload,
+  ): DisplayNameChange[] {
+    const oldItemsById = new Map(
+      Array.from(this.catalogByName.values()).map((item) => [
+        item.server.id,
+        item,
+      ]),
+    );
+
+    return payload.items.flatMap((item) => {
+      const oldItem = oldItemsById.get(item.server.id);
+      if (!oldItem || oldItem.server.displayName === item.server.displayName) {
+        return [];
+      }
+      return [
+        {
+          catalogItemId: item.server.id,
+          serverName: item.server.name,
+          displayName: item.server.displayName,
+        },
+      ];
+    });
   }
 
   // Diff the approved-name allowlist for one capability kind across the catalog.
