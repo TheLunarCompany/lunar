@@ -1,4 +1,5 @@
 import { ConfigConsumer } from "@mcpx/toolkit-core/config";
+import { normalizeServerName } from "@mcpx/toolkit-core/data";
 import { Logger } from "winston";
 import { Config } from "../model/config/config.js";
 import type {
@@ -90,15 +91,19 @@ class PermissionManagerState {
         );
       }
       Object.entries(toolGroup).forEach(([serviceName, serviceToolGroup]) => {
-        const current = services.get(serviceName);
+        // Tool-group configs may keep display-case server names (e.g. dashboard
+        // Create Tool Group), while capability resolution looks up the
+        // normalizeServerName()'d form. Normalize here so both agree (#68).
+        const normalizedServiceName = normalizeServerName(serviceName);
+        const current = services.get(normalizedServiceName);
         if (!current) {
           services.set(
-            serviceName,
+            normalizedServiceName,
             buildServicePermissions(type, serviceToolGroup),
           );
         } else {
           services.set(
-            serviceName,
+            normalizedServiceName,
             mergeServicePermissions(
               current,
               buildServicePermissions(type, serviceToolGroup),
@@ -211,7 +216,7 @@ function evaluatePermission(
   toolName: string,
 ): boolean {
   const { default: consumerDefault, services } = consumer;
-  const service = services.get(serviceName);
+  const service = services.get(normalizeServerName(serviceName));
   if (!service) {
     return consumerDefault === "allow";
   }
