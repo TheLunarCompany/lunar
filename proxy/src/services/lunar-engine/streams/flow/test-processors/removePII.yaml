@@ -1,0 +1,14 @@
+name: removePII
+description: removePII test processor
+exec: removePII.go
+parameters:
+  ParameterKey:
+    type: string
+    description: test
+    default: "ParameterValue"
+    required: false  
+output_streams:  
+  - type: StreamTypeRequest  
+input_stream:
+  name: input
+  type: StreamTypeRequest
