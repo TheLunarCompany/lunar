@@ -1,0 +1,28 @@
+quotas:
+  - id: MyLimitResource
+    filter:
+      url: httpbin.org/
+    strategy:
+      fixed_window:
+        max: 3
+        interval: 20
+        interval_unit: second
+        monthly_renewal:
+          day: 10
+          hour: 5
+          minute: 30
+          timezone: UTC
+
+internal_limits:
+  - id: MyLimitResourceProd
+    parent_id: MyLimitResource
+
+    filter:
+      url: httpbin.org/get
+      method: 
+        - GET
+    strategy:
+      fixed_window:
+        max: 1
+        interval: 10
+        interval_unit: second
