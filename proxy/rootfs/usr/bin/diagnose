@@ -1,0 +1,39 @@
+#!/bin/bash
+
+LUNAR_EXPORTER_FILE_DIR=$(cat /var/run/lunar_env/LUNAR_EXPORTER_FILE_DIR)
+LUNAR_EXPORTER_FILE_NAME=$(cat /var/run/lunar_env/LUNAR_EXPORTER_FILE_NAME)
+
+
+DIAGNOSE_OUTPUT_LOG=$(readlink -m "${LUNAR_EXPORTER_FILE_DIR}/${LUNAR_EXPORTER_FILE_NAME}")
+
+if [ -z "$1" ]; then
+    echo "==== Diagnose ===="
+    echo
+    echo "Inspect HAR samples exported by Lunar"
+    echo "Samples are ordered by time in ascending order"
+    echo
+    echo "Usage: diagnose <sample-index>"
+    echo
+    echo "Reading data from: ${DIAGNOSE_OUTPUT_LOG}"
+    echo
+    if  [ ! -f "${DIAGNOSE_OUTPUT_LOG}" ]; then
+        echo "No samples found"
+        exit 1
+    fi
+    echo "There are $(wc -l < "${DIAGNOSE_OUTPUT_LOG}") samples"
+    echo "Last sample is from $(sed "$(wc -l < "${DIAGNOSE_OUTPUT_LOG}")q;d" "${DIAGNOSE_OUTPUT_LOG}" | jq '.log.entries[0].startedDateTime')"
+    
+    exit 1
+fi
+
+if  [ ! -f "${DIAGNOSE_OUTPUT_LOG}" ]; then
+    echo "No samples found"
+    exit 1
+fi
+
+if  [ "$1" -gt "$(wc -l < "${DIAGNOSE_OUTPUT_LOG}")" ]; then
+    echo "There are only $(wc -l < "${DIAGNOSE_OUTPUT_LOG}") samples"
+    exit 1
+fi
+
+sed "$1q;d" "${DIAGNOSE_OUTPUT_LOG}" | jq '.'
