@@ -1,0 +1,16 @@
+name: CustomScript
+description: allows users to extract specific values from api calls and to customize them using Javascript
+exec: custom_script_processor.go
+parameters:
+  script_text:
+    type: string
+    description: "Defines the javascript callback that will be invoked once an API call will be reach this processor"
+    required: true
+  
+output_streams:  
+  - name: success
+    type: StreamTypeAny
+  - name: failure
+    type: StreamTypeAny
+input_stream:  
+  type: StreamTypeAny
