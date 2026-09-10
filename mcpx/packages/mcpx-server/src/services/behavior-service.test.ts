@@ -22,6 +22,8 @@ function createBehaviorService(
       enableResourceCapability: flat.enableResourceCapability,
       enablePromptCapability: flat.enablePromptCapability,
       enableSkillScoping: flat.enableSkillScoping,
+      enableStreamableEventStore: flat.enableStreamableEventStore,
+      enableToolCallCache: flat.enableToolCallCache,
     },
     policies: {
       logLevel: flat.logLevel,
@@ -48,7 +50,11 @@ describe("BehaviorService", () => {
 
       service.applyBehaviorSettings({
         newValues: {
-          featureFlags: { enableResourceCapability: true },
+          featureFlags: {
+            enableResourceCapability: true,
+            enableStreamableEventStore: false,
+            enableToolCallCache: false,
+          },
           policies: { stdioServersEnabled: true, dockerInDockerEnabled: true },
         },
         timestamp: 1,
@@ -68,7 +74,11 @@ describe("BehaviorService", () => {
     it("applies hub values over the initial values", () => {
       const applied = behaviorService.applyBehaviorSettings({
         newValues: {
-          featureFlags: { enableResourceCapability: false },
+          featureFlags: {
+            enableResourceCapability: false,
+            enableStreamableEventStore: false,
+            enableToolCallCache: false,
+          },
           policies: {
             stdioServersEnabled: false,
             dockerInDockerEnabled: false,
@@ -85,7 +95,11 @@ describe("BehaviorService", () => {
     it("drops a snapshot with a stale timestamp", () => {
       behaviorService.applyBehaviorSettings({
         newValues: {
-          featureFlags: { enableResourceCapability: true },
+          featureFlags: {
+            enableResourceCapability: true,
+            enableStreamableEventStore: false,
+            enableToolCallCache: false,
+          },
           policies: { stdioServersEnabled: true, dockerInDockerEnabled: true },
         },
         timestamp: 100,
@@ -93,7 +107,11 @@ describe("BehaviorService", () => {
 
       const applied = behaviorService.applyBehaviorSettings({
         newValues: {
-          featureFlags: { enableResourceCapability: false },
+          featureFlags: {
+            enableResourceCapability: false,
+            enableStreamableEventStore: false,
+            enableToolCallCache: false,
+          },
           policies: {
             stdioServersEnabled: false,
             dockerInDockerEnabled: false,
@@ -109,7 +127,11 @@ describe("BehaviorService", () => {
     it("accepts a snapshot with a newer timestamp", () => {
       behaviorService.applyBehaviorSettings({
         newValues: {
-          featureFlags: { enableResourceCapability: true },
+          featureFlags: {
+            enableResourceCapability: true,
+            enableStreamableEventStore: false,
+            enableToolCallCache: false,
+          },
           policies: { stdioServersEnabled: true, dockerInDockerEnabled: true },
         },
         timestamp: 100,
@@ -117,7 +139,11 @@ describe("BehaviorService", () => {
 
       const applied = behaviorService.applyBehaviorSettings({
         newValues: {
-          featureFlags: { enableResourceCapability: false },
+          featureFlags: {
+            enableResourceCapability: false,
+            enableStreamableEventStore: false,
+            enableToolCallCache: false,
+          },
           policies: { stdioServersEnabled: true, dockerInDockerEnabled: true },
         },
         timestamp: 200,

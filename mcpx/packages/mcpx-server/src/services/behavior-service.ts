@@ -22,6 +22,8 @@ export enum BehaviorSetting {
   ENABLE_RESOURCE_CAPABILITY = "enableResourceCapability",
   ENABLE_PROMPT_CAPABILITY = "enablePromptCapability",
   ENABLE_SKILL_SCOPING = "enableSkillScoping",
+  ENABLE_STREAMABLE_EVENT_STORE = "enableStreamableEventStore",
+  ENABLE_TOOL_CALL_CACHE = "enableToolCallCache",
   LOG_LEVEL = "logLevel",
   ENABLE_STDIO_MCP_SERVERS = "stdioServersEnabled",
   DIND_ENABLED = "dockerInDockerEnabled",

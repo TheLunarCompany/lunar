@@ -12,6 +12,7 @@ import { extractMetadata, logMetadataWarnings } from "./metadata.js";
 import { CloseSessionReason, TouchSource } from "../services/sessions.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { InMemoryEventStore } from "./streamable-event-store.js";
+import { BehaviorSetting } from "../services/behavior-service.js";
 
 type DownstreamTransportType = McpxSession["transport"]["type"];
 type DownstreamTransport = StreamableHTTPServerTransport | SSEServerTransport;
@@ -511,11 +512,7 @@ class DownstreamTransportFactory {
       metadata.isProbe,
     );
     const streamableSessionId = sessionIdHint ?? randomUUID();
-    // Replay buffer so a reopened GET stream recovers notifications missed while
-    // disconnected (e.g. tools/list_changed).
-    const eventStore = new InMemoryEventStore(this.logger, {
-      maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
-    });
+    const eventStore = this.buildEventStore();
     const streamableTransport = new StreamableHTTPServerTransport({
       sessionIdGenerator: (): string => streamableSessionId,
       onsessioninitialized: (initializedSessionId): void => {
@@ -556,9 +553,7 @@ class DownstreamTransportFactory {
       this.logger,
       metadata.isProbe,
     );
-    const eventStore = new InMemoryEventStore(this.logger, {
-      maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
-    });
+    const eventStore = this.buildEventStore();
     // onsessioninitialized is intentionally omitted. We register the session
     // manually below after pre-seeding the initialized state.
     const streamableTransport = new StreamableHTTPServerTransport({
@@ -625,6 +620,22 @@ class DownstreamTransportFactory {
       transportSessionId: sseTransport.sessionId,
     });
     return sseTransport;
+  }
+
+  // Replay buffer so a reopened stream recovers messages missed while
+  // disconnected. It retains every outbound message, tool results included,
+  // in the process heap, so it is opt-in via behavior settings.
+  private buildEventStore(): InMemoryEventStore | undefined {
+    if (
+      !this.services.behaviorService.get(
+        BehaviorSetting.ENABLE_STREAMABLE_EVENT_STORE,
+      )
+    ) {
+      return undefined;
+    }
+    return new InMemoryEventStore(this.logger, {
+      maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
+    });
   }
 
   private bindTransportLifecycle({

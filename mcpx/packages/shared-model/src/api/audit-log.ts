@@ -110,6 +110,8 @@ export const auditLogEntrySchema = z.discriminatedUnion("eventType", [
         enableResourceCapability: z.boolean(),
         enablePromptCapability: z.boolean(),
         enableSkillScoping: z.boolean(),
+        enableStreamableEventStore: z.boolean().default(false),
+        enableToolCallCache: z.boolean().default(false),
       }),
       policies: z.object({
         logLevel: auditLogLevelSchema,

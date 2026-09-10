@@ -3,6 +3,9 @@ import z from "zod/v4";
 export const mcpxBehaviorSettingsSchema = z.object({
   featureFlags: z.object({
     enableResourceCapability: z.boolean(),
+    // Defaulted so an older hub that omits them still validates.
+    enableStreamableEventStore: z.boolean().default(false),
+    enableToolCallCache: z.boolean().default(false),
     // add here more FFs as they are migrated
   }),
   // add here more behavior settings that will be migrated to hub in the future.

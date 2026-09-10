@@ -38,9 +38,52 @@ else
     DROP_PRIV=""
 fi
 
+# Node sizes its heap at roughly half the container memory limit, so a 512Mi
+# pod gets a ~256MB heap and dies on V8 OOM (exit 134) with half the pod unused.
+# Size the heap to 75% of the limit instead. Every bail-out logs why.
+heap_node_options() {
+    case "${NODE_OPTIONS:-}" in
+        *max-old-space-size*)
+            log "NODE_OPTIONS already sets a heap size, leaving it as is"
+            return
+            ;;
+    esac
+
+    # Where the limit lives depends on the cgroup setup:
+    #   v2 without a cgroup namespace: /sys/fs/cgroup/<own path>/memory.max
+    #   v2 with a cgroup namespace:    /sys/fs/cgroup/memory.max
+    #   v1:                            /sys/fs/cgroup/memory/memory.limit_in_bytes
+    own_cgroup="$(sed -n 's/^0::\(.*\)$/\1/p' /proc/self/cgroup 2>/dev/null)"
+    limit_bytes=""
+    for limit_file in "/sys/fs/cgroup${own_cgroup}/memory.max" \
+                      /sys/fs/cgroup/memory.max \
+                      /sys/fs/cgroup/memory/memory.limit_in_bytes; do
+        value="$(cat "${limit_file}" 2>/dev/null || true)"
+        case "${value}" in
+            ''|*[!0-9]*) continue ;;    # missing, or "max" meaning unlimited
+        esac
+        limit_bytes="${value}"
+        break
+    done
+
+    if [ -z "${limit_bytes}" ]; then
+        log "no cgroup memory limit found, keeping the default V8 heap"
+        return
+    fi
+    if [ "${limit_bytes}" -gt 68719476736 ]; then
+        log "cgroup memory limit ${limit_bytes} means unlimited, keeping the default V8 heap"
+        return
+    fi
+
+    heap_mb=$(( limit_bytes * 3 / 4 / 1048576 ))
+    log "sizing V8 heap to ${heap_mb}MB (75% of ${limit_bytes} bytes from ${limit_file})"
+    export NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--max-old-space-size=${heap_mb}"
+}
+
 # Replace the current (sub)shell with mcpx-server, running as lunar.
 exec_server() {
     cd "${SERVER_DIR}"
+    heap_node_options
     # shellcheck disable=SC2086 # intentional word splitting of the prefix
     exec ${DROP_PRIV} node dist/index.js
 }

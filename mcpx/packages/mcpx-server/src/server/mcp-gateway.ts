@@ -262,6 +262,7 @@ export async function getServer(
 
       try {
         const cached = getCachedToolCallEntry({
+          services,
           session,
           request,
         });
@@ -616,12 +617,26 @@ function makeUnavailableError(
   }
 }
 
+function isToolCallCacheable(options: {
+  services: Services;
+  session: McpxSession | undefined;
+  request: CallToolRequest;
+}): boolean {
+  const { services, session, request } = options;
+  return (
+    services.behaviorService.get(BehaviorSetting.ENABLE_TOOL_CALL_CACHE) &&
+    session !== undefined &&
+    hasExplicitCorrelationKey(request)
+  );
+}
+
 function getCachedToolCallEntry(options: {
+  services: Services;
   session: McpxSession | undefined;
   request: CallToolRequest;
 }): ToolCallCacheEntry | undefined {
   const { session, request } = options;
-  if (!session || !hasExplicitCorrelationKey(request)) {
+  if (!session || !isToolCallCacheable(options)) {
     return undefined;
   }
 
@@ -652,8 +667,12 @@ async function createAndAwaitToolCallEntry(options: {
     authorization,
     logger,
   } = options;
-  // No session or no correlation key → skip the cache entirely.
-  if (!sessionId || !session || !hasExplicitCorrelationKey(request)) {
+  // Cache disabled, no session, or no correlation key → skip the cache entirely.
+  if (
+    !sessionId ||
+    !session ||
+    !isToolCallCacheable({ services, session, request })
+  ) {
     return executeToolCall({
       services,
       sessionId,

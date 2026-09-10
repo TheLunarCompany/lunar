@@ -162,6 +162,8 @@ export class Services {
           enableResourceCapability: env.ENABLE_RESOURCE_CAPABILITY,
           enablePromptCapability: env.ENABLE_PROMPT_CAPABILITY,
           enableSkillScoping: env.ENABLE_SKILL_SCOPING,
+          enableStreamableEventStore: env.ENABLE_STREAMABLE_EVENT_STORE,
+          enableToolCallCache: env.ENABLE_TOOL_CALL_CACHE,
         },
         policies: {
           logLevel: env.LOG_LEVEL,

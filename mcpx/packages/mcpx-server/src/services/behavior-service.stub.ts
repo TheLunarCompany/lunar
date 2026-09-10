@@ -12,6 +12,8 @@ export const behaviorDefaults: McpxBehaviorFeatureFlags & McpxBehaviorPolicies =
     enableResourceCapability: false,
     enablePromptCapability: false,
     enableSkillScoping: false,
+    enableStreamableEventStore: false,
+    enableToolCallCache: false,
     logLevel: "info",
     stdioServersEnabled: true,
     dockerInDockerEnabled: true,

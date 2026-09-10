@@ -79,8 +79,10 @@ const envSchema = z
     MCPX_PORT: z.coerce.number().default(9523),
     PING_INTERVAL_MS: z.coerce.number().default(5000),
     DOWNSTREAM_KEEPALIVE_INTERVAL_MS: z.coerce.number().default(25000),
+    ENABLE_TOOL_CALL_CACHE: z.stringbool().default(false),
     TOOL_CALL_CACHE_TTL_MS: z.coerce.number().default(5 * 60_000),
     TOOL_CALL_CACHE_MAX_ENTRIES: z.coerce.number().default(1000),
+    ENABLE_STREAMABLE_EVENT_STORE: z.stringbool().default(false),
     STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS: z.coerce
       .number()
       .default(5 * 60_000),
@@ -179,8 +181,10 @@ const NON_SECRET_KEYS = [
   "MCPX_PORT",
   "PING_INTERVAL_MS",
   "DOWNSTREAM_KEEPALIVE_INTERVAL_MS",
+  "ENABLE_TOOL_CALL_CACHE",
   "TOOL_CALL_CACHE_TTL_MS",
   "TOOL_CALL_CACHE_MAX_ENTRIES",
+  "ENABLE_STREAMABLE_EVENT_STORE",
   "STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS",
   "PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS",
   "AGENT_SESSION_TTL_MIN",
