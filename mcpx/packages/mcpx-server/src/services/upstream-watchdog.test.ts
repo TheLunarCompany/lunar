@@ -2,7 +2,11 @@ import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { UpstreamWatchdog } from "./upstream-watchdog.js";
 
 const INTERVAL_MS = 10;
-const config = { pingIntervalMs: INTERVAL_MS, pingTimeoutMs: 500 };
+const config = {
+  pingIntervalMs: INTERVAL_MS,
+  pingTimeoutMs: 500,
+  pingFailureThreshold: 1,
+};
 
 async function waitFor(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -84,6 +88,67 @@ describe("UpstreamWatchdog", () => {
     expect(pingCallCount).toBe(1);
   });
 
+  it("tolerates ping failures below the threshold", async () => {
+    let pingCallCount = 0;
+    let unreachableCalled = false;
+
+    const watchdog = new UpstreamWatchdog(
+      {
+        pingServer: async () => {
+          pingCallCount++;
+          return pingCallCount < 3 ? new Error("slow") : null;
+        },
+        onServerUnreachable: async () => {
+          unreachableCalled = true;
+        },
+      },
+      { ...config, pingFailureThreshold: 3 },
+      noOpLogger,
+    );
+
+    watchdog.watch("server-a");
+    await waitFor(INTERVAL_MS * 6);
+    watchdog.unwatch("server-a");
+
+    expect(pingCallCount).toBeGreaterThanOrEqual(3);
+    expect(unreachableCalled).toBe(false);
+  });
+
+  it("only reports unreachable after consecutive failures reach the threshold", async () => {
+    const outcomes: Array<Error | null> = [
+      new Error("1"),
+      null,
+      new Error("2"),
+      new Error("3"),
+    ];
+    let pingCallCount = 0;
+    const unreachableCalls: Error[] = [];
+
+    const watchdog = new UpstreamWatchdog(
+      {
+        pingServer: async () => {
+          const outcome =
+            pingCallCount < outcomes.length
+              ? outcomes[pingCallCount]!
+              : new Error("late");
+          pingCallCount++;
+          return outcome;
+        },
+        onServerUnreachable: async (_name, error) => {
+          unreachableCalls.push(error);
+        },
+      },
+      { ...config, pingFailureThreshold: 2 },
+      noOpLogger,
+    );
+
+    watchdog.watch("server-a");
+    await waitFor(INTERVAL_MS * 8);
+
+    expect(pingCallCount).toBe(4);
+    expect(unreachableCalls.map((e) => e.message)).toEqual(["3"]);
+  });
+
   it("stops pinging after unwatch", async () => {
     let pingCallCount = 0;
 
@@ -119,7 +184,7 @@ describe("UpstreamWatchdog", () => {
         },
         onServerUnreachable: async () => {},
       },
-      { pingIntervalMs: 0, pingTimeoutMs: 500 },
+      { pingIntervalMs: 0, pingTimeoutMs: 500, pingFailureThreshold: 1 },
       noOpLogger,
     );
 

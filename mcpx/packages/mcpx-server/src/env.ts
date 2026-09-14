@@ -130,7 +130,9 @@ const envSchema = z
     // Max delay between reconnect attempts; caps the jittered backoff.
     HUB_RECONNECT_DELAY_MAX_MS: z.coerce.number().default(10000),
     UPSTREAM_PING_INTERVAL_MS: z.coerce.number().default(30_000),
-    UPSTREAM_PING_TIMEOUT_MS: z.coerce.number().default(3_000),
+    UPSTREAM_PING_TIMEOUT_MS: z.coerce.number().default(10_000),
+    // Consecutive ping misses before a server is declared unreachable.
+    UPSTREAM_PING_FAILURE_THRESHOLD: z.coerce.number().int().min(1).default(3),
     UPSTREAM_RECONNECT_BASE_DELAY_MS: z.coerce.number().default(30_000),
     STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
     // Policy gate: when false, stdio MCP servers are not allowed (UI add is
@@ -223,6 +225,7 @@ const NON_SECRET_KEYS = [
   "HUB_RECONNECT_DELAY_MAX_MS",
   "UPSTREAM_PING_INTERVAL_MS",
   "UPSTREAM_PING_TIMEOUT_MS",
+  "UPSTREAM_PING_FAILURE_THRESHOLD",
   "UPSTREAM_RECONNECT_BASE_DELAY_MS",
   "STDIO_INHERIT_PROCESS_ENV",
   "ENABLE_STDIO_MCP_SERVERS",

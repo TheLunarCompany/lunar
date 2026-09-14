@@ -79,6 +79,7 @@ import { UpstreamWatchdog } from "./upstream-watchdog.js";
 export interface UpstreamHandlerConfig {
   pingIntervalMs: number;
   pingTimeoutMs: number;
+  pingFailureThreshold: number;
   reconnectBaseDelayMs: number;
 }
 

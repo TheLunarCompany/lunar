@@ -223,6 +223,7 @@ export class Services {
       {
         pingIntervalMs: env.UPSTREAM_PING_INTERVAL_MS,
         pingTimeoutMs: env.UPSTREAM_PING_TIMEOUT_MS,
+        pingFailureThreshold: env.UPSTREAM_PING_FAILURE_THRESHOLD,
         reconnectBaseDelayMs: env.UPSTREAM_RECONNECT_BASE_DELAY_MS,
       },
     );

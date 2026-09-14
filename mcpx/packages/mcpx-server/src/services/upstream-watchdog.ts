@@ -4,12 +4,13 @@ import { Logger } from "winston";
 interface UpstreamWatchdogConfig {
   pingIntervalMs: number;
   pingTimeoutMs: number;
+  pingFailureThreshold: number;
 }
 
 /**
  * Liveness monitor for upstream servers. Periodically pings each watched server
- * and calls onServerUnreachable when a ping fails. Reconnect handling is the
- * caller's responsibility.
+ * and calls onServerUnreachable once pingFailureThreshold consecutive pings
+ * fail. Reconnect handling is the caller's responsibility.
  */
 export class UpstreamWatchdog {
   private readonly stoppers = new Map<string, () => void>();
@@ -53,9 +54,10 @@ export class UpstreamWatchdog {
   }
 
   private startPing(name: string): () => void {
-    const { pingIntervalMs } = this.config;
+    const { pingIntervalMs, pingFailureThreshold } = this.config;
 
     let stopped = false;
+    let consecutiveFailures = 0;
     let timeoutId: NodeJS.Timeout | undefined;
 
     // Recursive setTimeout: the next ping is only scheduled after the current
@@ -67,11 +69,24 @@ export class UpstreamWatchdog {
     const runPing = async (): Promise<void> => {
       try {
         const error = await this.target.pingServer(name);
-        if (error !== null) {
-          this.logger.error(
-            "Upstream server ping failed, triggering reconnect",
+        consecutiveFailures = error === null ? 0 : consecutiveFailures + 1;
+        if (error !== null && consecutiveFailures < pingFailureThreshold) {
+          this.logger.warn(
+            "Upstream server ping failed, tolerated until threshold",
             {
               name,
+              consecutiveFailures,
+              pingFailureThreshold,
+              error: loggableError(error),
+            },
+          );
+        }
+        if (error !== null && consecutiveFailures >= pingFailureThreshold) {
+          this.logger.error(
+            "Upstream server ping failed repeatedly, triggering reconnect",
+            {
+              name,
+              consecutiveFailures,
               error: loggableError(error),
             },
           );
