@@ -1,0 +1,21 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Audit Log Service over SSE should persist events to file 1`] = `
+{
+  "args": {
+    "message": "The sound of silence?",
+  },
+  "targetServerName": "echo-service",
+  "toolName": "echo",
+}
+`;
+
+exports[`Audit Log Service over StreamableHTTP should persist events to file 1`] = `
+{
+  "args": {
+    "message": "The sound of silence?",
+  },
+  "targetServerName": "echo-service",
+  "toolName": "echo",
+}
+`;
