@@ -26,6 +26,10 @@ MCPX provides:
 [![MCPX Demo Video](https://img.youtube.com/vi/5I23SiOflaM/0.jpg)](https://www.youtube.com/watch?v=5I23SiOflaM)
 </div>
 
+## Optional TOA governance gate
+
+Before enabling a new upstream MCP server in MCPX, you can optionally verify offline [TOA](https://github.com/Carmel-Labs-Inc/toa) delivery evidence. See [docs/toa-optional-governance-gate.md](docs/toa-optional-governance-gate.md).
+
 ## Tip
 This repository helps you get up and running quickly. For detailed feature guides, architecture, and advanced options, head to the [official docs](https://docs.lunar.dev/next/mcpx/get_started).
 
