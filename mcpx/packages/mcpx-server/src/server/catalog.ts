@@ -1,6 +1,7 @@
 import { CatalogMCPServerList, SecretKeys } from "@mcpx/shared-model";
 import express, { Router } from "express";
 import { Services } from "../services/services.js";
+import { BehaviorSetting } from "../services/behavior-service.js";
 import { Logger } from "winston";
 
 export function buildCatalogRouter(
@@ -14,8 +15,18 @@ export function buildCatalogRouter(
     "/mcp-servers",
     authGuard,
     async (_req: express.Request, res: express.Response) => {
+      /* this initialiation has to be inside to get the current value otherwise it will get stale values */
+      const isStdioEnabled = services.behaviorService.get(
+        BehaviorSetting.ENABLE_STDIO_MCP_SERVERS,
+      );
       const servers = services.catalogManager.getCatalog();
-      return res.status(200).json(servers satisfies CatalogMCPServerList);
+      const allowedServers = isStdioEnabled
+        ? servers
+        : servers.filter((server) => server.config.type !== "stdio");
+
+      return res
+        .status(200)
+        .json(allowedServers satisfies CatalogMCPServerList);
     },
   );
 

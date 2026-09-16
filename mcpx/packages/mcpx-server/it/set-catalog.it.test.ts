@@ -4,9 +4,11 @@ import { resetEnv } from "../src/env.js";
 import {
   getTestHarness,
   stdioCatalogItems,
+  oauthCatalogItem,
   echoTargetServer,
   calculatorTargetServer,
   MCPX_BASE_URL,
+  allCatalogItems,
 } from "./utils.js";
 import { CatalogMCPServerItem, CatalogMCPServerList } from "@mcpx/shared-model";
 
@@ -246,6 +248,61 @@ describe("set-catalog integration test", () => {
         expect(serversAfter).toContain(echoTargetServer.name);
         expect(serversAfter).not.toContain(calculatorTargetServer.name);
       });
+    });
+  });
+
+  describe("filter STDIO servers based on stdioServersEnabled flag", () => {
+    const visibilityHarness = getTestHarness();
+
+    beforeAll(async () => {
+      await visibilityHarness.initialize("StreamableHTTP");
+    });
+
+    afterAll(async () => {
+      await visibilityHarness.shutdown();
+    });
+
+    it("when stdioServersEnabled flag is OFF - hide stdio servers while retaining non-stdio servers", async () => {
+      visibilityHarness.emitCatalog({
+        items: allCatalogItems.map((server) => ({ server })),
+      });
+      const socketId =
+        visibilityHarness.mockHubServer.getConnectedClients()[0]!;
+      await visibilityHarness.mockHubServer.emitBehaviorWithAck(socketId, {
+        mcpxBehaviorSettings: {
+          featureFlags: { enableResourceCapability: false },
+          policies: {
+            stdioServersEnabled: false,
+            dockerInDockerEnabled: false,
+          },
+        },
+        timestamp: 1001,
+      });
+      const response = await getCatalogServers();
+      const catalogRes = await response.json();
+      checkReturnedCatalog(catalogRes, [oauthCatalogItem]);
+    });
+
+    it("when stdioServersEnabled flag is ON -  show stdio servers", async () => {
+      visibilityHarness.emitCatalog({
+        items: allCatalogItems.map((server) => ({ server })),
+      });
+      const socketId =
+        visibilityHarness.mockHubServer.getConnectedClients()[0]!;
+      await visibilityHarness.mockHubServer.emitBehaviorWithAck(socketId, {
+        mcpxBehaviorSettings: {
+          featureFlags: { enableResourceCapability: false },
+          policies: {
+            stdioServersEnabled: true,
+            dockerInDockerEnabled: false,
+          },
+        },
+        timestamp: 1001,
+      });
+
+      const response = await getCatalogServers();
+      const catalogRes = await response.json();
+      checkReturnedCatalog(catalogRes, allCatalogItems);
     });
   });
 });
