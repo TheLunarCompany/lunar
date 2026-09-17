@@ -1,0 +1,60 @@
+# Start with ONLY an invalid app.yaml (no mcp.json).
+# On first load, the UI should show the "Configuration Error" banner with the
+# message "Failed to load MCPX config: data is missing or invalid."
+name: "Init with invalid app.yaml"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+env: {}
+dependentContainers: []
+configMount: config
+cleanConfigMount: false
+verboseOutput: false
+disableTest: false
+expectErrorsOnStartup: true   # default is false; only set true for “bad config” runs
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Verify Configuration Error banner
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const deadline = Date.now() + 15000;
+          const check = () => {
+            const haystack = (document.body.innerText || '').toLowerCase();
+            const hasTitle = haystack.includes('configuration error');
+            const hasMsg = haystack.includes('failed to load mcpx config: data is missing or invalid');
+            const notConnected =
+              haystack.includes('not connected') &&
+              haystack.includes('could not be established');
+
+            if (hasTitle && hasMsg) {
+              return resolve('ok-invalid-app-error');
+            }
+
+            if (notConnected) {
+              return resolve('ok-invalid-app-error:not-connected');
+            }
+
+            if (Date.now() > deadline) {
+              return resolve(
+                JSON.stringify({ hasTitle, hasMsg, sample: haystack.slice(0, 160) })
+              );
+            }
+
+            setTimeout(check, 250);
+          };
+
+          check();
+        })
+    expected:
+      mode: contains
+      value: ok-invalid-app-error
