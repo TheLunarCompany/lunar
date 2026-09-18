@@ -1,4 +1,53 @@
-import { loggableHttpError } from "./errors.js";
+import {
+  LoggableErrorCause,
+  loggableError,
+  loggableHttpError,
+} from "./errors.js";
+
+describe("loggableError", () => {
+  it("reports name, message and stack", () => {
+    const result = loggableError(new RangeError("out of range"));
+    expect(result.errorName).toBe("RangeError");
+    expect(result.errorMessage).toBe("out of range");
+    expect(result.errorStack).toContain("out of range");
+    expect(result).not.toHaveProperty("errorCode");
+    expect(result).not.toHaveProperty("errorCause");
+  });
+
+  it("wraps non-errors", () => {
+    const result = loggableError({ status: 503 });
+    expect(result.errorMessage).toBe('Unknown error ({"status":503})');
+  });
+
+  it("follows the cause chain and picks up system error codes", () => {
+    const socket = Object.assign(new Error("read ECONNRESET"), {
+      code: "ECONNRESET",
+    });
+    const fetchFailed = new TypeError("fetch failed", { cause: socket });
+    const result = loggableError(fetchFailed);
+    expect(result.errorMessage).toBe("fetch failed");
+    expect(result.errorCause).toEqual({
+      errorName: "Error",
+      errorMessage: "read ECONNRESET",
+      errorCode: "ECONNRESET",
+    });
+  });
+
+  it("ignores a non-string code", () => {
+    const error = Object.assign(new Error("boom"), { code: 42 });
+    expect(loggableError(error)).not.toHaveProperty("errorCode");
+  });
+
+  it("stops on a cyclic cause chain", () => {
+    const a = new Error("a");
+    const b = new Error("b", { cause: a });
+    a.cause = b;
+    const result = loggableError(a);
+    const depth = (e: LoggableErrorCause | undefined): number =>
+      e === undefined ? 0 : 1 + depth(e.errorCause);
+    expect(depth(result)).toBe(4);
+  });
+});
 
 describe("loggableHttpError", () => {
   it("emits a bounded bodyPreview and never a raw body key", () => {

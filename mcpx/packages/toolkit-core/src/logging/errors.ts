@@ -4,15 +4,40 @@ export interface LoggableError {
   errorName: string;
   errorMessage: string;
   errorStack?: string;
+  // e.g. ECONNRESET
+  errorCode?: string;
+  // e.g. the socket error behind undici's "fetch failed"; no stack, the top one has it
+  errorCause?: LoggableErrorCause;
 }
+
+export type LoggableErrorCause = Omit<LoggableError, "errorStack">;
+
+// Guards against cyclic cause chains.
+const MAX_CAUSE_DEPTH = 3;
 
 export function loggableError(e: unknown): LoggableError {
   const error = makeError(e);
+  return { ...loggableCause(error, 0), errorStack: error.stack };
+}
+
+function loggableCause(e: unknown, depth: number): LoggableErrorCause {
+  const error = makeError(e);
+  const code = readErrorCode(error);
+  const cause =
+    error.cause !== undefined && depth < MAX_CAUSE_DEPTH
+      ? loggableCause(error.cause, depth + 1)
+      : undefined;
   return {
     errorName: error.name,
     errorMessage: error.message,
-    errorStack: error.stack,
+    ...(code === undefined ? {} : { errorCode: code }),
+    ...(cause === undefined ? {} : { errorCause: cause }),
   };
+}
+
+function readErrorCode(error: Error): string | undefined {
+  if (!("code" in error)) return undefined;
+  return typeof error.code === "string" ? error.code : undefined;
 }
 
 const MAX_BODY_PREVIEW_LENGTH = 512;
