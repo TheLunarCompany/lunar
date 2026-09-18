@@ -131,7 +131,7 @@ const envSchema = z
     HUB_RECONNECT_DELAY_MAX_MS: z.coerce.number().default(10000),
     UPSTREAM_PING_INTERVAL_MS: z.coerce.number().default(30_000),
     UPSTREAM_PING_TIMEOUT_MS: z.coerce.number().default(10_000),
-    // Consecutive ping misses before a server is declared unreachable.
+    // Consecutive failures (pings and tool calls) before a server is declared unreachable.
     UPSTREAM_PING_FAILURE_THRESHOLD: z.coerce.number().int().min(1).default(3),
     UPSTREAM_RECONNECT_BASE_DELAY_MS: z.coerce.number().default(30_000),
     STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),

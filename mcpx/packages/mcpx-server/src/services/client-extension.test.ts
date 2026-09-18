@@ -452,7 +452,7 @@ describe("ExtendedClient.isAlive", () => {
     expect(await extendedClient.isAlive(1000)).toBeNull();
   });
 
-  it("does not call ping after MethodNotFound is detected — subsequent calls are a no-op returning null", async () => {
+  it("does not call ping after MethodNotFound is detected — subsequent calls are a no-op returning no-signal", async () => {
     let pingCallCount = 0;
     const client = mockOriginalClientWithPing(async () => {
       pingCallCount++;
@@ -468,7 +468,7 @@ describe("ExtendedClient.isAlive", () => {
     expect(await extendedClient.isAlive(1000)).toBeNull();
     expect(pingCallCount).toBe(1);
 
-    expect(await extendedClient.isAlive(1000)).toBeNull();
+    expect(await extendedClient.isAlive(1000)).toBe("no-signal");
     expect(pingCallCount).toBe(1); // no second network call
   });
 
@@ -485,7 +485,7 @@ describe("ExtendedClient.isAlive", () => {
     expect(await extendedClient.isAlive(1000)).toBeNull();
   });
 
-  it("does not call ping after invalid response format is detected — subsequent calls are a no-op returning null", async () => {
+  it("does not call ping after invalid response format is detected — subsequent calls are a no-op returning no-signal", async () => {
     let pingCallCount = 0;
     const client = mockOriginalClientWithPing(async () => {
       pingCallCount++;
@@ -501,7 +501,7 @@ describe("ExtendedClient.isAlive", () => {
     expect(await extendedClient.isAlive(1000)).toBeNull();
     expect(pingCallCount).toBe(1);
 
-    expect(await extendedClient.isAlive(1000)).toBeNull();
+    expect(await extendedClient.isAlive(1000)).toBe("no-signal");
     expect(pingCallCount).toBe(1); // no second network call
   });
 

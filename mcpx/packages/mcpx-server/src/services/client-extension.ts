@@ -90,7 +90,7 @@ export interface ExtendedClientI {
   getPrompt(
     params: Parameters<Client["getPrompt"]>[0],
   ): ReturnType<Client["getPrompt"]>;
-  isAlive(timeoutMs: number): Promise<Error | null>;
+  isAlive(timeoutMs: number): Promise<PingOutcome>;
   onToolsListChanged(callback: () => void): () => void;
   onPromptsListChanged(callback: () => void): () => void;
 }
@@ -190,6 +190,10 @@ export function isInvalidResponseFormatError(e: unknown): boolean {
   return e instanceof ZodError;
 }
 
+// null: alive. Error: unreachable. "no-signal": nothing was checked (ping
+// unsupported), so the result says nothing about liveness either way.
+export type PingOutcome = Error | null | "no-signal";
+
 export class ExtendedClient {
   private cachedListToolsResponse?: ListToolsResponse;
   private cachedExtendedTools?: Record<string, ExtendedTool>;
@@ -254,9 +258,9 @@ export class ExtendedClient {
     });
   }
 
-  async isAlive(timeoutMs: number): Promise<Error | null> {
+  async isAlive(timeoutMs: number): Promise<PingOutcome> {
     if (!this.pingSupported) {
-      return null;
+      return "no-signal";
     }
     return this.originalClient
       .ping({ timeout: timeoutMs })
@@ -268,7 +272,7 @@ export class ExtendedClient {
           this.logger.warn(PING_UNSUPPORTED_MESSAGES[unsupported.reason], {
             name: this.serviceName,
           });
-          this.logger.debug("PING error while the server is responsing:", {
+          this.logger.debug("PING error while the server is responding:", {
             name: this.serviceName,
             error: loggableError(e),
           });

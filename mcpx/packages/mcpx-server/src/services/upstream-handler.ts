@@ -42,7 +42,11 @@ import {
 } from "../errors.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
-import { ExtendedClientI, isTransportError } from "./client-extension.js";
+import {
+  ExtendedClientI,
+  isTransportError,
+  PingOutcome,
+} from "./client-extension.js";
 import {
   fetchPromptCapabilities,
   fetchPromptMessages,
@@ -135,6 +139,7 @@ export class UpstreamHandler
   private readonly reconnectQueue = new Map<string, NodeJS.Timeout>();
   private readonly reconnectAttemptsByServer = new Map<string, number>();
   private readonly reconnectBaseDelayMs: number;
+  private shuttingDown = false;
   private previousToolExtensions: ToolExtensions["services"] = {};
   private unsubscribeConfig?: () => void;
 
@@ -155,7 +160,7 @@ export class UpstreamHandler
     this.reconnectBaseDelayMs = config.reconnectBaseDelayMs;
     this._watchdog = new UpstreamWatchdog(
       {
-        pingServer: (name): Promise<Error | null> =>
+        pingServer: (name): Promise<PingOutcome> =>
           this.pingServer(name, config.pingTimeoutMs),
         onServerUnreachable: (name, error): Promise<void> =>
           this.onServerUnreachable(name, error),
@@ -401,6 +406,7 @@ export class UpstreamHandler
 
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down UpstreamHandler...");
+    this.shuttingDown = true;
 
     for (const timeout of this.reconnectQueue.values()) {
       clearTimeout(timeout);
@@ -988,9 +994,9 @@ export class UpstreamHandler
   private async pingServer(
     name: string,
     timeoutMs: number,
-  ): Promise<Error | null> {
+  ): Promise<PingOutcome> {
     const client = this.getConnectedClientByName(name);
-    if (!client) return null;
+    if (!client) return "no-signal";
     return client.extendedClient.isAlive(timeoutMs);
   }
 
@@ -1021,6 +1027,8 @@ export class UpstreamHandler
   }
 
   private enqueueReconnect(name: string): void {
+    // A reconnect already in flight during shutdown must not reschedule itself.
+    if (this.shuttingDown) return;
     this._watchdog.unwatch(name);
     this.cancelReconnect(name);
     const normalizedName = normalizeServerName(name);
@@ -1284,23 +1292,28 @@ export class UpstreamHandler
       throw new TokenExpiredError(client.targetServer.name);
     }
 
+    const { name } = client.targetServer;
     try {
-      return await action(client.extendedClient);
+      const result = await action(client.extendedClient);
+      this._watchdog.reportSuccess(name);
+      return result;
     } catch (e) {
+      // Any answer, even an error one, proves the server is reachable. Only a
+      // transport failure counts against it, and the watchdog threshold decides.
+      if (isTransportError(e) && !isAuthenticationError(e)) {
+        this._watchdog.reportFailure(name, makeError(e));
+      } else {
+        this._watchdog.reportSuccess(name);
+      }
       if (isAuthenticationError(e)) {
         const recovered = await this.handleAuthFailure(client, context);
         if (recovered) {
           return await action(recovered.extendedClient);
         }
         // Recovery failed — if this is an OAuth server, signal the agent to re-auth
-        if (this.isOAuthServer(client.targetServer.name)) {
-          throw new TokenExpiredError(client.targetServer.name);
+        if (this.isOAuthServer(name)) {
+          throw new TokenExpiredError(name);
         }
-      }
-      // Transport failure — server is unreachable. Trigger reconnect in the background
-      // so the agent gets an immediate error response while recovery proceeds.
-      if (isTransportError(e)) {
-        void this.onServerUnreachable(client.targetServer.name, makeError(e));
       }
       throw e;
     }
