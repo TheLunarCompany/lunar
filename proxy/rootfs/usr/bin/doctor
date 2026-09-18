@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -e
+/usr/bin/setenv > /dev/null
+wget --content-on-error -q '' -O - http://localhost:$ENGINE_ADMIN_PORT/doctor 2>&1 | jq
