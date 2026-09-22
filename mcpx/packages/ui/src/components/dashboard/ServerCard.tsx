@@ -121,6 +121,8 @@ export const ServerCard = ({
         "relative flex flex-col gap-4 rounded-xl border bg-white p-4",
         className,
       )}
+      data-testid="dashboard-server-card"
+      data-server-name={server.name}
     >
       <div className="grid grid-cols-6 grid-rows-auto gap-x-2 gap-y-2 text-foreground font-semibold">
         <div className="row-start-1 flex h-10 shrink-0 items-center justify-center justify-self-start">

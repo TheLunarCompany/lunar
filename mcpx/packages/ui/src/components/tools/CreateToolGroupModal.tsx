@@ -75,6 +75,7 @@ export function CreateToolGroupModal({
               )}
               <Input
                 id="groupName"
+                data-testid="tool-group-name"
                 placeholder="Enter tool group name"
                 value={newGroupName}
                 onChange={(e) => onGroupNameChange(e.target.value)}
@@ -130,6 +131,7 @@ export function CreateToolGroupModal({
           </Button>
           <Button
             onClick={onSave}
+            data-testid="tool-group-save"
             disabled={
               !newGroupName.trim() || isCreating || selectedToolsCount === 0
             }

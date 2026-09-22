@@ -169,6 +169,7 @@ export const EnvVarsEditor = ({
           size="sm"
           className="bg-[#5147E4]"
           onClick={handleSave}
+          data-testid="env-vars-save"
           disabled={isSaving || isOnlyFixed}
         >
           {isSaving ? "Saving..." : "Save & Connect"}

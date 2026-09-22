@@ -21,6 +21,10 @@ export type McpRegistryCardProps = {
     catalogItemId?: string,
   ) => void;
   status?: McpServerStatus;
+  // Forwarded straight to McpCard's root div, which already spreads rest props.
+  // See GAT-161 review: no wrapper needed, McpCard is the natural home for this.
+  "data-testid"?: string;
+  "data-server-name"?: string;
 };
 
 export function McpRegistryCard({
@@ -28,6 +32,8 @@ export function McpRegistryCard({
   className,
   status,
   onAddServer,
+  "data-testid": dataTestId,
+  "data-server-name": dataServerName,
 }: McpRegistryCardProps) {
   const { toast } = useToast();
   const serverConfig = server.config[server.name];
@@ -95,5 +101,13 @@ export function McpRegistryCard({
     </Button>
   );
 
-  return <McpCard server={server} action={action} className={className} />;
+  return (
+    <McpCard
+      server={server}
+      action={action}
+      className={className}
+      data-testid={dataTestId}
+      data-server-name={dataServerName}
+    />
+  );
 }

@@ -145,7 +145,11 @@ export const EnvVarRow = ({
   };
 
   return (
-    <div className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]">
+    <div
+      className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]"
+      data-testid="env-var-row"
+      data-env-name={envKey}
+    >
       <div className="flex w-full items-center justify-between gap-2 px-3 py-2 text-(--color-text-primary)">
         <div className="flex items-center gap-2">
           {(isRequired || isFixed) && (

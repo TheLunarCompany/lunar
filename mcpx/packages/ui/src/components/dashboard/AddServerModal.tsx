@@ -764,6 +764,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                         status={getServerStatus(server.name)}
                         className="w-full border-[#E3E6EF] shadow-[0_1px_3px_rgba(16,24,40,0.10)]"
                         onAddServer={handleUseExample}
+                        data-testid="add-server-card"
+                        data-server-name={server.name}
                       />
                     ))}
                   </div>

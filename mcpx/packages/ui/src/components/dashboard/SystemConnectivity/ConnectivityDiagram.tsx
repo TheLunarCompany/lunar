@@ -436,7 +436,11 @@ const ConnectivityDiagramComponent = ({
                       Add Agent
                     </Button>
                   )}
-                  <Button variant="node-card" onClick={handleAddServer}>
+                  <Button
+                    variant="node-card"
+                    onClick={handleAddServer}
+                    data-testid="dashboard-add-server"
+                  >
                     <Plus data-icon="inline-start" />
                     Add Server
                   </Button>
