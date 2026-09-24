@@ -1,0 +1,3 @@
+path_params:
+  - url: httpbin.org/anything/{param1}/{param2}
+  - url: httpbin.org/get/{param1}
