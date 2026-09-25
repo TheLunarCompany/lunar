@@ -21,6 +21,7 @@ import { DEVICE_FLOW_COMPLETE } from "../oauth-providers/device-flow.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
 import { ExtendedClientBuilderI, ExtendedClientI } from "./client-extension.js";
 import { buildClient } from "./target-server-connection-factory.js";
+import { RefreshCoalescer } from "./refresh-coalescing-fetch.js";
 import {
   clientMetadataDocumentSchema,
   PublishedClientMetadata,
@@ -175,6 +176,8 @@ export class OAuthConnectionHandler {
   // In-progress initiation per server, reused by concurrent or repeat callers
   // (e.g. reopening after closing the tab) until the flow completes or is cancelled.
   private flows: Map<string, Promise<InitiateOAuthResult>> = new Map();
+  // Kept across reconnects so every transport of a server shares one coalescer.
+  private refreshCoalescers: Map<string, RefreshCoalescer> = new Map();
 
   constructor(
     private oauthSessionManager: OAuthSessionManagerI,
@@ -304,14 +307,7 @@ export class OAuthConnectionHandler {
     });
 
     // Create transport with existing auth provider
-    const transport =
-      targetServer.type === "sse"
-        ? new SSEClientTransport(new URL(targetServer.url), {
-            authProvider,
-          })
-        : new StreamableHTTPClientTransport(new URL(targetServer.url), {
-            authProvider,
-          });
+    const transport = this.buildTransport(targetServer, authProvider);
 
     // Try to use the existing tokens
     try {
@@ -457,12 +453,7 @@ export class OAuthConnectionHandler {
     await this.settleClientIdentity(authProvider, authMeta);
 
     // Create transport with auth provider - this will trigger OAuth flow
-    const transport =
-      targetServer.type === "sse"
-        ? new SSEClientTransport(new URL(targetServer.url), { authProvider })
-        : new StreamableHTTPClientTransport(new URL(targetServer.url), {
-            authProvider,
-          });
+    const transport = this.buildTransport(targetServer, authProvider);
 
     // Drive the authorization request directly instead of waiting for the
     // transport to receive a 401. Servers that allow unauthenticated connects
@@ -570,28 +561,14 @@ export class OAuthConnectionHandler {
           name: serverName,
         });
 
-        const freshTransport =
-          targetServer.type === "sse"
-            ? new SSEClientTransport(new URL(targetServer.url), {
-                authProvider: provider,
-              })
-            : new StreamableHTTPClientTransport(new URL(targetServer.url), {
-                authProvider: provider,
-              });
+        const freshTransport = this.buildTransport(targetServer, provider);
 
         await client.connect(freshTransport);
       } else {
         // Standard OAuth authorization code flow - exchange code for tokens
         await transport.finishAuth(authorizationCode);
 
-        const postAuthTransport =
-          targetServer.type === "sse"
-            ? new SSEClientTransport(new URL(targetServer.url), {
-                authProvider: provider,
-              })
-            : new StreamableHTTPClientTransport(new URL(targetServer.url), {
-                authProvider: provider,
-              });
+        const postAuthTransport = this.buildTransport(targetServer, provider);
 
         await client.connect(postAuthTransport);
       }
@@ -611,6 +588,21 @@ export class OAuthConnectionHandler {
       // Live connection runs on the post-auth transport, close the pre-auth one.
       this.cleanupPendingFlow(serverName);
     }
+  }
+
+  // Every OAuth transport is built here, so no SDK refresh can bypass the coalescer.
+  private buildTransport(
+    targetServer: RemoteTargetServer,
+    authProvider: McpxOAuthProviderI,
+  ): RemoteTransport {
+    const coalescer =
+      this.refreshCoalescers.get(targetServer.name) ??
+      new RefreshCoalescer(targetServer.name, this.logger);
+    this.refreshCoalescers.set(targetServer.name, coalescer);
+    const options = { authProvider, fetch: coalescer.wrap() };
+    return targetServer.type === "sse"
+      ? new SSEClientTransport(new URL(targetServer.url), options)
+      : new StreamableHTTPClientTransport(new URL(targetServer.url), options);
   }
 
   // Drop the flow entry, clear the provider's pending URL via completeAuthorization(),
@@ -705,6 +697,7 @@ export class OAuthConnectionHandler {
    */
   async deleteOAuthTokensForServer(serverName: string): Promise<void> {
     this.cancelPendingOAuth(serverName);
+    this.refreshCoalescers.delete(serverName);
     await this.oauthSessionManager.deleteOAuthTokensForServer(serverName);
     this.logger.info("Deleted OAuth tokens for server", { serverName });
   }

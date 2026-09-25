@@ -72,6 +72,8 @@ export class MockHubServer {
   private skills: Map<string, SkillWithDraft> = new Map();
   private downstreamSessions: Map<string, PersistedDownstreamSessionDataWire> =
     new Map();
+  // OAuth tokens, verifiers and client info, keyed by "<serverName>:<tokenType>".
+  private oauthTokens: Map<string, unknown> = new Map();
   private dynamicCapabilitiesResponse: DynamicCapabilitiesMatchingAck = {
     status: "success",
     result: { tools: [] },
@@ -850,11 +852,46 @@ export class MockHubServer {
       );
 
       socket.on(
+        WEBAPP_BOUND_EVENTS.SAVE_OAUTH_TOKEN,
+        (
+          envelope: {
+            payload: { serverName: string; tokenType: string; data: unknown };
+          },
+          ack: (res: { success: boolean }) => void,
+        ) => {
+          const { serverName, tokenType, data } = envelope.payload;
+          this.oauthTokens.set(`${serverName}:${tokenType}`, data);
+          ack({ success: true });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.LOAD_OAUTH_TOKEN,
+        (
+          envelope: { payload: { serverName: string; tokenType: string } },
+          ack: (res: { success: boolean; data?: unknown }) => void,
+        ) => {
+          const { serverName, tokenType } = envelope.payload;
+          ack({
+            success: true,
+            data: this.oauthTokens.get(`${serverName}:${tokenType}`),
+          });
+        },
+      );
+
+      socket.on(
         WEBAPP_BOUND_EVENTS.DELETE_OAUTH_TOKENS,
-        (_envelope: unknown, ack: (res: { success: boolean }) => void) => {
+        (
+          envelope: { payload: { serverName: string } },
+          ack: (res: { success: boolean }) => void,
+        ) => {
           this.logger.info("Received delete-oauth-tokens", {
             socketId: socket.id,
           });
+          const prefix = `${envelope.payload.serverName}:`;
+          Array.from(this.oauthTokens.keys())
+            .filter((key) => key.startsWith(prefix))
+            .forEach((key) => this.oauthTokens.delete(key));
           ack({ success: true });
         },
       );
