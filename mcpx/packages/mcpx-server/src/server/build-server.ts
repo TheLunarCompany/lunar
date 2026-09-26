@@ -148,7 +148,13 @@ export async function buildMcpxServer(
   );
 
   // Bind UI websocket
-  bindUIWebsocket(server, services, logger.child({ component: "ws-ui" }));
+  bindUIWebsocket(
+    server,
+    services,
+    logger.child({ component: "ws-ui" }),
+    config,
+    env.AUTH_KEY,
+  );
 
   return server;
 }
