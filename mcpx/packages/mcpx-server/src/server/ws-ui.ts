@@ -12,13 +12,17 @@ import { toClientIdentity } from "../services/identity-service.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { env } from "../env.js";
 import { checkHubConnection } from "./hub-connection-guard.js";
-import { ConfigSnapshot } from "../config.js";
-import { stringify } from "yaml";
+import { ConfigService, ConfigSnapshot } from "../config.js";
+import { parse, stringify } from "yaml";
+import { checkSocketAuth } from "./auth.js";
+import { redactConfigSecrets } from "../services/redact.js";
 
 export function bindUIWebsocket(
   server: HTTPServer,
   services: Services,
   logger: Logger,
+  configService?: ConfigService,
+  apiKey?: string,
 ): void {
   const io = new WSServer(server, {
     path: "/ws-ui",
@@ -28,8 +32,27 @@ export function bindUIWebsocket(
     },
   });
 
-  // Middleware to check hub connection before allowing websocket connections
+  // Middleware to check authentication and hub connection before allowing websocket connections
   io.use((socket, next) => {
+    if (configService) {
+      const authCheck = checkSocketAuth(
+        configService,
+        logger,
+        apiKey,
+        socket.handshake.headers,
+        socket.handshake.auth,
+      );
+
+      if (!authCheck.allowed) {
+        logger.warn("WebSocket connection rejected - authentication failed", {
+          id: socket.id,
+          error: authCheck.error,
+        });
+        const err = new Error(authCheck.error);
+        return next(err);
+      }
+    }
+
     const connectionCheck = checkHubConnection(
       services.hubService,
       env.ENFORCE_HUB_CONNECTION,
@@ -69,8 +92,9 @@ export function bindUIWebsocket(
 
     const appConfigCallback = services.controlPlane.subscribeToAppConfigUpdates(
       (configSnapshot: ConfigSnapshot) => {
-        // Convert ConfigSnapshot to SerializedAppConfig
-        const yaml = stringify(configSnapshot.config);
+        // Convert ConfigSnapshot to SerializedAppConfig with secrets redacted
+        const sanitized = redactConfigSecrets(configSnapshot.config);
+        const yaml = stringify(sanitized);
         socket.emit(UI_ClientBoundMessage.AppConfig, {
           yaml,
           version: configSnapshot.version,
@@ -134,7 +158,16 @@ async function handleWsEvent(
       case UI_ServerBoundMessage.GetAppConfig: {
         logger.debug("Fetching current app config");
         const appConfig = services.controlPlane.getAppConfig();
-        socket.emit(UI_ClientBoundMessage.AppConfig, appConfig);
+        try {
+          const parsed = parse(appConfig.yaml);
+          const sanitized = redactConfigSecrets(parsed);
+          socket.emit(UI_ClientBoundMessage.AppConfig, {
+            ...appConfig,
+            yaml: stringify(sanitized),
+          });
+        } catch {
+          socket.emit(UI_ClientBoundMessage.AppConfig, appConfig);
+        }
         break;
       }
       case UI_ServerBoundMessage.GetSystemState: {
