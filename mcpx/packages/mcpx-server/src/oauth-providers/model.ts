@@ -4,6 +4,11 @@ import { PublishedClientMetadata } from "@mcpx/toolkit-core/oauth";
 // Our custom OAuth provider interface narrows down `state` and adds methods.
 
 export type OAuthProviderType = "dcr" | "static" | "device_flow";
+export type ExtraAuthorizationParams = {
+  access_type?: "offline" | "online";
+  prompt?: "consent";
+};
+
 export type McpxOAuthProviderI = Omit<OAuthClientProvider, "state"> & {
   type: OAuthProviderType;
   serverName: string;
@@ -14,6 +19,8 @@ export type McpxOAuthProviderI = Omit<OAuthClientProvider, "state"> & {
   getUserCode(): string | null; // Only for device flow
   /** Adds a scope discovered from auth server metadata (e.g. "offline_access") */
   setDiscoveredScope(scope: string): void;
+  /** Replaces authorization request defaults selected from server metadata. */
+  setExtraAuthorizationParams(params: ExtraAuthorizationParams): void;
   /** Why CIMD is unavailable (logging). DCR-only; others leave unimplemented. */
   clientMetadataSkipReason?(): string | undefined;
   /** Expected CIMD document URL, if this flow could use one. */

@@ -16,7 +16,10 @@ import {
   SSETargetServer,
   StreamableHttpTargetServer,
 } from "../model/target-servers.js";
-import { McpxOAuthProviderI } from "../oauth-providers/model.js";
+import {
+  ExtraAuthorizationParams,
+  McpxOAuthProviderI,
+} from "../oauth-providers/model.js";
 import { DEVICE_FLOW_COMPLETE } from "../oauth-providers/device-flow.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
 import { ExtendedClientBuilderI, ExtendedClientI } from "./client-extension.js";
@@ -444,8 +447,8 @@ export class OAuthConnectionHandler {
       callbackUrl,
     });
 
-    // Discover auth server metadata and request offline_access if supported,
-    // so servers that support refresh tokens will issue one.
+    // Apply metadata-driven scope and authorization request defaults before the
+    // SDK builds the browser authorization URL.
     const authMeta = await this.applyDiscoveredScope(
       targetServer.url,
       authProvider,
@@ -638,10 +641,10 @@ export class OAuthConnectionHandler {
   }
 
   /**
-   * Discovers the auth server's metadata and calls setDiscoveredScope("offline_access")
-   * on the provider when the server lists it in scopes_supported.
-   * Non-fatal: errors are logged inside discoverOAuthMetadata and the flow
-   * continues without the extra scope.
+   * Applies metadata-driven authorization settings. `offline_access` is the
+   * OpenID Connect scope used by servers that advertise it; Google instead
+   * requires `access_type=offline` and interactive consent.
+   * Discovery remains non-fatal and the flow continues without defaults.
    */
   private async applyDiscoveredScope(
     serverUrl: string,
@@ -655,6 +658,21 @@ export class OAuthConnectionHandler {
         provider: provider.serverName,
       });
     }
+
+    const extraParams: ExtraAuthorizationParams = {};
+    if (authMeta?.issuer === "https://accounts.google.com") {
+      extraParams.access_type = "offline";
+      extraParams.prompt = "consent";
+      this.logger.debug(
+        "Requested access_type=offline and prompt=consent for Google authorization",
+        {
+          serverUrl,
+          provider: provider.serverName,
+        },
+      );
+    }
+    provider.setExtraAuthorizationParams(extraParams);
+
     return authMeta;
   }
 

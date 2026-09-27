@@ -12,7 +12,11 @@ type ClientCredentialsConfig = Extract<
 import { randomUUID } from "node:crypto";
 import { Logger } from "winston";
 import { env } from "../env.js";
-import { McpxOAuthProviderI, OAuthProviderType } from "./model.js";
+import {
+  ExtraAuthorizationParams,
+  McpxOAuthProviderI,
+  OAuthProviderType,
+} from "./model.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
 import { appendToQueryParam } from "@mcpx/toolkit-core/http";
@@ -35,6 +39,7 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
   private discoveredScope: string | null = null;
+  private extraAuthorizationParams: ExtraAuthorizationParams = {};
 
   constructor(options: {
     serverName: string;
@@ -92,6 +97,10 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     this.discoveredScope = scope;
   }
 
+  setExtraAuthorizationParams(params: ExtraAuthorizationParams): void {
+    this.extraAuthorizationParams = { ...params };
+  }
+
   state(): string {
     return this._state;
   }
@@ -135,7 +144,10 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   async saveTokens(tokens: OAuthTokens): Promise<void> {
     try {
       await this.tokenStore.saveTokens(this.serverName, withExpiresAt(tokens));
-      this.logger.debug("Tokens saved", { serverName: this.serverName });
+      this.logger.debug("Tokens saved", {
+        serverName: this.serverName,
+        refreshTokenReceived: Boolean(tokens.refresh_token),
+      });
     } catch (error) {
       this.logger.error("Failed to save tokens", {
         error,
@@ -150,6 +162,18 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   // -> finishAuth() path; silent token reuse fails fast instead of hanging on a
   // user who may never come back.
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
+    const { access_type, prompt } = this.extraAuthorizationParams;
+    if (access_type) {
+      authorizationUrl.searchParams.set("access_type", access_type);
+    }
+    if (prompt) {
+      appendToQueryParam({
+        searchParams: authorizationUrl.searchParams,
+        paramName: "prompt",
+        valueToAppend: prompt,
+        delimiter: " ",
+      });
+    }
     // Force account selection so users can switch accounts via delete+re-add
     appendToQueryParam({
       searchParams: authorizationUrl.searchParams,

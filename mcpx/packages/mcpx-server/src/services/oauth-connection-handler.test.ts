@@ -16,6 +16,8 @@ import {
 } from "./oauth-connection-handler.js";
 import { discoverAuthorizationServerMetadata } from "@modelcontextprotocol/sdk/client/auth.js";
 import { PublishedClientMetadata } from "@mcpx/toolkit-core/oauth";
+import { StaticOAuthProvider } from "../oauth-providers/static.js";
+import { OAuthTokenStoreI } from "./oauth-token-store.js";
 
 type AuthorizationServerMeta = Awaited<
   ReturnType<typeof discoverAuthorizationServerMetadata>
@@ -139,6 +141,8 @@ describe("OAuthConnectionHandler", () => {
         redirectToAuthorization: async (_url: URL) => {},
         saveCodeVerifier: async (_verifier: string) => {},
         codeVerifier: async () => "",
+        setDiscoveredScope: () => {},
+        setExtraAuthorizationParams: () => {},
         ...overrides,
       } as McpxOAuthProviderI;
     }
@@ -709,6 +713,8 @@ describe("OAuthConnectionHandler", () => {
         provider: McpxOAuthProviderI;
         auth: NonNullable<OAuthDiscovery["auth"]>;
         flowTimeoutMs?: number;
+        authMeta?: AuthorizationServerMeta;
+        authDiscoveryError?: Error;
       }): OAuthConnectionHandler {
         return new OAuthConnectionHandler(
           createMockSessionManager(opts.provider),
@@ -718,12 +724,53 @@ describe("OAuthConnectionHandler", () => {
             discoverOAuthProtectedResourceMetadata: async () => {
               throw new Error("404 Not Found");
             },
-            discoverAuthorizationServerMetadata: async () => undefined,
+            discoverAuthorizationServerMetadata: async () => {
+              if (opts.authDiscoveryError) throw opts.authDiscoveryError;
+              return opts.authMeta;
+            },
             auth: opts.auth,
             flowTimeoutMs: opts.flowTimeoutMs,
           },
         );
       }
+
+      function createStaticProvider(): StaticOAuthProvider {
+        const tokenStore: OAuthTokenStoreI = {
+          loadTokens: async () => undefined,
+          saveTokens: async () => {},
+          loadCodeVerifier: async () => undefined,
+          saveCodeVerifier: async () => {},
+          loadClientInfo: async () => undefined,
+          saveClientInfo: async () => {},
+          deleteAll: async () => {},
+        };
+        return new StaticOAuthProvider({
+          serverName: TEST_SERVER_NAME,
+          config: {
+            authMethod: "client_credentials",
+            scopes: ["openid"],
+            tokenAuthMethod: "client_secret_basic",
+            credentials: {
+              clientId: { type: "literal", value: "client-id" },
+              clientSecret: { type: "literal", value: "client-secret" },
+            },
+          },
+          clientId: "client-id",
+          clientSecret: "client-secret",
+          callbackUrl: "http://localhost:9523/oauth/callback",
+          logger: noOpLogger,
+          tokenStore,
+        });
+      }
+
+      const recordAuthorizationUrl: NonNullable<
+        OAuthDiscovery["auth"]
+      > = async (provider) => {
+        await provider.redirectToAuthorization(
+          new URL("https://accounts.google.com/o/oauth2/v2/auth"),
+        );
+        return "REDIRECT";
+      };
 
       it("returns the URL recorded by redirectToAuthorization", async () => {
         const handler = buildHandler({
@@ -734,6 +781,116 @@ describe("OAuthConnectionHandler", () => {
         const result = await handler.initiateOAuth(remoteServer);
         expect(result.authorizationUrl).toBe(TEST_AUTH_URL.toString());
         expect(result.state).toBe(TEST_STATE);
+      });
+
+      it.each([
+        ["without advertised offline_access", undefined],
+        ["with advertised offline_access", ["openid", "offline_access"]],
+      ])(
+        "requests Google offline access and consent %s",
+        async (_case, scopesSupported) => {
+          const provider = createStaticProvider();
+          const handler = buildHandler({
+            provider,
+            auth: recordAuthorizationUrl,
+            authMeta: {
+              issuer: "https://accounts.google.com",
+              authorization_endpoint:
+                "https://accounts.google.com/o/oauth2/v2/auth",
+              response_types_supported: ["code"],
+              ...(scopesSupported ? { scopes_supported: scopesSupported } : {}),
+            } as AuthorizationServerMeta,
+          });
+
+          const result = await handler.initiateOAuth(remoteServer);
+          const authorizationUrl = new URL(result.authorizationUrl);
+
+          expect(authorizationUrl.searchParams.get("access_type")).toBe(
+            "offline",
+          );
+          expect(
+            authorizationUrl.searchParams.get("prompt")?.split(" "),
+          ).toEqual(["consent", "select_account"]);
+          expect(provider.clientMetadata.scope).toBe(
+            scopesSupported ? "openid offline_access" : "openid",
+          );
+        },
+      );
+
+      it("keeps offline_access scope behavior separate for non-Google issuers", async () => {
+        const provider = createStaticProvider();
+        const handler = buildHandler({
+          provider,
+          auth: recordAuthorizationUrl,
+          authMeta: {
+            issuer: "https://auth.example.com",
+            authorization_endpoint: "https://auth.example.com/authorize",
+            response_types_supported: ["code"],
+            scopes_supported: ["openid", "offline_access"],
+          } as AuthorizationServerMeta,
+        });
+
+        const result = await handler.initiateOAuth(remoteServer);
+        const authorizationUrl = new URL(result.authorizationUrl);
+
+        expect(authorizationUrl.searchParams.get("access_type")).toBeNull();
+        expect(authorizationUrl.searchParams.get("prompt")).toBe(
+          "select_account",
+        );
+        expect(provider.clientMetadata.scope).toBe("openid offline_access");
+      });
+
+      it.each([
+        ["missing metadata", undefined],
+        ["failed discovery", new Error("discovery unavailable")],
+      ])("adds no Google defaults for %s", async (_case, discoveryError) => {
+        const provider = createStaticProvider();
+        const handler = buildHandler({
+          provider,
+          auth: recordAuthorizationUrl,
+          authDiscoveryError: discoveryError,
+        });
+
+        const result = await handler.initiateOAuth(remoteServer);
+        const authorizationUrl = new URL(result.authorizationUrl);
+
+        expect(authorizationUrl.searchParams.get("access_type")).toBeNull();
+        expect(authorizationUrl.searchParams.get("prompt")).toBe(
+          "select_account",
+        );
+      });
+
+      it("clears Google defaults when a reused provider discovers a different issuer", async () => {
+        const provider = createStaticProvider();
+        const googleHandler = buildHandler({
+          provider,
+          auth: recordAuthorizationUrl,
+          authMeta: {
+            issuer: "https://accounts.google.com",
+            authorization_endpoint:
+              "https://accounts.google.com/o/oauth2/v2/auth",
+            response_types_supported: ["code"],
+          } as AuthorizationServerMeta,
+        });
+        await googleHandler.initiateOAuth(remoteServer);
+
+        const otherHandler = buildHandler({
+          provider,
+          auth: recordAuthorizationUrl,
+          authMeta: {
+            issuer: "https://auth.example.com",
+            authorization_endpoint: "https://auth.example.com/authorize",
+            response_types_supported: ["code"],
+          } as AuthorizationServerMeta,
+        });
+
+        const result = await otherHandler.initiateOAuth(remoteServer);
+        const authorizationUrl = new URL(result.authorizationUrl);
+
+        expect(authorizationUrl.searchParams.get("access_type")).toBeNull();
+        expect(authorizationUrl.searchParams.get("prompt")).toBe(
+          "select_account",
+        );
       });
 
       it("surfaces the auth() failure as the error message", async () => {
@@ -924,6 +1081,7 @@ describe("settleClientIdentity", () => {
       getAuthorizationUrl: () => new URL("https://as.example/authorize"),
       getUserCode: () => null,
       setDiscoveredScope: () => {},
+      setExtraAuthorizationParams: () => {},
       redirectUrl: "https://mcpx.example/auth/callback",
       clientMetadata: { redirect_uris: ["https://mcpx.example/auth/callback"] },
       clientInformation: async () => undefined,

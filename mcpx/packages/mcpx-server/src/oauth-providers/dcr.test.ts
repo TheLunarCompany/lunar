@@ -23,15 +23,19 @@ const stubTokenStore: OAuthTokenStoreI = {
   deleteAll: async () => {},
 };
 
+function makeProvider(): DcrOAuthProvider {
+  return new DcrOAuthProvider({
+    serverName: "notion",
+    logger: noOpLogger,
+    tokenStore: stubTokenStore,
+  });
+}
+
 describe("DcrOAuthProvider#redirectToAuthorization", () => {
   // Regression: it used to block on a promise resolved only when the user
   // completed the redirect, which hung silent token-reuse during setup-apply.
   it("resolves immediately and records the URL (does not block on the user)", async () => {
-    const provider = new DcrOAuthProvider({
-      serverName: "notion",
-      logger: noOpLogger,
-      tokenStore: stubTokenStore,
-    });
+    const provider = makeProvider();
 
     const outcome = await Promise.race([
       provider
@@ -44,6 +48,43 @@ describe("DcrOAuthProvider#redirectToAuthorization", () => {
 
     expect(outcome).toBe("resolved");
     expect(provider.getAuthorizationUrl()?.host).toBe("mcp.notion.com");
+  });
+
+  it("adds Google offline access and consent to the authorization URL", async () => {
+    const provider = makeProvider();
+    provider.setExtraAuthorizationParams({
+      access_type: "offline",
+      prompt: "consent",
+    });
+    const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+
+    await provider.redirectToAuthorization(authUrl);
+
+    expect(authUrl.searchParams.get("access_type")).toBe("offline");
+    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual([
+      "consent",
+      "select_account",
+    ]);
+  });
+
+  it("overwrites access_type and preserves existing prompts without duplicating consent", async () => {
+    const provider = makeProvider();
+    provider.setExtraAuthorizationParams({
+      access_type: "offline",
+      prompt: "consent",
+    });
+    const authUrl = new URL(
+      "https://accounts.google.com/o/oauth2/v2/auth?access_type=online&prompt=login%20consent",
+    );
+
+    await provider.redirectToAuthorization(authUrl);
+
+    expect(authUrl.searchParams.getAll("access_type")).toEqual(["offline"]);
+    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual([
+      "login",
+      "consent",
+      "select_account",
+    ]);
   });
 });
 

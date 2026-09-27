@@ -10,7 +10,11 @@ import { randomUUID } from "node:crypto";
 import { Logger } from "winston";
 import z from "zod/v4";
 import { env } from "../env.js";
-import { McpxOAuthProviderI, OAuthProviderType } from "./model.js";
+import {
+  ExtraAuthorizationParams,
+  McpxOAuthProviderI,
+  OAuthProviderType,
+} from "./model.js";
 import {
   OAuthTokenStoreI,
   StoredTokens,
@@ -130,6 +134,9 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   setDiscoveredScope(scope: string): void {
     this.discoveredScope = scope;
   }
+
+  // Browser authorization parameters do not apply to RFC 8628 device flow.
+  setExtraAuthorizationParams(_params: ExtraAuthorizationParams): void {}
 
   state(): string {
     return this._state;
