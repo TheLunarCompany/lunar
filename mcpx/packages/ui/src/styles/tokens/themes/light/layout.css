@@ -1,0 +1,5 @@
+/* Light Theme - Layout Tokens */
+:root {
+  /* Content dimensions */
+  --content-column-width: 480px;
+}

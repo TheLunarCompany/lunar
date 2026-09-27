@@ -1,0 +1,12 @@
+/* Light Theme - Data Series Tokens */
+:root {
+  /* Data series colors */
+  --data-series-series-1: #30c5cf;
+  --data-series-series-2: #0065e5;
+  --data-series-series-3: #414cb4;
+  --data-series-series-4: #5b19e6;
+  --data-series-series-5: #9a3aa1;
+  --data-series-series-6: #d8188b;
+  --data-series-series-7: #ff280f;
+  --data-series-series-8: #ff9200;
+}
