@@ -1,0 +1,70 @@
+name: SearchRateLimiter
+
+filter:
+    url: "*"
+
+processors:
+  LimiterBoxUser:
+    processor: Limiter
+    parameters:
+      - key: quota_id
+        value: LimiterMinuteBoxUser
+  GenerateResponseTooManyRequests:
+    processor: GenerateResponse
+    parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: Too many requests
+      - key: Content-Type
+        value: text/plain
+
+flow:
+  request:
+    # Start by applying rate limiting to the requests going to box.com/*
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: LimiterBoxUser
+    # If the rate limit is exceeded, respond with a 429 status
+    - from:
+        processor:
+          name: LimiterBoxUser
+          condition: above_limit        
+      to:
+        processor: 
+          name: GenerateResponseTooManyRequests
+
+    # If the request is within the rate limit, continue processing
+    - from:
+        processor:
+          name: LimiterBoxUser
+          condition: below_limit
+      to:
+        stream:
+          name: globalStream
+          at: end    
+
+  response:
+    # Respond with 429 status if any processor condition failed
+    - from:
+        processor:
+          name: GenerateResponseTooManyRequests
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    # Complete the flow if the request is processed successfully
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        stream:
+          name: globalStream
+          at: end
+
