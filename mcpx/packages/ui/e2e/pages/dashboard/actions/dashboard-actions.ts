@@ -316,9 +316,7 @@ export class DashboardActions {
     await expect(serverNameElement).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const serverCard = serverNameElement
-      .locator(
-        'xpath=ancestor::div[contains(@class, "border") and contains(@class, "bg-white")]',
-      )
+      .locator('xpath=ancestor::*[@data-slot="card"]')
       .first();
 
     await expect(serverCard).toBeVisible({ timeout: TIMEOUT_5_SEC });

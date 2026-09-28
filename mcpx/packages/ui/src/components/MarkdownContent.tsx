@@ -81,7 +81,7 @@ const defaultComponents: Components = {
   ),
   blockquote: ({ node: _node, ...props }) => (
     <blockquote
-      className="border-l-2 border-gray-300 pl-3 my-2 text-sm text-muted-foreground"
+      className="my-2 border-l-2 border-mcpx-border pl-3 text-sm text-muted-foreground"
       {...props}
     />
   ),

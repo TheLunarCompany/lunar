@@ -118,6 +118,6 @@ The new Card component has `gap-6 py-6` by default. Fixed on MetricsPanel with `
 
 ## Known issues not fixed here
 
-- ~~Font hosting~~ — resolved. `vite.config.ts` now uses `searchForWorkspaceRoot` so Vite's dev server can access `@fontsource-variable/inter` regardless of where npm hoists it.
+- ~~Typography~~ - resolved. The UI uses Exosphere's Poppins, Noto Sans, and Fira Mono font variables and the fonts loaded by Exosphere's stylesheet.
 - React 18 ref warnings: new shadcn vega components use React 19 function-component style (ref as prop). React 18 logs "Function components cannot be given refs" warnings. Harmless — goes away on React 19 upgrade.
 - ~37 remaining old CSS variable references (semantic colors: success, warning, danger, attention) that have no direct shadcn equivalent.

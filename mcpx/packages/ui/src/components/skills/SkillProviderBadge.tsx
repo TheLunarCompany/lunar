@@ -35,8 +35,8 @@ export function SkillProviderBadge({
       className={cn(
         "flex h-auto min-w-0 items-center gap-1.5 rounded border px-2 py-1.5 text-[12px] font-normal leading-none",
         isMissingOrInactive
-          ? "border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] text-[var(--colors-warning-700)]"
-          : "border-[var(--colors-gray-100)] bg-[var(--structure-color-bg-app)] text-[var(--text-colours-color-text-primary)]",
+          ? "border-mcpx-warning-strong bg-mcpx-warning-bg text-mcpx-warning-strong"
+          : "border-mcpx-border-subtle bg-mcpx-surface text-mcpx-text",
         className,
       )}
     >
@@ -61,7 +61,7 @@ export function SkillMoreProviders({
     <Badge
       variant="outline"
       className={cn(
-        "h-auto min-w-0 rounded border-[var(--colors-gray-100)] bg-[var(--structure-color-bg-app)] px-2 py-1.5 text-[12px] font-normal text-[var(--text-colours-color-text-secondary)]",
+        "h-auto min-w-0 rounded border-mcpx-border-subtle bg-mcpx-surface px-2 py-1.5 text-[12px] font-normal text-mcpx-text-secondary",
         className,
       )}
     >

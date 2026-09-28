@@ -2,7 +2,7 @@ import React from "react";
 
 export const WindsurfInstructions: React.FC = () => {
   return (
-    <div className="space-y-3 text-sm text-[#1E1B4B]">
+    <div className="space-y-3 text-sm text-mcpx-text">
       <div>
         <p className="font-semibold mb-4">Connect with Windsurf</p>
         <ol className="list-decimal list-inside space-y-1">

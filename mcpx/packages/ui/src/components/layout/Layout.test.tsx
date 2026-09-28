@@ -96,6 +96,12 @@ describe("Layout", () => {
     expect(screen.queryByText("Page content")).not.toBeInTheDocument();
   });
 
+  it("uses the semantic page surface for the shell", () => {
+    renderLayout({ type: "ready" });
+
+    expect(screen.getByTestId("layout-shell")).toHaveClass("bg-mcpx-page");
+  });
+
   it("shows initializing while a ready instance waits for the socket", () => {
     harness.socket.isConnected = false;
     harness.socket.isPending = false;

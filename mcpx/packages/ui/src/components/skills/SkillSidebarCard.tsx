@@ -11,7 +11,7 @@ export function SkillSidebarCardRoot({
   return (
     <aside
       className={cn(
-        "rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-4",
+        "rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-4",
         className,
       )}
       {...props}
@@ -38,7 +38,7 @@ export function SkillSidebarCardTitle({
   return (
     <h2
       className={cn(
-        "text-xs font-semibold uppercase tracking-normal text-[var(--colors-gray-600)]",
+        "text-xs font-semibold uppercase tracking-normal text-mcpx-text-secondary",
         className,
       )}
       {...props}
@@ -74,11 +74,9 @@ export function SkillSidebarCardRow({
     <div
       data-variant={variant}
       className={cn(
-        "flex items-center gap-2 rounded-md border border-transparent p-1 text-sm text-[var(--text-colours-color-text-primary)]",
-        variant === "active" &&
-          "border-[var(--colors-purple-300)] bg-[var(--colors-purple-50)]",
-        variant === "muted" &&
-          "text-[var(--text-colours-color-text-secondary)] opacity-60",
+        "flex items-center gap-2 rounded-md border border-transparent p-1 text-sm text-mcpx-text",
+        variant === "active" && "border-mcpx-selected bg-mcpx-selected-weak",
+        variant === "muted" && "text-mcpx-text-secondary opacity-60",
         className,
       )}
       {...props}
@@ -126,7 +124,7 @@ export function SkillSidebarCardActionButton({
       type="button"
       variant="outline"
       className={cn(
-        "mt-3 w-full rounded-lg border-[var(--colors-purple-300)] text-[var(--colors-purple-700)] hover:bg-[var(--colors-purple-50)]",
+        "mt-3 w-full rounded-lg border-mcpx-selected text-mcpx-selected hover:bg-mcpx-selected-weak",
         className,
       )}
       {...props}

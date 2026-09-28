@@ -43,38 +43,38 @@ export const getAgentType = (
 export const getStatusTextColor = (status: string) => {
   switch (status) {
     case "connecting":
-      return "text-[#6B7280]";
+      return "text-mcpx-text-secondary";
     case "connected_running":
     case "connected_stopped":
-      return "text-(--color-fg-success)";
+      return "text-mcpx-success-text";
     case "connected_inactive":
-      return "text-[#4120A4]";
+      return "text-mcpx-selected";
     case "pending_auth":
     case "pending_input":
-      return "text-[#FF9500]";
+      return "text-mcpx-warning-strong";
     case "connection_failed":
       return "text-destructive";
     default:
-      return "text-gray-600";
+      return "text-mcpx-text-secondary";
   }
 };
 
 export const getStatusBackgroundColor = (status: string) => {
   switch (status) {
     case "connecting":
-      return "bg-[#F3F4F6]";
+      return "bg-mcpx-surface-tertiary";
     case "connected_running":
     case "connected_stopped":
-      return "bg-(--color-bg-success)";
+      return "bg-mcpx-success-bg";
     case "connected_inactive":
-      return "bg-[#EBE6FB]";
+      return "bg-mcpx-selected-weak";
     case "pending_auth":
     case "pending_input":
-      return "bg-[#FFF5E6]";
+      return "bg-mcpx-warning-bg";
     case "connection_failed":
-      return "bg-(--color-bg-danger)";
+      return "bg-mcpx-danger-bg";
     default:
-      return "bg-gray-100";
+      return "bg-mcpx-surface-tertiary";
   }
 };
 
@@ -102,38 +102,38 @@ export const getStatusText = (status: string) => {
 export const getServerStatusTextColor = (status: string) => {
   switch (status) {
     case "connecting":
-      return "text-[#6B7280]";
+      return "text-mcpx-text-secondary";
     case "connected":
-      return "text-[#00B271]";
+      return "text-mcpx-success-text";
     case "pending-auth":
-      return "text-[#FF9500]";
+      return "text-mcpx-warning-strong";
     case "pending-input":
-      return "text-[#FF9500]";
+      return "text-mcpx-warning-strong";
     case "connection-failed":
-      return "text-[#AD0149]";
+      return "text-mcpx-danger-text";
     case "inactive":
-      return "text-[#4120A4]";
+      return "text-mcpx-selected";
     default:
-      return "text-gray-600";
+      return "text-mcpx-text-secondary";
   }
 };
 
 export const getServerStatusBackgroundColor = (status: string) => {
   switch (status) {
     case "connecting":
-      return "bg-[#F3F4F6]";
+      return "bg-mcpx-surface-tertiary";
     case "connected":
-      return "bg-[#D7F3E8]";
+      return "bg-mcpx-success-bg";
     case "pending-auth":
-      return "bg-[#FFF5E6]";
+      return "bg-mcpx-warning-bg";
     case "pending-input":
-      return "bg-[#FFF5E6]";
+      return "bg-mcpx-warning-bg";
     case "connection-failed":
-      return "bg-[#FBDAE3]";
+      return "bg-mcpx-danger-bg";
     case "inactive":
-      return "bg-[#EBE6FB]";
+      return "bg-mcpx-selected-weak";
     default:
-      return "bg-gray-100";
+      return "bg-mcpx-surface-tertiary";
   }
 };
 

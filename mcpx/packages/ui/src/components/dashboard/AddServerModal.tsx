@@ -672,7 +672,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     <Dialog open onOpenChange={handleDialogOpenChange}>
       <DialogContent
         aria-describedby={undefined}
-        className="top-[20px] bottom-[20px] left-1/2 -translate-x-1/2 translate-y-0 w-full sm:max-w-[1560px] max-h-none h-[calc(100vh-40px)] flex flex-col min-h-0 overflow-hidden bg-white border border-border rounded-lg px-6 py-5"
+        className="flex h-[760px] max-h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-mcpx-surface px-6 py-5 sm:max-w-5xl"
       >
         {errorMessage && (
           <ErrorBanner
@@ -690,7 +690,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
           <DialogTitle>Add Server</DialogTitle>
         </VisuallyHidden>
         <div className="text-2xl font-semibold shrink-0">Add Server</div>
-        <hr className="shrink-0" />
+        <hr className="-mx-6 shrink-0 border-mcpx-border-subtle" />
         <div className="flex flex-col min-h-0 flex-1 overflow-y-auto">
           <div className="min-h-0 flex flex-col flex-1">
             <CustomTabs
@@ -732,7 +732,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                         onChange={(event) => setSearch(event.target.value)}
                         placeholder="Search..."
                         wrapperClassName="w-[320px] max-w-full ml-[3px]"
-                        className="h-9 rounded-lg border-[#D8DCED] bg-white"
+                        className="h-9 border-mcpx-border"
                       />
                       <Sort
                         title="Sort"
@@ -762,7 +762,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                         key={server.name}
                         server={server}
                         status={getServerStatus(server.name)}
-                        className="w-full border-[#E3E6EF] shadow-[0_1px_3px_rgba(16,24,40,0.10)]"
+                        className="w-full border-mcpx-border-subtle shadow-[var(--mcpx-shadow-weak)]"
                         onAddServer={handleUseExample}
                         data-testid="add-server-card"
                         data-server-name={server.name}

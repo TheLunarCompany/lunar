@@ -228,6 +228,10 @@ describe("McpxSidebar", () => {
       '[data-slot="sidebar-menu-button"][data-active="true"]',
     );
     expect(activeButton?.textContent).toContain("Dashboard");
+    expect(activeButton).toHaveClass(
+      "data-[active=true]:bg-[var(--mcpx-sidebar-active)]!",
+      "data-[active=true]:text-mcpx-tooltip-text!",
+    );
 
     const disabledButton = Array.from(
       container.querySelectorAll('[data-slot="sidebar-menu-button"]'),

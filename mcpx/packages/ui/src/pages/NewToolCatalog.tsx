@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { ToolGroupSheet } from "@/components/tools/ToolGroupSheet";
 import { CustomToolDialog } from "@/components/tools/CustomToolDialog";
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
@@ -311,10 +311,10 @@ export default function NewToolCatalog({
     <>
       {/* Full-page loader overlay for tool group operations */}
       {isCreating && toolGroupOperation && (
-        <div className="fixed inset-0 bg-white/80 backdrop-blur-xs z-9999 flex items-center justify-center">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-[var(--mcpx-scrim)]">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-            <p className="text-lg font-medium text-gray-700">
+            <Loader2 className="w-12 h-12 animate-spin text-mcpx-info-text" />
+            <p className="text-lg font-medium text-mcpx-text-secondary">
               {toolGroupOperation === "creating" && "Creating tool group..."}
               {toolGroupOperation === "editing" && "Updating tool group..."}
               {toolGroupOperation === "deleting" && "Deleting tool group..."}
@@ -332,32 +332,32 @@ export default function NewToolCatalog({
 
       <div
         data-testid="new-tool-catalog-container"
-        className={`${styles.container} bg-gray-10 p-6`}
+        className={`${styles.container} bg-mcpx-surface p-6`}
       >
         <div className={styles.content}>
           <div className="mb-6">
             <div className="flex items-center justify-between">
-              <p
-                className="font-semibold"
-                style={{ color: "#1E1B4B", fontSize: "20px" }}
-              >
-                Tools
-              </p>
+              <h1 className="mcpx-page-title">Tools</h1>
               <div className="flex gap-3">
                 {!isEditMode && !showCreateModal && (
                   <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
                     onClick={handleClickAddCustomTool}
-                    className={`border-[#5147E4] border-2 ${isAddCustomToolMode ? "text-white bg-[#5147E4] hover:bg-[#5147E4]/90" : "text-[#5147E4] hover:bg-[#5147E4] hover:text-white bg-transparent"} px-4 py-2 rounded-lg font-medium transition-colors text-sm`}
                   >
+                    {!isAddCustomToolMode && <Plus />}
                     {isAddCustomToolMode ? "Cancel" : "Add Custom Tool"}
                   </Button>
                 )}
                 {!isAddCustomToolMode && (
                   <Button
+                    type="button"
+                    size="lg"
                     onClick={handleClickCreateToolGroup}
                     disabled={isAddCustomToolMode}
-                    className={`${styles.editModeButton}`}
                   >
+                    {!isEditMode && <Plus />}
                     {isEditMode ? "Cancel" : "Create Tool Group"}
                   </Button>
                 )}
@@ -594,46 +594,40 @@ export default function NewToolCatalog({
 const styles = {
   // Container styles
   container: " w-full relative",
-  content: "container mx-auto ",
+  content: "w-full",
 
   // Header styles
   header: "flex justify-between items-start gap-12 whitespace-nowrap mb-0",
-  title: "text-3xl font-bold tracking-tight",
-  titleSection: "flex flex-col gap-2",
   filterInfo: "flex flex-wrap items-center gap-2 text-sm mb-2",
   filterBadge:
-    "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
-  searchTerm: "bg-gray-200 text-gray-700 px-2 py-1 rounded",
+    "bg-mcpx-selected-weak text-mcpx-selected px-2 py-1 rounded-full font-medium",
+  searchTerm:
+    "bg-mcpx-surface-disabled text-mcpx-text-secondary px-2 py-1 rounded",
   customToolsFilter:
-    "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
-  editModeButton:
-    " bg-[#5147E4] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
-  editModeButtonActive: "bg-[#4F33CC] text-white hover:bg-[#4F33CC]",
-  editModeButtonInactive: "bg-gray-200 text-gray-800 hover:bg-gray-300",
-
+    "bg-mcpx-selected-weak text-mcpx-selected px-2 py-1 rounded-full font-medium",
   // Empty state styles
   emptyState: "text-center py-12",
-  emptyStateTitle: "text-gray-500 text-lg",
-  emptyStateSubtitle: "text-gray-400 text-sm mt-2",
+  emptyStateTitle: "text-mcpx-text-tertiary text-lg",
+  emptyStateSubtitle: "text-mcpx-text-disabled text-sm mt-2",
 
   // Accordion styles
   accordion: "space-y-4",
-  accordionItem: "border-b border-gray-200",
+  accordionItem: "border-b border-mcpx-border-subtle",
   accordionTrigger: "hover:no-underline",
   accordionHeader: "flex items-center justify-between gap-3 flex-1",
   providerInfo: "flex items-center gap-3 flex-1",
   providerIcon: "text-xl",
-  providerName: "font-semibold text-gray-800",
+  providerName: "font-semibold text-mcpx-text",
 
   // Status badge styles
   statusBadgeConnected:
-    "bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium ml-8 mr-2",
+    "bg-mcpx-success-bg text-mcpx-success-text text-xs px-2 py-1 rounded-full font-medium ml-8 mr-2",
   statusBadgePending:
-    "bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium ml-12 mr-2",
+    "bg-mcpx-warning-bg text-mcpx-warning-strong text-xs px-2 py-1 rounded-full font-medium ml-12 mr-2",
   statusBadgeFailed:
-    "bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium ml-8 mr-2",
+    "bg-mcpx-danger-bg text-mcpx-danger-text text-xs px-2 py-1 rounded-full font-medium ml-8 mr-2",
   statusBadgeUnauthorized:
-    "bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1 ml-8 mr-2",
+    "bg-mcpx-page0 text-mcpx-text-secondary text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1 ml-8 mr-2",
   statusBadgeIcon: "w-3 h-3",
 
   // Tools container styles
@@ -641,34 +635,35 @@ const styles = {
     "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-2",
   toolWrapper: "w-full",
   scrollIndicator: "hidden",
-  scrollIcon: "w-5 h-5 text-gray-400",
-  noToolsMessage: "col-span-full text-center py-8 text-gray-500 text-sm",
+  scrollIcon: "w-5 h-5 text-mcpx-text-disabled",
+  noToolsMessage:
+    "col-span-full text-center py-8 text-mcpx-text-tertiary text-sm",
 
   // Selection panel styles
   selectionPanel:
-    "fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50",
+    "fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-mcpx-surface border border-mcpx-border-subtle rounded-lg shadow-[var(--mcpx-shadow-moderate)] p-4 z-50",
   selectionPanelContent: "flex items-center gap-6",
   selectionInfo: "flex items-center",
   toolCounter: "flex items-center gap-2",
   toolCounterIcon:
-    "bg-[#4F33CC] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium",
-  toolCounterText: "text-sm text-gray-700 font-medium",
+    "bg-mcpx-selected text-mcpx-tooltip-text w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium",
+  toolCounterText: "text-sm text-mcpx-text-secondary font-medium",
   selectionActions: "flex items-center gap-2",
   createButton:
-    "bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-[#4F33CC]",
+    "bg-mcpx-selected text-mcpx-tooltip-text px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-mcpx-selected",
   removeButton:
-    "border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-gray-50",
+    "border-mcpx-border text-mcpx-text-secondary px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-mcpx-surface-subtle",
 
   // Modal and form styles
   modalContent: "max-w-md",
   modalSpace: "space-y-4 py-4",
   modalLabel: "text-sm font-medium",
   modalInput:
-    "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500",
-  modalCharacterCount: "text-xs text-gray-500",
+    "w-full px-3 py-2 border border-mcpx-border rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-mcpx-focus",
+  modalCharacterCount: "text-xs text-mcpx-text-tertiary",
   modalFooter: "flex justify-end gap-2",
   modalCancelButton:
-    "px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors",
+    "px-4 py-2 border border-mcpx-border rounded-md text-sm font-medium text-mcpx-text-secondary bg-mcpx-surface hover:bg-mcpx-surface-subtle transition-colors",
   modalCreateButton:
-    "px-4 py-2 bg-[#4F33CC] text-white rounded-md text-sm font-medium hover:bg-[#4F33CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+    "px-4 py-2 bg-mcpx-selected text-mcpx-tooltip-text rounded-md text-sm font-medium hover:bg-mcpx-selected transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
 };

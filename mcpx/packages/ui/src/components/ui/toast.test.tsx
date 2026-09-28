@@ -118,3 +118,15 @@ describe("Toast copy button", () => {
     expect(container.querySelector("[toast-close]")).toBeTruthy();
   });
 });
+
+describe("Toast semantic colors", () => {
+  it("uses danger roles for destructive notifications", () => {
+    removeClipboard();
+    renderToast("destructive");
+    const toast = screen.getByText(LONG_ERROR).closest("[data-state]");
+
+    expect(toast).toHaveClass("border-mcpx-danger-text");
+    expect(toast).toHaveClass("bg-mcpx-danger-bg");
+    expect(toast).toHaveClass("text-mcpx-danger-text");
+  });
+});

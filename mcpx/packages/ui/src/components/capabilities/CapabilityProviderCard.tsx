@@ -77,11 +77,11 @@ function HeaderCapabilityCount({
   return (
     <span
       aria-label={`${label}: ${value}`}
-      className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-colours-color-text-primary)]"
+      className="inline-flex items-center gap-1 text-xs font-semibold text-mcpx-text"
     >
       <span
         aria-hidden="true"
-        className="grid size-4 place-items-center text-[var(--text-colours-color-text-secondary)] [--fill-0:currentColor] [&_svg]:size-4"
+        className="grid size-4 place-items-center text-mcpx-text-secondary [--fill-0:currentColor] [&_svg]:size-4"
       >
         {icon}
       </span>
@@ -139,7 +139,7 @@ export function CapabilityProviderCard({
   ) => (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4 p-4">
       {items.length === 0 ? (
-        <div className="col-span-full py-8 text-center text-sm text-[var(--colors-gray-500)]">
+        <div className="col-span-full py-8 text-center text-sm text-[var(--mcpx-text-tertiary)]">
           {emptyMessage}
         </div>
       ) : (
@@ -150,7 +150,7 @@ export function CapabilityProviderCard({
 
   return (
     <div
-      className="rounded-lg border border-[var(--colors-gray-200)] bg-white transition-shadow hover:shadow-md"
+      className="rounded-lg border border-[var(--mcpx-border-subtle)] bg-mcpx-surface transition-shadow hover:shadow-[var(--mcpx-shadow-moderate)]"
       data-provider-name={provider.name}
     >
       <button
@@ -166,7 +166,7 @@ export function CapabilityProviderCard({
             alt={`${provider.name} favicon`}
             className="size-8 shrink-0 object-contain"
           />
-          <h3 className="truncate text-lg font-semibold capitalize text-[var(--colors-gray-900)]">
+          <h3 className="truncate text-lg font-semibold capitalize text-mcpx-text">
             {provider.name}
           </h3>
         </div>
@@ -189,7 +189,7 @@ export function CapabilityProviderCard({
           </div>
           <ChevronRight
             className={cn(
-              "size-5 text-[var(--colors-gray-500)] transition-transform",
+              "size-5 text-[var(--mcpx-text-tertiary)] transition-transform",
               isExpanded ? "rotate-90" : "",
             )}
             aria-hidden="true"

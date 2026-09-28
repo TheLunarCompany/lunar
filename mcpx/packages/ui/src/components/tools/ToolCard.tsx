@@ -1,7 +1,7 @@
 import { Eye, Settings, Square, Trash2 } from "lucide-react";
 import CustomBadge from "@/components/CustomBadge";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
-import { Badge } from "@/components/ui/badge";
+import { SemanticBadge } from "@/components/ui/semantic-badge";
 import { useCallback, useState } from "react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { ToolAnnotations } from "@/types";
@@ -39,19 +39,20 @@ interface ToolCardProps {
 
 const styles = {
   toolCard:
-    "bg-white rounded-lg p-3 border-2 border-[#D8DCED] hover:border-primary! hover:shadow-md hover:shadow-primary/30 transition-all duration-200 min-h-[120px] flex flex-col min-w-0 overflow-hidden",
+    "bg-mcpx-surface rounded-lg p-3 border-2 border-mcpx-border hover:border-primary! hover:shadow-[var(--mcpx-shadow-moderate)] hover:shadow-primary/30 transition-all duration-200 min-h-[120px] flex flex-col min-w-0 overflow-hidden",
   toolCardSelected:
-    " border-primary! hover:border-primary! shadow-md shadow-primary/30",
+    " border-primary! hover:border-primary! shadow-[var(--mcpx-shadow-moderate)] shadow-primary/30",
   toolCardHeader:
     "flex justify-between items-start gap-2 relative min-w-0 flex-1",
-  checkboxButton: "text-gray-500 transition-colors absolute top-0 right-0 z-10",
+  checkboxButton:
+    "text-mcpx-text-tertiary transition-colors absolute top-0 right-0 z-10",
   checkboxIcon: "w-4 h-4",
   purpleCheckbox:
-    "bg-[#4F33CC] text-white w-4 h-4 rounded flex items-center justify-center",
+    "bg-mcpx-selected text-mcpx-tooltip-text w-4 h-4 rounded flex items-center justify-center",
   toolCardContent: "flex-1 flex flex-col justify-between min-w-0",
-  toolTitle: "font-medium text-gray-900 text-sm mb-1 truncate min-h-[20px] ",
+  toolTitle: "font-medium text-mcpx-text text-sm mb-1 truncate min-h-[20px] ",
   toolDescription:
-    "text-gray-600 text-xs text-overflow-ellipsis leading-relaxed max-w-full h-[40px] ",
+    "text-mcpx-text-secondary text-xs text-overflow-ellipsis leading-relaxed max-w-full h-[40px] ",
 };
 
 const customStyles = `
@@ -126,8 +127,10 @@ export const ToolCard: React.FC<ToolCardProps> = ({
       <style>{customStyles}</style>
       <div
         className={`${styles.toolCard} ${isSelectionMode && isSelected ? styles.toolCardSelected : ""} ${
-          isDrawerOpen ? "border-primary! shadow-md! shadow-primary/30!" : ""
-        } ${isInactive ? "bg-gray-100! text-[#C3C4CD]!" : ""}`}
+          isDrawerOpen
+            ? "border-primary! shadow-[var(--mcpx-shadow-moderate)]! shadow-primary/30!"
+            : ""
+        } ${isInactive ? "bg-mcpx-surface-tertiary! text-mcpx-text-disabled!" : ""}`}
         data-tool-name={tool.name}
         data-provider={providerName}
         title={tool.name}
@@ -144,7 +147,6 @@ export const ToolCard: React.FC<ToolCardProps> = ({
               : onToolClick
                 ? "pointer"
                 : "default",
-          backgroundColor: isInactive ? "#F3F4F6" : undefined,
           opacity: isInactive ? 0.65 : selectionLocked && !isSelected ? 0.6 : 1,
         }}
       >
@@ -179,14 +181,14 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                   <div className="min-w-0">
                     {internalLoading ? (
                       // Skeleton only for title
-                      <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                      <div className="h-4 bg-mcpx-surface-disabled rounded w-3/4 animate-pulse"></div>
                     ) : (
                       <h3
-                        className={`${styles.toolTitle} ${isInactive ? "text-[#C3C4CD]!" : ""}`}
+                        className={`${styles.toolTitle} ${isInactive ? "text-mcpx-text-disabled!" : ""}`}
                         title={tool.name}
                       >
                         {tool.name || (
-                          <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                          <div className="h-4 bg-mcpx-surface-disabled rounded w-3/4 animate-pulse"></div>
                         )}
                       </h3>
                     )}
@@ -195,20 +197,20 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                   {tool.annotations && (
                     <div className="flex gap-1 mb-1 flex-wrap">
                       {tool.annotations.readOnlyHint && (
-                        <Badge variant="success" size="sm">
+                        <SemanticBadge tone="success" showDot={false}>
                           Read-only
-                        </Badge>
+                        </SemanticBadge>
                       )}
                       {tool.annotations.destructiveHint && (
-                        <Badge variant="danger" size="sm">
+                        <SemanticBadge tone="danger" showDot={false}>
                           Destructive
-                        </Badge>
+                        </SemanticBadge>
                       )}
                       {!tool.annotations.readOnlyHint &&
                         !tool.annotations.destructiveHint && (
-                          <Badge variant="warning" size="sm">
+                          <SemanticBadge tone="warning" showDot={false}>
                             Write
-                          </Badge>
+                          </SemanticBadge>
                         )}
                     </div>
                   )}
@@ -216,7 +218,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                   <div className=" min-h-0 overflow-hidden">
                     <p
                       className={`${styles.toolDescription} h-full ${
-                        isInactive ? "text-[#C3C4CD]!" : ""
+                        isInactive ? "text-mcpx-text-disabled!" : ""
                       }`}
                       title={tool.description || "No description available"}
                     >

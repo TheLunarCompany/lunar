@@ -160,19 +160,19 @@ describe("SkillLinkedCapabilities", () => {
     expect(
       screen.getByText("Unavailable MCP server").parentElement,
     ).toHaveClass(
-      "border-[var(--colors-warning-300)]",
-      "bg-[var(--colors-warning-50)]",
-      "text-[var(--colors-warning-700)]",
+      "border-mcpx-warning-strong",
+      "bg-mcpx-warning-bg",
+      "text-mcpx-warning-strong",
     );
     expect(screen.getByText("archived_tool").parentElement).toHaveClass(
-      "border-[var(--colors-warning-300)]",
-      "bg-[var(--colors-warning-50)]",
-      "text-[var(--colors-warning-700)]",
+      "border-mcpx-warning-strong",
+      "bg-mcpx-warning-bg",
+      "text-mcpx-warning-strong",
     );
     expect(screen.getByText("archived_prompt").parentElement).toHaveClass(
-      "border-[var(--colors-warning-300)]",
-      "bg-[var(--colors-warning-50)]",
-      "text-[var(--colors-warning-700)]",
+      "border-mcpx-warning-strong",
+      "bg-mcpx-warning-bg",
+      "text-mcpx-warning-strong",
     );
   });
 

@@ -46,8 +46,8 @@ describe("McpServerCatalogCard", () => {
 
     const card = container.firstElementChild;
     expect(card).toHaveAttribute("aria-pressed", "true");
-    expect(card?.className).toContain("border-[#5147E4]");
-    expect(card?.className).toContain("bg-[#F7F6FE]");
+    expect(card?.className).toContain("border-mcpx-selected");
+    expect(card?.className).toContain("bg-mcpx-selected-weak");
   });
 
   it("toggles selection from mouse and keyboard interactions", () => {

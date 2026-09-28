@@ -61,7 +61,7 @@ export const McpJsonForm = ({
         className={fillHeight ? "min-w-0 flex-1 min-h-0" : "min-w-0"}
       />
       {errorMessage && (
-        <div className="mb-3 p-2 bg-(--color-bg-danger) border border-(--color-border-danger) rounded-md">
+        <div className="mb-3 rounded-md border border-mcpx-danger-text bg-mcpx-danger-bg p-2">
           <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-destructive">
             {errorMessage}
           </p>

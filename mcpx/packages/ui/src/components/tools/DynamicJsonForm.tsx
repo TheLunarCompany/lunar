@@ -280,7 +280,7 @@ const DynamicJsonForm = ({
                 <label className="block text-sm font-medium mb-1">
                   {key}
                   {propSchema.required?.includes(key) && (
-                    <span className="text-red-500 ml-1">*</span>
+                    <span className="text-mcpx-danger-text ml-1">*</span>
                   )}
                 </label>
                 {renderFormFields(
@@ -304,13 +304,13 @@ const DynamicJsonForm = ({
           return (
             <div className="space-y-4">
               {propSchema.description && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-mcpx-text-secondary">
                   {propSchema.description}
                 </p>
               )}
 
               {propSchema.items?.description && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-mcpx-text-tertiary">
                   Items: {propSchema.items.description}
                 </p>
               )}
@@ -502,14 +502,14 @@ const DynamicJsonForm = ({
         rawJsonValue &&
         rawJsonValue !== "{}" ? (
         <div className="space-y-4 border rounded-md p-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-mcpx-text-tertiary">
             Form view not available for this JSON structure. Using simplified
             view:
           </p>
-          <pre className="bg-gray-50 dark:bg-gray-800 dark:text-gray-100 p-4 rounded text-sm overflow-auto">
+          <pre className="bg-mcpx-surface-subtle   p-4 rounded text-sm overflow-auto">
             {rawJsonValue}
           </pre>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-mcpx-text-tertiary">
             Use JSON mode for full editing capabilities.
           </p>
         </div>

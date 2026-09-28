@@ -30,9 +30,9 @@ test.describe("Dashboard Canvas with Mocks", () => {
       await expect(noServersNode).toBeVisible({ timeout: TIMEOUT_5_SEC });
       await expect(noAgentsNode).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
-      const noServersCard = page
-        .locator('div[class*="border-dashed"][class*="border-[#5147E4]"]')
-        .filter({ hasText: /No MCP Server/i });
+      const noServersCard = page.locator(
+        '.react-flow__node[data-id="no-servers"]',
+      );
 
       await expect(noServersCard).toBeVisible({ timeout: TIMEOUT_5_SEC });
       await expect(noServersCard).toContainText("No MCP Server");

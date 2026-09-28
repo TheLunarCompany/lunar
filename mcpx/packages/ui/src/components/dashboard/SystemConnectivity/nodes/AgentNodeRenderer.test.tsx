@@ -109,7 +109,7 @@ describe("AgentNodeRenderer", () => {
     );
     const icon = container.querySelector("svg.lucide-wifi-off");
     expect(icon).not.toBeNull();
-    expect(icon?.classList.contains("text-amber-500")).toBe(true);
+    expect(icon?.classList.contains("text-mcpx-warning-strong")).toBe(true);
     // Unresponsive agents are live, so the card is not greyed out.
     expect(container.querySelector('[data-variant="disabled"]')).toBeNull();
   });
@@ -120,7 +120,9 @@ describe("AgentNodeRenderer", () => {
     );
     const icon = container.querySelector("svg.lucide-wifi-off");
     expect(icon).not.toBeNull();
-    expect(icon?.classList.contains("text-amber-500")).toBe(false);
+    expect(icon?.classList.contains("text-[var(--mcpx-text-disabled)]")).toBe(
+      true,
+    );
     expect(container.querySelector('[data-variant="disabled"]')).not.toBeNull();
   });
 });

@@ -37,7 +37,7 @@ describe("CapabilityPromptCard", () => {
     expect(screen.getByText("read_file")).toBeInTheDocument();
     expect(container.querySelector("g#Prompt")).toBeInTheDocument();
     expect(screen.getByText("read_file").parentElement?.className).toContain(
-      "--colors-success-100",
+      "bg-mcpx-success-bg",
     );
     expect(screen.getByText("Read a file")).toBeInTheDocument();
     expect(screen.getByLabelText("Input fields: 2")).toBeInTheDocument();

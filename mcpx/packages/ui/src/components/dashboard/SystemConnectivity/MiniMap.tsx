@@ -2,21 +2,21 @@ import { MiniMap as ReactFlowMiniMap } from "@xyflow/react";
 
 export const MiniMap = () => (
   <ReactFlowMiniMap
-    bgColor="rgba(255, 255, 255, 0.5)"
+    bgColor="var(--mcpx-surface)"
     nodeStrokeWidth={2}
     nodeBorderRadius={8}
     nodeColor="currentColor"
     nodeClassName={(node) => {
       const colorsMap: Record<string, string> = {
-        mcpx: "text-(--color-mcpx-server)",
-        mcpServer: "text-(--color-active-server)",
-        agent: "text-(--color-active-agent)",
-        noAgents: "text-(--color-no-agents)",
+        mcpx: "text-mcpx-node-hub",
+        mcpServer: "text-mcpx-node-server",
+        agent: "text-mcpx-node-agent",
+        noAgents: "text-mcpx-route-inactive",
       };
-      return `rounded-md ${(node.type && colorsMap[node.type]) || "text-gray-500"}`;
+      return `rounded-md ${(node.type && colorsMap[node.type]) || "text-mcpx-text-tertiary"}`;
     }}
-    className="backdrop-blur-xs"
-    style={{ width: 100, height: 100 }}
+    className="m-6! overflow-hidden rounded-[var(--border-radius-sm)] border border-mcpx-border-subtle shadow-none!"
+    style={{ width: 160, height: 120 }}
     pannable
     draggable
     zoomable

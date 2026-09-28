@@ -11,27 +11,28 @@ describe("ServerStatusBadge", () => {
     );
 
     expect(html).toContain(">Active</span>");
-    expect(html).toContain("border-(--color-border-success)");
+    expect(html).toContain("border-0");
     expect(html).not.toContain("shadow-[0_0_0_3px");
   });
 
-  it.each<[McpServerStatus, string]>([
-    ["connecting", "border-(--colors-gray-200)"],
-    ["connected_stopped", "border-(--color-border-success)"],
-    ["connected_inactive", "border-(--colors-primary-200)"],
-    ["connection_failed", "border-(--colors-error-200)"],
-    ["pending_auth", "border-(--colors-info-200)"],
-    ["pending_input", "border-(--colors-warning-200)"],
-  ])("renders a semantic border for %s", (status, borderClass) => {
+  it.each<McpServerStatus>([
+    "connecting",
+    "connected_stopped",
+    "connected_inactive",
+    "connection_failed",
+    "pending_auth",
+    "pending_input",
+  ])("renders without a border for %s", (status) => {
     const html = renderToStaticMarkup(<ServerStatusBadge status={status} />);
 
-    expect(html).toContain(borderClass);
+    expect(html).toContain("border-0");
+    expect(html).not.toContain("border-mcpx-");
   });
 
   it("renders a disabled presentation badge", () => {
     const html = renderToStaticMarkup(<ServerStatusBadge status="disabled" />);
 
     expect(html).toContain(">Disabled</span>");
-    expect(html).toContain("bg-(--colors-gray-200)");
+    expect(html).toContain("bg-mcpx-surface-disabled");
   });
 });

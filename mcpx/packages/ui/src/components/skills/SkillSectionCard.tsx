@@ -23,24 +23,24 @@ export function SkillSectionCard({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-xl border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] shadow-sm",
+        "overflow-hidden rounded-xl border border-mcpx-border bg-mcpx-surface-subtle shadow-sm",
         className,
       )}
       {...props}
     >
       <div
         className={cn(
-          "flex min-h-14 flex-col items-start justify-between gap-3 border-b border-[var(--colors-gray-200)] bg-[var(--colors-gray-100)] px-4 py-3 sm:flex-row sm:items-center",
+          "flex min-h-14 flex-col items-start justify-between gap-3 border-b border-mcpx-border bg-mcpx-surface-tertiary px-4 py-3 sm:flex-row sm:items-center",
           headerClassName,
         )}
       >
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="shrink-0 text-primary">{icon}</span>
-          <h2 className="min-w-0 text-sm font-semibold text-[var(--text-colours-color-text-primary)]">
+          <h2 className="min-w-0 text-sm font-semibold text-mcpx-text">
             {title}
           </h2>
           {description ? (
-            <span className="min-w-0 truncate text-sm text-[var(--text-colours-color-text-secondary)]">
+            <span className="min-w-0 truncate text-sm text-mcpx-text-secondary">
               {description}
             </span>
           ) : null}
@@ -52,7 +52,7 @@ export function SkillSectionCard({
         ) : null}
       </div>
 
-      <div className={cn("bg-[var(--colors-gray-50)]", contentClassName)}>
+      <div className={cn("bg-mcpx-surface-subtle", contentClassName)}>
         {children}
       </div>
     </section>

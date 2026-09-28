@@ -146,25 +146,25 @@ export const EnvVarRow = ({
 
   return (
     <div
-      className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]"
+      className="rounded-lg border border-border overflow-hidden bg-mcpx-surface-subtle"
       data-testid="env-var-row"
       data-env-name={envKey}
     >
-      <div className="flex w-full items-center justify-between gap-2 px-3 py-2 text-(--color-text-primary)">
+      <div className="flex w-full items-center justify-between gap-2 px-3 py-2 text-mcpx-text">
         <div className="flex items-center gap-2">
           {(isRequired || isFixed) && (
-            <span className="text-red-500 text-md shrink-0">*</span>
+            <span className="text-mcpx-danger-text text-md shrink-0">*</span>
           )}
-          <div className="bg-lunar-purpleNew/10 px-1.5 py-0.5 rounded-[4px] max-w-[300px] min-w-0 shrink flex items-center gap-0.5">
-            <span className="text-xs text-lunar-purpleNew truncate block min-w-0">
+          <div className="flex max-w-[300px] min-w-0 shrink items-center gap-0.5 rounded-[4px] bg-mcpx-selected-weak px-1.5 py-0.5">
+            <span className="block min-w-0 truncate text-xs text-mcpx-selected">
               {envKey}
             </span>
           </div>
           {(isInvalid || (isMissing && !hasChanged)) && (
-            <TriangleAlert className="w-4 h-4 text-orange-500 shrink-0" />
+            <TriangleAlert className="w-4 h-4 text-mcpx-warning-strong shrink-0" />
           )}
           {isFixed && (
-            <span className="text-[8px] border rounded-md border-gray-500 text-gray-500 px-1 py-0.5">
+            <span className="text-[8px] border rounded-md border-mcpx-border text-mcpx-text-tertiary px-1 py-0.5">
               Set by Admin
             </span>
           )}
@@ -176,7 +176,7 @@ export const EnvVarRow = ({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-(--color-text-secondary) hover:text-(--color-text-primary)"
+              className="h-8 w-8 text-mcpx-text-secondary hover:text-mcpx-text"
               onClick={(e) => {
                 e.stopPropagation();
                 handleReset();
@@ -322,13 +322,13 @@ export const EnvVarRow = ({
               )}
             </div>
             <div className="min-h-5 mt-1">
-              <div className="text-amber-500 text-[10px] font-medium whitespace-nowrap">
+              <div className="text-mcpx-warning-strong text-[10px] font-medium whitespace-nowrap">
                 {showMissingWarning &&
                   (missingInfo?.type === "fromEnv"
                     ? `Missing Environment variable. Try another value or contact your admin.`
                     : "Missing required variable. Please provide a value.")}
               </div>
-              <div className="text-red-500 text-[10px] font-medium whitespace-nowrap">
+              <div className="text-mcpx-danger-text text-[10px] font-medium whitespace-nowrap">
                 {isInvalid && !(isMissing && !hasChanged)
                   ? validation.reason
                   : ""}

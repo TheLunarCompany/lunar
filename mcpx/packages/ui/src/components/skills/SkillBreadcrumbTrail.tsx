@@ -21,7 +21,7 @@ export function SkillBreadcrumbTrail({
       <Link
         to="/"
         aria-label="Home"
-        className="shrink-0 rounded-sm text-[var(--text-colours-color-text-tertiary)] transition hover:text-[var(--text-colours-color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        className="shrink-0 rounded-sm text-mcpx-text-tertiary transition hover:text-mcpx-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         <House aria-hidden="true" className="size-4" />
       </Link>

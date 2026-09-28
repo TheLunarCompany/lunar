@@ -576,7 +576,7 @@ export default function Catalog() {
   }, []);
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white p-6">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-mcpx-surface p-6">
       {activeTab === TABS.CUSTOM && customTabError && (
         <ErrorBanner
           details={customTabErrorDetails}
@@ -601,9 +601,7 @@ export default function Catalog() {
           }}
         />
       )}
-      <h1 className="mb-5 shrink-0 text-[20px] font-semibold text-[#20222A]">
-        Catalog
-      </h1>
+      <h1 className="mcpx-page-title mb-5 shrink-0">Catalog</h1>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
           <CustomTabs
@@ -635,7 +633,7 @@ export default function Catalog() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search..."
                 wrapperClassName="mb-4 w-[320px] ml-[3px]"
-                className="h-9 rounded-lg border-[#D8DCED] bg-white"
+                className="h-9 border-mcpx-border"
               />
             )}
 
@@ -665,7 +663,7 @@ export default function Catalog() {
                       key={example.name}
                       server={example}
                       status={getServerStatus(example.name)}
-                      className="w-full border-[#E3E6EF] shadow-[0_1px_3px_rgba(16,24,40,0.10)]"
+                      className="w-full border-mcpx-border-subtle shadow-[var(--mcpx-shadow-weak)]"
                       onAddServer={handleUseExample}
                     />
                   ))}

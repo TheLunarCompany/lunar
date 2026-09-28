@@ -7,7 +7,7 @@ export const FixedInput = ({ value }: { value: string }) => {
         value={value}
         disabled
         readOnly
-        className="h-10 w-full min-w-0 rounded-md border-input bg-background px-3 py-2 text-sm flex-1 bg-muted/40 text-muted-foreground cursor-not-allowed"
+        className="h-10 w-full min-w-0 rounded-md border-input px-3 py-2 text-sm flex-1 bg-muted/40 text-muted-foreground cursor-not-allowed"
       />
       <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
         (fixed)

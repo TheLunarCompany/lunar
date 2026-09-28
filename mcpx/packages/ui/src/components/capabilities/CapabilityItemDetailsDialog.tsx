@@ -1,8 +1,8 @@
 import CustomBadge from "@/components/CustomBadge";
 import HierarchyBadge from "@/components/HierarchyBadge";
 import { MarkdownContent } from "@/components/MarkdownContent";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SemanticBadge } from "@/components/ui/semantic-badge";
 import {
   Sheet,
   SheetContent,
@@ -77,10 +77,8 @@ function PromptMessagesSection({ item }: { item: CapabilityItem }) {
 
   return (
     <section>
-      <h3 className="mb-3 text-sm font-semibold text-[var(--colors-indigo-950)]">
-        Messages
-      </h3>
-      <div className="min-h-[320px] space-y-4 rounded-lg border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] p-4">
+      <h3 className="mb-3 text-sm font-semibold text-mcpx-text">Messages</h3>
+      <div className="min-h-[320px] space-y-4 rounded-lg border border-[var(--mcpx-border-subtle)] bg-[var(--mcpx-surface-subtle)] p-4">
         {messages.length > 0 ? (
           messages.map((message, index) => {
             const isAssistant = message.role === "assistant";
@@ -98,10 +96,10 @@ function PromptMessagesSection({ item }: { item: CapabilityItem }) {
                   />
                 )}
                 <div
-                  className={`max-w-[420px] rounded-lg p-4 text-sm leading-[1.34] tracking-normal text-[var(--colors-indigo-950)] shadow-[0_1px_0.5px_rgba(0,0,0,0.16)] ${
+                  className={`max-w-[420px] rounded-lg p-4 text-sm leading-[1.34] tracking-normal text-mcpx-text shadow-[var(--mcpx-shadow-weak)] ${
                     isAssistant
-                      ? "rounded-tr-none bg-[#e0eaff]"
-                      : "rounded-tl-none bg-[#d1f1cc]"
+                      ? "rounded-tr-none bg-mcpx-info-bg"
+                      : "rounded-tl-none bg-mcpx-success-bg"
                   }`}
                 >
                   <p className="mb-1 text-xs font-semibold">{roleLabel}</p>
@@ -120,7 +118,7 @@ function PromptMessagesSection({ item }: { item: CapabilityItem }) {
             );
           })
         ) : (
-          <div className="py-8 text-center text-sm text-[var(--colors-gray-500)]">
+          <div className="py-8 text-center text-sm text-[var(--mcpx-text-tertiary)]">
             <Settings className="mx-auto mb-3 size-8" />
             No messages available for this prompt template
           </div>
@@ -148,11 +146,11 @@ export function CapabilityItemDetailsDialog({
         side="right"
         aria-describedby={undefined}
         showCloseButton={false}
-        className="w-[600px]! max-w-[600px]! overflow-y-auto border-l-2 border-primary bg-white p-0"
+        className="w-[600px]! max-w-[600px]! overflow-y-auto border-l-2 border-primary bg-mcpx-surface p-0"
       >
         {item ? (
           <>
-            <div className="flex items-center justify-between gap-2 border-b border-[var(--colors-gray-200)] px-6 py-4">
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--mcpx-border-subtle)] px-6 py-4">
               <div className="flex items-center gap-2">
                 {item.isCustom && (
                   <CustomBadge
@@ -164,13 +162,13 @@ export function CapabilityItemDetailsDialog({
                       <CustomCapabilityBadgeSvg
                         aria-label="Custom capability icon"
                         className="size-5"
-                        style={{ color: "#4F33CC" }}
+                        style={{ color: "var(--mcpx-selected)" }}
                       />
                     }
                   />
                 )}
               </div>
-              <div className="flex items-center gap-2 text-[#7D7B98]">
+              <div className="flex items-center gap-1">
                 {item.isCustom ? (
                   <>
                     {!isPrompt && (
@@ -180,7 +178,7 @@ export function CapabilityItemDetailsDialog({
                         aria-label="Edit custom capability"
                         onClick={() => onEditItem(item)}
                       >
-                        <PencilIcon className="size-5" />
+                        <PencilIcon />
                       </Button>
                     )}
                     <Button
@@ -189,7 +187,7 @@ export function CapabilityItemDetailsDialog({
                       aria-label="Delete custom capability"
                       onClick={() => onDeleteItem(item)}
                     >
-                      <TrashIcon className="size-5" />
+                      <TrashIcon />
                     </Button>
                   </>
                 ) : !isPrompt ? (
@@ -199,7 +197,7 @@ export function CapabilityItemDetailsDialog({
                     aria-label="Customize capability"
                     onClick={() => onCustomizeItem(item)}
                   >
-                    <PencilIcon className="size-5" />
+                    <PencilIcon />
                   </Button>
                 ) : null}
                 <Button
@@ -208,12 +206,12 @@ export function CapabilityItemDetailsDialog({
                   onClick={onClose}
                   aria-label="Close"
                 >
-                  <ArrowRightIcon className="size-5" />
+                  <ArrowRightIcon />
                 </Button>
               </div>
             </div>
 
-            <div className="border-b border-[var(--colors-gray-200)] px-6 py-4">
+            <div className="border-b border-[var(--mcpx-border-subtle)] px-6 py-4">
               <div className="flex min-w-0 items-center gap-3">
                 <img
                   src={providerIcon}
@@ -252,14 +250,20 @@ export function CapabilityItemDetailsDialog({
                   <h3 className="mb-2 text-base font-semibold">Annotations</h3>
                   <div className="flex flex-wrap gap-1.5">
                     {item.annotations.readOnlyHint && (
-                      <Badge variant="success">Read-only</Badge>
+                      <SemanticBadge tone="success" showDot={false}>
+                        Read-only
+                      </SemanticBadge>
                     )}
                     {item.annotations.destructiveHint && (
-                      <Badge variant="danger">Destructive</Badge>
+                      <SemanticBadge tone="danger" showDot={false}>
+                        Destructive
+                      </SemanticBadge>
                     )}
                     {!item.annotations.readOnlyHint &&
                       !item.annotations.destructiveHint && (
-                        <Badge variant="warning">Write</Badge>
+                        <SemanticBadge tone="warning" showDot={false}>
+                          Write
+                        </SemanticBadge>
                       )}
                   </div>
                 </section>
@@ -275,16 +279,16 @@ export function CapabilityItemDetailsDialog({
                       {parameters.map((parameter) => (
                         <div
                           key={parameter.name}
-                          className="rounded-lg border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] p-3"
+                          className="rounded-lg border border-[var(--mcpx-border-subtle)] bg-[var(--mcpx-surface-subtle)] p-3"
                         >
                           <div className="mb-1 flex items-center justify-between gap-3">
                             <p className="font-semibold">{parameter.name}</p>
-                            <span className="rounded bg-[var(--colors-gray-200)] px-2 py-1 text-xs">
+                            <span className="rounded bg-[var(--mcpx-border-subtle)] px-2 py-1 text-xs">
                               {parameter.type}
                             </span>
                           </div>
                           {parameter.description && (
-                            <p className="text-xs text-[var(--colors-gray-600)]">
+                            <p className="text-xs text-[var(--mcpx-text-secondary)]">
                               {parameter.description}
                             </p>
                           )}
@@ -292,7 +296,7 @@ export function CapabilityItemDetailsDialog({
                       ))}
                     </div>
                   ) : (
-                    <div className="py-8 text-center text-sm text-[var(--colors-gray-500)]">
+                    <div className="py-8 text-center text-sm text-[var(--mcpx-text-tertiary)]">
                       <Settings className="mx-auto mb-3 size-8" />
                       No parameters available for this tool
                     </div>
@@ -302,7 +306,7 @@ export function CapabilityItemDetailsDialog({
             </div>
           </>
         ) : (
-          <div className="p-6 text-sm text-[var(--colors-gray-600)]">
+          <div className="p-6 text-sm text-[var(--mcpx-text-secondary)]">
             No tool selected
           </div>
         )}

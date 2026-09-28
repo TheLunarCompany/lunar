@@ -277,11 +277,11 @@ export function CustomToolDialog({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={isOpen}>
-      <DialogContent className="sm:max-w-4xl rounded-lg p-0 overflow-hidden gap-0 [&>button]:hidden bg-white">
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] min-h-0 flex-col gap-0 overflow-hidden rounded-lg bg-mcpx-surface p-0 sm:max-w-4xl [&>button]:hidden">
         <DialogTitle className="sr-only">Customize Tool</DialogTitle>
-        <div className="px-6 py-6 border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between bg-white">
-            <div className="flex items-center gap-3 bg-white">
+        <div className="shrink-0 border-b border-mcpx-border-subtle bg-mcpx-surface px-6 py-6">
+          <div className="flex items-center justify-between bg-mcpx-surface">
+            <div className="flex items-center gap-3 bg-mcpx-surface">
               <div className="flex flex-col">
                 <h2 className="text-2xl font-semibold ">Customize Tool</h2>
               </div>
@@ -289,7 +289,7 @@ export function CustomToolDialog({
             <DialogClose asChild>
               <button
                 onClick={onClose}
-                className="text-2xl leading-none text-gray-500 hover:text-gray-700 px-2 py-1"
+                className="text-2xl leading-none text-mcpx-text-tertiary hover:text-mcpx-text-secondary px-2 py-1"
                 aria-label="Close"
               >
                 ×
@@ -298,23 +298,23 @@ export function CustomToolDialog({
           </div>
         </div>
         {isLoading && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex items-center justify-center">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--mcpx-scrim)]">
             <div className="flex flex-col items-center gap-3">
               <Spinner />
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-mcpx-text-secondary">
                 Saving custom tool...
               </span>
             </div>
           </div>
         )}
         {/* Header */}
-        <div className="  border-b border-gray-200 relative bg-white">
-          <div className="mx-6 py-4 bg-white border-b border-gray-200 flex flex-row items-center justify-between">
+        <div className="relative min-h-0 flex-1 overflow-y-auto border-b border-mcpx-border-subtle bg-mcpx-surface">
+          <div className="mx-6 py-4 bg-mcpx-surface border-b border-mcpx-border-subtle flex flex-row items-center justify-between">
             <div className="flex items-center gap-3 ">
               <img
                 src={providerIcon}
                 alt={`${providerName} icon`}
-                className="h-12 w-12 rounded-full object-contain bg-white"
+                className="h-12 w-12 rounded-full object-contain bg-mcpx-surface"
               />
               <div className="flex flex-col">
                 <h3 className="text-2xl font-semibold ">
@@ -335,10 +335,10 @@ export function CustomToolDialog({
 
           <DialogDescription className="sr-only"></DialogDescription>
 
-          <div className="px-6 bg-white">
+          <div className="px-6 bg-mcpx-surface">
             {/* Custom Tool Name */}
             <div className="mt-4">
-              <h3 className="text-base font-medium text-gray-800 mb-1">
+              <h3 className="text-base font-medium text-mcpx-text mb-1">
                 Custom tool name
               </h3>
               <Input
@@ -353,7 +353,7 @@ export function CustomToolDialog({
                 }}
                 onBlur={() => setNameTouched(true)}
                 placeholder="Enter custom tool name"
-                className={`w-full border-gray-200 focus-visible:ring-[#4F33CC] ${nameTouched && nameErrorInline ? "border-red-500" : ""}`}
+                className={`w-full border-mcpx-border-subtle ${nameTouched && nameErrorInline ? "border-mcpx-danger-text" : ""}`}
               />
               {nameTouched && nameErrorInline && (
                 <div className="flex pt-1 items-end gap-1">
@@ -369,33 +369,33 @@ export function CustomToolDialog({
 
             {/* Description Section */}
             <div className="mt-4">
-              <h3 className="text-base font-medium text-gray-800 mb-1">
+              <h3 className="text-base font-medium text-mcpx-text mb-1">
                 Description
               </h3>
               <Input
                 value={toolDescription}
                 onChange={(e) => setToolDescription(e.target.value)}
                 placeholder="Enter tool description..."
-                className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+                className="w-full border-mcpx-border-subtle"
               />
             </div>
 
             {/* Properties Section */}
             <div className="pb-6 ">
               <h3 className="text-base font-medium  my-4">Parameters</h3>
-              <div className="space-y-4 max-h-80 overflow-y-auto rounded-lg pr-2">
+              <div className="space-y-4 rounded-lg pr-2">
                 {toolParameters.length > 0 ? (
                   toolParameters.map((param, index) => (
                     <div
                       key={index}
-                      className="border bg-[#F9F8FB] pb-4 border-gray-200 rounded-lg"
+                      className="border bg-mcpx-surface-subtle pb-4 border-mcpx-border-subtle rounded-lg"
                     >
                       <div className="flex items-center justify-between px-4 py-3">
-                        <div className="text-base font-semibold text-[#1D1B4B]">
+                        <div className="text-base font-semibold text-mcpx-text">
                           {param.name}
                         </div>
 
-                        <span className="text-[11px] rounded-sm font-medium text-[#1D1B4B] bg-[#E5E3EF] px-1 py-1">
+                        <span className="text-[11px] rounded-sm font-medium text-mcpx-text bg-mcpx-surface-tertiary px-1 py-1">
                           {param.type || "string"}
                         </span>
                       </div>
@@ -410,7 +410,7 @@ export function CustomToolDialog({
                               handleParameterChange(index, e.target.value)
                             }
                             placeholder="Enter value"
-                            className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+                            className="w-full border-mcpx-border-subtle"
                           />
                         </div>
 
@@ -427,14 +427,14 @@ export function CustomToolDialog({
                               )
                             }
                             placeholder="Enter parameter description"
-                            className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+                            className="w-full border-mcpx-border-subtle"
                           />
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-gray-500 italic">
+                  <div className="text-sm text-mcpx-text-tertiary italic">
                     No parameters found for this tool.
                   </div>
                 )}
@@ -444,24 +444,24 @@ export function CustomToolDialog({
         </div>
 
         {/* Dialog Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-white flex flex-row items-center justify-between">
-          {/* <Button  onClick={onClose}  className="text-[#5147E4] bg-white   px-4 py-2 rounded-lg font-medium transition-colors text-sm ">
+        <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-mcpx-border-subtle bg-mcpx-surface px-6 py-4">
+          {/* <Button  onClick={onClose}  className="text-mcpx-selected bg-mcpx-surface   px-4 py-2 rounded-lg font-medium transition-colors text-sm ">
             Cancel
           </Button> */}
           <div
             onClick={onClose}
-            className="text-[#5147E4] px-4 py-2 rounded-lg font-medium  text-sm cursor-pointer "
+            className="text-mcpx-selected px-4 py-2 rounded-lg font-medium  text-sm cursor-pointer "
           >
             Cancel
           </div>
           <Button
             onClick={handleCreate}
             disabled={isLoading}
-            className="text-white px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-mcpx-tooltip-text px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <div className="flex items-center gap-2">
-                <Spinner className="text-white" />
+                <Spinner className="text-mcpx-tooltip-text" />
                 <span>Saving...</span>
               </div>
             ) : preSelectedServer && preSelectedTool && preFilledData ? (

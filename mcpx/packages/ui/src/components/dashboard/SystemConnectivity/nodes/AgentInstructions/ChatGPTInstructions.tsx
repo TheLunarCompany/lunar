@@ -5,12 +5,15 @@ export const ChatGPTInstructions: React.FC = () => {
   const mcpxUrl = getMcpxServerURL("http");
   if (mcpxUrl.includes("localhost")) {
     return (
-      <div className="text-sm text-[#1E1B4B]">
-        <div style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}>
+      <div className="text-sm text-mcpx-text">
+        <div>
           <p className="font-semibold mb-4">Connect with ChatGPT</p>
           <p>
             ChatGPT cannot connect to MCPX when it is running on{" "}
-            <code className="bg-gray-100 px-1 rounded">localhost</code>.
+            <code className="bg-mcpx-surface-tertiary px-1 rounded">
+              localhost
+            </code>
+            .
           </p>
           <p>
             OAuth-based MCP connections require a publicly reachable HTTPS
@@ -31,7 +34,7 @@ export const ChatGPTInstructions: React.FC = () => {
             <span className="font-semibold">Live demo:</span>{" "}
             <a
               href="https://www.lunar.dev/demo"
-              className="text-blue-500 underline"
+              className="text-mcpx-info-text underline"
               target="_blank"
               title="Watch live demo"
             >
@@ -43,13 +46,13 @@ export const ChatGPTInstructions: React.FC = () => {
     );
   }
   return (
-    <div className="text-sm text-[#1E1B4B]">
+    <div className="text-sm text-mcpx-text">
       <div>
         <p className="font-semibold mb-4">Connect with ChatGPT</p>
         <ol className="list-decimal list-inside space-y-1">
           <li>
             In{" "}
-            <code className="bg-gray-100 px-1 rounded">
+            <code className="bg-mcpx-surface-tertiary px-1 rounded">
               {" "}
               https://chatgpt.com
             </code>
@@ -79,11 +82,13 @@ export const ChatGPTInstructions: React.FC = () => {
             <ul className="list-disc list-inside ml-4">
               <li>
                 <span className="font-semibold">Name:</span>{" "}
-                <code className="bg-gray-100 px-1 rounded">MCPX</code>
+                <code className="bg-mcpx-surface-tertiary px-1 rounded">
+                  MCPX
+                </code>
               </li>
               <li>
                 <span className="font-semibold">MCP Server URL:</span>{" "}
-                <code className="bg-gray-100 px-1 rounded">
+                <code className="bg-mcpx-surface-tertiary px-1 rounded">
                   {" "}
                   {`${mcpxUrl}/mcp`}
                 </code>

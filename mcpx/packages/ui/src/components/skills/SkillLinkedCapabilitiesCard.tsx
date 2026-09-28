@@ -41,7 +41,7 @@ export function SkillLinkedCapabilitiesCard({
 
       <SkillSidebarCardContent>
         {providers.length === 0 ? (
-          <p className="py-2 text-sm text-[var(--text-colours-color-text-secondary)]">
+          <p className="py-2 text-sm text-mcpx-text-secondary">
             No MCP servers linked yet.
           </p>
         ) : (
@@ -86,7 +86,7 @@ function LinkedProviderRow({
     <SkillSidebarCardRow variant={isActive ? "active" : "default"}>
       {onProviderClick ? (
         <SkillSidebarCardRowButton
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left text-sm text-[var(--text-colours-color-text-primary)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left text-sm text-mcpx-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`Filter by ${provider.name}`}
           aria-pressed={isActive}
           onClick={() => onProviderClick(provider)}
@@ -98,7 +98,7 @@ function LinkedProviderRow({
           />
         </SkillSidebarCardRowButton>
       ) : (
-        <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-[var(--text-colours-color-text-primary)]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-mcpx-text">
           <ProviderRowContent
             provider={provider}
             iconSrc={iconSrc}
@@ -111,7 +111,7 @@ function LinkedProviderRow({
           type="button"
           variant="ghost"
           size="icon-sm"
-          className="size-7 text-[var(--colors-gray-600)]"
+          className="size-7 text-mcpx-text-secondary"
           aria-label={`Unlink ${provider.name} capabilities`}
           onClick={() => onProviderUnlink(provider)}
         >
@@ -150,7 +150,7 @@ function ProviderIcon({ name, iconSrc }: { name: string; iconSrc?: string }) {
   }
 
   return (
-    <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-[var(--colors-gray-900)] text-[11px] font-semibold uppercase text-[var(--colors-gray-50)]">
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-mcpx-inverse-surface text-[11px] font-semibold uppercase text-mcpx-text-inverse">
       {name.slice(0, 1)}
     </span>
   );

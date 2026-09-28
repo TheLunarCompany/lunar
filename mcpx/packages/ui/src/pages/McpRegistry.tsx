@@ -546,7 +546,7 @@ export default function McpRegistry() {
   }, []);
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white p-6">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-mcpx-surface p-6">
       {activeTab === TABS.ALL && allTabError && (
         <ErrorBanner message={allTabError} onClose={() => setAllTabError("")} />
       )}
@@ -574,9 +574,7 @@ export default function McpRegistry() {
           }}
         />
       )}
-      <h1 className="mb-5 shrink-0 text-[20px] font-semibold text-[#20222A]">
-        MCP Registry
-      </h1>
+      <h1 className="mcpx-page-title mb-5 shrink-0">MCP Registry</h1>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -612,7 +610,7 @@ export default function McpRegistry() {
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search..."
                     wrapperClassName="w-[320px] max-w-full ml-[3px]"
-                    className="h-9 rounded-lg border-[#D8DCED] bg-white"
+                    className="h-9 border-mcpx-border"
                   />
                   <Sort
                     title="Sort"
@@ -640,7 +638,7 @@ export default function McpRegistry() {
                     key={server.name}
                     server={server}
                     status={getServerStatus(server.name)}
-                    className="w-full border-[#E3E6EF] shadow-[0_1px_3px_rgba(16,24,40,0.10)]"
+                    className="w-full border-mcpx-border-subtle shadow-[var(--mcpx-shadow-weak)]"
                     onAddServer={handleUseExample}
                   />
                 ))}

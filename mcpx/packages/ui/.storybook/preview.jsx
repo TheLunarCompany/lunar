@@ -20,7 +20,9 @@ const preview = {
     (Story) => (
       <QueryClientProvider client={storybookQueryClient}>
         <TooltipProvider>
-          <Story />
+          <div className="ex-theme-light">
+            <Story />
+          </div>
         </TooltipProvider>
       </QueryClientProvider>
     ),

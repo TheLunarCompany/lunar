@@ -79,15 +79,17 @@ export const HierarchyBadge: React.FC<HierarchyBadgeProps> = ({
   className = "",
 }) => {
   return (
-    <div className={`flex items-center text-sm text-gray-700 ${className}`}>
-      <TruncatableText className="font-medium opacity-50 text-gray-900 truncate max-w-[250px] inline-block">
+    <div
+      className={`flex items-center text-sm text-mcpx-text-secondary ${className}`}
+    >
+      <TruncatableText className="inline-block max-w-[250px] truncate font-medium text-mcpx-text opacity-50">
         {serverName}
       </TruncatableText>
 
       {toolName && (
         <>
-          <span className="mx-2 text-gray-400">→</span>
-          <TruncatableText className="font-medium text-gray-900 truncate max-w-[250px] inline-block">
+          <span className="mx-2 text-mcpx-text-tertiary">→</span>
+          <TruncatableText className="inline-block max-w-[250px] truncate font-medium text-mcpx-text">
             {toolName}
           </TruncatableText>
         </>

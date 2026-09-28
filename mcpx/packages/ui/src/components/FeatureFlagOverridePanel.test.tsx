@@ -50,6 +50,7 @@ const runtimeConfig: RuntimeConfig = {
   VITE_ADD_SERVER_CHECKBOX: "Add another server",
   VITE_UI_SIDEBAR_RESTRUCTURE: "false",
   VITE_SHOW_MCP_SERVERS: "false",
+  VITE_IS_BOOMI: "false",
 };
 
 vi.mock("@/config/runtime-config", async (importOriginal) => {
@@ -127,13 +128,13 @@ describe("FeatureFlagOverridePanel", () => {
     expect(screen.getByText("VITE_ENABLE_PERMISSIONS")).toBeVisible();
   });
 
-  it("renders the four approved flags with inherited values", async () => {
+  it("renders the five approved flags with inherited values", async () => {
     const user = userEvent.setup();
     renderPanel();
 
     await user.click(screen.getByRole("button", { name: "Dev flags" }));
 
-    expect(screen.getAllByRole("switch")).toHaveLength(4);
+    expect(screen.getAllByRole("switch")).toHaveLength(5);
     expect(
       screen.getByRole("switch", { name: "VITE_ENABLE_PERMISSIONS" }),
     ).toHaveAttribute("data-state", "checked");
@@ -142,7 +143,10 @@ describe("FeatureFlagOverridePanel", () => {
         name: "VITE_ENABLE_CAPABILITIES_UI",
       }),
     ).toHaveAttribute("data-state", "unchecked");
-    expect(screen.getAllByText("Inherited")).toHaveLength(4);
+    expect(
+      screen.getByRole("switch", { name: "VITE_IS_BOOMI" }),
+    ).toHaveAttribute("data-state", "unchecked");
+    expect(screen.getAllByText("Inherited")).toHaveLength(5);
     expect(screen.getByRole("button", { name: "Reset all" })).toBeDisabled();
   });
 
@@ -175,7 +179,7 @@ describe("FeatureFlagOverridePanel", () => {
 
     await user.click(screen.getByRole("button", { name: "Reset all" }));
 
-    expect(screen.getAllByText("Inherited")).toHaveLength(4);
+    expect(screen.getAllByText("Inherited")).toHaveLength(5);
     expect(
       screen.getByRole("switch", {
         name: "VITE_ENABLE_CAPABILITIES_UI",

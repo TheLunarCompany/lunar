@@ -6,9 +6,10 @@ describe("InstanceStatusRow", () => {
   it("renders the current state", () => {
     render(<InstanceStatusRow status="working" />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Working");
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Processing active calls",
-    );
+    const status = screen.getByRole("status");
+
+    expect(status).toHaveTextContent("Working");
+    expect(status).toHaveTextContent("Processing active calls");
+    expect(status).toHaveClass("bg-[var(--mcpx-sidebar-active)]");
   });
 });

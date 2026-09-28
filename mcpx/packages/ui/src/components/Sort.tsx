@@ -45,7 +45,7 @@ export function Sort<TValue extends string>({
             <DropdownMenuCheckboxItem
               key={option.value}
               checked={option.value === selected}
-              className="rounded-sm px-3 py-2 text-sm hover:bg-gray-50 focus:!bg-transparent focus:!text-inherit focus-visible:!border-transparent focus-visible:!ring-0 focus-visible:!ring-transparent data-[highlighted]:!bg-transparent data-[highlighted]:!text-inherit"
+              className="rounded-sm px-3 py-2 text-sm"
               onCheckedChange={() => onChange(option.value)}
             >
               {option.label}

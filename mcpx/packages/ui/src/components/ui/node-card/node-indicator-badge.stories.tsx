@@ -40,7 +40,7 @@ export const AllVariants: Story = {
       {(["warning", "info", "error"] as const).map((variant) => (
         <div
           key={variant}
-          className="relative size-16 rounded-lg border border-dashed border-gray-300"
+          className="relative size-16 rounded-lg border border-dashed border-mcpx-border"
         >
           <NodeIndicatorBadge variant={variant} />
         </div>

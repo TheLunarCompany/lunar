@@ -15,12 +15,12 @@ import { MoreVertical } from "lucide-react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 const titleBadgeVariants = cva(
-  "flex min-w-0 max-w-full items-center rounded font-medium leading-[1.34] tracking-[0] text-[var(--text-colours-color-text-primary)] [&_svg]:shrink-0",
+  "flex min-w-0 max-w-full items-center rounded font-medium leading-[1.34] tracking-[0] text-mcpx-text [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        interactive: "bg-[var(--colors-primary-100)]",
-        success: "bg-[var(--colors-success-100)]",
+        interactive: "bg-[var(--mcpx-selected-weak)]",
+        success: "bg-mcpx-success-bg",
       },
       size: {
         md: "h-7 gap-2 px-1.5 py-1 text-sm [&_svg]:size-4",
@@ -44,7 +44,7 @@ function CapabilityItemCardRoot({
   return (
     <Card
       className={cn(
-        "relative flex w-[376px] max-w-full flex-col gap-3 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] p-3 text-[var(--text-colours-color-text-primary)] shadow-none ring-0",
+        "relative flex w-[376px] max-w-full flex-col gap-3 rounded-lg border border-mcpx-border-subtle bg-[var(--mcpx-surface)] p-3 text-mcpx-text shadow-none ring-0",
         className,
       )}
       {...props}
@@ -101,7 +101,7 @@ function CapabilityItemCardStatusBadge({
       variant="outline"
       size="sm"
       className={cn(
-        "h-[15px] rounded border-[var(--text-colours-color-text-secondary)] px-1 py-0 text-[10px] font-medium leading-none text-[var(--text-colours-color-text-secondary)]",
+        "h-[15px] rounded border-mcpx-text-secondary px-1 py-0 text-[10px] font-medium leading-none text-mcpx-text-secondary",
         className,
       )}
       {...props}
@@ -119,7 +119,7 @@ function CapabilityItemCardDescription({
   return (
     <p
       className={cn(
-        "line-clamp-2 text-[13px] font-normal leading-[1.34] tracking-[0] text-[var(--text-colours-color-text-secondary)]",
+        "line-clamp-2 text-[13px] font-normal leading-[1.34] tracking-[0] text-mcpx-text-secondary",
         className,
       )}
       {...props}
@@ -135,7 +135,7 @@ function CapabilityItemCardDivider({
 }: ComponentPropsWithoutRef<typeof Separator>) {
   return (
     <Separator
-      className={cn("bg-[var(--structure-color-border-primary)]", className)}
+      className={cn("bg-mcpx-border-subtle", className)}
       decorative
       {...props}
     />
@@ -170,12 +170,12 @@ function CapabilityItemCardMetric({
       aria-label={`${label}: ${value}`}
       title={label}
       className={cn(
-        "flex items-center gap-1 text-[11px] font-semibold leading-none text-[var(--text-colours-color-text-primary)]",
+        "flex items-center gap-1 text-[11px] font-semibold leading-none text-mcpx-text",
         className,
       )}
       {...props}
     >
-      <span className="grid size-4 place-items-center text-[var(--text-colours-color-text-secondary)] [&_svg]:size-4">
+      <span className="grid size-4 place-items-center text-mcpx-text-secondary [&_svg]:size-4">
         {icon}
       </span>
       <span>{value}</span>
@@ -202,7 +202,7 @@ function CapabilityItemCardMenuButton({
         variant: "ghost",
         size: "icon-sm",
         className: cn(
-          "absolute right-1 top-1 text-[var(--text-colours-color-text-secondary)] hover:bg-[var(--structure-color-bg-container-overlay)]",
+          "absolute right-1 top-1 text-mcpx-text-secondary hover:bg-mcpx-selected-weak",
           className,
         ),
       })}

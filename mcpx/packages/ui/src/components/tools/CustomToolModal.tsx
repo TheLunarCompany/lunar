@@ -97,7 +97,7 @@ export const CustomToolModal = ({
   return (
     <Dialog onOpenChange={(open) => !open && handleClose()} open>
       <DialogContent
-        className="bg-card p-0 sm:max-w-3xl"
+        className="flex max-h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden bg-card p-0 sm:max-w-3xl"
         onEscapeKeyDown={handleClose}
         onPointerDownOutside={handleClose}
       >
@@ -105,9 +105,9 @@ export const CustomToolModal = ({
           onSubmit={handleSubmit((data) =>
             handleSubmitTool({ originalTool, ...data }, isNewTool),
           )}
-          className="w-full"
+          className="flex min-h-0 w-full flex-1 flex-col"
         >
-          <DialogHeader className="p-6 pb-4">
+          <DialogHeader className="shrink-0 p-6 pb-4">
             <DialogTitle>Customize Tool</DialogTitle>
             <DialogDescription>
               <span className="flex items-center gap-2">
@@ -124,7 +124,7 @@ export const CustomToolModal = ({
               </span>
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[70vh] overflow-y-auto px-6 pt-4 pb-8">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-8">
             <h2 className="text-lg font-semibold">Properties</h2>
             <div className="grid gap-3 mb-6 px-4">
               <div className="grid gap-2 mt-4">
@@ -325,7 +325,9 @@ export const CustomToolModal = ({
                     />
                   )}
                   {description && (
-                    <p className="text-xs text-gray-500">{description}</p>
+                    <p className="text-xs text-mcpx-text-tertiary">
+                      {description}
+                    </p>
                   )}
                   {/* `as any` required: React Hook Form's FieldErrors type cannot represent
                       dynamic keys. `errors.overrideParams?.[name]` is valid at runtime but
@@ -344,10 +346,10 @@ export const CustomToolModal = ({
               ))}
             </div>
           </div>
-          <DialogFooter className="flex justify-end items-end p-6">
+          <DialogFooter className="flex shrink-0 items-end justify-end p-6">
             <Button
               variant="secondary"
-              className="bg-muted text-foreground enabled:bg-(--color-bg-success) enabled:text-(--color-fg-success) hover:enabled:bg-(--color-bg-success-hover) hover:enabled:text-(--color-fg-success-hover) focus:enabled:bg-(--color-bg-success-hover) focus:enabled:text-(--color-fg-success-hover)"
+              className="bg-muted text-foreground enabled:bg-mcpx-success-bg enabled:text-mcpx-success-text hover:enabled:bg-mcpx-surface-hover hover:enabled:text-mcpx-success-text focus:enabled:bg-mcpx-surface-hover focus:enabled:text-mcpx-success-text"
               disabled={!isDirty || isSubmitting}
             >
               <BookmarkPlus className="w-4 h-4 mr-2" />

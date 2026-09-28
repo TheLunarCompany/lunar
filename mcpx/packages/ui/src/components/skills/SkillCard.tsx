@@ -107,7 +107,7 @@ export function SkillCard({
         size="sm"
         onClick={() => navigate(detailHref)}
         className={cn(
-          "group relative flex min-h-40 cursor-pointer flex-col gap-0 rounded-xl border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-4 shadow-sm ring-0 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
+          "group relative flex min-h-40 cursor-pointer flex-col gap-0 rounded-xl border border-mcpx-border-subtle bg-mcpx-surface p-4 shadow-sm ring-0 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
           className,
         )}
       >
@@ -124,7 +124,7 @@ export function SkillCard({
               variant: "ghost",
               size: "icon-sm",
               className:
-                "absolute right-2 top-2 text-[var(--text-colours-color-text-secondary)] hover:bg-[var(--structure-color-bg-container-overlay)]",
+                "absolute right-2 top-2 text-mcpx-text-secondary hover:bg-mcpx-selected-weak",
             })}
           >
             <MoreVertical />
@@ -161,7 +161,7 @@ export function SkillCard({
             <div className="min-w-0 flex-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <h3 className="truncate text-sm font-semibold leading-5 text-[var(--text-colours-color-text-primary)]">
+                  <h3 className="truncate text-sm font-semibold leading-5 text-mcpx-text">
                     {skill.name}
                   </h3>
                 </TooltipTrigger>
@@ -173,7 +173,7 @@ export function SkillCard({
                   {skill.name}
                 </TooltipContent>
               </Tooltip>
-              <p className="mt-0.5 truncate text-[12px] leading-4 text-[var(--text-colours-color-text-tertiary)]">
+              <p className="mt-0.5 truncate text-[12px] leading-4 text-mcpx-text-tertiary">
                 by {skill.author.displayName}
               </p>
             </div>
@@ -182,7 +182,7 @@ export function SkillCard({
           {/* Description */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <p className="line-clamp-2 min-h-[40px] text-sm text-[var(--text-colours-color-text-secondary)]">
+              <p className="line-clamp-2 min-h-[40px] text-sm text-mcpx-text-secondary">
                 {skill.description}
               </p>
             </TooltipTrigger>
@@ -199,7 +199,7 @@ export function SkillCard({
         {/* MCP capabilities */}
         <div className="h-[154px] overflow-hidden">
           <div>
-            <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--colors-gray-600)]">
+            <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-mcpx-text-secondary">
               MCP capabilities
             </p>
             {providers.length > 0 ? (
@@ -219,7 +219,7 @@ export function SkillCard({
                 ) : null}
               </SkillProviderBadges>
             ) : (
-              <div className="flex items-center gap-1.5 text-[12px] text-[var(--colors-gray-500)]">
+              <div className="flex items-center gap-1.5 text-[12px] text-mcpx-text-tertiary">
                 <Unplug className="size-3.5" />
                 No capabilities linked yet
               </div>
@@ -227,7 +227,7 @@ export function SkillCard({
           </div>
 
           <div className="mt-4">
-            <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-[var(--colors-gray-600)]">
+            <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-mcpx-text-secondary">
               Applied to agents
             </p>
             {agents.length > 0 ? (
@@ -236,7 +236,7 @@ export function SkillCard({
                   <Badge
                     key={name}
                     variant="outline"
-                    className="flex h-auto min-w-0 items-center gap-1.5 rounded border-[var(--colors-gray-100)] bg-[var(--structure-color-bg-app)] px-2 py-1.5 text-[12px] font-normal leading-none text-[var(--text-colours-color-text-primary)]"
+                    className="flex h-auto min-w-0 items-center gap-1.5 rounded border-mcpx-border-subtle bg-mcpx-surface px-2 py-1.5 text-[12px] font-normal leading-none text-mcpx-text"
                   >
                     <SkillAgentIcon name={name} className="size-4" />
                     <span className="min-w-0 truncate">{name}</span>
@@ -245,14 +245,14 @@ export function SkillCard({
                 {hiddenAgentsCount > 0 ? (
                   <Badge
                     variant="outline"
-                    className="h-auto min-w-0 shrink-0 rounded border-[var(--colors-gray-100)] bg-[var(--structure-color-bg-app)] px-2 py-1.5 text-[12px] font-normal text-[var(--text-colours-color-text-secondary)]"
+                    className="h-auto min-w-0 shrink-0 rounded border-mcpx-border-subtle bg-mcpx-surface px-2 py-1.5 text-[12px] font-normal text-mcpx-text-secondary"
                   >
                     +{hiddenAgentsCount}
                   </Badge>
                 ) : null}
               </SkillProviderBadges>
             ) : (
-              <div className="text-[12px] text-[var(--colors-gray-500)]">
+              <div className="text-[12px] text-mcpx-text-tertiary">
                 No agents applied yet
               </div>
             )}
@@ -260,12 +260,12 @@ export function SkillCard({
         </div>
 
         {/* Footer */}
-        <div className="flex min-w-0 items-center justify-between gap-3 border-t border-[var(--structure-color-border-primary)] pt-3">
+        <div className="flex min-w-0 items-center justify-between gap-3 border-t border-mcpx-border-subtle pt-3">
           <SkillCardMetrics
             toolsCount={toolsCount}
             promptsCount={promptsCount}
           />
-          <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--text-colours-color-text-tertiary)]">
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-mcpx-text-tertiary">
             <Clock className="size-3" />
             Updated {skillUpdatedAtFormatter.format(skill.updatedAt)}
           </span>

@@ -59,11 +59,11 @@ export function CapabilityGroupsSection({
 
   if (groups.length === 0) {
     return (
-      <section className="mb-12 rounded-lg border border-dashed border-[var(--colors-gray-200)] bg-white p-8 text-center">
-        <p className="text-base font-semibold text-[var(--colors-gray-900)]">
+      <section className="mb-12 rounded-lg border border-dashed border-[var(--mcpx-border-subtle)] bg-mcpx-surface p-8 text-center">
+        <p className="text-base font-semibold text-mcpx-text">
           No Capability Groups yet
         </p>
-        <p className="mt-1 text-sm text-[var(--colors-gray-600)]">
+        <p className="mt-1 text-sm text-[var(--mcpx-text-secondary)]">
           Create a tool group from selected catalog tools.
         </p>
         <Button className="mt-4" size="sm" onClick={onCreateGroupClick}>
@@ -74,8 +74,8 @@ export function CapabilityGroupsSection({
   }
 
   return (
-    <section className="mb-8 rounded-lg border border-[var(--colors-gray-200)] bg-white p-4 shadow-xs">
-      <p className="mb-3 text-sm font-semibold text-[var(--colors-gray-900)]">
+    <section className="mb-8 rounded-lg border border-[var(--mcpx-border-subtle)] bg-mcpx-surface p-4 shadow-[var(--mcpx-shadow-weak)]">
+      <p className="mb-3 text-sm font-semibold text-mcpx-text">
         Capabilities Groups
       </p>
 
@@ -90,7 +90,7 @@ export function CapabilityGroupsSection({
                 Math.max(0, currentIndex - 1),
               )
             }
-            className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-white shadow-md"
+            className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-mcpx-surface shadow-[var(--mcpx-shadow-moderate)]"
           >
             <ChevronLeft className="size-4" />
           </Button>
@@ -106,7 +106,7 @@ export function CapabilityGroupsSection({
                 Math.min(totalPages - 1, currentIndex + 1),
               )
             }
-            className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-white shadow-md"
+            className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-mcpx-surface shadow-[var(--mcpx-shadow-moderate)]"
           >
             <ChevronRight className="size-4" />
           </Button>
@@ -123,8 +123,8 @@ export function CapabilityGroupsSection({
                 className={cn(
                   "max-w-none transition-all",
                   isSelected
-                    ? "border-primary shadow-md shadow-primary/20 ring-2 ring-primary/15"
-                    : "hover:border-primary/60 hover:shadow-md",
+                    ? "border-primary shadow-[var(--mcpx-shadow-moderate)] shadow-primary/20 ring-2 ring-primary/15"
+                    : "hover:border-primary/60 hover:shadow-[var(--mcpx-shadow-moderate)]",
                 )}
               >
                 <button
@@ -163,7 +163,7 @@ export function CapabilityGroupsSection({
 
                   <CapabilityGroupCard.Metrics>
                     {hasWildcardProvider(group) ? (
-                      <span className="text-[11px] font-semibold leading-none text-[var(--text-colours-color-text-primary)]">
+                      <span className="text-[11px] font-semibold leading-none text-mcpx-text">
                         All tools
                       </span>
                     ) : (
@@ -239,7 +239,9 @@ export function CapabilityGroupsSection({
               aria-label={`Show tool groups page ${index + 1}`}
               className={cn(
                 "size-2 rounded-full transition-colors",
-                index === currentGroupIndex ? "bg-primary/80" : "bg-gray-300",
+                index === currentGroupIndex
+                  ? "bg-primary/80"
+                  : "bg-mcpx-border",
               )}
               onClick={() => setCurrentGroupIndex(index)}
             />

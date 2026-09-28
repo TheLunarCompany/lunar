@@ -15,18 +15,27 @@ export const McpxNotConnected = ({
 
   return (
     <div
-      className={`${fullScreen ? "fixed inset-0" : "size-full"} bg-pink-50 flex items-center justify-center`}
+      className={`${fullScreen ? "fixed inset-0" : "size-full"} bg-mcpx-danger-bg flex items-center justify-center`}
     >
       <div className="flex flex-col items-center text-center">
-        <XCircle className="w-16 h-16 mb-4" style={{ color: "#ef4444" }} />
+        <XCircle
+          className="w-16 h-16 mb-4"
+          style={{ color: "var(--mcpx-danger-action)" }}
+        />
 
-        <h1 className="text-2xl font-bold mb-4" style={{ color: "#ef4444" }}>
+        <h1
+          className="text-2xl font-bold mb-4"
+          style={{ color: "var(--mcpx-danger-action)" }}
+        >
           Not Connected
         </h1>
-        <p className="text-lg mb-2" style={{ color: "#b91c1c" }}>
+        <p
+          className="text-lg mb-2"
+          style={{ color: "var(--mcpx-danger-text)" }}
+        >
           Connection to the MCPX server could not be established.
         </p>
-        <p className="text-lg" style={{ color: "#b91c1c" }}>
+        <p className="text-lg" style={{ color: "var(--mcpx-danger-text)" }}>
           Please check your configuration and ensure it is set up correctly.
         </p>
       </div>

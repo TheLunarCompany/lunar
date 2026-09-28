@@ -192,18 +192,18 @@ export const JsonUpload = ({
         )}
       >
         {uploadedFileName && (
-          <div className="flex shrink-0 items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg">
+          <div className="flex shrink-0 items-center justify-between rounded-lg border border-mcpx-border bg-mcpx-surface px-3 py-2">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-900">{uploadedFileName}</span>
+              <FileText className="w-4 h-4 text-mcpx-text-secondary" />
+              <span className="text-sm text-mcpx-text">{uploadedFileName}</span>
             </div>
             <button
               type="button"
               onClick={handleDelete}
-              className="flex items-center justify-center p-1 rounded hover:bg-gray-100 transition-colors"
+              className="flex items-center justify-center rounded p-1 transition-colors hover:bg-mcpx-surface-hover"
               aria-label="Delete file"
             >
-              <Trash2 className="w-4 h-4 text-gray-500 hover:text-gray-900" />
+              <Trash2 className="w-4 h-4 text-mcpx-text-secondary hover:text-mcpx-text" />
             </button>
           </div>
         )}
@@ -238,11 +238,12 @@ export const JsonUpload = ({
       className={cn(
         "w-full rounded-lg",
         !hasBeenUploaded &&
-          "border border-dashed border-[#5147E4] bg-[#F9FAFD]",
+          "border border-dashed border-mcpx-selected bg-mcpx-surface-subtle",
         "flex flex-col items-center justify-center overflow-hidden",
         "transition-colors",
         fillHeight && "flex-1 h-full",
-        isDragging && "border-dashed border-[#5147E4] bg-[#5147E4]/5",
+        isDragging &&
+          "border-dashed border-mcpx-selected bg-mcpx-selected-weak",
         className,
       )}
       style={fillHeight ? undefined : { height }}
@@ -265,9 +266,7 @@ export const JsonUpload = ({
             className="max-h-[30vh] w-auto hidden [@media(min-height:630px)]:block"
           />
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-(--color-text-primary) text-lg">
-              Add server
-            </p>
+            <p className="text-lg font-semibold text-mcpx-text">Add server</p>
           </div>
         </div>
         <Button
@@ -275,12 +274,12 @@ export const JsonUpload = ({
           variant="default"
           size="lg"
           onClick={handleButtonClick}
-          className="bg-[#5147E4] hover:bg-[#5147E4]/90 text-white w-[140px]"
+          className="w-[140px] bg-mcpx-selected text-mcpx-tooltip-text hover:bg-mcpx-selected-hover"
         >
           <Plus className="w-6 h-6 font-bold" />
           Upload JSON
         </Button>
-        <p className="text-(--color-text-tertiary)">or Drop it here</p>
+        <p className="text-mcpx-text-tertiary">or Drop it here</p>
       </div>
     </div>
   );

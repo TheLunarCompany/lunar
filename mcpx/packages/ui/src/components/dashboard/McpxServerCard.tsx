@@ -79,14 +79,14 @@ export const McpxServerCard = ({
   }, [isActive, server.status]);
 
   return (
-    <Card className="gap-0 rounded-lg bg-(--colors-gray-50) p-3 py-3 shadow-none ring-0">
+    <Card className="gap-0 rounded-lg bg-mcpx-surface-subtle p-3 py-3 shadow-none ring-0">
       <CardContent className="p-0">
         <div className="flex items-center gap-2">
           <div className="shrink-0">
             <img
               src={domainIconUrl}
               alt="Server Icon"
-              className="min-w-8 w-8 min-h-8 h-8 rounded-md object-contain p-1 bg-white"
+              className="min-w-8 w-8 min-h-8 h-8 rounded-md object-contain p-1 bg-mcpx-surface"
             />
           </div>
           <div className="flex-1 flex-row min-w-0">

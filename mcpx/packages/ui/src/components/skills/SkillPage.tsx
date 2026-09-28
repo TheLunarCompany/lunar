@@ -15,7 +15,7 @@ export function Root({
       data-slot="skill-page-root"
       data-overflow={overflow}
       className={cn(
-        "relative flex min-h-0 flex-1 flex-col bg-[var(--structure-color-bg-app)] p-4 sm:p-6",
+        "relative flex min-h-0 flex-1 flex-col bg-mcpx-surface p-4 sm:p-6",
         overflow === "hidden" ? "overflow-hidden" : "overflow-auto",
         className,
       )}
@@ -114,7 +114,7 @@ export function Title({
     <h1
       data-slot="skill-page-title"
       className={cn(
-        "text-[20px] font-semibold leading-7 text-[var(--text-colours-color-text-primary)]",
+        "font-brand text-xl font-semibold leading-[1.25] text-mcpx-text",
         className,
       )}
       {...props}
@@ -133,7 +133,7 @@ export function Description({
     <p
       data-slot="skill-page-description"
       className={cn(
-        "mt-2 max-w-2xl text-sm leading-6 text-[var(--text-colours-color-text-secondary)]",
+        "mt-2 max-w-2xl text-sm leading-6 text-mcpx-text-secondary",
         className,
       )}
       {...props}
@@ -205,7 +205,7 @@ export function Message({
     <div
       data-slot="skill-page-message"
       className={cn(
-        "grid min-h-40 place-items-center gap-4 rounded-lg border border-dashed border-[var(--structure-color-border-primary)] text-sm text-[var(--text-colours-color-text-secondary)]",
+        "grid min-h-40 place-items-center gap-4 rounded-lg border border-dashed border-mcpx-border-subtle text-sm text-mcpx-text-secondary",
         className,
       )}
       {...props}

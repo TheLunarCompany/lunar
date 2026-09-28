@@ -61,7 +61,7 @@ import { ServerPromptsList } from "./ServerToolsList";
 import { useFeatureFlag } from "@/contexts/feature-flags";
 
 const DRAWER_SHEET_CLASS_NAME =
-  "w-[600px]! max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden";
+  "w-[600px]! max-w-[600px]! bg-mcpx-surface p-0 flex flex-col [&>button]:hidden";
 
 export function ServerCapabilitiesSections({
   server,
@@ -465,13 +465,13 @@ export const ServerDetailsModal = ({
           <>
             <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2 shrink-0">
               <ServerStatusBadge status={effectiveStatus} />
-              <div className="flex m-0! gap-1.5 items-center text-[#7F7999]">
+              <div className="m-0! flex items-center gap-1">
                 {liveStatus !== "connecting" && canEditCustom && (
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="w-4 h-4"
+                    size="icon-sm"
                     onClick={handleEditServer}
+                    aria-label="Edit server"
                   >
                     <PencilIcon />
                   </Button>
@@ -479,18 +479,18 @@ export const ServerDetailsModal = ({
                 {liveStatus !== "connecting" && (
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="w-4 h-4"
+                    size="icon-sm"
                     onClick={handleRemoveServer}
+                    aria-label="Delete server"
                   >
                     <TrashIcon />
                   </Button>
                 )}
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="w-4 h-4"
+                  size="icon-sm"
                   onClick={handleClose}
+                  aria-label="Close server details"
                 >
                   <ArrowRightIcon />
                 </Button>
@@ -503,7 +503,7 @@ export const ServerDetailsModal = ({
                   <img
                     src={domainIconUrl}
                     alt="Domain Icon"
-                    className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
+                    className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-mcpx-surface"
                   />
                   <span
                     className={`text-2xl font-medium ${!currentServer.displayName ? "capitalize" : ""}`}
@@ -561,8 +561,8 @@ export const ServerDetailsModal = ({
               <div className="">
                 {liveStatus === "connecting" ? (
                   <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4 mb-4">
-                    <Loader2 className="w-6 h-6 animate-spin text-[#6B7280]" />
-                    <div className="text-sm font-semibold text-[#6B7280]">
+                    <Loader2 className="w-6 h-6 animate-spin text-mcpx-text-secondary" />
+                    <div className="text-sm font-semibold text-mcpx-text-secondary">
                       Connecting...
                     </div>
                   </div>
@@ -635,7 +635,7 @@ export const ServerDetailsModal = ({
                               className={
                                 effectiveStatus === "pending_input" &&
                                 serverDetailsOpenedFromInsertValueButton
-                                  ? "pt-3 rounded-lg p-4 border border-[#5147E4] shadow-xl shadow-[#5147E4]/30"
+                                  ? "pt-3 rounded-lg p-4 border border-[var(--mcpx-selected)] shadow-xl shadow-[var(--mcpx-selected)]/30"
                                   : "pt-3"
                               }
                             >

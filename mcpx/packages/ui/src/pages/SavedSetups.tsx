@@ -302,9 +302,7 @@ export default function SavedSetups() {
   if (error) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <p className="text-(--color-text-danger)">
-          Failed to load saved setups
-        </p>
+        <p className="text-mcpx-danger-text">Failed to load saved setups</p>
       </div>
     );
   }
@@ -317,9 +315,10 @@ export default function SavedSetups() {
   return (
     <div className="w-full p-6">
       <div className="flex items-start justify-between">
-        <div className="text-[20px] font-semibold mb-3">Saved Setups</div>
+        <h1 className="mcpx-page-title mb-3">Saved Setups</h1>
         <div className="flex justify-end mb-4">
           <Button
+            size={"lg"}
             onClick={() => setIsSaveDialogOpen(true)}
             className="bg-primary hover:bg-primary/80 text-primary-foreground"
           >
@@ -360,7 +359,7 @@ export default function SavedSetups() {
               return (
                 <div
                   key={setup.id}
-                  className="bg-white rounded-lg border-2 border-[#D8DCED] p-4 hover:border-primary! hover:shadow-md hover:shadow-primary/30 transition-all duration-200 cursor-pointer min-h-[160px] flex flex-col"
+                  className="flex min-h-[160px] cursor-pointer flex-col rounded-lg border-2 border-mcpx-border bg-mcpx-surface p-4 transition-all duration-200 hover:border-mcpx-selected! hover:shadow-[var(--mcpx-shadow-moderate)] hover:shadow-primary/30"
                   onClick={() => setSelectedSetup(setup)}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -413,7 +412,7 @@ export default function SavedSetups() {
                     {serverNames.slice(0, 3).map((name) => (
                       <div
                         key={name}
-                        className="rounded-[4px] flex items-center gap-1 bg-white px-1 py-1 text-xs border border-[#D8DCED]"
+                        className="flex items-center gap-1 rounded-[4px] border border-mcpx-border bg-mcpx-surface px-1 py-1 text-xs"
                       >
                         <ServerIconCell name={name} />
                         <span className="text-foreground truncate max-w-[100px]">
@@ -445,7 +444,7 @@ export default function SavedSetups() {
                         {skillLabels.slice(0, 3).map((skill) => (
                           <div
                             key={skill.id}
-                            className={`rounded-[4px] flex items-center gap-1 bg-white px-1 py-1 text-xs border border-[#D8DCED] ${
+                            className={`flex items-center gap-1 rounded-[4px] border border-mcpx-border bg-mcpx-surface px-1 py-1 text-xs ${
                               skill.unavailable ? "text-muted-foreground" : ""
                             }`}
                             title={
@@ -485,7 +484,7 @@ export default function SavedSetups() {
                         {toolGroupNames.slice(0, 3).map((groupName) => (
                           <div
                             key={groupName}
-                            className="rounded-[4px] flex items-center gap-1 bg-white px-1 py-1 text-xs border border-[#D8DCED]"
+                            className="flex items-center gap-1 rounded-[4px] border border-mcpx-border bg-mcpx-surface px-1 py-1 text-xs"
                           >
                             <Hammer className="w-4 h-4 text-muted-foreground" />
                             <span className="text-foreground truncate max-w-[100px]">
@@ -613,7 +612,9 @@ export default function SavedSetups() {
                 Cancel
               </Button>
               <Button
-                variant="destructive"
+                variant={
+                  pendingAction?.type === "restore" ? "outline" : "destructive"
+                }
                 onClick={handleJustAction}
                 disabled={isActionPending}
               >

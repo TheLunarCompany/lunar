@@ -33,12 +33,10 @@ export const ZeroDefault: Story = {
   name: "Zero / Default",
   render: () => (
     <NodeCard variant="zero" className="w-[230px] items-center gap-3 py-6">
-      <Bot className="size-[30px] text-[var(--colors-primary-500)]" />
+      <Bot className="size-[30px] text-mcpx-selected" />
       <div className="flex flex-col items-center gap-1 text-sm">
-        <span className="font-semibold text-[var(--colors-gray-950)]">
-          No AI Agent
-        </span>
-        <span className="text-[var(--colors-gray-600)]">
+        <span className="font-semibold text-mcpx-text">No AI Agent</span>
+        <span className="text-mcpx-text-secondary">
           Waiting for agent connection
         </span>
       </div>
@@ -58,12 +56,10 @@ export const ZeroActive: Story = {
       state="active"
       className="w-[230px] items-center gap-3 py-6"
     >
-      <Bot className="size-[30px] text-[var(--colors-primary-500)]" />
+      <Bot className="size-[30px] text-mcpx-selected" />
       <div className="flex flex-col items-center gap-0.5 text-sm">
-        <span className="font-semibold text-[var(--colors-gray-950)]">
-          No AI Agent
-        </span>
-        <span className="text-[var(--colors-gray-600)]">
+        <span className="font-semibold text-mcpx-text">No AI Agent</span>
+        <span className="text-mcpx-text-secondary">
           Waiting for agent connection
         </span>
       </div>
@@ -81,7 +77,7 @@ export const ZeroAllStates: Story = {
     <div className="flex gap-8">
       {(["default", "active"] as const).map((state) => (
         <div key={state} className="flex flex-col gap-4">
-          <span className="border-b border-[#e9e9e9] pb-2 text-xs font-medium uppercase text-black">
+          <span className="border-b border-mcpx-border-subtle pb-2 text-xs font-medium uppercase text-mcpx-text">
             {state}
           </span>
           <NodeCard
@@ -89,12 +85,10 @@ export const ZeroAllStates: Story = {
             state={state}
             className="w-[230px] items-center gap-3 py-6"
           >
-            <Bot className="size-[30px] text-[var(--colors-primary-500)]" />
+            <Bot className="size-[30px] text-mcpx-selected" />
             <div className="flex flex-col items-center gap-1 text-sm">
-              <span className="font-semibold text-[var(--colors-gray-950)]">
-                No AI Agent
-              </span>
-              <span className="text-[var(--colors-gray-600)]">
+              <span className="font-semibold text-mcpx-text">No AI Agent</span>
+              <span className="text-mcpx-text-secondary">
                 Waiting for agent connection
               </span>
             </div>
@@ -117,16 +111,16 @@ export const RegularAllStates: Story = {
     <div className="flex gap-8">
       {(["default", "active"] as const).map((state) => (
         <div key={state} className="flex flex-col gap-4">
-          <span className="border-b border-[#e9e9e9] pb-2 text-xs font-medium uppercase text-black">
+          <span className="border-b border-mcpx-border-subtle pb-2 text-xs font-medium uppercase text-mcpx-text">
             {state}
           </span>
           <NodeCard variant="default" state={state} className="w-[230px]">
             <div className="flex gap-3 items-center">
               <NodeCardIcon>
-                <Bot className="size-[30px] text-[var(--colors-primary-500)]" />
+                <Bot className="size-[30px] text-mcpx-selected" />
               </NodeCardIcon>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-[var(--colors-gray-950)]">
+                <span className="text-sm font-semibold text-mcpx-text">
                   Claude
                 </span>
                 <NodeBadge>Claude</NodeBadge>
@@ -147,17 +141,17 @@ export const WarningAllStates: Story = {
     <div className="flex gap-8">
       {(["default", "active"] as const).map((state) => (
         <div key={state} className="flex flex-col gap-4">
-          <span className="border-b border-[#e9e9e9] pb-2 text-xs font-medium uppercase text-black">
+          <span className="border-b border-mcpx-border-subtle pb-2 text-xs font-medium uppercase text-mcpx-text">
             {state}
           </span>
           <NodeCard variant="warning" state={state} className="w-[230px] gap-2">
             <NodeIndicatorBadge variant="warning" />
             <div className="flex gap-3 items-center">
               <NodeCardIcon>
-                <Server className="size-[30px] text-[var(--colors-gray-500)]" />
+                <Server className="size-[30px] text-mcpx-text-secondary" />
               </NodeCardIcon>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-[var(--colors-gray-950)]">
+                <span className="text-sm font-semibold text-mcpx-text">
                   Slack
                 </span>
                 <NodeBadge variant="warning">Pending user input</NodeBadge>
@@ -182,17 +176,17 @@ export const InfoAllStates: Story = {
     <div className="flex gap-8">
       {(["default", "active"] as const).map((state) => (
         <div key={state} className="flex flex-col gap-4">
-          <span className="border-b border-[#e9e9e9] pb-2 text-xs font-medium uppercase text-black">
+          <span className="border-b border-mcpx-border-subtle pb-2 text-xs font-medium uppercase text-mcpx-text">
             {state}
           </span>
           <NodeCard variant="info" state={state} className="w-[230px] gap-2">
             <NodeIndicatorBadge variant="info" />
             <div className="flex gap-3 items-center">
               <NodeCardIcon>
-                <Server className="size-[30px] text-[var(--colors-info-500)]" />
+                <Server className="size-[30px] text-mcpx-info-text" />
               </NodeCardIcon>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-[var(--colors-gray-950)]">
+                <span className="text-sm font-semibold text-mcpx-text">
                   Memory
                 </span>
                 <NodeBadge variant="info">Pending auth</NodeBadge>
@@ -216,17 +210,17 @@ export const ErrorAllStates: Story = {
     <div className="flex gap-8">
       {(["default", "active"] as const).map((state) => (
         <div key={state} className="flex flex-col gap-4">
-          <span className="border-b border-[#e9e9e9] pb-2 text-xs font-medium uppercase text-black">
+          <span className="border-b border-mcpx-border-subtle pb-2 text-xs font-medium uppercase text-mcpx-text">
             {state}
           </span>
           <NodeCard variant="error" state={state} className="w-[230px] gap-2">
             <NodeIndicatorBadge variant="error" />
             <div className="flex gap-3 items-center">
               <NodeCardIcon>
-                <Server className="size-[30px] text-[var(--colors-error-700)]" />
+                <Server className="size-[30px] text-mcpx-danger-text" />
               </NodeCardIcon>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-[var(--colors-gray-950)]">
+                <span className="text-sm font-semibold text-mcpx-text">
                   Context7
                 </span>
                 <NodeBadge variant="error">Connection error</NodeBadge>
@@ -256,12 +250,12 @@ export const AllVariants: Story = {
               state={state}
               className="w-[230px] items-center gap-3 py-6"
             >
-              <Bot className="size-[30px] text-[var(--colors-primary-500)]" />
+              <Bot className="size-[30px] text-mcpx-selected" />
               <div className="flex flex-col items-center gap-1 text-sm">
-                <span className="font-semibold text-[var(--colors-gray-950)]">
+                <span className="font-semibold text-mcpx-text">
                   No AI Agent
                 </span>
-                <span className="text-[var(--colors-gray-600)]">
+                <span className="text-mcpx-text-secondary">
                   Waiting for agent connection
                 </span>
               </div>
@@ -287,10 +281,10 @@ export const AllVariants: Story = {
             >
               <div className="flex gap-3 items-center">
                 <NodeCardIcon>
-                  <Bot className="size-[30px] text-[var(--colors-primary-500)]" />
+                  <Bot className="size-[30px] text-mcpx-selected" />
                 </NodeCardIcon>
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-[var(--colors-gray-950)]">
+                  <span className="text-sm font-semibold text-mcpx-text">
                     Claude
                   </span>
                   <NodeBadge>Claude</NodeBadge>
@@ -315,10 +309,10 @@ export const AllVariants: Story = {
               <NodeIndicatorBadge variant="warning" />
               <div className="flex gap-3 items-center">
                 <NodeCardIcon>
-                  <Server className="size-[30px] text-[var(--colors-gray-500)]" />
+                  <Server className="size-[30px] text-mcpx-text-secondary" />
                 </NodeCardIcon>
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-[var(--colors-gray-950)]">
+                  <span className="text-sm font-semibold text-mcpx-text">
                     Slack
                   </span>
                   <NodeBadge variant="warning">Pending user input</NodeBadge>
@@ -347,10 +341,10 @@ export const AllVariants: Story = {
               <NodeIndicatorBadge variant="info" />
               <div className="flex gap-3 items-center">
                 <NodeCardIcon>
-                  <Server className="size-[30px] text-[var(--colors-info-500)]" />
+                  <Server className="size-[30px] text-mcpx-info-text" />
                 </NodeCardIcon>
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-[var(--colors-gray-950)]">
+                  <span className="text-sm font-semibold text-mcpx-text">
                     Memory
                   </span>
                   <NodeBadge variant="info">Pending auth</NodeBadge>
@@ -378,10 +372,10 @@ export const AllVariants: Story = {
               <NodeIndicatorBadge variant="error" />
               <div className="flex gap-3 items-center">
                 <NodeCardIcon>
-                  <Server className="size-[30px] text-[var(--colors-error-700)]" />
+                  <Server className="size-[30px] text-mcpx-danger-text" />
                 </NodeCardIcon>
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-[var(--colors-gray-950)]">
+                  <span className="text-sm font-semibold text-mcpx-text">
                     Context7
                   </span>
                   <NodeBadge variant="error">Connection error</NodeBadge>

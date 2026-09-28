@@ -121,12 +121,12 @@ export const Layout: FC<LayoutProps> = ({
           <OboEditBanner />
           <div
             data-testid="layout-shell"
-            className="grid min-h-0 w-full flex-1 grid-cols-[16rem_minmax(0,1fr)] gap-1.5 bg-[#fcfcfc] bg-[linear-gradient(135deg,#dad9f6_0%,rgb(255_207_236_/_0.5)_100%)] p-1.5"
+            className="grid min-h-0 w-full flex-1 grid-cols-[16rem_minmax(0,1fr)] gap-2 bg-mcpx-page p-2"
           >
             <McpxSidebar
               activeItemId={activeItemId}
               collapsible="none"
-              className="min-h-0 overflow-hidden rounded-xl"
+              className="min-h-0 overflow-hidden rounded-lg"
               instanceStatus={instanceStatus}
             >
               {loginRequired ? (
@@ -135,7 +135,7 @@ export const Layout: FC<LayoutProps> = ({
                 ) : (
                   <button
                     onClick={() => login()}
-                    className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm text-white transition-colors hover:bg-primary/80"
+                    className="flex w-full items-center justify-center gap-2 rounded-md bg-mcpx-selected px-3 py-2 text-sm text-mcpx-tooltip-text transition-colors hover:bg-mcpx-selected-hover"
                   >
                     Login
                   </button>
@@ -143,8 +143,8 @@ export const Layout: FC<LayoutProps> = ({
               ) : null}
             </McpxSidebar>
 
-            <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[12px] bg-white">
-              <div className="flex min-h-0 flex-1 bg-white">
+            <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg bg-mcpx-surface">
+              <div className="flex min-h-0 flex-1 bg-mcpx-surface">
                 {approvalPending ? (
                   <ProvisioningScreen />
                 ) : panelStatus ? (

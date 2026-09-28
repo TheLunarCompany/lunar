@@ -32,14 +32,16 @@ export const UserDetails: FC = () => {
     <div className="relative">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="w-full text-left cursor-pointer rounded-lg outline-hidden ring-sidebar-ring focus-visible:ring-2 hover:bg-white/10 transition-colors">
-            <div className="flex flex-row items-center gap-3 pl-2 min-w-0">
-              <div className="w-9 h-9 bg-pink-500 rounded-full flex items-center justify-center shadow-md shrink-0">
-                <User className="h-5 w-5 text-white" />
+          <button className="w-full cursor-pointer rounded-[var(--border-radius-sm)] text-left outline-hidden ring-sidebar-ring transition-colors hover:bg-[var(--mcpx-sidebar-active)] focus-visible:ring-2">
+            <div className="flex min-w-0 flex-row items-center gap-3 p-2">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-mcpx-surface shadow-none">
+                <User className="size-5 text-[var(--mcpx-sidebar)]" />
               </div>
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <div className="text-sm truncate">{username}</div>
-                <div className="text-sm text-white/65 truncate">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <div className="truncate text-sm font-semibold text-[var(--mcpx-sidebar-text)]">
+                  {username}
+                </div>
+                <div className="truncate text-xs text-[var(--mcpx-sidebar-text-muted)]">
                   {userEmail}
                 </div>
               </div>
@@ -49,19 +51,19 @@ export const UserDetails: FC = () => {
 
         <DropdownMenuContent
           align="end"
-          className="w-[200px] mt-2 bg-white shadow-[0_6px_20px_0_rgba(30,27,75,0.20)] ml-[5px]"
+          className="mt-2 ml-[5px] w-[200px] bg-mcpx-surface shadow-[var(--mcpx-shadow-moderate)]"
           side="top"
           sideOffset={8}
         >
-          <div className="flex flex-col items-center gap-3 bg-white p-2 py-4">
-            <div className="w-[54px] h-[54px] bg-pink-500 rounded-full flex items-center justify-center shadow-md shrink-0">
-              <User className="h-7 w-7 text-white" />
+          <div className="flex flex-col items-center gap-3 bg-mcpx-surface p-2 py-4">
+            <div className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full bg-mcpx-action shadow-[var(--mcpx-shadow-weak)]">
+              <User className="h-7 w-7 text-mcpx-tooltip-text" />
             </div>
             <div className="flex-1 min-w-0 w-full text-center px-2">
               <div className="text-md font-semibold truncate pb-1 w-full">
                 {username}
               </div>
-              <div className="text-xs text-gray-600 truncate w-full">
+              <div className="w-full truncate text-xs text-mcpx-text-secondary">
                 {userEmail}
               </div>
             </div>
@@ -90,8 +92,8 @@ export const UserDetails: FC = () => {
                 <DropdownMenuSeparator />
               </div>
               <div className="flex items-center gap-2 px-3 py-2">
-                <Building2 className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">
+                <Building2 className="h-4 w-4 text-mcpx-text-secondary" />
+                <span className="text-sm text-mcpx-text-secondary">
                   {isAdmin ? "Enterprise Admin" : "Enterprise user"}
                 </span>
               </div>
@@ -103,11 +105,11 @@ export const UserDetails: FC = () => {
           </div>
 
           <DropdownMenuItem
-            className="flex items-center gap-2 cursor-pointer focus:bg-transparent focus:text-current"
+            className="flex cursor-pointer items-center gap-2"
             onClick={() => logout()}
           >
             <LogOut className="h-4 w-4" />
-            <span className="text-sm text-gray-600">Log Out</span>
+            <span className="text-sm text-mcpx-text-secondary">Log Out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

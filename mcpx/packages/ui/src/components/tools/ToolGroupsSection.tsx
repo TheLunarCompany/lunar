@@ -70,7 +70,7 @@ function TruncatedTitle({ text }: TruncatedTitleProps): React.JSX.Element {
     <p
       ref={textRef}
       className="leading-[100%] truncate"
-      style={{ color: "#231A4D", fontSize: "18px" }}
+      style={{ color: "var(--mcpx-text)", fontSize: "18px" }}
     >
       {text}
     </p>
@@ -112,7 +112,7 @@ export function ToolGroupsSection({
   return (
     <div className="mb-12">
       {transformedToolGroups.length > 0 ? (
-        <div className="bg-white rounded-lg p-6 shadow-xs border border-gray-200">
+        <div className="bg-mcpx-surface rounded-lg p-6 shadow-[var(--mcpx-shadow-weak)] border border-mcpx-border-subtle">
           <div className="relative w-full">
             <p
               className="font-semibold mb-4"
@@ -130,7 +130,7 @@ export function ToolGroupsSection({
                   variant="secondary"
                   size="sm"
                   onClick={() => onGroupNavigation("left")}
-                  className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-md"
+                  className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-mcpx-surface shadow-[var(--mcpx-shadow-moderate)]"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -151,10 +151,10 @@ export function ToolGroupsSection({
                       key={group.id}
                       data-tool-group-card
                       data-group-id={group.id}
-                      className={`flex min-h-[156px] w-full min-w-[130px] cursor-pointer flex-col rounded-lg border bg-white p-4 transition-all ${
+                      className={`flex min-h-[156px] w-full min-w-[130px] cursor-pointer flex-col rounded-lg border bg-mcpx-surface p-4 transition-all ${
                         isSelected || isDialogSelected
-                          ? "border-primary shadow-md shadow-primary/20 ring-2 ring-primary/15"
-                          : "border-[var(--colors-gray-200)] hover:border-primary/60 hover:shadow-md"
+                          ? "border-primary shadow-[var(--mcpx-shadow-moderate)] shadow-primary/20 ring-2 ring-primary/15"
+                          : "border-[var(--mcpx-border-subtle)] hover:border-primary/60 hover:shadow-[var(--mcpx-shadow-moderate)]"
                       }`}
                       onClick={() => onGroupClick(group.id)}
                     >
@@ -162,10 +162,10 @@ export function ToolGroupsSection({
                         <div className="flex min-w-0 flex-1 items-start gap-3">
                           <div className="flex min-w-0 flex-1 items-start gap-3">
                             <span
-                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-[var(--colors-gray-50)] text-lg ${
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-[var(--mcpx-surface-subtle)] text-lg ${
                                 isSelected || isDialogSelected
                                   ? "border-primary/50"
-                                  : "border-[var(--colors-gray-200)]"
+                                  : "border-[var(--mcpx-border-subtle)]"
                               }`}
                             >
                               {group.icon}
@@ -241,12 +241,12 @@ export function ToolGroupsSection({
                         </div>
                       </div>
 
-                      <div className="mb-3 flex items-center justify-between gap-2 border-t border-[var(--colors-gray-200)] pt-3">
-                        <span className="text-xs font-medium text-[var(--colors-gray-600)]">
+                      <div className="mb-3 flex items-center justify-between gap-2 border-t border-[var(--mcpx-border-subtle)] pt-3">
+                        <span className="text-xs font-medium text-[var(--mcpx-text-secondary)]">
                           {group.tools.length} server
                           {group.tools.length === 1 ? "" : "s"}
                         </span>
-                        <span className="rounded-full bg-[var(--colors-gray-50)] px-2 py-0.5 text-xs font-medium text-[var(--colors-gray-600)]">
+                        <span className="rounded-full bg-[var(--mcpx-surface-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--mcpx-text-secondary)]">
                           {totalTools} tool{totalTools === 1 ? "" : "s"}
                         </span>
                       </div>
@@ -260,7 +260,7 @@ export function ToolGroupsSection({
                           />
                         ))}
                         {group.tools.length > 5 && (
-                          <div className="flex h-7 items-center rounded-md border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] px-2 text-xs text-[var(--colors-gray-600)]">
+                          <div className="flex h-7 items-center rounded-md border border-[var(--mcpx-border-subtle)] bg-[var(--mcpx-surface-subtle)] px-2 text-xs text-[var(--mcpx-text-secondary)]">
                             +{group.tools.length - 5}
                           </div>
                         )}
@@ -276,7 +276,7 @@ export function ToolGroupsSection({
                   variant="secondary"
                   size="sm"
                   onClick={() => onGroupNavigation("right")}
-                  className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-md"
+                  className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-mcpx-surface shadow-[var(--mcpx-shadow-moderate)]"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -293,7 +293,7 @@ export function ToolGroupsSection({
                   className={`w-2 h-2 rounded-full transition-colors ${
                     index === currentGroupIndex
                       ? "bg-primary/80"
-                      : "bg-gray-300"
+                      : "bg-mcpx-border"
                   }`}
                   onClick={() => setCurrentGroupIndex(index)}
                 />

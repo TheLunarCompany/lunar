@@ -1,36 +1,23 @@
-import { Badge, BadgeProps } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import {
+  SemanticBadge,
+  type SemanticBadgeProps,
+  type SemanticBadgeTone,
+} from "@/components/ui/semantic-badge";
 import { McpServerStatus } from "@/types";
-import { SERVER_STATUS } from "@/types/mcp-server";
-import { cva } from "class-variance-authority";
 
 type ServerStatusBadgeStatus = McpServerStatus | "disabled";
 
-const serverStatusBadgeVariants = cva(
-  "h-[22px] rounded-full pl-1.5 pr-2 leading-[18px]",
+const SERVER_STATUS_TONES: Record<ServerStatusBadgeStatus, SemanticBadgeTone> =
   {
-    variants: {
-      status: {
-        [SERVER_STATUS.connecting]:
-          "border-(--colors-gray-200) bg-(--colors-gray-100) text-(--colors-gray-600)",
-        disabled:
-          "border-(--colors-gray-200) bg-(--colors-gray-200) text-(--colors-gray-500)",
-        [SERVER_STATUS.connected_running]:
-          "border-(--color-border-success) bg-(--color-bg-success) text-(--color-fg-success)",
-        [SERVER_STATUS.connected_stopped]:
-          "border-(--color-border-success) bg-(--color-bg-success) text-(--color-fg-success)",
-        [SERVER_STATUS.connected_inactive]:
-          "border-(--colors-primary-200) bg-(--colors-primary-50) text-(--colors-primary-700)",
-        [SERVER_STATUS.connection_failed]:
-          "border-(--colors-error-200) bg-(--colors-error-50) text-(--colors-error-700)",
-        [SERVER_STATUS.pending_auth]:
-          "border-(--colors-info-200) bg-(--colors-info-50) text-(--colors-info-700)",
-        [SERVER_STATUS.pending_input]:
-          "border-(--colors-warning-200) bg-(--colors-warning-100) text-(--colors-warning-500)",
-      },
-    },
-  },
-);
+    connecting: "neutral",
+    disabled: "disabled",
+    connected_running: "success",
+    connected_stopped: "success",
+    connected_inactive: "inactive",
+    connection_failed: "danger",
+    pending_auth: "info",
+    pending_input: "pending",
+  };
 
 const SERVER_STATUS_LABELS: Record<ServerStatusBadgeStatus, string> = {
   connecting: "Connecting...",
@@ -43,7 +30,10 @@ const SERVER_STATUS_LABELS: Record<ServerStatusBadgeStatus, string> = {
   pending_input: "Missing Configuration",
 };
 
-type ServerStatusBadgeProps = Omit<BadgeProps, "children" | "variant"> & {
+type ServerStatusBadgeProps = Omit<
+  SemanticBadgeProps,
+  "children" | "tone" | "showDot"
+> & {
   status: ServerStatusBadgeStatus;
 };
 
@@ -53,22 +43,13 @@ export function ServerStatusBadge({
   ...props
 }: ServerStatusBadgeProps) {
   return (
-    <Badge
+    <SemanticBadge
       {...props}
-      variant="secondary"
-      size="md"
+      tone={SERVER_STATUS_TONES[status]}
       title={SERVER_STATUS_LABELS[status]}
-      className={cn(
-        serverStatusBadgeVariants({ status }),
-        "max-w-full min-w-0",
-        className,
-      )}
+      className={className}
     >
-      <span
-        className="bg-current w-1.5 h-1.5 shrink-0 rounded-full"
-        aria-hidden
-      />
-      <span className="min-w-0 truncate">{SERVER_STATUS_LABELS[status]}</span>
-    </Badge>
+      {SERVER_STATUS_LABELS[status]}
+    </SemanticBadge>
   );
 }

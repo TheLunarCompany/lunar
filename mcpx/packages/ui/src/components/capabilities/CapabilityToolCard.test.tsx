@@ -37,7 +37,7 @@ describe("CapabilityToolCard", () => {
     expect(screen.getByText("read_file")).toBeInTheDocument();
     expect(screen.getByLabelText("Capability type icon")).toBeInTheDocument();
     expect(screen.getByText("read_file").parentElement?.className).toContain(
-      "--colors-primary-100",
+      "--mcpx-selected-weak",
     );
     expect(screen.getByText("READ ONLY")).toBeInTheDocument();
     expect(screen.getByText("Read a file")).toBeInTheDocument();

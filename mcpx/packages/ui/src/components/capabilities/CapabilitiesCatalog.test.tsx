@@ -163,7 +163,7 @@ describe("CapabilitiesCatalog", () => {
     render(<CapabilitiesCatalog />);
 
     expect(
-      screen.getByText("Capabilities", { selector: "p" }),
+      screen.getByRole("heading", { level: 1, name: "Capabilities" }),
     ).toBeInTheDocument();
     // No top-level "Add Custom Tool" button; custom tools are created per-item.
     expect(
@@ -186,7 +186,7 @@ describe("CapabilitiesCatalog", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText("Connected").closest("[data-slot='badge']"),
-    ).toHaveClass("bg-(--color-bg-success)");
+    ).toHaveClass("bg-mcpx-success-bg");
     expect(screen.getByText("safe_read")).toBeInTheDocument();
     expect(screen.getByText("Read a file safely")).toBeInTheDocument();
     expect(screen.getAllByText("READ ONLY").length).toBeGreaterThan(0);
@@ -257,7 +257,7 @@ describe("CapabilitiesCatalog", () => {
     expect(screen.queryByText("release_prompt")).not.toBeInTheDocument();
     expect(
       screen.getByText("create_repository").parentElement?.className,
-    ).toContain("--colors-primary-100");
+    ).toContain("--mcpx-selected-weak");
 
     fireEvent.click(screen.getByRole("tab", { name: "Prompts 1" }));
 
@@ -269,7 +269,7 @@ describe("CapabilitiesCatalog", () => {
     expect(screen.queryByText("create_repository")).not.toBeInTheDocument();
     expect(
       screen.getByText("release_prompt").parentElement?.className,
-    ).toContain("--colors-success-100");
+    ).toContain("bg-mcpx-success-bg");
 
     const resourcesTab = screen.getByRole("tab", { name: "Resources" });
     expect(resourcesTab).toBeDisabled();
@@ -287,9 +287,9 @@ describe("CapabilitiesCatalog", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "Filter Tools" }));
 
     const expectedDotClasses = {
-      "Read-only": "bg-green-500",
-      Write: "bg-amber-500",
-      Destructive: "bg-red-500",
+      "Read-only": "bg-mcpx-success-text",
+      Write: "bg-mcpx-warning-strong",
+      Destructive: "bg-mcpx-danger-bg0",
     };
 
     await screen.findByRole("menuitemcheckbox", { name: "Read-only" });
@@ -339,7 +339,7 @@ describe("CapabilitiesCatalog", () => {
 
     expect(
       screen.getByText("Pending Auth").closest("[data-slot='badge']"),
-    ).toHaveClass("bg-(--colors-info-50)");
+    ).toHaveClass("bg-mcpx-selected-weak", "text-mcpx-action");
   });
 
   it("renders empty states when provider and group data are missing", () => {

@@ -23,23 +23,23 @@ export const ConfirmDeleteDialog = ({
   return (
     <div className="relative flex-1 flex flex-col  min-h-0">
       {isOpen && (
-        <div className="absolute inset-0 z-60 backdrop-blur-xs bg-black/20 flex items-start justify-center pointer-events-auto pt-[50px]">
-          <div className="bg-white rounded-lg border-2 border-[var(--colors-route-active)] p-4 shadow-lg pointer-events-auto w-[90%] flex items-center gap-4">
-            <p className="flex-1 text-sm font-semibold text-[#1E1B4B]">
+        <div className="absolute inset-0 z-60 flex items-start justify-center bg-[var(--mcpx-scrim)] pt-[50px] pointer-events-auto">
+          <div className="bg-mcpx-surface rounded-lg border-2 border-[var(--mcpx-route-active)] p-4 shadow-lg pointer-events-auto w-[90%] flex items-center gap-4">
+            <p className="flex-1 text-sm font-semibold text-mcpx-text">
               {title}
             </p>
             <div className="flex items-center gap-2 shrink-0">
               <Button
                 onClick={onClose}
                 variant="ghost"
-                className="text-[#5147E4]! bg-white weight-semibold border-none!"
+                className="text-mcpx-selected! bg-mcpx-surface weight-semibold border-none!"
                 type="button"
               >
                 {cancelButtonText}
               </Button>
               <Button
                 variant="destructive"
-                className="bg-[#AD0149] hover:bg-[#AD0149]/90 text-white border-[#AD0149]"
+                className="bg-destructive hover:bg-destructive/90 text-mcpx-tooltip-text border-destructive"
                 onClick={onConfirm}
                 type="button"
               >
@@ -51,7 +51,6 @@ export const ConfirmDeleteDialog = ({
       )}
       <div
         className={`flex flex-col flex-1 min-h-0 ${isOpen ? "pointer-events-none" : ""}`}
-        style={isOpen ? { filter: "blur(2px)" } : undefined}
       >
         {children}
       </div>

@@ -23,6 +23,8 @@ describe("NodeBadge", () => {
     const badge = screen.getByText("Disabled");
 
     expect(badge).toHaveAttribute("data-variant", "disabled");
+    expect(badge).toHaveClass("bg-mcpx-surface-disabled");
+    expect(badge).toHaveClass("text-mcpx-text-tertiary");
   });
 
   it("keeps badge width content-sized inside flex columns", () => {

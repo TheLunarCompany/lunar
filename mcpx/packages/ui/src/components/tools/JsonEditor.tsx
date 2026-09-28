@@ -41,8 +41,8 @@ const JsonEditor = ({
       <div
         className={`border rounded-md ${
           displayError
-            ? "border-red-500"
-            : "border-gray-200 dark:border-gray-800"
+            ? "border-mcpx-danger-text"
+            : "border-mcpx-border-subtle "
         }`}
       >
         <Editor
@@ -62,7 +62,7 @@ const JsonEditor = ({
         />
       </div>
       {displayError && (
-        <p className="text-sm text-red-500 mt-1">{displayError}</p>
+        <p className="text-sm text-mcpx-danger-text mt-1">{displayError}</p>
       )}
     </div>
   );

@@ -22,7 +22,7 @@ export function SkillSetupSummaryCard({ className, ...props }: SetupCardProps) {
   return (
     <div
       className={cn(
-        "flex min-h-16 min-w-0 items-center gap-2 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--colors-white)] px-4 py-2",
+        "flex min-h-16 min-w-0 items-center gap-2 rounded-lg border border-mcpx-border-subtle bg-mcpx-surface px-4 py-2",
         className,
       )}
       {...props}
@@ -37,7 +37,7 @@ export function SkillSetupSummaryIcon({
   return (
     <span
       className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-full border-0 bg-[var(--component-colours-color-fg-interactive)] text-[var(--colors-white)]",
+        "grid size-8 shrink-0 place-items-center rounded-full border-0 bg-mcpx-selected text-mcpx-text-inverse",
         className,
       )}
       {...props}
@@ -59,7 +59,7 @@ export function SkillSetupSummaryTitle({
   return (
     <h2
       className={cn(
-        "truncate text-[13px] font-semibold leading-[18px] text-[var(--text-colours-color-text-primary)]",
+        "truncate text-[13px] font-semibold leading-[18px] text-mcpx-text",
         className,
       )}
       {...props}
@@ -74,7 +74,7 @@ export function SkillSetupSummaryDescription({
   return (
     <p
       className={cn(
-        "truncate text-xs leading-[18px] text-[var(--text-colours-color-text-secondary)]",
+        "truncate text-xs leading-[18px] text-mcpx-text-secondary",
         className,
       )}
       {...props}

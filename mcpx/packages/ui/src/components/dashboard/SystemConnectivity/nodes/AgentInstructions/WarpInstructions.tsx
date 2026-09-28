@@ -3,7 +3,7 @@ import React from "react";
 
 export const WarpInstructions: React.FC = () => {
   return (
-    <div className="space-y-3 text-sm text-[#1E1B4B]">
+    <div className="space-y-3 text-sm text-mcpx-text">
       <div>
         <p className="font-semibold mb-4">Connect with Warp</p>
         <ol className="list-decimal list-inside space-y-2">
@@ -21,8 +21,9 @@ export const WarpInstructions: React.FC = () => {
             </strong>{" "}
             or, if you've connected to MCPX before (e.g. from Claude Code or
             Codex), scroll down, find{" "}
-            <code className="bg-gray-100 px-1 rounded">mcpx</code>, and click
-            the , and click the <Plus className="w-3 h-3 inline" /> button
+            <code className="bg-mcpx-surface-tertiary px-1 rounded">mcpx</code>,
+            and click the , and click the <Plus className="w-3 h-3 inline" />{" "}
+            button
           </li>
           <li>Copy and paste the configuration from the JSON config tab</li>
           <li>

@@ -50,6 +50,7 @@ const runtimeConfig: RuntimeConfig = {
   VITE_ADD_SERVER_CHECKBOX: "Add another server",
   VITE_UI_SIDEBAR_RESTRUCTURE: "false",
   VITE_SHOW_MCP_SERVERS: "false",
+  VITE_IS_BOOMI: "false",
 };
 
 vi.mock("@/config/runtime-config", async (importOriginal) => {

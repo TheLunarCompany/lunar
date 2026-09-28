@@ -16,9 +16,9 @@
   --spacing-xl: var(--dimension-xl);
 
   /* Border radius tokens */
-  --border-radius-sm: 4px;
-  --border-radius-md: 8px;
-  --border-radius-lg: 12px;
-  --border-radius-xl: 16px;
+  --border-radius-sm: var(--exo-radius-small);
+  --border-radius-md: var(--exo-radius-standard);
+  --border-radius-lg: var(--exo-radius-large);
+  --border-radius-xl: var(--exo-radius-x-large);
   --border-radius-full: 9999px;
 }

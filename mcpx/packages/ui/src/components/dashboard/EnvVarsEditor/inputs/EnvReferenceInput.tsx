@@ -179,7 +179,7 @@ export const EnvReferenceInput = ({
           </ComboboxList>
         </ComboboxContent>
       </CreatableCombobox>
-      <FieldDescription className="text-[10px] font-medium text-red-500 mt-1">
+      <FieldDescription className="text-[10px] font-medium text-mcpx-danger-text mt-1">
         {hasUnappliedDraft ? (
           <>Click '+ Use env var "{trimmedQuery}"' to apply this value</>
         ) : null}

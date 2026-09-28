@@ -20,7 +20,9 @@ export const SessionIdsTooltip: React.FC<SessionIdsTooltipProps> = ({
   // Defensive: ensure we have at least one session
   if (!primarySessionId) {
     return (
-      <div className={cn("text-sm text-gray-600 mb-3 mt-1", className)}>
+      <div
+        className={cn("mb-3 mt-1 text-sm text-mcpx-text-secondary", className)}
+      >
         Session ID: No active session
       </div>
     );
@@ -29,14 +31,16 @@ export const SessionIdsTooltip: React.FC<SessionIdsTooltipProps> = ({
   const hasMultipleSessions = sessionIds.length > 1;
 
   return (
-    <div className={cn("text-sm text-gray-600 mb-3 mt-1", className)}>
+    <div
+      className={cn("mb-3 mt-1 text-sm text-mcpx-text-secondary", className)}
+    >
       Session ID: {primarySessionId}
       {hasMultipleSessions && (
         // Radix Tooltip portals its content, so the overflow-y-auto parent in
         // the modal no longer clips it.
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="ml-2 text-gray-500 cursor-help">
+            <span className="ml-2 cursor-help text-mcpx-text-secondary">
               [{sessionIds.length} sessions]
             </span>
           </TooltipTrigger>
@@ -45,7 +49,7 @@ export const SessionIdsTooltip: React.FC<SessionIdsTooltipProps> = ({
             align="end"
             className="max-w-none flex-col items-start gap-1"
           >
-            <div className="text-gray-400">All sessions:</div>
+            <div className="text-mcpx-text-disabled">All sessions:</div>
             <div className="space-y-0.5">
               {sessionIds.map((id, idx) => (
                 <div key={idx} className="font-mono text-xs whitespace-nowrap">

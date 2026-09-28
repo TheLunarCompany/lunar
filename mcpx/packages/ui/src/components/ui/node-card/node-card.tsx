@@ -4,58 +4,54 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const nodeCardVariants = cva(
-  "relative flex flex-col items-start justify-center rounded-[var(--border-radius-lg)] bg-white p-3 transition-all",
+  "relative flex flex-col items-start justify-center rounded-[var(--border-radius-lg)] bg-mcpx-surface p-3 transition-all",
   {
     variants: {
       variant: {
         default:
-          "border border-solid border-[var(--colors-gray-200)] shadow-[var(--shadow-node-default)] hover:border-[var(--colors-primary-400)] hover:shadow-[var(--shadow-node-hover-primary)]",
-        zero: "border border-dashed border-[var(--colors-gray-300)] shadow-[var(--shadow-node-default)] hover:border-[var(--colors-primary-400)] hover:shadow-[var(--shadow-node-hover-primary)]",
-        warning:
-          "border border-solid border-[var(--colors-warning-400)] hover:shadow-[var(--shadow-node-hover-warning)]",
-        info: "border border-solid border-[var(--colors-info-500)] hover:shadow-[var(--shadow-node-hover-info)]",
-        error:
-          "border border-solid border-[var(--colors-error-700)] hover:shadow-[var(--shadow-node-hover-error)]",
+          "border border-solid border-mcpx-border-subtle shadow-none hover:border-mcpx-selected",
+        zero: "border border-solid border-mcpx-border-subtle shadow-none",
+        warning: "border border-solid border-mcpx-warning-strong shadow-none",
+        info: "border border-solid border-mcpx-info-text shadow-none",
+        error: "border border-solid border-mcpx-danger-text shadow-none",
         disabled:
-          "border border-solid border-[var(--colors-gray-200)] bg-[var(--colors-gray-100)] shadow-[var(--shadow-node-default)]",
+          "border border-solid border-mcpx-border-subtle bg-mcpx-surface-tertiary shadow-none",
       },
       state: {
         default: "",
-        active: "border-2",
+        active: "",
       },
     },
     compoundVariants: [
       {
         variant: "default",
         state: "active",
-        className:
-          "border-[var(--colors-route-active)] shadow-[var(--shadow-node-active-primary)]",
+        className: "border-mcpx-selected shadow-none",
       },
       {
         variant: "zero",
         state: "active",
-        className:
-          "border-[var(--colors-route-active)] shadow-[var(--shadow-node-active-primary)]",
+        className: "border-mcpx-selected shadow-none",
       },
       {
         variant: "warning",
         state: "active",
-        className: "shadow-[var(--shadow-node-active-warning)]",
+        className: "shadow-none",
       },
       {
         variant: "info",
         state: "active",
-        className: "shadow-[var(--shadow-node-active-info)]",
+        className: "shadow-none",
       },
       {
         variant: "error",
         state: "active",
-        className: "shadow-[var(--shadow-node-active-error)]",
+        className: "shadow-none",
       },
       {
         variant: "disabled",
         state: "active",
-        className: "shadow-[var(--shadow-node-default)]",
+        className: "shadow-none",
       },
     ],
     defaultVariants: {

@@ -30,7 +30,7 @@ import { useSkills } from "@/data/skills";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { buildSkillCardCapabilitySummaryResolver } from "@/mapping/skills";
 import { useSocketStore } from "@/store";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 interface SavedSetupSheetProps {
   isOpen: boolean;
@@ -49,6 +49,7 @@ export function SavedSetupSheet({
   onOverwrite,
   onDelete,
 }: SavedSetupSheetProps) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const skillsFeatureEnabled = useSkillsFeatureEnabled().data ?? false;
   const skillsQuery = useSkills({
     enabled: skillsFeatureEnabled && setup !== null,
@@ -91,10 +92,13 @@ export function SavedSetupSheet({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[600px] max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden border-l-2 border-primary"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+        }}
+        className="flex w-[600px] max-w-[600px]! flex-col gap-0 overflow-x-hidden border-l-2 border-primary bg-mcpx-surface p-0 [&>button]:hidden"
         style={{
           overflowX: "hidden",
-          boxShadow: "-4px 0 60px 0 rgba(0, 0, 0, 0.25)",
+          boxShadow: "-4px 0 60px 0 var(--mcpx-shadow-strong)",
         }}
       >
         <VisuallyHidden>
@@ -103,26 +107,29 @@ export function SavedSetupSheet({
         <SheetHeader className="px-6">
           <div className="flex items-center justify-between mt-6 gap-2 min-w-0">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <span className="text-xl min-w-10 w-10 min-h-10 h-10 rounded-full flex items-center justify-center bg-[#F3F5FA] border-2 border-gray-200 shrink-0">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-mcpx-border-subtle bg-mcpx-surface-tertiary text-xl">
                 <MonitorCog className="w-5 h-5 text-muted-foreground" />
               </span>
               <div className="min-w-0 flex-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div
-                      className="text-xl font-semibold text-gray-900 truncate"
-                      style={{ fontWeight: 600 }}
-                    >
+                <h2
+                  ref={titleRef}
+                  tabIndex={-1}
+                  className="text-xl font-semibold text-mcpx-text"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block w-fit max-w-full truncate">
+                        {setup.description}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
                       {setup.description}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    {setup.description}
-                  </TooltipContent>
-                </Tooltip>
+                    </TooltipContent>
+                  </Tooltip>
+                </h2>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <p className="text-xs text-muted-foreground cursor-default">
+                    <p className="w-fit cursor-default text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(setup.savedAt), {
                         addSuffix: true,
                       })}
@@ -140,11 +147,11 @@ export function SavedSetupSheet({
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon-sm"
                     onClick={() => onRestore(setup)}
-                    className="p-2"
+                    aria-label="Restore"
                   >
-                    <RotateCcw className="w-4 h-4" />
+                    <RotateCcw />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Restore</TooltipContent>
@@ -153,11 +160,11 @@ export function SavedSetupSheet({
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon-sm"
                     onClick={() => onOverwrite(setup)}
-                    className="p-2"
+                    aria-label="Overwrite with current setup"
                   >
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
@@ -168,11 +175,11 @@ export function SavedSetupSheet({
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon-sm"
                     onClick={() => onDelete(setup)}
-                    className="p-2"
+                    aria-label="Delete"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Delete</TooltipContent>
@@ -184,8 +191,8 @@ export function SavedSetupSheet({
 
         <div className="px-6 py-2 space-y-4 overflow-y-auto">
           {serverNames.length > 0 && (
-            <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
-              <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+            <div className="space-y-3 rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-4 shadow-[var(--mcpx-shadow-weak)]">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-mcpx-text">
                 <Server className="w-4 h-4 text-muted-foreground" />
                 Servers
               </h3>
@@ -193,11 +200,7 @@ export function SavedSetupSheet({
                 {serverNames.map((name) => (
                   <div
                     key={name}
-                    className="flex items-center rounded-lg p-3"
-                    style={{
-                      backgroundColor: "white",
-                      border: "1px solid #E2E2E2",
-                    }}
+                    className="flex items-center rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-3"
                   >
                     <p className="text-foreground" style={{ fontWeight: 600 }}>
                       {name}
@@ -205,15 +208,15 @@ export function SavedSetupSheet({
                   </div>
                 ))}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-mcpx-text-secondary">
                 {pluralizeWithCount(serverNames.length, "server")}
               </div>
             </div>
           )}
 
           {skillsFeatureEnabled && savedSkills.length > 0 ? (
-            <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
-              <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+            <div className="space-y-3 rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-4 shadow-[var(--mcpx-shadow-weak)]">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-mcpx-text">
                 <Sparkles className="w-4 h-4 text-muted-foreground" />
                 Skills
               </h3>
@@ -221,19 +224,19 @@ export function SavedSetupSheet({
                 {savedSkills.map(({ id, skill, summary }) => (
                   <div
                     key={id}
-                    className="flex flex-col gap-1 rounded-lg border border-gray-200 bg-white p-3"
+                    className="flex flex-col gap-1 rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-3"
                   >
                     <p className="font-semibold text-foreground">
                       {skill?.name ?? id}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-mcpx-text-secondary">
                       {skill?.description ??
                         (skillsQuery.isLoading
                           ? "Loading skill details..."
                           : "Skill is no longer available.")}
                     </p>
                     {skill ? (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-mcpx-text-tertiary">
                         {pluralizeWithCount(summary.providers.length, "server")}{" "}
                         · {pluralizeWithCount(summary.toolsCount, "tool")}
                         {summary.promptsCount > 0
@@ -247,13 +250,13 @@ export function SavedSetupSheet({
                   </div>
                 ))}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-mcpx-text-secondary">
                 {pluralizeWithCount(savedSkills.length, "skill")} selected
               </div>
             </div>
           ) : !skillsFeatureEnabled && toolGroups.length > 0 ? (
-            <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
-              <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+            <div className="space-y-3 rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-4 shadow-[var(--mcpx-shadow-weak)]">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-mcpx-text">
                 <Wrench className="w-4 h-4 text-muted-foreground" />
                 Tool Groups
               </h3>
@@ -267,11 +270,7 @@ export function SavedSetupSheet({
                   return (
                     <div
                       key={group.name}
-                      className="flex flex-col gap-1 rounded-lg p-3"
-                      style={{
-                        backgroundColor: "white",
-                        border: "1px solid #E2E2E2",
-                      }}
+                      className="flex flex-col gap-1 rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-3"
                     >
                       <p
                         className="text-foreground"
@@ -280,11 +279,11 @@ export function SavedSetupSheet({
                         {group.name}
                       </p>
                       {group.description && (
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-mcpx-text-secondary">
                           {group.description}
                         </p>
                       )}
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-mcpx-text-tertiary">
                         {pluralizeWithCount(serviceNames.length, "server")} ·{" "}
                         {pluralizeWithCount(totalTools, "tool")}
                       </p>
@@ -292,7 +291,7 @@ export function SavedSetupSheet({
                   );
                 })}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-mcpx-text-secondary">
                 {pluralizeWithCount(toolGroups.length, "tool group")} selected
               </div>
             </div>
@@ -303,7 +302,9 @@ export function SavedSetupSheet({
               ? savedSkills.length === 0
               : toolGroups.length === 0) && (
               <div className="text-center py-8">
-                <div className="text-gray-500 text-sm">This setup is empty</div>
+                <div className="text-sm text-mcpx-text-secondary">
+                  This setup is empty
+                </div>
               </div>
             )}
         </div>

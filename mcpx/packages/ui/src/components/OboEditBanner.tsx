@@ -44,7 +44,7 @@ export const OboEditBanner: FC = () => {
   };
 
   return (
-    <div className="flex w-full items-center justify-center gap-2 bg-amber-400 px-4 py-2 text-center text-sm font-semibold text-amber-950 shadow-md">
+    <div className="flex w-full items-center justify-center gap-2 bg-mcpx-warning-bg px-4 py-2 text-center text-sm font-semibold text-mcpx-text shadow-[var(--mcpx-shadow-weak)]">
       <Pencil className="h-4 w-4 shrink-0" />
       <span>
         This {kindLabel}
@@ -59,7 +59,7 @@ export const OboEditBanner: FC = () => {
         <button
           onClick={() => void endEditing()}
           disabled={isEnding}
-          className="ml-2 shrink-0 rounded-md bg-amber-950 px-3 py-1 text-xs font-semibold text-amber-50 hover:bg-amber-900 disabled:opacity-60"
+          className="ml-2 shrink-0 rounded-md bg-mcpx-warning-strong px-3 py-1 text-xs font-semibold text-mcpx-tooltip-text hover:bg-mcpx-action disabled:cursor-not-allowed disabled:bg-mcpx-surface-disabled disabled:text-mcpx-text-disabled"
         >
           {isEnding ? "Ending..." : "End editing"}
         </button>

@@ -97,7 +97,7 @@ export function SkillForm({
       <div className="min-h-0 flex-1 space-y-4 overflow-auto">
         <section
           aria-label="Skill details"
-          className="space-y-5 rounded-xl border border-[var(--colors-purple-200)] bg-[var(--colors-white)] p-4 shadow-none sm:p-5"
+          className="space-y-5 rounded-xl border border-mcpx-selected bg-mcpx-surface p-4 shadow-none sm:p-5"
         >
           <div className="space-y-2">
             <Label
@@ -111,7 +111,6 @@ export function SkillForm({
               id="skill-name"
               aria-invalid={Boolean(errors.name)}
               aria-required="true"
-              className="bg-[var(--structure-color-bg-app)]"
               {...register("name")}
             />
             {errors.name ? <ErrorText>{errors.name.message}</ErrorText> : null}
@@ -128,7 +127,7 @@ export function SkillForm({
               id="skill-description"
               aria-invalid={Boolean(errors.description)}
               aria-required="true"
-              className="min-h-20 resize-y bg-[var(--structure-color-bg-app)]"
+              className="min-h-20 resize-y"
               {...register("description")}
             />
             {errors.description ? (
@@ -139,7 +138,7 @@ export function SkillForm({
             name="exposeAsPrompt"
             control={control}
             render={({ field }) => (
-              <div className="flex items-center justify-between gap-4 rounded-md border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-app)] px-3 py-2">
+              <div className="flex items-center justify-between gap-4 rounded-md border border-mcpx-border-subtle bg-mcpx-surface px-3 py-2">
                 <div className="flex items-center gap-1.5">
                   <Label htmlFor="skill-expose-as-prompt">
                     Expose as slash command
@@ -150,7 +149,7 @@ export function SkillForm({
                         <button
                           type="button"
                           aria-label="About slash commands"
-                          className="rounded-full p-0.5 text-[var(--text-colours-color-text-secondary)] transition-colors hover:text-[var(--text-colours-color-text-primary)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                          className="rounded-full p-0.5 text-mcpx-text-secondary transition-colors hover:text-mcpx-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                         >
                           <Info aria-hidden="true" className="size-3.5" />
                         </button>
@@ -195,8 +194,8 @@ export function SkillForm({
                 </TabsList>
               </Tabs>
             }
-            className="rounded-xl border-[var(--colors-purple-200)] bg-[var(--colors-white)] shadow-none"
-            headerClassName="min-h-[72px] bg-[var(--colors-gray-50)] px-4 py-4 sm:px-6"
+            className="rounded-xl border-mcpx-selected bg-mcpx-surface shadow-none"
+            headerClassName="min-h-[72px] bg-mcpx-surface-subtle px-4 py-4 sm:px-6"
             contentClassName={bodyMode === "raw" ? undefined : "p-4 sm:p-7"}
           >
             {bodyMode === "raw" ? (
@@ -204,7 +203,7 @@ export function SkillForm({
                 id="skill-body"
                 aria-label="Markdown body"
                 aria-invalid={Boolean(errors.body)}
-                className="min-h-[420px] resize-y rounded-none border-0 bg-[var(--colors-white)] p-4 font-mono text-sm leading-7 shadow-none focus-visible:ring-0 aria-invalid:!border-0 aria-invalid:!ring-0 sm:min-h-[640px] sm:p-7 sm:text-base sm:leading-8 dark:aria-invalid:!border-0 dark:aria-invalid:!ring-0"
+                className="min-h-[420px] resize-y rounded-none border-0 p-4 font-mono text-sm leading-7 shadow-none focus-visible:ring-0 aria-invalid:!border-0 aria-invalid:!ring-0 sm:min-h-[640px] sm:p-7 sm:text-base sm:leading-8 dark:aria-invalid:!border-0 dark:aria-invalid:!ring-0"
                 {...register("body")}
               />
             ) : (
@@ -212,10 +211,10 @@ export function SkillForm({
                 {bodyValue.trim() ? (
                   <MarkdownContent
                     content={bodyValue}
-                    className="text-[var(--text-colours-color-text-primary)] [&_h1]:!text-base [&_h1]:!leading-6 [&_h2]:!text-sm [&_h2]:!leading-5 [&_h3]:!text-sm [&_h3]:!leading-5"
+                    className="text-mcpx-text [&_h1]:!text-base [&_h1]:!leading-6 [&_h2]:!text-sm [&_h2]:!leading-5 [&_h3]:!text-sm [&_h3]:!leading-5"
                   />
                 ) : (
-                  <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
+                  <p className="text-sm text-mcpx-text-secondary">
                     Nothing to preview.
                   </p>
                 )}

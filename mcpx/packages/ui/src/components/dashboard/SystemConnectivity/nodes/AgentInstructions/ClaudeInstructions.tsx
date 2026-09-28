@@ -6,14 +6,14 @@ import { toast } from "@/components/ui/use-toast";
 
 export const ClaudeDesktopInstructions: React.FC = () => {
   return (
-    <div className="space-y-3 text-sm text-[#1E1B4B]">
+    <div className="space-y-3 text-sm text-mcpx-text">
       <div>
         <p className="font-semibold mb-4">Connect with Claude Desktop</p>
         <ol className="list-decimal list-inside space-y-1">
           <li>In Claude Desktop, go to Settings → Developer</li>
           <li>
             Click "Edit Config" and open{" "}
-            <code className="bg-gray-100 px-1 rounded">
+            <code className="bg-mcpx-surface-tertiary px-1 rounded">
               claude_desktop_config.json
             </code>{" "}
             to edit the config file using the configuration in the json config
@@ -21,7 +21,7 @@ export const ClaudeDesktopInstructions: React.FC = () => {
           </li>
           <li>
             Save your updated{" "}
-            <code className="bg-gray-100 px-1 rounded">
+            <code className="bg-mcpx-surface-tertiary px-1 rounded">
               claude_desktop_config.json
             </code>{" "}
             and restart Claude to ensure all tools and integrations are properly
@@ -30,11 +30,11 @@ export const ClaudeDesktopInstructions: React.FC = () => {
         </ol>
       </div>
 
-      <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6">
+      <div className="bg-mcpx-selected-weak border border-mcpx-border-subtle rounded-lg p-6">
         <p className="font-semibold mb-4">Important Note</p>
         <p>
           MCPX will expose the available tools which are set up in{" "}
-          <code className="bg-gray-100 px-1 rounded">
+          <code className="bg-mcpx-surface-tertiary px-1 rounded">
             claude_desktop_config.json
           </code>
           , however they are not yet accessible for use. Please close and
@@ -69,7 +69,7 @@ export const ClaudeCodeInstructions: React.FC = () => {
     }
   };
   return (
-    <div className="text-sm text-[#1E1B4B]">
+    <div className="text-sm text-mcpx-text">
       <div>
         <p className="font-semibold mb-4">Connect with Claude Code</p>
         <ol className="list-decimal list-inside space-y-1">
@@ -77,7 +77,7 @@ export const ClaudeCodeInstructions: React.FC = () => {
           <li>
             Run the following command: <br></br>
             <div className="relative group my-2">
-              <pre className="bg-gray-100 p-4 rounded overflow-x-auto whitespace-pre-wrap wrap-break-word">
+              <pre className="bg-mcpx-surface-tertiary p-4 rounded overflow-x-auto whitespace-pre-wrap wrap-break-word">
                 <code className="text-sm">{commandText}</code>
               </pre>
               <Button
@@ -87,9 +87,9 @@ export const ClaudeCodeInstructions: React.FC = () => {
                 className="absolute top-2 right-2 h-7 w-7 p-0 flex items-center justify-center hover:opacity-70 transition-opacity"
               >
                 {copied ? (
-                  <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                  <CheckCircle className="h-3.5 w-3.5 text-mcpx-success-text" />
                 ) : (
-                  <Copy className="h-3.5 w-3.5 text-gray-600" />
+                  <Copy className="h-3.5 w-3.5 text-mcpx-text-secondary" />
                 )}
               </Button>
             </div>
@@ -97,8 +97,10 @@ export const ClaudeCodeInstructions: React.FC = () => {
           <li>Close and re-open Claude Code in terminal</li>
           <li>
             Run the following command:
-            <code className="bg-gray-100 px-1 rounded">/mcp</code> to see
-            connected mcp server
+            <code className="bg-mcpx-surface-tertiary px-1 rounded">
+              /mcp
+            </code>{" "}
+            to see connected mcp server
           </li>
           <ul className="list-disc list-inside ml-4">
             <li>
@@ -106,11 +108,18 @@ export const ClaudeCodeInstructions: React.FC = () => {
                 If MCPX server isn't connected, click{" "}
               </span>{" "}
               {!mcpxUrl.includes("localhost") ? (
-                <code className="bg-gray-100 px-1 rounded">Authenticate</code>
+                <code className="bg-mcpx-surface-tertiary px-1 rounded">
+                  Authenticate
+                </code>
               ) : (
                 <>
-                  <code className="bg-gray-100 px-1 rounded">Reconnect</code> or{" "}
-                  <code className="bg-gray-100 px-1 rounded">Enable</code>
+                  <code className="bg-mcpx-surface-tertiary px-1 rounded">
+                    Reconnect
+                  </code>{" "}
+                  or{" "}
+                  <code className="bg-mcpx-surface-tertiary px-1 rounded">
+                    Enable
+                  </code>
                 </>
               )}
             </li>

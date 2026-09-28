@@ -181,6 +181,7 @@ export default function SkillEditor() {
           <SkillPage.Actions>
             <Button
               type="submit"
+              size="lg"
               form="skill-details-form"
               disabled={submitDisabled}
             >
@@ -269,7 +270,7 @@ function EditorMessage({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="grid flex-1 place-items-center gap-4 p-5 text-sm text-[var(--text-colours-color-text-secondary)]">
+    <div className="grid flex-1 place-items-center gap-4 p-5 text-sm text-mcpx-text-secondary">
       <span>{title}</span>
       {children}
     </div>

@@ -13,14 +13,14 @@ export function ServerMetricCard({
   value: string | number;
 }) {
   return (
-    <Card className="flex-1 gap-2 rounded-lg bg-(--colors-gray-50) p-3 py-3 shadow-none ring-0">
+    <Card className="flex-1 gap-2 rounded-lg bg-mcpx-surface-subtle p-3 py-3 shadow-none ring-0">
       <CardHeader className="p-0">
-        <CardTitle className="font-sans text-xs font-normal leading-[18px] text-(--colors-gray-600)">
+        <CardTitle className="font-sans text-xs font-normal leading-[18px] text-mcpx-text-secondary">
           {label}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="text-lg font-semibold leading-6 text-(--colors-gray-950)">
+        <div className="text-lg font-semibold leading-6 text-mcpx-text">
           {value}
         </div>
       </CardContent>

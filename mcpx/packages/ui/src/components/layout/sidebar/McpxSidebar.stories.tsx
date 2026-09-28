@@ -100,7 +100,7 @@ type Story = StoryObj<typeof meta>;
 
 const renderSidebarShell: Story["render"] = (args) => (
   <SidebarProvider>
-    <div className="grid h-svh w-full grid-cols-[16rem_minmax(0,1fr)] gap-1.5 bg-[#fcfcfc] bg-[linear-gradient(135deg,#dad9f6_0%,rgb(255_207_236_/_0.5)_100%)] p-1.5">
+    <div className="grid h-svh w-full grid-cols-[16rem_minmax(0,1fr)] gap-1.5 bg-mcpx-page p-1.5">
       <McpxSidebar
         {...args}
         collapsible="none"
@@ -108,7 +108,7 @@ const renderSidebarShell: Story["render"] = (args) => (
       >
         <SidebarAvatar name="MCPX User" />
       </McpxSidebar>
-      <div className="flex min-h-0 min-w-0 items-center justify-center rounded-[12px] bg-white text-sm font-medium text-slate-400">
+      <div className="flex min-h-0 min-w-0 items-center justify-center rounded-[12px] bg-mcpx-surface text-sm font-medium text-mcpx-text-secondary">
         App content
       </div>
     </div>
@@ -125,7 +125,7 @@ export const Brand: Story = {
 
 export const AvatarImage: Story = {
   render: () => (
-    <div className="rounded-[12px] bg-[#201681] p-4">
+    <div className="rounded-[12px] bg-mcpx-inverse-surface p-4">
       <SidebarAvatar name="MCPX User" src="/favicon.svg" />
     </div>
   ),
@@ -133,7 +133,7 @@ export const AvatarImage: Story = {
 
 export const AvatarFallback: Story = {
   render: () => (
-    <div className="rounded-[12px] bg-[#201681] p-4">
+    <div className="rounded-[12px] bg-mcpx-inverse-surface p-4">
       <SidebarAvatar name="MCPX User" />
     </div>
   ),

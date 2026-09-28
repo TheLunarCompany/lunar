@@ -166,7 +166,7 @@ export default function SkillDetail() {
             </SkillIdentity.Root>
             <SkillSetupSummary.Root>
               <SkillSetupSummary.Card>
-                <SkillSetupSummary.Icon className="bg-[var(--component-colours-color-fg-success)]">
+                <SkillSetupSummary.Icon className="bg-mcpx-success-text">
                   <CircleCheck aria-hidden="true" className="size-4" />
                 </SkillSetupSummary.Icon>
                 <SkillSetupSummary.Content>
@@ -196,7 +196,7 @@ export default function SkillDetail() {
 
               {hasCapabilities ? (
                 <SkillSetupSummary.Card>
-                  <SkillSetupSummary.Icon className="bg-[var(--component-colours-color-fg-success)]">
+                  <SkillSetupSummary.Icon className="bg-mcpx-success-text">
                     <CircleCheck aria-hidden="true" className="size-4" />
                   </SkillSetupSummary.Icon>
                   <SkillSetupSummary.Content>
@@ -227,7 +227,7 @@ export default function SkillDetail() {
                 </SkillSetupSummary.Card>
               ) : (
                 <SkillSetupSummary.Card>
-                  <SkillSetupSummary.Icon className="bg-[var(--colors-gray-100)] text-[var(--colors-gray-500)]">
+                  <SkillSetupSummary.Icon className="bg-mcpx-surface-tertiary text-mcpx-text-tertiary">
                     <Unplug aria-hidden="true" className="size-4" />
                   </SkillSetupSummary.Icon>
                   <SkillSetupSummary.Content>
@@ -238,7 +238,7 @@ export default function SkillDetail() {
                       <Badge
                         variant="ghost"
                         size="sm"
-                        className="h-4 rounded-[4px] border-0 bg-[var(--colors-gray-100)] px-1.5 py-0 text-[9px] leading-none font-semibold tracking-[0.04em] text-[var(--colors-gray-500)]"
+                        className="h-4 rounded-[4px] border-0 bg-mcpx-surface-tertiary px-1.5 py-0 text-[9px] leading-none font-semibold tracking-[0.04em] text-mcpx-text-tertiary"
                       >
                         OPTIONAL
                       </Badge>
@@ -269,7 +269,7 @@ export default function SkillDetail() {
 
               {enabledSkillsQuery.isLoading || enabledSkillsQuery.isError ? (
                 <SkillSetupSummary.Card>
-                  <SkillSetupSummary.Icon className="bg-[var(--colors-gray-100)] text-[var(--colors-gray-500)]">
+                  <SkillSetupSummary.Icon className="bg-mcpx-surface-tertiary text-mcpx-text-tertiary">
                     <CircleAlert aria-hidden="true" className="size-4" />
                   </SkillSetupSummary.Icon>
                   <SkillSetupSummary.Content>
@@ -300,7 +300,7 @@ export default function SkillDetail() {
                 </SkillSetupSummary.Card>
               ) : appliedAgentCount > 0 ? (
                 <SkillSetupSummary.Card>
-                  <SkillSetupSummary.Icon className="bg-[var(--component-colours-color-fg-success)]">
+                  <SkillSetupSummary.Icon className="bg-mcpx-success-text">
                     <CircleCheck aria-hidden="true" className="size-4" />
                   </SkillSetupSummary.Icon>
                   <SkillSetupSummary.Content>
@@ -329,14 +329,14 @@ export default function SkillDetail() {
                 </SkillSetupSummary.Card>
               ) : (
                 <SkillSetupSummary.Card>
-                  <SkillSetupSummary.Icon className="bg-[var(--colors-gray-100)] text-[var(--colors-gray-500)]">
+                  <SkillSetupSummary.Icon className="bg-mcpx-surface-tertiary text-mcpx-text-tertiary">
                     <Users aria-hidden="true" className="size-4" />
                   </SkillSetupSummary.Icon>
                   <SkillSetupSummary.Content>
                     <SkillSetupSummary.Title>
                       Applied to agents
                     </SkillSetupSummary.Title>
-                    <SkillSetupSummary.Description className="text-[var(--component-colours-color-fg-warning)]">
+                    <SkillSetupSummary.Description className="text-mcpx-warning-strong">
                       Required to run
                     </SkillSetupSummary.Description>
                   </SkillSetupSummary.Content>
@@ -372,7 +372,7 @@ export default function SkillDetail() {
                   <Badge
                     variant="secondary"
                     size="sm"
-                    className="min-w-5 justify-center rounded-full border-[var(--structure-color-border-primary)]"
+                    className="min-w-5 justify-center rounded-full border-mcpx-border-subtle"
                   >
                     {capabilityCount}
                   </Badge>
@@ -382,7 +382,7 @@ export default function SkillDetail() {
                   <Badge
                     variant="secondary"
                     size="sm"
-                    className="min-w-5 justify-center rounded-full border-[var(--structure-color-border-primary)]"
+                    className="min-w-5 justify-center rounded-full border-mcpx-border-subtle"
                   >
                     {agentTabCount}
                   </Badge>

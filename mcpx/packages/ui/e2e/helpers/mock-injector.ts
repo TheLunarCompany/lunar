@@ -309,12 +309,12 @@ export async function setupMockedSystemState(
   // Navigate to dashboard
   await page.goto("/dashboard");
 
-  // Wait for page to load and store to be available
-  await page.waitForSelector('[class*="bg-gray-100"]', {
+  // Wait until the dashboard route is mounted before replacing socket state.
+  await page.waitForSelector('[data-testid="dashboard-add-server"]', {
     timeout: TIMEOUT_10_SEC,
   });
 
-  // Wait for the socket store to be exposed to window
+  // Wait for the socket store to be exposed after the dashboard loads.
   await page.waitForFunction(
     () => {
       return !!(window as any).__MCPX_SOCKET_STORE__;

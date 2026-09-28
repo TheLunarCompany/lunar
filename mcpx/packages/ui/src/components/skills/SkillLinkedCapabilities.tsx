@@ -32,7 +32,7 @@ type LinkedCapability = {
 };
 
 const unavailableBadgeClassName =
-  "border border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] text-[var(--colors-warning-700)]";
+  "border border-mcpx-warning-strong bg-mcpx-warning-bg text-mcpx-warning-strong";
 
 export function SkillLinkedCapabilities({
   capabilityGroup,
@@ -77,7 +77,7 @@ export function SkillLinkedCapabilities({
             ) : null
           }
           className={className}
-          contentClassName="bg-[var(--colors-gray-50)]"
+          contentClassName="bg-mcpx-surface-subtle"
           {...props}
         >
           <div className="flex min-h-80 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
@@ -85,11 +85,11 @@ export function SkillLinkedCapabilities({
               <ServerIconSvg className="h-40 w-auto" />
             </span>
             <div className="space-y-1">
-              <h2 className="text-base font-semibold text-[var(--text-colours-color-text-primary)]">
+              <h2 className="text-base font-semibold text-mcpx-text">
                 No servers connected yet. Click here to connect servers to your
                 MCPX instance.
               </h2>
-              <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
+              <p className="text-sm text-mcpx-text-secondary">
                 Add an MCP server to make tools and prompts available for this
                 skill.
               </p>
@@ -138,7 +138,7 @@ export function SkillLinkedCapabilities({
                 name={provider.name}
                 isMissingOrInactive={provider.unavailable}
               />
-              <span className="shrink-0 text-xs text-[var(--text-colours-color-text-secondary)]">
+              <span className="shrink-0 text-xs text-mcpx-text-secondary">
                 {provider.unavailable
                   ? `${Math.max(provider.tools.length + provider.prompts.length, 1)} unavailable`
                   : `${provider.tools.length + provider.prompts.length} linked`}
@@ -148,7 +148,7 @@ export function SkillLinkedCapabilities({
               {provider.unavailable &&
               provider.tools.length === 0 &&
               provider.prompts.length === 0 ? (
-                <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
+                <p className="text-sm text-mcpx-text-secondary">
                   Capability details unavailable
                 </p>
               ) : null}

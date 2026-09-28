@@ -5,7 +5,7 @@ export const CodexInstructions: React.FC = () => {
   const mcpxUrl = getMcpxServerURL("http");
 
   return (
-    <div className="space-y-3 text-sm text-[#1E1B4B]">
+    <div className="space-y-3 text-sm text-mcpx-text">
       <div>
         <div>
           <p className="font-semibold mb-2">Option 1: Edit config file</p>
@@ -18,7 +18,7 @@ export const CodexInstructions: React.FC = () => {
 
             <li>
               Click "Open config.toml" to open{" "}
-              <code className="bg-gray-100 px-1 rounded">
+              <code className="bg-mcpx-surface-tertiary px-1 rounded">
                 .codex/config.toml
               </code>{" "}
               and edit the config file using the configuration in the toml
@@ -26,7 +26,7 @@ export const CodexInstructions: React.FC = () => {
             </li>
             <li>
               Save your updated{" "}
-              <code className="bg-gray-100 px-1 rounded">
+              <code className="bg-mcpx-surface-tertiary px-1 rounded">
                 .codex/config.toml
               </code>{" "}
               and restart Codex to ensure all tools and integrations are
@@ -61,11 +61,13 @@ export const CodexInstructions: React.FC = () => {
               <ul className="list-disc list-inside ml-4 mt-1">
                 <li>
                   <span className="font-semibold">Name: </span>
-                  <code className="bg-gray-100 px-1 rounded">mcpx</code>
+                  <code className="bg-mcpx-surface-tertiary px-1 rounded">
+                    mcpx
+                  </code>
                 </li>
                 <li>
                   <span className="font-semibold">URL: </span>
-                  <code className="bg-gray-100 px-1 rounded">{`${mcpxUrl}/mcp`}</code>
+                  <code className="bg-mcpx-surface-tertiary px-1 rounded">{`${mcpxUrl}/mcp`}</code>
                 </li>
               </ul>
             </li>
@@ -74,7 +76,7 @@ export const CodexInstructions: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6">
+      <div className="bg-mcpx-selected-weak border border-mcpx-border-subtle rounded-lg p-6">
         <p className="font-semibold mb-4">Important Note</p>
         <ul className="list-disc list-inside ml-4 mt-1">
           <li>

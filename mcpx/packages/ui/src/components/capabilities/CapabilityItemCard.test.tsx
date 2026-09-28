@@ -146,10 +146,10 @@ describe("CapabilityItemCard", () => {
 
     expect(
       screen.getByText("Interactive tool").parentElement?.className,
-    ).toContain("--colors-primary-100");
+    ).toContain("--mcpx-selected-weak");
     expect(
       screen.getByText("Success prompt").parentElement?.className,
-    ).toContain("--colors-success-100");
+    ).toContain("bg-mcpx-success-bg");
   });
 
   it("supports a compact title badge size", () => {

@@ -25,7 +25,7 @@ export function ServerCatalogBadges({
       {getServerCatalogBadgeLabels(type, command).map((badge) => (
         <p
           key={badge}
-          className="text-[10px] w-fit font-semibold text-muted-foreground border border-[#7D7B98] rounded-[4px] px-1"
+          className="text-[10px] w-fit font-semibold text-muted-foreground border border-mcpx-border rounded-[4px] px-1"
         >
           {badge}
         </p>

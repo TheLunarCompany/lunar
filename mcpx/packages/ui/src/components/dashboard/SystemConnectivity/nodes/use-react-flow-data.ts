@@ -434,16 +434,16 @@ export const useReactFlowData = ({
 
       return {
         animated: isRunning,
-        className: "#DDDCE4",
+        className: "var(--mcpx-border-subtle)",
         id: `e-mcpx-${id}`,
         source: "mcpx",
         style: {
           stroke:
             finalStatus === SERVER_STATUS.connected_inactive
-              ? "#C3C4CD"
+              ? "var(--mcpx-text-disabled)"
               : isRunning
-                ? "var(--colors-route-active)"
-                : "#D8DCED",
+                ? "var(--mcpx-route-active)"
+                : "var(--mcpx-border)",
           strokeWidth: 1,
           strokeDasharray: isRunning ? "5,5" : undefined,
         },
@@ -471,11 +471,13 @@ export const useReactFlowData = ({
 
       return {
         animated: isActiveAgent,
-        className: "#DDDCE4",
+        className: "var(--mcpx-border-subtle)",
         id: `e-${id}`,
         source: id,
         style: {
-          stroke: isActiveAgent ? "var(--colors-route-active)" : "#D8DCED",
+          stroke: isActiveAgent
+            ? "var(--mcpx-route-active)"
+            : "var(--mcpx-border)",
           strokeWidth: 1,
           strokeDasharray: isActiveAgent ? "5,5" : undefined,
         },

@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 export const WithChildren: Story = {
   render: () => (
     <NodeCardIcon>
-      <Bot className="size-[30px] text-[var(--colors-primary-500)]" />
+      <Bot className="size-[30px] text-mcpx-selected" />
     </NodeCardIcon>
   ),
 };
@@ -21,7 +21,7 @@ export const WithChildren: Story = {
 export const WithServerIcon: Story = {
   render: () => (
     <NodeCardIcon>
-      <Server className="size-[30px] text-[var(--colors-gray-500)]" />
+      <Server className="size-[30px] text-mcpx-text-secondary" />
     </NodeCardIcon>
   ),
 };

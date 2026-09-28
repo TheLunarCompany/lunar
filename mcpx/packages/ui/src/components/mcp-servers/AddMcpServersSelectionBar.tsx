@@ -23,7 +23,7 @@ export function AddMcpServersSelectionBar({
 
   return (
     <div
-      className="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-4 rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 shadow-[0_8px_16px_0_rgba(0,0,0,0.25)] backdrop-blur-[25px]"
+      className="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-4 rounded-2xl border-2 border-mcpx-border-subtle bg-mcpx-surface px-4 py-3 shadow-[var(--mcpx-shadow-strong)] backdrop-blur-[25px]"
       role="region"
       aria-label="Server selection summary"
     >
@@ -31,14 +31,10 @@ export function AddMcpServersSelectionBar({
 
       <Button
         type="button"
+        variant="default"
         size="sm"
         onClick={onAdd}
         disabled={!hasSelection || isAdding}
-        className={
-          hasSelection
-            ? "rounded-lg bg-lunar-purpleNew px-4 py-1 text-white hover:bg-lunar-purpleNew/90"
-            : "cursor-not-allowed rounded-lg bg-gray-200 px-4 text-gray-500"
-        }
       >
         {isAdding ? "Adding..." : "Add"}
       </Button>

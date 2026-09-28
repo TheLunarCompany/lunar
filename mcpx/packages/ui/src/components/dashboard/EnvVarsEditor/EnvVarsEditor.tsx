@@ -167,7 +167,7 @@ export const EnvVarsEditor = ({
         <Button
           variant="default"
           size="sm"
-          className="bg-[#5147E4]"
+          className="bg-[var(--mcpx-selected)]"
           onClick={handleSave}
           data-testid="env-vars-save"
           disabled={isSaving || isOnlyFixed}

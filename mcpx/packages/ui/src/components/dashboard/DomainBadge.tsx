@@ -37,8 +37,8 @@ export const DomainBadge = ({
       variant="outline"
       className={`flex h-[30px] items-center gap-1 rounded-[4px] border px-2 py-1 ${
         isMissingOrInactive
-          ? "border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] text-[var(--colors-warning-700)]"
-          : "border-[var(--colors-gray-200)] bg-white"
+          ? "border-mcpx-warning-strong bg-mcpx-warning-bg text-mcpx-warning-strong"
+          : "border-[var(--mcpx-border-subtle)] bg-mcpx-surface"
       }`}
       title={
         isMissingOrInactive
@@ -52,15 +52,15 @@ export const DomainBadge = ({
       <span
         className={`text-xs capitalize font-normal leading-[18px] ${
           isMissingOrInactive
-            ? "text-[var(--colors-warning-700)]"
-            : "text-[var(--colors-gray-600)]"
+            ? "text-mcpx-warning-strong"
+            : "text-[var(--mcpx-text-secondary)]"
         }`}
       >
         {domain}
       </span>
       <Badge
         variant="outline"
-        className="h-auto rounded-[16px] border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] px-[6px] py-0 text-xs font-normal leading-[18px] text-[var(--colors-gray-600)]"
+        className="h-auto rounded-[16px] border border-[var(--mcpx-border-subtle)] bg-[var(--mcpx-surface-subtle)] px-[6px] py-0 text-xs font-normal leading-[18px] text-[var(--mcpx-text-secondary)]"
       >
         {toolsNumber}
       </Badge>

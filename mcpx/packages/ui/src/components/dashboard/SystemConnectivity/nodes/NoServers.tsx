@@ -10,22 +10,23 @@ const NoServers = () => {
 
   return (
     <>
-      <NodeCard variant="zero" className="w-[230px] items-center gap-3 py-6">
+      <NodeCard variant="zero" className="w-[242px] items-center gap-3 p-6">
         <McpServerConnectionIcon
-          width={30}
-          height={30}
-          className="text-[var(--colors-primary-400)]"
+          width={32}
+          height={32}
+          className="text-[var(--mcpx-selected)]"
         />
-        <div className="flex flex-col items-center gap-1 text-sm">
-          <span className="font-semibold text-[var(--colors-gray-950)]">
+        <div className="flex flex-col items-center gap-1 text-center text-sm">
+          <span className="font-bold leading-[1.5] text-mcpx-text">
             No MCP Server
           </span>
-          <span className="text-[var(--colors-gray-600)]">
+          <span className="leading-6 text-mcpx-text-secondary">
             Waiting for server connection
           </span>
         </div>
         <Button
           variant="node-card"
+          size="sm"
           onClick={() => setIsAddServerModalOpen(true)}
         >
           <Plus data-icon="inline-start" />

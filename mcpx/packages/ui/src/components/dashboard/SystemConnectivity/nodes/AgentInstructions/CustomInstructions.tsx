@@ -21,12 +21,12 @@ function CopyableCodeBlock({ code }: { code: string }) {
         type="button"
       >
         {copied ? (
-          <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+          <CheckCircle className="h-3.5 w-3.5 text-mcpx-success-text" />
         ) : (
-          <Copy className="h-3.5 w-3.5 text-gray-600" />
+          <Copy className="h-3.5 w-3.5 text-mcpx-text-secondary" />
         )}
       </button>
-      <pre className="bg-gray-100 p-4 pr-10 rounded-lg overflow-x-auto text-sm">
+      <pre className="bg-mcpx-surface-tertiary p-4 pr-10 rounded-lg overflow-x-auto text-sm">
         <code>{code}</code>
       </pre>
     </div>
@@ -43,7 +43,7 @@ export const CustomInstructions: React.FC = () => {
   const customConfig = config?.getConfig() as CustomMcpConfig;
 
   return (
-    <div className="space-y-3 text-sm text-[#1E1B4B]">
+    <div className="space-y-3 text-sm text-mcpx-text">
       <div>
         <p className="font-semibold mb-4">{config.description}</p>
       </div>

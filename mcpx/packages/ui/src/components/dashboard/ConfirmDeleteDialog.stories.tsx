@@ -19,7 +19,7 @@ export const Open: Story = {
     isOpen: true,
     title: "Are you sure you want to delete this server?",
     children: (
-      <div className="p-4 text-sm text-gray-500">
+      <div className="p-4 text-sm text-mcpx-text-secondary">
         Background content that will be blurred.
       </div>
     ),
@@ -31,7 +31,7 @@ export const Closed: Story = {
     isOpen: false,
     title: "Are you sure you want to delete this server?",
     children: (
-      <div className="p-4 text-sm text-gray-700">
+      <div className="p-4 text-sm text-mcpx-text">
         Normal content visible when dialog is closed.
       </div>
     ),
@@ -45,7 +45,7 @@ export const CustomButtons: Story = {
     confirmButtonText: "Remove",
     cancelButtonText: "Keep",
     children: (
-      <div className="p-4 text-sm text-gray-500">
+      <div className="p-4 text-sm text-mcpx-text-secondary">
         This action cannot be undone.
       </div>
     ),

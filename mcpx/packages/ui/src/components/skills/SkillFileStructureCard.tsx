@@ -30,7 +30,7 @@ export function SkillFileStructureCard({
 
       <SkillSidebarCardContent>
         <SkillSidebarCardRow>
-          <SkillSidebarCardIcon className="text-[var(--colors-purple-600)]">
+          <SkillSidebarCardIcon className="text-mcpx-selected">
             <Folder className="size-4" aria-hidden="true" />
           </SkillSidebarCardIcon>
           <span className="min-w-0 flex-1 truncate font-semibold">
@@ -39,7 +39,7 @@ export function SkillFileStructureCard({
         </SkillSidebarCardRow>
 
         <SkillSidebarCardRow variant="active">
-          <SkillSidebarCardIcon className="text-[var(--colors-purple-700)]">
+          <SkillSidebarCardIcon className="text-mcpx-selected">
             <FileText className="size-4" aria-hidden="true" />
           </SkillSidebarCardIcon>
           <span className="min-w-0 flex-1 truncate font-semibold">

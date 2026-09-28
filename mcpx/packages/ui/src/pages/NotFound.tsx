@@ -8,11 +8,9 @@ const ICON_HEIGHT = 200;
 
 export default function NotFound() {
   return (
-    <div className="min-h-full flex flex-col bg-background">
+    <div className="flex min-h-full flex-col bg-mcpx-surface">
       <div className="px-6 py-4">
-        <h1 className="text-[20px] font-semibold text-(--color-text-primary)">
-          Oops...Lost in Space
-        </h1>
+        <h1 className="mcpx-page-title">Oops...Lost in Space</h1>
       </div>
 
       <div className=" items-center justify-center px-6 ">

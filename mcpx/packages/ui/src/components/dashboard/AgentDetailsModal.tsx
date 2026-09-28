@@ -810,11 +810,10 @@ export const AgentDetailsModal = ({
             </SheetDescription>
           </VisuallyHidden>
           <div />
-          <div className="flex items-center gap-1.5 text-muted-foreground">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
-              size="icon"
-              className="size-8 rounded-lg"
+              size="icon-sm"
               aria-label="Close agent details"
               onClick={handleClose}
             >
@@ -950,7 +949,6 @@ export const AgentDetailsModal = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   wrapperClassName="mb-3 flex-1 shrink-0"
-                  className="bg-background"
                 />
                 {agentToolGroups.length === 0 ? (
                   <div className="rounded-lg border border-border bg-background px-4 py-8 text-center">

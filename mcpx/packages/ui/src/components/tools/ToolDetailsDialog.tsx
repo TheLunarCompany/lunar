@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { SemanticBadge } from "@/components/ui/semantic-badge";
 import CustomBadge from "@/components/CustomBadge";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { Copy, Edit, Settings, Trash2, X } from "lucide-react";
@@ -199,11 +199,11 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
       <SheetContent
         side="right"
         aria-describedby={undefined}
-        className="w-[600px]! max-w-[600px]! bg-white p-0 border-l-2 border-primary flex flex-col [&>button]:hidden overflow-y-auto"
-        style={{ boxShadow: "-4px 0 60px 0 rgba(0, 0, 0, 0.25)" }}
+        className="w-[600px]! max-w-[600px]! bg-mcpx-surface p-0 border-l-2 border-primary flex flex-col [&>button]:hidden overflow-y-auto"
+        style={{ boxShadow: "-4px 0 60px 0 var(--mcpx-shadow-strong)" }}
       >
         <div
-          className={`flex ${tool.isCustom ? "justify-between" : "justify-end"}  items-center gap-2 border-b border-gray-200 px-6 py-4`}
+          className={`flex ${tool.isCustom ? "justify-between" : "justify-end"}  items-center gap-2 border-b border-mcpx-border-subtle px-6 py-4`}
         >
           {tool.isCustom && (
             <CustomBadge
@@ -214,7 +214,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
               icon={
                 <svg
                   className="w-5 h-5"
-                  style={{ color: "#4F33CC" }}
+                  style={{ color: "var(--mcpx-selected)" }}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -229,54 +229,59 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
               }
             />
           )}
-          <div>
+          <div className="flex items-center gap-1">
             {tool.isCustom ? (
               <>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="p-2"
+                  size="icon-sm"
                   onClick={() => handleAction(onEdit!)}
+                  aria-label="Edit custom tool"
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit />
                 </Button>
                 <Button
-                  size="sm"
+                  size="icon-sm"
                   variant="ghost"
-                  className="p-2"
                   onClick={() => handleAction(onDuplicate!)}
+                  aria-label="Duplicate custom tool"
                 >
-                  <Copy className="w-4 h-4" />
+                  <Copy />
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="p-2"
+                  size="icon-sm"
                   onClick={() => handleAction(onDelete!)}
+                  aria-label="Delete custom tool"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 />
                 </Button>
               </>
             ) : (
               onCustomize && (
                 <Button
-                  size="sm"
+                  size="icon-sm"
                   variant="ghost"
                   onClick={() => handleAction(onCustomize!)}
-                  className="p-2"
+                  aria-label="Customize tool"
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit />
                 </Button>
               )
             )}
-            <Button variant="ghost" className="p-2" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onClose}
+              aria-label="Close tool details"
+            >
+              <X />
             </Button>
           </div>
         </div>
 
         {/* Header */}
-        <div className="mx-6  bg-white border-b border-gray-200">
+        <div className="mx-6  bg-mcpx-surface border-b border-mcpx-border-subtle">
           {/* Tool Title Badge */}
           <div className="mb-4">
             <div className="flex items-center justify-between">
@@ -286,7 +291,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                     <img
                       src={providerIcon}
                       alt={`icon`}
-                      className="h-12 w-12 rounded-full object-contain bg-white shrink-0"
+                      className="h-12 w-12 rounded-full object-contain bg-mcpx-surface shrink-0"
                     />
 
                     <div className="flex flex-col mt-[-3px] min-w-0 flex-1 overflow-hidden">
@@ -328,7 +333,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                 <h3 className="text-base font-medium font-semibold  mb-1">
                   Custom Tool Name
                 </h3>
-                <p className="text-[#231A4D] text-sm leading-relaxed">
+                <p className="text-mcpx-text text-sm leading-relaxed">
                   {tool.name}
                 </p>
               </div>
@@ -353,20 +358,30 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
               </h3>
               <div className="flex gap-1.5 flex-wrap">
                 {tool.annotations.readOnlyHint && (
-                  <Badge variant="success">Read-only</Badge>
+                  <SemanticBadge tone="success" showDot={false}>
+                    Read-only
+                  </SemanticBadge>
                 )}
                 {tool.annotations.destructiveHint && (
-                  <Badge variant="danger">Destructive</Badge>
+                  <SemanticBadge tone="danger" showDot={false}>
+                    Destructive
+                  </SemanticBadge>
                 )}
                 {!tool.annotations.readOnlyHint &&
                   !tool.annotations.destructiveHint && (
-                    <Badge variant="warning">Write</Badge>
+                    <SemanticBadge tone="warning" showDot={false}>
+                      Write
+                    </SemanticBadge>
                   )}
                 {tool.annotations.idempotentHint && (
-                  <Badge variant="info">Idempotent</Badge>
+                  <SemanticBadge tone="info" showDot={false}>
+                    Idempotent
+                  </SemanticBadge>
                 )}
                 {tool.annotations.openWorldHint && (
-                  <Badge variant="purple">Open-world</Badge>
+                  <SemanticBadge tone="purple" showDot={false}>
+                    Open-world
+                  </SemanticBadge>
                 )}
               </div>
             </div>
@@ -376,7 +391,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
           {tool.inputSchema?.properties &&
             Object.keys(tool.inputSchema.properties).length > 0 && (
               <div>
-                <h3 className="text-base font-medium text-gray-800 mb-1">
+                <h3 className="text-base font-medium text-mcpx-text mb-1">
                   Parameters
                 </h3>
 
@@ -386,12 +401,12 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                       ({ name, schema, value, descriptionOverride }) => (
                         <div
                           key={name}
-                          className="space-y-3  rounded-lg bg-[#F9F8FB]  border border-gray-200 rounded-lg p-3"
+                          className="space-y-3  rounded-lg bg-mcpx-surface-subtle  border border-mcpx-border-subtle rounded-lg p-3"
                         >
                           <div>
                             <div className="flex items-center justify-between mb-1">
                               <div className="text-sm font-bold ">{name}</div>
-                              <span className="text-xs  bg-gray-200 px-2 py-1 rounded">
+                              <span className="text-xs  bg-mcpx-surface-disabled px-2 py-1 rounded">
                                 {schema.type || "unknown"}
                               </span>
                             </div>
@@ -401,7 +416,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                             </p>
 
                             {(descriptionOverride || schema.description) && (
-                              <p className="text-xs text-[#827E95] leading-relaxed">
+                              <p className="text-xs text-mcpx-text-secondary leading-relaxed">
                                 {descriptionOverride || schema.description}
                               </p>
                             )}
@@ -412,10 +427,10 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 bg-white border border-gray-200">
-                      <Settings className="w-8 h-8 text-gray-400" />
+                    <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 bg-mcpx-surface border border-mcpx-border-subtle">
+                      <Settings className="w-8 h-8 text-mcpx-text-disabled" />
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-mcpx-text-tertiary">
                       No parameters available for this tool
                     </p>
                   </div>
@@ -427,10 +442,10 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
           {(!tool.inputSchema?.properties ||
             Object.keys(tool.inputSchema.properties).length === 0) && (
             <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 bg-white border border-gray-200">
-                <Settings className="w-8 h-8 text-gray-400" />
+              <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 bg-mcpx-surface border border-mcpx-border-subtle">
+                <Settings className="w-8 h-8 text-mcpx-text-disabled" />
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-mcpx-text-tertiary">
                 No parameters available for this tool
               </p>
             </div>

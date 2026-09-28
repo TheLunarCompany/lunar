@@ -118,7 +118,7 @@ export const ServerCard = ({
   return (
     <div
       className={cn(
-        "relative flex flex-col gap-4 rounded-xl border bg-white p-4",
+        "relative flex flex-col gap-4 rounded-xl border bg-mcpx-surface p-4",
         className,
       )}
       data-testid="dashboard-server-card"
@@ -181,7 +181,7 @@ export const ServerCard = ({
           {envVarKeys.map((key) => (
             <div
               key={key}
-              className="font-semibold text-[#5147E4] px-1.5 py-0.5 rounded bg-[#EBE6FB] text-[10px]"
+              className="font-semibold text-mcpx-selected px-1.5 py-0.5 rounded bg-mcpx-selected-weak text-[10px]"
             >
               {key}
             </div>

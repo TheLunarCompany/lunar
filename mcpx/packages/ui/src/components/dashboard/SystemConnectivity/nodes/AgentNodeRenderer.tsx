@@ -52,7 +52,7 @@ const AgentNodeRenderer = ({
           <div
             className="absolute -top-2 -right-4 flex items-center rounded-full px-1 py-0.5 min-w-7 justify-center
                bg-size-[100%_100%] bg-[linear-gradient(180deg,#F9FAFD_0%,#E6E6ED_100%)]
-               shadow-[0_4px_4px_0_rgba(97,71,209,0.15)] border border-[#C3B4F3]"
+               shadow-[var(--mcpx-shadow-weak)] border border-mcpx-selected"
             title={
               skillsFeatureEnabled
                 ? "Tools from assigned skills"
@@ -60,10 +60,10 @@ const AgentNodeRenderer = ({
             }
           >
             <Hammer
-              className="h-3 w-3 shrink-0 text-[var(--colors-gray-500)]"
+              className="h-3 w-3 shrink-0 text-[var(--mcpx-text-tertiary)]"
               strokeWidth={2}
             />
-            <span className="text-xs font-semibold text-[var(--colors-primary-500)] tabular-nums">
+            <span className="text-xs font-semibold text-[var(--mcpx-selected)] tabular-nums">
               {toolCount}
             </span>
           </div>
@@ -73,7 +73,7 @@ const AgentNodeRenderer = ({
               <TooltipTrigger asChild>
                 <span className="absolute bottom-2 right-2">
                   <WifiOff
-                    className={`h-5 w-5 ${data.connectionState === "unresponsive" ? "text-amber-500" : "text-[var(--colors-gray-400)]"}`}
+                    className={`h-5 w-5 ${data.connectionState === "unresponsive" ? "text-mcpx-warning-strong" : "text-[var(--mcpx-text-disabled)]"}`}
                     strokeWidth={2}
                   />
                 </span>
@@ -97,7 +97,7 @@ const AgentNodeRenderer = ({
             <div className="flex flex-col gap-1 min-w-0">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="text-sm font-semibold truncate text-[var(--colors-gray-950)]">
+                  <span className="text-sm font-semibold truncate text-[var(--mcpx-text)]">
                     {display.title}
                   </span>
                 </TooltipTrigger>
@@ -113,7 +113,7 @@ const AgentNodeRenderer = ({
                             {display.subtitle.primary}
                           </span>
                           {display.subtitle.extraCount > 0 && (
-                            <span className="shrink-0 text-[var(--colors-gray-500)]">
+                            <span className="shrink-0 text-[var(--mcpx-text-tertiary)]">
                               +{display.subtitle.extraCount}
                             </span>
                           )}

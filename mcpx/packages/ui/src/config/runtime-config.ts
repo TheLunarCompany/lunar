@@ -15,6 +15,7 @@ export interface RuntimeConfig {
   VITE_ADD_SERVER_CHECKBOX: string;
   VITE_UI_SIDEBAR_RESTRUCTURE: string;
   VITE_SHOW_MCP_SERVERS: string;
+  VITE_IS_BOOMI: string;
 }
 
 let cachedConfig: RuntimeConfig | null = null;
@@ -52,6 +53,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
       cachedConfig = {
         ...config,
         VITE_AUTH_BFF_URL: config.VITE_AUTH_BFF_URL || "",
+        VITE_IS_BOOMI: config.VITE_IS_BOOMI || "false",
       };
       return cachedConfig!;
     } catch (_error) {
@@ -81,6 +83,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         VITE_UI_SIDEBAR_RESTRUCTURE:
           import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
         VITE_SHOW_MCP_SERVERS: import.meta.env.VITE_SHOW_MCP_SERVERS || "false",
+        VITE_IS_BOOMI: import.meta.env.VITE_IS_BOOMI || "false",
       };
 
       cachedConfig = fallbackConfig;
@@ -119,6 +122,7 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_UI_SIDEBAR_RESTRUCTURE:
       import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
     VITE_SHOW_MCP_SERVERS: import.meta.env.VITE_SHOW_MCP_SERVERS || "false",
+    VITE_IS_BOOMI: import.meta.env.VITE_IS_BOOMI || "false",
   };
 }
 

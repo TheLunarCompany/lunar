@@ -34,7 +34,7 @@ function CapabilityGroupCardRoot({
   return (
     <Card
       className={cn(
-        "relative w-full max-w-[380px] gap-2 rounded-lg border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-3 text-[var(--text-colours-color-text-primary)] shadow-none ring-0",
+        "relative w-full max-w-[380px] gap-2 rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-3 text-mcpx-text shadow-none ring-0",
         className,
       )}
       {...props}
@@ -70,15 +70,15 @@ function CapabilityGroupCardIcon({
     <div
       aria-hidden="true"
       className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--colors-white)]",
+        "grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--mcpx-surface)]",
         className,
       )}
       {...props}
     >
       <div className="grid grid-cols-3 grid-rows-2 gap-0">
-        <span className="col-start-2 row-start-1 size-1.5 rounded-[1px] bg-[var(--component-colours-color-fg-accent-primary)]" />
-        <span className="col-start-1 row-start-2 size-1.5 rounded-[1px] bg-[var(--component-colours-color-fg-accent-primary)]" />
-        <span className="col-start-3 row-start-2 size-1.5 rounded-[1px] bg-[var(--component-colours-color-fg-accent-primary)]" />
+        <span className="col-start-2 row-start-1 size-1.5 rounded-[1px] bg-mcpx-data-purple" />
+        <span className="col-start-1 row-start-2 size-1.5 rounded-[1px] bg-mcpx-data-purple" />
+        <span className="col-start-3 row-start-2 size-1.5 rounded-[1px] bg-mcpx-data-purple" />
       </div>
     </div>
   );
@@ -92,7 +92,7 @@ function CapabilityGroupCardTitle({
   return (
     <CardTitle
       className={cn(
-        "min-w-0 truncate text-[15px] font-medium leading-[1.34] tracking-[0] text-[var(--text-colours-color-text-primary)]",
+        "min-w-0 truncate text-[15px] font-medium leading-[1.34] tracking-[0] text-mcpx-text",
         className,
       )}
       {...props}
@@ -122,7 +122,7 @@ function CapabilityGroupCardMenuButton({
           variant: "ghost",
           size: "icon",
           className: cn(
-            "size-8 rounded-md text-[var(--text-colours-color-text-secondary)] hover:bg-[var(--structure-color-bg-container-overlay)]",
+            "size-8 rounded-md text-mcpx-text-secondary hover:bg-mcpx-selected-weak",
             className,
           ),
         })}
@@ -191,8 +191,8 @@ function CapabilityGroupCardProviderBadge({
       className={cn(
         "flex h-6 items-center gap-1 rounded-[4px] border px-1 py-0 text-[11px] font-normal leading-[15px]",
         isMissingOrInactive
-          ? "border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] text-[var(--colors-warning-700)]"
-          : "border-[var(--colors-gray-200)] bg-[var(--colors-white)] text-[var(--colors-gray-600)]",
+          ? "border-mcpx-warning-strong bg-mcpx-warning-bg text-mcpx-warning-strong"
+          : "border-[var(--mcpx-border-subtle)] bg-[var(--mcpx-surface)] text-[var(--mcpx-text-secondary)]",
         className,
       )}
     >
@@ -203,7 +203,7 @@ function CapabilityGroupCardProviderBadge({
       {toolsNumber != null ? (
         <Badge
           variant="outline"
-          className="h-auto rounded-[16px] border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] px-[6px] py-0 text-xs font-normal leading-[18px] text-[var(--colors-gray-600)]"
+          className="h-auto rounded-[16px] border border-[var(--mcpx-border-subtle)] bg-[var(--mcpx-surface-subtle)] px-[6px] py-0 text-xs font-normal leading-[18px] text-[var(--mcpx-text-secondary)]"
         >
           {toolsNumber}
         </Badge>
@@ -224,7 +224,7 @@ function CapabilityGroupCardMoreProviders({
   return (
     <span
       className={cn(
-        "text-[11px] font-normal leading-[1.4] text-[var(--text-colours-color-text-primary)]",
+        "text-[11px] font-normal leading-[1.4] text-mcpx-text",
         className,
       )}
     >
@@ -239,7 +239,7 @@ function CapabilityGroupCardDivider({
 }: ComponentPropsWithoutRef<typeof Separator>) {
   return (
     <Separator
-      className={cn("bg-[var(--structure-color-border-primary)]", className)}
+      className={cn("bg-mcpx-border-subtle", className)}
       decorative
       {...props}
     />
@@ -276,13 +276,13 @@ function CapabilityGroupCardMetric({
     <div
       aria-label={`${label}: ${value}`}
       className={cn(
-        "flex items-center gap-1 text-[11px] font-semibold leading-none text-[var(--text-colours-color-text-primary)]",
+        "flex items-center gap-1 text-[11px] font-semibold leading-none text-mcpx-text",
         className,
       )}
       title={label}
       {...props}
     >
-      <span className="grid size-4 place-items-center text-[var(--text-colours-color-text-secondary)] [--fill-0:currentColor] [&_svg]:size-4">
+      <span className="grid size-4 place-items-center text-mcpx-text-secondary [--fill-0:currentColor] [&_svg]:size-4">
         {icon}
       </span>
       <span>{value}</span>

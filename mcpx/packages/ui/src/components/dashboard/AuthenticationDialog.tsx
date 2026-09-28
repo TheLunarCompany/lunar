@@ -74,7 +74,7 @@ export const AuthenticationDialog = ({
         {/* Header */}
         <DialogHeader className="border-b border-border px-6 pt-6 pb-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="flex items-center justify-center w-9 h-9 rounded-full bg-(--color-bg-interactive) shrink-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mcpx-selected-weak">
               <ShieldCheck className="w-[18px] h-[18px] text-primary" />
             </div>
             <DialogTitle className="text-base font-semibold text-foreground leading-snug">
@@ -96,7 +96,7 @@ export const AuthenticationDialog = ({
           <button
             type="button"
             onClick={handleCopy}
-            className="w-full group flex items-center justify-between gap-4 rounded-lg border border-ring bg-(--color-bg-interactive) px-5 py-4 transition-all hover:bg-accent hover:border-ring focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+            className="group flex w-full items-center justify-between gap-4 rounded-lg border border-ring bg-mcpx-selected-weak px-5 py-4 transition-all hover:border-ring hover:bg-accent focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="font-mono text-2xl font-bold tracking-[0.2em] text-foreground select-all">
               {userCode}
@@ -105,8 +105,8 @@ export const AuthenticationDialog = ({
             <span className="shrink-0 flex items-center gap-1.5 text-xs font-medium min-w-[52px] justify-end transition-colors">
               {copied ? (
                 <>
-                  <Check className="w-4 h-4 text-(--color-fg-success)" />
-                  <span className="text-(--color-fg-success)">Copied</span>
+                  <Check className="h-4 w-4 text-mcpx-success-text" />
+                  <span className="text-mcpx-success-text">Copied</span>
                 </>
               ) : (
                 <>
@@ -122,8 +122,8 @@ export const AuthenticationDialog = ({
           {/* Waiting status */}
           <div className="flex items-center gap-2 pt-0.5">
             <span className="relative flex h-2 w-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-(--color-fg-success) opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-(--color-fg-success)" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mcpx-success-text opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-mcpx-success-text" />
             </span>
             <p className="text-xs text-muted-foreground">
               Waiting for authentication to complete…

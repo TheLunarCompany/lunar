@@ -55,19 +55,19 @@ export function SkillAppliedAgentsSummary({
       ) : appliedOptions.length === 0 ? (
         <StatusMessage>No agents have this skill applied.</StatusMessage>
       ) : (
-        <ul className="divide-y divide-[var(--structure-color-border-primary)] overflow-hidden rounded-lg border border-[var(--structure-color-border-primary)]">
+        <ul className="divide-y divide-mcpx-border-subtle overflow-hidden rounded-lg border border-mcpx-border-subtle">
           {appliedOptions.map((option) => (
             <li
               key={scopeSubjectKey(option.subject)}
-              className="flex items-center justify-between gap-3 bg-[var(--structure-color-bg-container)] px-3 py-3"
+              className="flex items-center justify-between gap-3 bg-mcpx-surface px-3 py-3"
             >
               <SkillAgentIcon name={option.label} className="size-6" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-[var(--text-colours-color-text-primary)]">
+                <span className="block truncate text-sm font-medium text-mcpx-text">
                   {option.label}
                 </span>
                 {!option.connected ? (
-                  <span className="block text-xs text-[var(--text-colours-color-text-secondary)]">
+                  <span className="block text-xs text-mcpx-text-secondary">
                     Not currently connected
                   </span>
                 ) : null}
@@ -85,7 +85,7 @@ export function SkillAppliedAgentsSummary({
 
 function StatusMessage({ children }: { children: React.ReactNode }) {
   return (
-    <p className="py-8 text-center text-sm text-[var(--text-colours-color-text-secondary)]">
+    <p className="py-8 text-center text-sm text-mcpx-text-secondary">
       {children}
     </p>
   );

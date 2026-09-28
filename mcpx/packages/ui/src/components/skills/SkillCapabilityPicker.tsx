@@ -95,7 +95,7 @@ export function SkillCapabilityPicker({
       ) : (
         <div
           data-testid="skill-capability-provider-list"
-          className="divide-y divide-border rounded-md border border-border bg-[var(--colors-white)]"
+          className="divide-y divide-border rounded-md border border-border bg-mcpx-surface"
         >
           {viewModel.providerRows.map((row) => (
             <ProviderRow
@@ -215,7 +215,7 @@ function ProviderFilterMultiSelect({
           <span>
             Filter MCP servers
             {!isAll && (
-              <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+              <span className="ml-1.5 text-xs text-mcpx-text-tertiary">
                 ({selectedCount})
               </span>
             )}
@@ -256,7 +256,7 @@ function ProviderFilterOptionIcon({ name }: { name: string }) {
   return (
     <span
       aria-hidden="true"
-      className="grid size-5 shrink-0 place-items-center rounded bg-[var(--colors-gray-900)] text-[10px] font-semibold text-[var(--colors-white)]"
+      className="grid size-5 shrink-0 place-items-center rounded bg-mcpx-inverse-surface text-[10px] font-semibold text-mcpx-text-inverse"
     >
       {getProviderInitial(name)}
     </span>
@@ -330,7 +330,7 @@ function ProviderIcon({ name }: { name: string }) {
       <span
         aria-hidden="true"
         data-testid={`skill-capability-provider-icon-${name}`}
-        className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--colors-white)]"
+        className="grid size-7 shrink-0 place-items-center rounded-md bg-mcpx-surface"
       >
         <img src={iconUrl} alt="" className="size-6 rounded object-contain" />
       </span>
@@ -341,7 +341,7 @@ function ProviderIcon({ name }: { name: string }) {
     <span
       aria-hidden="true"
       data-testid={`skill-capability-provider-icon-${name}`}
-      className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--colors-gray-900)] text-xs font-semibold text-[var(--colors-white)]"
+      className="grid size-7 shrink-0 place-items-center rounded-md bg-mcpx-inverse-surface text-xs font-semibold text-mcpx-text-inverse"
     >
       {getProviderInitial(name)}
     </span>

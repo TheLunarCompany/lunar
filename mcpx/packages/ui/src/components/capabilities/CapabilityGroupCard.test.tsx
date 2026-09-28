@@ -42,10 +42,7 @@ describe("CapabilityGroupCard.ProviderBadge", () => {
 
     expect(
       screen.getByText("github").closest('[data-slot="badge"]'),
-    ).toHaveClass(
-      "border-[var(--colors-warning-300)]",
-      "bg-[var(--colors-warning-50)]",
-    );
+    ).toHaveClass("border-mcpx-warning-strong", "bg-mcpx-warning-bg");
   });
 
   it("does not render a tool count when none is provided", () => {

@@ -85,7 +85,7 @@ export function SkillIdentityTitle({
   return (
     <Component
       className={cn(
-        "min-w-0 truncate text-base font-semibold leading-6 text-[var(--text-colours-color-text-primary)]",
+        "min-w-0 truncate text-base font-semibold leading-6 text-mcpx-text",
         className,
       )}
       {...props}
@@ -111,7 +111,7 @@ export function SkillIdentityDescription({
   return (
     <p
       className={cn(
-        "mt-2 max-w-3xl text-sm leading-6 text-[var(--text-colours-color-text-secondary)]",
+        "mt-2 max-w-3xl text-sm leading-6 text-mcpx-text-secondary",
         className,
       )}
       {...props}
@@ -128,7 +128,7 @@ export function SkillIdentityMeta({
   return (
     <div
       className={cn(
-        "mt-4 flex flex-wrap items-center gap-4 text-xs text-[var(--text-colours-color-text-secondary)]",
+        "mt-4 flex flex-wrap items-center gap-4 text-xs text-mcpx-text-secondary",
         className,
       )}
       {...props}
@@ -145,9 +145,7 @@ export function SkillIdentityMaintainer() {
         {getInitial(maintainerName)}
       </span>
       <span>by</span>
-      <strong className="font-semibold text-[var(--text-colours-color-text-primary)]">
-        {maintainerName}
-      </strong>
+      <strong className="font-semibold text-mcpx-text">{maintainerName}</strong>
     </span>
   );
 }
@@ -159,7 +157,7 @@ export function SkillIdentityUpdatedAt() {
     <span className="inline-flex items-center gap-1.5">
       <Clock3 className="size-3.5" />
       <span>Updated</span>
-      <span className="font-semibold text-[var(--text-colours-color-text-primary)]">
+      <span className="font-semibold text-mcpx-text">
         {skillUpdatedAtFormatter.format(updatedAt)}
       </span>
     </span>

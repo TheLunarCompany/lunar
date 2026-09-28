@@ -62,10 +62,10 @@ export function CreateCapabilityGroupModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-h-[85vh] w-[90vw] overflow-x-hidden rounded-lg border border-[var(--colors-gray-200)] bg-white p-0 sm:max-w-[600px]"
+        className="max-h-[85vh] w-[90vw] overflow-x-hidden rounded-lg border border-[var(--mcpx-border-subtle)] bg-mcpx-surface p-0 sm:max-w-[600px]"
         showCloseButton={false}
       >
-        <div className="border-b border-[var(--colors-gray-200)] px-6 py-6">
+        <div className="border-b border-[var(--mcpx-border-subtle)] px-6 py-6">
           <DialogTitle className="text-2xl font-semibold text-foreground">
             Create Capability Group
           </DialogTitle>
@@ -119,19 +119,18 @@ export function CreateCapabilityGroupModal({
               placeholder="Enter tool group description"
               rows={3}
               maxLength={200}
-              className="bg-white"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-[var(--colors-gray-200)] bg-white px-6 py-6">
+        <div className="flex items-center justify-between border-t border-[var(--mcpx-border-subtle)] bg-mcpx-surface px-6 py-6">
           <Button variant="ghost" onClick={onClose} disabled={isCreating}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isCreating}>
             {isCreating ? (
               <span className="flex items-center gap-2">
-                <Spinner className="text-white" />
+                <Spinner className="text-mcpx-tooltip-text" />
                 Creating...
               </span>
             ) : (

@@ -5,6 +5,7 @@ export const FEATURE_FLAG_KEYS = [
   "VITE_ENABLE_CAPABILITIES_UI",
   "VITE_UI_SIDEBAR_RESTRUCTURE",
   "VITE_SHOW_MCP_SERVERS",
+  "VITE_IS_BOOMI",
 ] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];

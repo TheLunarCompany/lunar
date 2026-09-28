@@ -116,8 +116,8 @@ export default function SkillCreateStart() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={[
-              "flex min-h-[260px] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] px-8 py-8 text-center shadow-sm transition",
-              "hover:border-primary/50 hover:bg-[var(--structure-color-bg-container-overlay)]",
+              "flex min-h-[260px] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-mcpx-border-subtle bg-mcpx-surface px-8 py-8 text-center shadow-sm transition",
+              "hover:border-primary/50 hover:bg-mcpx-selected-weak",
               "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
               "disabled:pointer-events-none disabled:opacity-50",
               isDragging ? "border-primary bg-primary/5" : "",
@@ -129,13 +129,13 @@ export default function SkillCreateStart() {
             >
               <FileUp className="size-7" />
             </span>
-            <span className="mt-6 text-base font-semibold leading-6 text-[var(--text-colours-color-text-primary)]">
+            <span className="mt-6 text-base font-semibold leading-6 text-mcpx-text">
               Drag and drop your skill here, or{" "}
               <span className="text-primary underline underline-offset-4">
                 browse files
               </span>
             </span>
-            <span className="mt-2 max-w-3xl text-sm leading-5 text-[var(--text-colours-color-text-secondary)]">
+            <span className="mt-2 max-w-3xl text-sm leading-5 text-mcpx-text-secondary">
               Upload a single SKILL.md file.
             </span>
             <span className="mt-5 flex flex-wrap justify-center gap-2">
@@ -143,10 +143,10 @@ export default function SkillCreateStart() {
             </span>
           </button>
 
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-5 text-sm font-semibold tracking-wide text-[var(--text-colours-color-text-secondary)]">
-            <span className="h-px bg-[var(--structure-color-border-primary)]" />
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-5 text-sm font-semibold tracking-wide text-mcpx-text-secondary">
+            <span className="h-px bg-mcpx-border-subtle" />
             <span>OR</span>
-            <span className="h-px bg-[var(--structure-color-border-primary)]" />
+            <span className="h-px bg-mcpx-border-subtle" />
           </div>
 
           <CreateChoiceLink
@@ -162,7 +162,7 @@ export default function SkillCreateStart() {
 }
 
 const choiceCardClassName =
-  "flex min-h-[160px] w-full flex-col items-center justify-center gap-3 rounded-xl border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container)] p-6 text-center no-underline shadow-sm transition hover:-translate-y-px hover:border-primary/40 hover:shadow-md";
+  "flex min-h-[160px] w-full flex-col items-center justify-center gap-3 rounded-xl border border-mcpx-border-subtle bg-mcpx-surface p-6 text-center no-underline shadow-sm transition hover:-translate-y-px hover:border-primary/40 hover:shadow-md";
 
 function CreateChoiceLink({
   to,
@@ -199,15 +199,15 @@ function CreateChoiceContent({
     <>
       <span
         aria-hidden="true"
-        className="grid size-12 place-items-center rounded-xl bg-[var(--structure-color-bg-container-overlay)] text-[var(--text-colours-color-text-primary)]"
+        className="grid size-12 place-items-center rounded-xl bg-mcpx-selected-weak text-mcpx-text"
       >
         <Icon className="size-5" />
       </span>
       <span className="min-w-0">
-        <span className="block text-[15px] font-semibold leading-5 text-[var(--text-colours-color-text-primary)]">
+        <span className="block text-[15px] font-semibold leading-5 text-mcpx-text">
           {title}
         </span>
-        <span className="mt-1.5 block text-sm leading-5 text-[var(--text-colours-color-text-secondary)]">
+        <span className="mt-1.5 block text-sm leading-5 text-mcpx-text-secondary">
           {description}
         </span>
       </span>
@@ -217,7 +217,7 @@ function CreateChoiceContent({
 
 function UploadPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-md border border-[var(--structure-color-border-primary)] bg-[var(--structure-color-bg-container-overlay)] px-3 py-1 font-mono text-sm text-[var(--text-colours-color-text-secondary)]">
+    <span className="rounded-md border border-mcpx-border-subtle bg-mcpx-selected-weak px-3 py-1 font-mono text-sm text-mcpx-text-secondary">
       {children}
     </span>
   );

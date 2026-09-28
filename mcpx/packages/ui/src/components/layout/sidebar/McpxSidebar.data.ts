@@ -1,7 +1,7 @@
 import {
-  Gauge,
   Hammer,
   Library,
+  LibraryBig,
   Sparkles,
   ScrollText,
   Server,
@@ -35,7 +35,7 @@ export function getDefaultMcpxSidebarSections({
     {
       id: "dashboard",
       label: "Dashboard",
-      icon: Gauge,
+      icon: LibraryBig,
       url: routes.dashboard,
     },
     { id: "catalog", label: "Catalog", icon: Library, url: routes.catalog },
@@ -101,7 +101,7 @@ function getRestructuredMcpxSidebarSections({
     {
       id: "dashboard",
       label: "Dashboard",
-      icon: Gauge,
+      icon: LibraryBig,
       url: routes.dashboard,
     },
   ];

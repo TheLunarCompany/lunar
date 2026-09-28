@@ -5,13 +5,13 @@ import { AlertTriangle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const nodeIndicatorBadgeVariants = cva(
-  "absolute -right-3.5 -top-3.5 flex items-center justify-center rounded-[var(--border-radius-full)] p-1.5 shadow-[var(--shadow-node-indicator)]",
+  "absolute -right-3.5 -top-3.5 flex items-center justify-center rounded-[var(--border-radius-full)] p-1.5 shadow-[var(--mcpx-shadow-weak)]",
   {
     variants: {
       variant: {
-        warning: "bg-[var(--colors-warning-400)]",
-        info: "bg-[var(--colors-info-500)]",
-        error: "bg-[var(--colors-error-700)]",
+        warning: "bg-mcpx-warning-strong",
+        info: "bg-mcpx-info-text",
+        error: "bg-destructive",
       },
     },
     defaultVariants: {
@@ -46,7 +46,7 @@ function NodeIndicatorBadge({
       className={cn(nodeIndicatorBadgeVariants({ variant }), className)}
       {...props}
     >
-      <IconComponent className="size-4 text-white" />
+      <IconComponent className="size-4 text-mcpx-tooltip-text" />
     </div>
   );
 }

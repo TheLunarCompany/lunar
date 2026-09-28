@@ -132,10 +132,10 @@ export function SkillAppliedAgents({
             <AgentCapabilitiesSvg className="h-40 w-auto" />
           </span>
           <div className="space-y-1">
-            <h2 className="text-base font-semibold text-[var(--text-colours-color-text-primary)]">
+            <h2 className="text-base font-semibold text-mcpx-text">
               No agents available.
             </h2>
-            <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
+            <p className="text-sm text-mcpx-text-secondary">
               Connect AI agents from the dashboard to apply this skill.
             </p>
           </div>
@@ -155,14 +155,14 @@ export function SkillAppliedAgents({
           {visibleOptions.length === 0 ? (
             <StatusMessage>No matching agents.</StatusMessage>
           ) : (
-            <div className="divide-y divide-[var(--structure-color-border-primary)] overflow-hidden rounded-lg border border-[var(--structure-color-border-primary)]">
+            <div className="divide-y divide-mcpx-border-subtle overflow-hidden rounded-lg border border-mcpx-border-subtle">
               {visibleOptions.map((option) => {
                 const kindLabel = subjectKindLabel(option.subject);
 
                 return (
                   <label
                     key={scopeSubjectKey(option.subject)}
-                    className="flex cursor-pointer items-center gap-3 bg-[var(--structure-color-bg-container)] px-3 py-3 has-[:disabled]:cursor-not-allowed"
+                    className="flex cursor-pointer items-center gap-3 bg-mcpx-surface px-3 py-3 has-[:disabled]:cursor-not-allowed"
                   >
                     <Checkbox
                       checked={selectedKeys.has(
@@ -177,11 +177,11 @@ export function SkillAppliedAgents({
                     <SkillAgentIcon name={option.label} className="size-6" />
                     <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-[var(--text-colours-color-text-primary)]">
+                        <span className="block truncate text-sm font-medium text-mcpx-text">
                           {option.label}
                         </span>
                         {!option.connected ? (
-                          <span className="block text-xs text-[var(--text-colours-color-text-secondary)]">
+                          <span className="block text-xs text-mcpx-text-secondary">
                             Not currently connected
                           </span>
                         ) : null}
@@ -201,7 +201,7 @@ export function SkillAppliedAgents({
 
 function StatusMessage({ children }: { children: React.ReactNode }) {
   return (
-    <p className="py-8 text-center text-sm text-[var(--text-colours-color-text-secondary)]">
+    <p className="py-8 text-center text-sm text-mcpx-text-secondary">
       {children}
     </p>
   );

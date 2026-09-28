@@ -31,7 +31,7 @@
   "dependencies": {
     "@auth0/auth0-react": "^2.4.0",
     "@base-ui/react": "^1.4.1",
-    "@fontsource-variable/inter": "^5.2.8",
+    "@boomi/exosphere": "^7.11.0",
     "@hookform/resolvers": "^4.1.2",
     "@mcpx/shared-model": "1.0.0",
     "@mcpx/toolkit-ui": "file:../toolkit-ui",

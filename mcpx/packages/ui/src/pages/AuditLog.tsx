@@ -55,27 +55,25 @@ const EVENT_BADGE: Record<
   catalog_updated: {
     variant: "outline",
     className:
-      "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-800",
+      "border-mcpx-data-purple bg-mcpx-selected-weak text-mcpx-data-purple",
   },
   behavior_updated: {
     variant: "outline",
     className:
-      "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800",
+      "border-mcpx-warning-strong bg-mcpx-warning-bg text-mcpx-warning-strong",
   },
   tool_used: {
     variant: "outline",
-    className:
-      "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-200 dark:border-yellow-800",
+    className: "border-mcpx-data-coral bg-mcpx-warning-bg text-mcpx-data-coral",
   },
   prompt_used: {
     variant: "outline",
-    className:
-      "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-800",
+    className: "border-mcpx-info-text bg-mcpx-info-bg text-mcpx-info-text",
   },
   resource_read: {
     variant: "outline",
     className:
-      "bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-800",
+      "border-mcpx-success-text bg-mcpx-success-bg text-mcpx-success-text",
   },
 };
 
@@ -206,17 +204,17 @@ export default function AuditLog() {
   };
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-mcpx-surface">
       <div className="flex items-center justify-between border-b px-6 py-4">
         <div>
-          <h1 className="text-xl font-semibold">Audit Log</h1>
+          <h1 className="mcpx-page-title">Audit Log</h1>
           <p className="text-sm text-muted-foreground">
             Recent changes to this mcpx instance.
           </p>
         </div>
         <Button
-          variant="outline"
-          size="sm"
+          variant="default"
+          size="lg"
           onClick={() => refetch()}
           disabled={isFetching}
         >
@@ -241,7 +239,7 @@ export default function AuditLog() {
               <Badge
                 variant={active ? badge.variant : "outline"}
                 size="md"
-                className={`cursor-pointer ${active && badge.className ? badge.className : ""}`}
+                className={`cursor-pointer border-0 ${active && badge.className ? badge.className : ""}`}
               >
                 {EVENT_LABEL[t]}
               </Badge>
@@ -293,7 +291,7 @@ export default function AuditLog() {
                         <Badge
                           variant={EVENT_BADGE[entry.eventType].variant}
                           size="md"
-                          className={EVENT_BADGE[entry.eventType].className}
+                          className={`border-0 ${EVENT_BADGE[entry.eventType].className ?? ""}`}
                         >
                           {EVENT_LABEL[entry.eventType]}
                         </Badge>

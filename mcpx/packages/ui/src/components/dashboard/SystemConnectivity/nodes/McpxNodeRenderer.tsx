@@ -28,18 +28,14 @@ const McpxNodeRenderer = ({
       <NodeCard
         variant="default"
         state={selected ? "active" : "default"}
-        className={`w-[220px] cursor-pointer ${
-          selected
-            ? "bg-white"
-            : "[background:linear-gradient(white,white)_padding-box,linear-gradient(to_bottom_right,var(--colors-primary-500),var(--colors-secondary-200))_border-box] border border-transparent"
-        }`}
+        className="w-[220px] cursor-pointer border-mcpx-selected shadow-none hover:border-mcpx-selected"
       >
         <div className="flex items-center gap-3">
-          <NodeCardIcon className="border-none bg-gradient-to-br from-[#CDCBFF] to-[#FFE5F5]">
-            <Hexagon className="size-6 text-[var(--colors-primary-500)]" />
+          <NodeCardIcon className="border-mcpx-surface-tertiary bg-mcpx-selected-weak">
+            <Hexagon className="size-6 text-mcpx-selected" />
           </NodeCardIcon>
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-bold text-[var(--colors-gray-950)]">
+          <div className="flex flex-col gap-1 overflow-hidden">
+            <span className="text-sm leading-[1.5] font-bold text-mcpx-text">
               MCPX
             </span>
             <NodeBadge>

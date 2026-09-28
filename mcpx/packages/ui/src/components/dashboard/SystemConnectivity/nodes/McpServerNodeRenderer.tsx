@@ -120,8 +120,8 @@ const McpServerNodeRenderer = ({
                       className={cn(
                         "text-sm font-semibold truncate",
                         isInactive
-                          ? "text-[var(--colors-gray-500)]"
-                          : "text-[var(--colors-gray-950)]",
+                          ? "text-[var(--mcpx-text-tertiary)]"
+                          : "text-[var(--mcpx-text)]",
                         !data.displayName ? "capitalize" : "",
                       )}
                     >
@@ -133,7 +133,7 @@ const McpServerNodeRenderer = ({
                   </TooltipContent>
                 </Tooltip>
                 {(isConnected || isPendingAuth) && (
-                  <span className="text-xs font-semibold text-[var(--colors-gray-500)]">
+                  <span className="text-xs font-semibold text-[var(--mcpx-text-tertiary)]">
                     {data.tools?.length || 0}
                     {data.tools?.length !== 1 ? " Tools" : " Tool"}
                   </span>

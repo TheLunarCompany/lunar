@@ -57,7 +57,7 @@ function CapabilitySelectionIndicator({ isSelected }: { isSelected: boolean }) {
           <Check className="size-3" />
         </span>
       ) : (
-        <Square className="size-4 text-[var(--colors-gray-500)]" />
+        <Square className="size-4 text-[var(--mcpx-text-tertiary)]" />
       )}
     </span>
   );
@@ -98,10 +98,10 @@ export function CapabilityToolCard({
       className={cn(
         "transition-all",
         isSelectable || onShowDetails
-          ? "cursor-pointer hover:border-primary hover:shadow-md hover:shadow-primary/30"
+          ? "cursor-pointer hover:border-primary hover:shadow-[var(--mcpx-shadow-moderate)] hover:shadow-primary/30"
           : "",
         isSelectionMode && isSelected
-          ? "border-primary shadow-md shadow-primary/30"
+          ? "border-primary shadow-[var(--mcpx-shadow-moderate)] shadow-primary/30"
           : "",
         className,
       )}

@@ -1,11 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { MemoryRouter } from "react-router-dom";
 import EnterpriseLoginScreen from "./EnterpriseLoginScreen";
 import { withAuth } from "@/stories/decorators";
 
 const meta = {
   title: "Components/EnterpriseLoginScreen",
   component: EnterpriseLoginScreen,
-  decorators: [withAuth({ isAuthenticated: false, user: null })],
+  decorators: [
+    (Story) => (
+      <MemoryRouter>
+        <Story />
+      </MemoryRouter>
+    ),
+    withAuth({ isAuthenticated: false, user: null }),
+  ],
 } satisfies Meta<typeof EnterpriseLoginScreen>;
 
 export default meta;

@@ -22,7 +22,7 @@ export function SkillCardMetrics({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 text-[11px] font-semibold leading-none text-[var(--text-colours-color-text-primary)]",
+        "flex items-center gap-3 text-[11px] font-semibold leading-none text-mcpx-text",
         className,
       )}
       {...props}
@@ -65,7 +65,7 @@ function SkillCardMetric({
             aria-label={`${label}: ${value}`}
             className="flex items-center gap-1"
           >
-            <span className="grid size-4 place-items-center text-[var(--text-colours-color-text-secondary)]">
+            <span className="grid size-4 place-items-center text-mcpx-text-secondary">
               {icon}
             </span>
             <span>{value}</span>

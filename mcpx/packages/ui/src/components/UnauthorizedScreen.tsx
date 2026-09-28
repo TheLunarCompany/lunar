@@ -1,11 +1,11 @@
 export function UnauthorizedScreen({ message }: { message?: string }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
+    <div className="flex min-h-screen items-center justify-center bg-mcpx-page">
+      <div className="w-full max-w-md rounded-lg border border-mcpx-border bg-mcpx-surface p-8 text-center shadow-[var(--mcpx-shadow-moderate)]">
         <div className="mb-6">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-mcpx-danger-bg">
             <svg
-              className="h-6 w-6 text-red-600"
+              className="h-6 w-6 text-mcpx-danger-text"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -18,14 +18,14 @@ export function UnauthorizedScreen({ message }: { message?: string }) {
               />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="mb-2 text-2xl font-bold text-mcpx-text">
             Access Denied
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="mb-6 text-mcpx-text-secondary">
             {message || "You are not authorized to access this application."}
           </p>
           <div className="space-y-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-mcpx-text-tertiary">
               Please contact your administrator if you believe this is an error.
             </p>
           </div>

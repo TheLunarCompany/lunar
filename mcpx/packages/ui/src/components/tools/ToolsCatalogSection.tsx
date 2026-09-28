@@ -69,9 +69,9 @@ const ANNOTATION_FILTER_OPTIONS: {
   label: string;
   dot?: string;
 }[] = [
-  { value: "read-only", label: "Read-only", dot: "bg-green-500" },
-  { value: "write", label: "Write", dot: "bg-amber-500" },
-  { value: "destructive", label: "Destructive", dot: "bg-red-500" },
+  { value: "read-only", label: "Read-only", dot: "bg-mcpx-success-text" },
+  { value: "write", label: "Write", dot: "bg-mcpx-warning-strong" },
+  { value: "destructive", label: "Destructive", dot: "bg-mcpx-danger-text" },
 ];
 
 function AnnotationFilterDropdown({
@@ -110,7 +110,7 @@ function AnnotationFilterDropdown({
           <ListFilter className="mr-2 size-4" />
           Filter
           {!isAll && (
-            <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+            <span className="ml-1.5 text-xs text-[var(--mcpx-text-tertiary)]">
               ({selectedCount})
             </span>
           )}
@@ -124,7 +124,7 @@ const styles = {
   header: "flex justify-between items-start gap-12 whitespace-nowrap mb-0",
   titleSection: "flex flex-col gap-2",
   editModeButton:
-    "bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
+    "bg-mcpx-selected text-mcpx-tooltip-text px-4 py-2 rounded-lg font-medium transition-colors text-sm",
 };
 
 function ToolsCatalogSectionComponent({
@@ -173,13 +173,13 @@ function ToolsCatalogSectionComponent({
 
   return (
     <>
-      <div className="bg-white rounded-lg p-6 shadow-xs border border-gray-200">
+      <div className="bg-mcpx-surface rounded-lg p-6 shadow-[var(--mcpx-shadow-weak)] border border-mcpx-border-subtle">
         <div className={styles.header}>
           <div className={styles.titleSection}>
             <div className="flex items-center justify-between pb-4">
               <p
                 className="font-semibold"
-                style={{ color: "#231A4D", fontSize: "16px" }}
+                style={{ color: "var(--mcpx-text)", fontSize: "16px" }}
               >
                 {selectedToolGroup
                   ? `Tools from "${toolGroups.find((g) => g.id === selectedToolGroup)?.name || "Selected Group"}"`
@@ -190,7 +190,7 @@ function ToolsCatalogSectionComponent({
                   variant="secondary"
                   size="sm"
                   onClick={onShowAllTools}
-                  className="text-gray-600"
+                  className="text-mcpx-text-secondary"
                 >
                   Show All Tools
                 </Button>
@@ -206,11 +206,6 @@ function ToolsCatalogSectionComponent({
             value={searchQuery}
             onChange={(e) => onSearchQueryChange(e.target.value)}
             wrapperClassName="w-[320px]"
-            className="rounded-lg"
-            style={{
-              borderRadius: "8px",
-              border: "1px solid #D8DCED",
-            }}
           />
 
           <AnnotationFilterDropdown

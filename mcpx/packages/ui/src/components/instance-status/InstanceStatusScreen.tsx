@@ -42,7 +42,7 @@ export function InstanceStatusScreen({
       data-instance-status={status}
       data-testid="instance-status-screen"
     >
-      <div className="flex w-full max-w-2xl flex-col items-center gap-6 rounded-3xl border border-instance-status-panel-border bg-instance-status-panel-surface px-6 py-12 shadow-[0_12px_32px_rgb(30_27_75_/_0.06)] sm:px-10 sm:py-16">
+      <div className="flex w-full max-w-2xl flex-col items-center gap-6 rounded-3xl border border-instance-status-panel-border bg-instance-status-panel-surface px-6 py-12 shadow-[var(--mcpx-shadow-moderate)] sm:px-10 sm:py-16">
         <div
           aria-hidden="true"
           className={cn(

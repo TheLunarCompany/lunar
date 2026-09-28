@@ -5,7 +5,7 @@ import { SquarePlus } from "lucide-react";
 export const N8nWorkflowInstructions: React.FC = () => {
   const mcpxUrl = getMcpxServerURL("http");
   return (
-    <div className="text-sm text-[#1E1B4B]">
+    <div className="text-sm text-mcpx-text">
       <div>
         <p className="font-semibold mb-4">Connect with an n8n workflow</p>
         <ol className="list-decimal list-inside space-y-1">
@@ -23,7 +23,7 @@ export const N8nWorkflowInstructions: React.FC = () => {
             <ul className="list-disc list-inside ml-4">
               <li>
                 <span className="font-semibold">Server Transport: </span>{" "}
-                <code className="bg-gray-100 px-1 rounded">
+                <code className="bg-mcpx-surface-tertiary px-1 rounded">
                   {" "}
                   HTTP Streamable
                 </code>
@@ -31,11 +31,11 @@ export const N8nWorkflowInstructions: React.FC = () => {
               <li>
                 <span className="font-semibold">MCP Endpoint URL: </span>
                 {mcpxUrl.includes("localhost") ? (
-                  <code className="bg-gray-100 px-1 rounded">
+                  <code className="bg-mcpx-surface-tertiary px-1 rounded">
                     {`http://host.docker.internal:${new URL(mcpxUrl).port}/mcp`}
                   </code>
                 ) : (
-                  <code className="bg-gray-100 px-1 rounded">{`${mcpxUrl}/mcp`}</code>
+                  <code className="bg-mcpx-surface-tertiary px-1 rounded">{`${mcpxUrl}/mcp`}</code>
                 )}
               </li>
 
@@ -44,7 +44,9 @@ export const N8nWorkflowInstructions: React.FC = () => {
                 {mcpxUrl.includes("localhost") ? (
                   "None"
                 ) : (
-                  <code className="bg-gray-100 px-1 rounded">MCP OAuth2 </code>
+                  <code className="bg-mcpx-surface-tertiary px-1 rounded">
+                    MCP OAuth2{" "}
+                  </code>
                 )}
               </li>
               {!mcpxUrl.includes("localhost") && (
@@ -57,7 +59,7 @@ export const N8nWorkflowInstructions: React.FC = () => {
                       Click "Select Credential" and than "Create new credential"
                     </li>
                     <span className="font-semibold ml-5">Server URL:</span>{" "}
-                    <code className="bg-gray-100 px-1 rounded">{`${mcpxUrl}/mcp`}</code>
+                    <code className="bg-mcpx-surface-tertiary px-1 rounded">{`${mcpxUrl}/mcp`}</code>
                     <br></br>
                     <span className="font-semibold ml-5">
                       Allowed HTTP Request Domains:

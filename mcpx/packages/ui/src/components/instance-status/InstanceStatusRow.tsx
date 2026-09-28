@@ -31,7 +31,7 @@ export function InstanceStatusRow({
       aria-atomic="true"
       aria-live="polite"
       className={cn(
-        "flex min-w-0 items-center gap-2.5 rounded-[10px] bg-white/[0.08] px-3 py-[9px] shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.1)] backdrop-blur-[6px]",
+        "flex min-w-0 items-center gap-2.5 rounded-[var(--border-radius-sm)] border border-[var(--mcpx-sidebar-border)] bg-[var(--mcpx-sidebar-active)] px-3 py-2 shadow-none",
         className,
       )}
       data-instance-status={status}
@@ -46,10 +46,10 @@ export function InstanceStatusRow({
         data-testid="instance-status-dot"
       />
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-[12.5px] font-semibold leading-[1.2] text-white">
+        <span className="text-xs font-semibold leading-4 text-mcpx-tooltip-text">
           {metadata.label}
         </span>
-        <span className="truncate text-[11px] leading-[1.3] text-white/50">
+        <span className="truncate text-xs leading-4 text-[var(--mcpx-sidebar-text-muted)]">
           {metadata.description}
         </span>
       </span>

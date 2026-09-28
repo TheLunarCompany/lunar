@@ -20,11 +20,8 @@ export function EllipsisActions({ items }: { items: ActionItem[] }) {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <div className="cursor-pointer text-[var(--colors-gray-600)]">
-          <MoreVertical
-            style={{ color: "var(--colors-gray-600)" }}
-            className="w-4 h-4 text-[var(--colors-gray-600)]"
-          />
+        <div className="cursor-pointer text-mcpx-text-secondary">
+          <MoreVertical className="w-4 h-4 text-mcpx-text-secondary" />
         </div>
       </DropdownMenuTrigger>
 
@@ -35,7 +32,7 @@ export function EllipsisActions({ items }: { items: ActionItem[] }) {
       >
         {safeItems.map((item, idx) => (
           <DropdownMenuItem
-            className="group gap-2 text-[var(--colors-gray-700)] hover:bg-[var(--colors-gray-50)] hover:text-[var(--colors-gray-950)] focus:bg-[var(--colors-gray-50)] focus:text-[var(--colors-gray-950)] data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:text-destructive [&_svg]:text-current"
+            className="group gap-2 text-mcpx-text hover:bg-mcpx-surface-hover hover:text-mcpx-text focus:bg-mcpx-surface-hover focus:text-mcpx-text data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:text-destructive [&_svg]:text-current"
             key={idx}
             variant={
               item.label.toLowerCase() === "delete" ? "destructive" : "default"

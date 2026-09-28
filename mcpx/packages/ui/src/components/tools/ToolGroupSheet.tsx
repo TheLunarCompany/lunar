@@ -11,6 +11,7 @@ import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
 const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { FileEdit, Trash2, TriangleAlert, Wrench } from "lucide-react";
 import { useState } from "react";
+import { ServerStatusBadge } from "@/components/dashboard/ServerStatusBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import type { ToolGroup } from "@/store/access-controls";
 import type { TargetServer } from "@mcpx/shared-model";
@@ -82,10 +83,10 @@ export function ToolGroupSheet({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[600px] max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden border-l-2 border-primary"
+        className="w-[600px] max-w-[600px]! bg-mcpx-surface p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden border-l-2 border-primary"
         style={{
           overflowX: "hidden",
-          boxShadow: "-4px 0 60px 0 rgba(0, 0, 0, 0.25)",
+          boxShadow: "-4px 0 60px 0 var(--mcpx-shadow-strong)",
         }}
       >
         <VisuallyHidden>
@@ -98,7 +99,7 @@ export function ToolGroupSheet({
         <SheetHeader className="px-6">
           <div className="flex items-center justify-between mt-6 gap-2 min-w-0">
             <div
-              className="flex-1 text-xl font-semibold text-gray-900 truncate min-w-0"
+              className="flex-1 text-xl font-semibold text-mcpx-text truncate min-w-0"
               style={{ fontWeight: 600 }}
               title={
                 toolGroups.find((g) => g.id === selectedToolGroup?.id)?.name ||
@@ -115,34 +116,31 @@ export function ToolGroupSheet({
               {onEditToolGroup && selectedToolGroup && (
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon-sm"
                   onClick={() => onEditToolGroup(selectedToolGroup)}
-                  className="p-2"
                   title="Edit Tool Group"
                 >
-                  <FileEdit className="w-4 h-4" />
+                  <FileEdit />
                 </Button>
               )}
               {onEditGroup && selectedToolGroup && (
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon-sm"
                   onClick={() => onEditGroup(selectedToolGroup)}
-                  className="p-2"
                   title="Update Tools"
                 >
-                  <Wrench className="w-4 h-4" />
+                  <Wrench />
                 </Button>
               )}
               {onDeleteGroup && selectedToolGroup && (
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon-sm"
                   onClick={() => onDeleteGroup(selectedToolGroup)}
-                  className="p-2"
                   title="Delete"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 />
                 </Button>
               )}
             </div>
@@ -188,9 +186,9 @@ export function ToolGroupSheet({
           <SearchInput
             placeholder="Search tools and servers..."
             style={{
-              backgroundColor: "#FBFBFF",
-              border: "1px solid #E2E2E2",
-              color: "#000000",
+              backgroundColor: "var(--mcpx-surface)",
+              border: "1px solid var(--mcpx-border)",
+              color: "var(--mcpx-text)",
             }}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -316,7 +314,7 @@ export function ToolGroupSheet({
               if (searchQuery && filteredProviders.length === 0) {
                 return (
                   <div className="text-center py-8">
-                    <div className="text-gray-500 text-sm">
+                    <div className="text-mcpx-text-tertiary text-sm">
                       No tools found matching "{searchQuery}"
                     </div>
                   </div>
@@ -332,17 +330,15 @@ export function ToolGroupSheet({
                 }) => (
                   <div
                     key={provider.name}
-                    className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-xs"
+                    className="border border-mcpx-border-subtle rounded-lg p-4 space-y-4 bg-mcpx-surface shadow-[var(--mcpx-shadow-weak)]"
                   >
                     <div className="flex items-center gap-2">
                       <DomainIcon provider={provider} size={32} />
                       <div className="flex-1">
-                        <h3 className="capitalize font-semibold text-gray-900 text-lg flex justify-between">
+                        <h3 className="capitalize font-semibold text-mcpx-text text-lg flex justify-between">
                           {provider.name}
                           {provider.state.type === "pending-auth" && (
-                            <span className="bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium border border-yellow-200">
-                              PENDING AUTH
-                            </span>
+                            <ServerStatusBadge status="pending_auth" />
                           )}
                         </h3>
                       </div>
@@ -353,7 +349,7 @@ export function ToolGroupSheet({
                         Tools for interacting with the {provider.name} API...
                       </p>
                       {providerNotConnected && (
-                        <div className="flex items-center gap-2 text-xs font-semibold leading-[18px] text-[var(--colors-warning-700)]">
+                        <div className="flex items-center gap-2 text-xs font-semibold leading-[18px] text-mcpx-warning-strong">
                           <TriangleAlert
                             aria-hidden="true"
                             className="size-4 shrink-0"
@@ -371,7 +367,7 @@ export function ToolGroupSheet({
                             className="flex items-center justify-between rounded-lg p-4"
                             style={{
                               backgroundColor: "white",
-                              border: "1px solid #E2E2E2",
+                              border: "1px solid var(--mcpx-border)",
                             }}
                           >
                             <div className="flex flex-col items-start gap-0.5">
@@ -393,7 +389,7 @@ export function ToolGroupSheet({
                             className="flex items-center justify-between rounded-lg p-4"
                             style={{
                               backgroundColor: "white",
-                              border: "1px solid #E2E2E2",
+                              border: "1px solid var(--mcpx-border)",
                             }}
                           >
                             <div className="flex flex-col items-start gap-0.5">
@@ -412,7 +408,7 @@ export function ToolGroupSheet({
                             </div>
                           </div>
                         ))}
-                      <div className="text-xs text-gray-500 mt-2">
+                      <div className="text-xs text-mcpx-text-tertiary mt-2">
                         {(providerNotConnected
                           ? fallbackToolNames?.length
                           : tools.length) || 0}{" "}

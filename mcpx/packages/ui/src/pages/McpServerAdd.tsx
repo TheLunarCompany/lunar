@@ -275,7 +275,7 @@ export default function McpServerAdd() {
   };
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-background p-6 pb-28">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-mcpx-surface p-6 pb-28">
       {addFailures.length > 0 && (
         <ErrorBanner
           message={
@@ -298,10 +298,10 @@ export default function McpServerAdd() {
       )}
       <Link
         to={routes.mcpServers}
-        className="mb-5 inline-flex w-fit items-center gap-2 text-[#20222A] transition-colors hover:text-gray-900"
+        className="mb-5 inline-flex w-fit items-center gap-2 text-mcpx-text transition-colors hover:text-mcpx-text"
       >
         <ArrowLeft className="size-5" />
-        <h1 className="text-[20px] font-semibold">Add Server</h1>
+        <h1 className="mcpx-page-title">Add Server</h1>
       </Link>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -310,7 +310,6 @@ export default function McpServerAdd() {
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           wrapperClassName="w-[320px] max-w-full"
-          className="rounded-lg"
         />
         <Sort
           title="Sort"
@@ -345,16 +344,16 @@ export default function McpServerAdd() {
           {SKELETON_PLACEHOLDERS.map((item) => (
             <div
               key={item}
-              className="h-36 animate-pulse rounded-lg border border-gray-100 bg-white p-4"
+              className="h-36 animate-pulse rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-4"
             >
-              <div className="mb-4 h-10 w-40 rounded bg-gray-200" />
-              <div className="h-4 w-full rounded bg-gray-200" />
-              <div className="mt-2 h-4 w-2/3 rounded bg-gray-200" />
+              <div className="mb-4 h-10 w-40 rounded bg-mcpx-surface-disabled" />
+              <div className="h-4 w-full rounded bg-mcpx-surface-disabled" />
+              <div className="mt-2 h-4 w-2/3 rounded bg-mcpx-surface-disabled" />
             </div>
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm text-red-600">
+        <p className="text-sm text-mcpx-danger-text">
           Failed to load catalog: {error.message}
         </p>
       ) : (
@@ -383,7 +382,7 @@ export default function McpServerAdd() {
           </div>
 
           {filteredCatalogServers.length === 0 && (
-            <p className="mt-6 text-sm text-gray-500">
+            <p className="mt-6 text-sm text-mcpx-text-tertiary">
               {catalogServers.length === 0
                 ? "No servers in the catalog."
                 : "No servers match your search."}

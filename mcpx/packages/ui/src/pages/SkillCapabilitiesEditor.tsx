@@ -204,7 +204,12 @@ export default function SkillCapabilitiesEditor() {
             </SkillPage.Description>
           </SkillPage.HeaderText>
           <SkillPage.Actions>
-            <Button type="button" variant="outline" onClick={handleCancel}>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={handleCancel}
+            >
               Cancel
             </Button>
             <SaveCapabilitiesButton
@@ -266,7 +271,12 @@ function SaveCapabilitiesButton({
   disabled: boolean;
 }) {
   return (
-    <Button type="submit" form={form} disabled={isSubmitting || disabled}>
+    <Button
+      type="submit"
+      size="lg"
+      form={form}
+      disabled={isSubmitting || disabled}
+    >
       {isSubmitting ? <Loader2 className="animate-spin" /> : null}
       Save capabilities
     </Button>
@@ -360,7 +370,7 @@ function EditorMessage({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="grid flex-1 place-items-center gap-4 p-5 text-sm text-[var(--text-colours-color-text-secondary)]">
+    <div className="grid flex-1 place-items-center gap-4 p-5 text-sm text-mcpx-text-secondary">
       <span>{title}</span>
       {children}
     </div>

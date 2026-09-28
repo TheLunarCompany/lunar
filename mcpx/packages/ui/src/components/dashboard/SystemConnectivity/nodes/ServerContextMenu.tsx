@@ -38,7 +38,7 @@ export function ServerContextMenu({
         bottom: bottom || undefined,
         zIndex: 100,
       }}
-      className="flex flex-col rounded-lg border border-[var(--colors-gray-200)] bg-white py-1 shadow-lg"
+      className="flex flex-col rounded-lg border border-[var(--mcpx-border-subtle)] bg-mcpx-surface py-1 shadow-lg"
       onClick={onClick}
     >
       <Button
@@ -47,7 +47,7 @@ export function ServerContextMenu({
         onClick={onDetails}
         className="justify-start gap-2 rounded-none px-2.5"
       >
-        <Info className="size-4 text-[var(--colors-gray-500)]" />
+        <Info className="size-4 text-[var(--mcpx-text-tertiary)]" />
         Details
       </Button>
       {canEdit && (
@@ -57,7 +57,7 @@ export function ServerContextMenu({
           onClick={onEdit}
           className="justify-start gap-2 rounded-none px-2.5"
         >
-          <Pencil className="size-4 text-[var(--colors-gray-500)]" />
+          <Pencil className="size-4 text-[var(--mcpx-text-tertiary)]" />
           Edit
         </Button>
       )}
@@ -67,25 +67,25 @@ export function ServerContextMenu({
         onClick={onToggleInactive}
         className={
           isInactive
-            ? "justify-start gap-2 rounded-none px-2.5 text-[var(--colors-success-600)] hover:text-[var(--colors-success-600)]"
+            ? "justify-start gap-2 rounded-none px-2.5 text-mcpx-success-text hover:text-mcpx-success-text"
             : "justify-start gap-2 rounded-none px-2.5"
         }
       >
         <Power
           className={
             isInactive
-              ? "size-4 text-[var(--colors-success-600)]"
-              : "size-4 text-[var(--colors-gray-500)]"
+              ? "size-4 text-mcpx-success-text"
+              : "size-4 text-[var(--mcpx-text-tertiary)]"
           }
         />
         {isInactive ? "Activate" : "Deactivate"}
       </Button>
-      <div className="mx-2 my-0.5 border-t border-[var(--colors-gray-200)]" />
+      <div className="mx-2 my-0.5 border-t border-[var(--mcpx-border-subtle)]" />
       <Button
         variant="ghost"
         size="sm"
         onClick={onDelete}
-        className="justify-start gap-2 rounded-none px-2.5 text-[var(--colors-error-600)] hover:text-[var(--colors-error-600)]"
+        className="justify-start gap-2 rounded-none px-2.5 text-mcpx-danger-text hover:text-mcpx-danger-text"
       >
         <Trash2 className="size-4" />
         Delete

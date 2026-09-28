@@ -38,9 +38,9 @@ const annotationFilterOptions: {
   label: string;
   dot: string;
 }[] = [
-  { value: "read-only", label: "Read-only", dot: "bg-green-500" },
-  { value: "write", label: "Write", dot: "bg-amber-500" },
-  { value: "destructive", label: "Destructive", dot: "bg-red-500" },
+  { value: "read-only", label: "Read-only", dot: "bg-mcpx-success-text" },
+  { value: "write", label: "Write", dot: "bg-mcpx-warning-strong" },
+  { value: "destructive", label: "Destructive", dot: "bg-mcpx-danger-bg0" },
 ];
 
 function AnnotationFilterDropdown({
@@ -79,7 +79,7 @@ function AnnotationFilterDropdown({
           <ListFilter className="mr-2 size-4" />
           Filter Tools
           {!isAll && (
-            <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+            <span className="ml-1.5 text-xs text-[var(--mcpx-text-tertiary)]">
               ({selectedCount})
             </span>
           )}
@@ -107,9 +107,9 @@ export function CapabilityProvidersSection({
   onDeleteItem,
 }: CapabilityProvidersSectionProps) {
   return (
-    <section className="rounded-lg border border-[var(--colors-gray-200)] bg-white p-6 shadow-xs">
+    <section className="rounded-lg border border-[var(--mcpx-border-subtle)] bg-mcpx-surface p-6 shadow-[var(--mcpx-shadow-weak)]">
       <div className="mb-4 flex items-center justify-between gap-4">
-        <p className="text-base font-semibold text-[var(--colors-gray-900)]">
+        <p className="text-base font-semibold text-mcpx-text">
           Capabilities Catalog
         </p>
       </div>
@@ -120,7 +120,6 @@ export function CapabilityProvidersSection({
           value={searchQuery}
           onChange={(event) => onSearchQueryChange(event.target.value)}
           wrapperClassName="w-[320px] max-w-full"
-          className="rounded-lg"
         />
         <AnnotationFilterDropdown
           value={annotationFilter}
@@ -129,11 +128,9 @@ export function CapabilityProvidersSection({
       </div>
 
       {providers.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] p-8 text-center">
-          <p className="font-medium text-[var(--colors-gray-900)]">
-            No tools available
-          </p>
-          <p className="mt-1 text-sm text-[var(--colors-gray-600)]">
+        <div className="rounded-lg border border-dashed border-[var(--mcpx-border-subtle)] bg-[var(--mcpx-surface-subtle)] p-8 text-center">
+          <p className="font-medium text-mcpx-text">No tools available</p>
+          <p className="mt-1 text-sm text-[var(--mcpx-text-secondary)]">
             Connect a server to see tools in the catalog.
           </p>
           {onAddServerClick && (

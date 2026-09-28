@@ -90,7 +90,6 @@ export function AgentSkillsSection({
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           wrapperClassName="mb-3 shrink-0"
-          className="bg-background"
         />
 
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">

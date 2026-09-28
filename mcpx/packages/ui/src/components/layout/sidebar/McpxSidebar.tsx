@@ -1,13 +1,6 @@
-import type {
-  CSSProperties,
-  ComponentPropsWithoutRef,
-  ElementType,
-  ReactNode,
-} from "react";
-import { Fragment } from "react";
+import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cva } from "class-variance-authority";
-import McpxLogo from "@/components/dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import {
   Sidebar,
   SidebarContent,
@@ -18,12 +11,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
 import { useSkillsFeatureEnabled } from "@/data/skills";
 import { InstanceStatusRow } from "@/components/instance-status/InstanceStatusRow";
+import { McpxBrandLogo } from "@/components/branding/McpxBrandLogo";
 import type { InstanceStatus } from "@/model/instance-status";
 import { useFeatureFlag } from "@/contexts/feature-flags";
 
@@ -43,11 +36,11 @@ export type McpxSidebarSection = {
 };
 
 const menuItemVariants = cva(
-  "h-10 rounded-lg px-3 py-2 text-sm font-medium leading-5 tracking-[0] shadow-none text-white/85 disabled:font-normal disabled:[&&]:opacity-30",
+  "h-10 rounded-[var(--border-radius-sm)] px-2 py-2 text-sm font-normal leading-6 tracking-[-0.02em] text-[var(--mcpx-sidebar-text)] shadow-none hover:bg-[var(--mcpx-sidebar-active)] hover:text-mcpx-tooltip-text disabled:font-normal disabled:text-mcpx-text-disabled disabled:[&&]:opacity-100",
   {
     variants: {
       isActive: {
-        true: "data-[active=true]:bg-black/35 data-[active=true]:hover:bg-black/35",
+        true: "data-[active=true]:bg-[var(--mcpx-sidebar-active)]! data-[active=true]:font-semibold data-[active=true]:text-mcpx-tooltip-text! data-[active=true]:hover:bg-[var(--mcpx-sidebar-active)]!",
         false: "",
       },
     },
@@ -57,29 +50,34 @@ const menuItemVariants = cva(
 export type SidebarBrandProps = ComponentPropsWithoutRef<"div"> & {
   title?: string;
   subtitle?: string;
+  isBoomi?: boolean;
 };
 
 export function SidebarBrand({
   title = "MCPX USER",
-  subtitle = "by lunar.dev",
+  subtitle,
+  isBoomi = false,
   className,
   ...props
 }: SidebarBrandProps) {
   return (
     <div
-      className={cn("flex items-center gap-2.5 px-4 py-5", className)}
+      className={cn(
+        "flex h-[77px] items-center gap-3 border-b border-[var(--mcpx-sidebar-border)] px-4",
+        className,
+      )}
       {...props}
     >
-      <div className="relative grid size-8 place-items-center rounded-lg bg-[#5147e4] text-white shadow-[0_1px_1px_-0.5px_rgba(10,13,18,0.13),inset_0_-4.5px_8.5px_#808cff]">
-        <McpxLogo className="size-5" />
-      </div>
-      <div className="flex flex-col text-white">
-        <p className="text-sm font-semibold leading-[1.4] tracking-[0]">
+      <McpxBrandLogo placement="sidebar" isBoomi={isBoomi} />
+      <div className="flex flex-col text-mcpx-tooltip-text">
+        <p className="text-base font-semibold leading-[1.4] tracking-[0]">
           {title}
         </p>
-        <p className="text-xs leading-none tracking-[0] text-white/40">
-          {subtitle}
-        </p>
+        {subtitle && (
+          <p className="text-xs leading-none tracking-[0] text-mcpx-tooltip-text/60">
+            {subtitle}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -107,7 +105,7 @@ export function SidebarAvatar({
     <div
       aria-label={name}
       className={cn(
-        "grid size-10 place-items-center overflow-hidden rounded-full bg-white/20 text-sm font-semibold text-white ring-1 ring-white/15",
+        "grid size-10 place-items-center overflow-hidden rounded-full bg-mcpx-tooltip-text/20 text-sm font-semibold text-mcpx-tooltip-text ring-1 ring-mcpx-tooltip-text/20",
         className,
       )}
       {...props}
@@ -139,6 +137,7 @@ export function McpxSidebar({
   const { data: skillsFeatureEnabled } = useSkillsFeatureEnabled();
   const capabilitiesEnabled = useFeatureFlag("VITE_ENABLE_CAPABILITIES_UI");
   const mcpServersShown = useFeatureFlag("VITE_SHOW_MCP_SERVERS");
+  const isBoomi = useFeatureFlag("VITE_IS_BOOMI");
   const sidebarRestructureEnabled = useFeatureFlag(
     "VITE_UI_SIDEBAR_RESTRUCTURE",
   );
@@ -154,44 +153,32 @@ export function McpxSidebar({
     <Sidebar className={className} {...props}>
       <div
         data-slot="sidebar-inner-gradient"
-        className="flex size-full flex-col rounded-[12px] bg-[radial-gradient(circle_at_0%_0%,#3221c9_0%,#5c2595_30%,#872960_60%,#542071_80%,#201681_100%)] text-white"
-        style={
-          {
-            "--sidebar-accent": "oklch(1 0 0 / 0.1)",
-            "--sidebar-accent-foreground": "oklch(1 0 0)",
-            "--sidebar-ring": "oklch(1 0 0 / 0.3)",
-          } as CSSProperties
-        }
+        className="flex size-full flex-col rounded-lg bg-[var(--mcpx-sidebar)] text-mcpx-tooltip-text [--sidebar-accent:var(--mcpx-sidebar-active)] [--sidebar-accent-foreground:var(--mcpx-tooltip-text)] [--sidebar-ring:var(--mcpx-focus)]"
       >
         <SidebarHeader className="p-0">
-          <SidebarBrand />
+          <SidebarBrand isBoomi={isBoomi} />
         </SidebarHeader>
-        <SidebarContent className="gap-5 pt-2">
+        <SidebarContent className="gap-4 px-2 pt-5">
           {resolvedSections.map((section) => (
-            <Fragment key={section.title}>
-              {section.title === "Catalogs" && (
-                <SidebarSeparator className="mx-auto w-[calc(100%-2rem)] bg-white/20" />
-              )}
-              <SidebarGroup className="px-4 py-0">
-                <SidebarGroupLabel className="h-auto rounded-lg p-2 text-[13px] font-semibold uppercase leading-none tracking-[0] text-white/65">
-                  {section.title}
-                </SidebarGroupLabel>
-                <SidebarMenu className="gap-1">
-                  {section.items.map((item) => (
-                    <McpxSidebarMenuItem
-                      key={item.id}
-                      item={item}
-                      isActive={item.id === activeItemId}
-                    />
-                  ))}
-                </SidebarMenu>
-              </SidebarGroup>
-            </Fragment>
+            <SidebarGroup key={section.title} className="px-0 py-0">
+              <SidebarGroupLabel className="h-auto rounded-none px-2 py-0 text-xs font-normal leading-4 tracking-[-0.01em] text-[var(--mcpx-sidebar-text-muted)]">
+                {section.title}
+              </SidebarGroupLabel>
+              <SidebarMenu className="mt-2 gap-1">
+                {section.items.map((item) => (
+                  <McpxSidebarMenuItem
+                    key={item.id}
+                    item={item}
+                    isActive={item.id === activeItemId}
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
           ))}
         </SidebarContent>
-        <SidebarFooter className="p-0">
+        <SidebarFooter className="border-t border-[var(--mcpx-sidebar-border)] p-3">
           {instanceStatus ? (
-            <InstanceStatusRow status={instanceStatus} className="mx-4 mb-3" />
+            <InstanceStatusRow status={instanceStatus} />
           ) : null}
           {children}
         </SidebarFooter>

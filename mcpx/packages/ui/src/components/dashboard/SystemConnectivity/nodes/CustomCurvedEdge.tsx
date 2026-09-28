@@ -113,8 +113,8 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
   }
 
   const strokeColor = isAgentToMcpx
-    ? "#6B6293"
-    : (style.stroke as string) || "#D8DCED";
+    ? "var(--mcpx-text-secondary)"
+    : (style.stroke as string) || "var(--mcpx-border)";
   const addButtonKind =
     data?.addButtonKind === "agent" || data?.addButtonKind === "server"
       ? (data.addButtonKind as AddButtonKind)
@@ -146,7 +146,7 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
             style={{ ...style, zIndex: 10 }}
             className="react-flow__edge-path"
             d={pathData}
-            stroke="var(--colors-route-active)"
+            stroke="var(--mcpx-route-active)"
             strokeWidth={3}
             fill="none"
             strokeLinecap="round"
@@ -157,7 +157,7 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
           <path
             style={{ ...style, zIndex: 9 }}
             d={pathData}
-            stroke="var(--colors-route-active)"
+            stroke="var(--mcpx-route-active)"
             strokeWidth={6}
             fill="none"
             strokeLinecap="round"

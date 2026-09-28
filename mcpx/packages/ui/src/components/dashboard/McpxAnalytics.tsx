@@ -20,7 +20,7 @@ export const McpxAnalytics = ({
             <CardTitle className="text-sm text-foreground">
               Total Requests
             </CardTitle>
-            <BarChart3 className="h-5 w-5 text-(--color-data-series-1)" />
+            <BarChart3 className="h-5 w-5 text-mcpx-data-blue" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
@@ -31,7 +31,7 @@ export const McpxAnalytics = ({
         <Card className="bg-background border-border w-[300px]">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <CardTitle className="text-foreground">Active Agents</CardTitle>
-            <Users className="h-5 w-5 text-(--color-data-series-2)" />
+            <Users className="h-5 w-5 text-mcpx-data-green" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
@@ -42,7 +42,7 @@ export const McpxAnalytics = ({
         <Card className="bg-background border-border w-[300px]">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <CardTitle className="text-foreground">Last Activity</CardTitle>
-            <Activity className="h-5 w-5 text-(--color-fg-success)" />
+            <Activity className="h-5 w-5 text-mcpx-success-text" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">

@@ -66,10 +66,8 @@ export const MetricsPanel = ({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="text-xl font-semibold text-[var(--colors-primary-950)]">
-        Dashboard
-      </div>
+    <div className="flex flex-col gap-6">
+      <h1 className="mcpx-page-title">Dashboard</h1>
       <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(min(100%,120px),1fr))] gap-2">
         {metrics.map((metric, index) => {
           const IconComponent = metric.icon;
@@ -78,7 +76,7 @@ export const MetricsPanel = ({
               key={index}
               label={metric.label}
               value={metric.value}
-              icon={<IconComponent className="size-5" strokeWidth={1.75} />}
+              icon={<IconComponent className="size-4" strokeWidth={1.75} />}
             />
           );
         })}

@@ -24,13 +24,13 @@ export function CapabilitySelectionPanel({
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-[var(--colors-gray-200)] bg-white p-4 shadow-lg">
+    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-[var(--mcpx-border-subtle)] bg-mcpx-surface p-4 shadow-[var(--mcpx-shadow-moderate)]">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
           <span className="flex size-6 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
             {selectedCapabilityKeys.size}
           </span>
-          <span className="text-sm font-medium text-[var(--colors-gray-700)]">
+          <span className="text-sm font-medium text-mcpx-text-secondary">
             Tool{selectedCapabilityKeys.size === 1 ? "" : "s"} selected
           </span>
         </div>

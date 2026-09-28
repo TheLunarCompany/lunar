@@ -53,17 +53,17 @@ export function MarkdownEditor({
           aria-label="Markdown body"
           value={value}
           onChange={(event) => onChange?.(event.target.value)}
-          className="min-h-[420px] resize-y rounded-none border-0 bg-[var(--colors-gray-50)] p-4 font-mono text-sm shadow-none focus-visible:ring-0 sm:p-7"
+          className="min-h-[420px] resize-y rounded-none border-0 bg-mcpx-surface-subtle p-4 font-mono text-sm shadow-none focus-visible:ring-0 sm:p-7"
         />
       ) : (
         <>
           {value.trim() ? (
             <MarkdownContent
               content={value}
-              className="text-[var(--text-colours-color-text-primary)] [&_h1]:!text-base [&_h1]:!leading-6 [&_h2]:!text-sm [&_h2]:!leading-5 [&_h3]:!text-sm [&_h3]:!leading-5"
+              className="text-mcpx-text [&_h1]:!text-base [&_h1]:!leading-6 [&_h2]:!text-sm [&_h2]:!leading-5 [&_h3]:!text-sm [&_h3]:!leading-5"
             />
           ) : (
-            <p className="text-sm text-[var(--text-colours-color-text-secondary)]">
+            <p className="text-sm text-mcpx-text-secondary">
               Nothing to preview.
             </p>
           )}

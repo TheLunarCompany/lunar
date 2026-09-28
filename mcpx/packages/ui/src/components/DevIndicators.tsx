@@ -11,8 +11,8 @@ function DevIndicator({
 }) {
   const variantClassName =
     variant === "warning"
-      ? "border-[var(--colors-warning-200)] bg-[var(--colors-warning-100)] text-[var(--colors-warning-800)]"
-      : "border-[var(--colors-info-200)] bg-[var(--colors-info-100)] text-[var(--colors-info-800)]";
+      ? "border-mcpx-warning-strong bg-mcpx-warning-bg text-mcpx-text"
+      : "border-mcpx-info-text bg-mcpx-info-bg text-mcpx-text";
 
   return (
     <div

@@ -43,7 +43,7 @@ export function EditCapabilityGroupModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg rounded-lg border border-[var(--colors-gray-200)] bg-white">
+      <DialogContent className="max-w-lg rounded-lg border border-[var(--mcpx-border-subtle)] bg-mcpx-surface">
         <DialogTitle>Update Group</DialogTitle>
         <DialogDescription className="text-foreground">
           Update the tool group name and description.
@@ -84,12 +84,11 @@ export function EditCapabilityGroupModal({
               placeholder="Enter tool group description"
               rows={2}
               maxLength={200}
-              className="bg-white"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-[var(--colors-gray-200)] pt-4">
+        <div className="flex items-center justify-between border-t border-[var(--mcpx-border-subtle)] pt-4">
           <Button variant="ghost" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
@@ -99,7 +98,7 @@ export function EditCapabilityGroupModal({
           >
             {isSaving ? (
               <span className="flex items-center gap-2">
-                <Spinner className="text-white" />
+                <Spinner className="text-mcpx-tooltip-text" />
                 Updating...
               </span>
             ) : (

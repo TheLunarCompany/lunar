@@ -1,16 +1,7 @@
 import { cn } from "@/lib/utils";
 import * as ToastPrimitives from "@radix-ui/react-toast";
 import { cva, type VariantProps } from "class-variance-authority";
-import {
-  AlertTriangle,
-  Check,
-  CheckCircle2,
-  Copy,
-  Info,
-  Server,
-  ShieldAlert,
-  X,
-} from "lucide-react";
+import { AlertTriangle, Check, CircleCheck, Copy, Info, X } from "lucide-react";
 import * as React from "react";
 
 const ToastProvider = ToastPrimitives.Provider;
@@ -45,16 +36,17 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const toastVariants = cva(
-  "group pointer-events-auto relative grid w-[min(420px,calc(100vw-2rem))] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border bg-white px-4 pr-12 shadow-[0_18px_48px_rgba(35,26,77,0.14),0_2px_8px_rgba(35,26,77,0.08)] transition-all data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-left-full data-[state=open]:animate-in data-[state=open]:slide-in-from-left",
+  "group pointer-events-auto relative flex w-[min(420px,calc(100vw-2rem))] items-center gap-3 overflow-hidden rounded-lg border p-4 pr-12 text-mcpx-text shadow-lg transition-all data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-left-full data-[state=open]:animate-in data-[state=open]:slide-in-from-left",
   {
     variants: {
       variant: {
-        default: "border-[#DFDCEB] text-[#231A4D]",
-        info: "toast-info border-[#C9D8FF] bg-[#F7FAFF] text-[#1F2D5C]",
+        default: "border-mcpx-success-text bg-mcpx-success-bg",
+        info: "toast-info border-mcpx-info-text bg-mcpx-selected-weak",
         "server-info":
-          "toast-server-info border-[#CFC8FA] bg-[#FAF9FF] text-[#231A4D]",
-        warning: "toast-warning border-[#F4C56A] bg-[#FFFBF1] text-[#432D08]",
-        destructive: "destructive border-[#F0A3A3] bg-[#FFF7F7] text-[#4D1616]",
+          "toast-server-info border-mcpx-info-text bg-mcpx-selected-weak",
+        warning: "toast-warning border-mcpx-warning-strong bg-mcpx-warning-bg",
+        destructive:
+          "destructive border-mcpx-danger-text bg-mcpx-danger-bg text-mcpx-danger-text",
       },
     },
     defaultVariants: {
@@ -66,15 +58,15 @@ const toastVariants = cva(
 type ToastVariant = VariantProps<typeof toastVariants>["variant"];
 
 const toastIconVariants = cva(
-  "flex size-10 shrink-0 items-center justify-center rounded-lg",
+  "flex size-5 shrink-0 items-center justify-center",
   {
     variants: {
       variant: {
-        default: "bg-[#EEEDFC] text-[#5147E4]",
-        info: "bg-[#EAF0FF] text-[#315FEA]",
-        "server-info": "bg-[#EEEDFC] text-[#5147E4]",
-        warning: "bg-[#FFF0C2] text-[#996100]",
-        destructive: "bg-[#FFE6E3] text-[#C7251A]",
+        default: "text-mcpx-success-text",
+        info: "text-mcpx-info-text",
+        "server-info": "text-mcpx-info-text",
+        warning: "text-mcpx-warning-strong",
+        destructive: "text-mcpx-danger-text",
       },
     },
     defaultVariants: {
@@ -88,20 +80,20 @@ function ToastIcon({ variant }: { variant?: ToastVariant }) {
 
   switch (variant) {
     case "info":
-      return <Info className={iconClassName} />;
+      return <Info aria-hidden="true" className={iconClassName} />;
     case "server-info":
-      return <Server className={iconClassName} />;
+      return <Info aria-hidden="true" className={iconClassName} />;
     case "warning":
-      return <AlertTriangle className={iconClassName} />;
+      return <AlertTriangle aria-hidden="true" className={iconClassName} />;
     case "destructive":
-      return <ShieldAlert className={iconClassName} />;
+      return <AlertTriangle aria-hidden="true" className={iconClassName} />;
     default:
-      return <CheckCircle2 className={iconClassName} />;
+      return <CircleCheck aria-hidden="true" className={iconClassName} />;
   }
 }
 
 const toastCloseClassName =
-  "flex size-7 items-center justify-center rounded-md text-[#7F7999] transition-colors hover:bg-[#F2F0F8] hover:text-[#231A4D] focus:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-[#5147E4]/25 group-[.destructive]:text-[#8C2B25] group-[.destructive]:hover:bg-[#FFE6E3] group-[.destructive]:hover:text-[#4D1616]";
+  "flex size-6 items-center justify-center rounded-full text-mcpx-text-secondary transition-colors hover:bg-mcpx-surface-hover hover:text-mcpx-text focus:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring/50";
 
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
@@ -145,7 +137,7 @@ const Toast = React.forwardRef<
         {...props}
       >
         {(isClosableProp || copyable) && (
-          <div className="absolute top-2 right-2 flex items-center gap-0.5">
+          <div className="absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-0.5">
             {copyable && <ToastCopy value={copyable} />}
             {isClosableProp && closeButton}
           </div>
@@ -156,12 +148,14 @@ const Toast = React.forwardRef<
         </div>
         {/* The viewport is overflow-visible, so it will not scroll an oversized
             toast for us. Bound it here. 6rem clears the viewport's m-4. */}
-        <div className="max-h-[calc(100vh-6rem)] min-w-0 overflow-y-auto py-4 pr-6">
+        <div className="max-h-[calc(100vh-6rem)] min-w-0 flex-1 overflow-y-auto">
           {content}
         </div>
-        <div className="flex items-center self-center py-4 pr-2">
-          {actionButton}
-        </div>
+        {actionButton && (
+          <div className="flex shrink-0 items-center self-center">
+            {actionButton}
+          </div>
+        )}
       </ToastPrimitives.Root>
     );
   },
@@ -175,7 +169,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-[#5147E4] px-3 text-sm font-medium text-white transition-colors hover:bg-[#4338CA] focus:outline-hidden focus:ring-2 focus:ring-[#5147E4]/25 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:bg-[#D92D20] group-[.destructive]:hover:bg-[#B42318]",
+      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-mcpx-action px-3 text-sm font-medium text-mcpx-tooltip-text transition-colors hover:bg-mcpx-action-hover focus:outline-hidden focus:ring-2 focus:ring-ring/50 disabled:pointer-events-none disabled:bg-mcpx-surface-disabled disabled:text-mcpx-text-disabled group-[.destructive]:bg-destructive group-[.destructive]:text-destructive-foreground group-[.destructive]:hover:bg-[var(--mcpx-danger-action-hover)]",
       className,
     )}
     {...props}
@@ -189,6 +183,7 @@ const ToastClose = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Close
     ref={ref}
+    aria-label="Dismiss notification"
     className={cn(toastCloseClassName, className)}
     toast-close=""
     {...props}
@@ -255,7 +250,7 @@ const ToastDescription = React.forwardRef<
       // No clamp: messages come from upstream servers, so we cannot know where
       // the useful part sits. min-w-0 stops an unbreakable token (a JWT, a URL)
       // from widening the grid track until overflow-hidden clips it.
-      "wrap-break-word mt-0.5 min-w-0 text-sm leading-5 whitespace-normal text-current/75",
+      "wrap-break-word mt-0.5 min-w-0 text-sm leading-5 whitespace-normal text-mcpx-text-secondary",
       className,
     )}
     {...props}

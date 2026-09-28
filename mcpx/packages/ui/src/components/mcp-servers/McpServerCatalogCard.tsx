@@ -52,7 +52,7 @@ export function McpServerCatalogCard({
       className="text-primary"
     />
   ) : isInstalled ? (
-    <div className="inline-flex items-center gap-1 rounded-md bg-[#7D7B98] px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
+    <div className="inline-flex items-center gap-1 rounded-md bg-mcpx-text-secondary px-2 py-0.5 text-xs font-semibold text-mcpx-tooltip-text shadow-[var(--mcpx-shadow-weak)]">
       <Check className="size-3.5" />
       Installed
     </div>

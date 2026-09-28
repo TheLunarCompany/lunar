@@ -23,8 +23,7 @@ const CustomBadge: React.FC<CustomBadgeProps> = ({
 }) => {
   return (
     <div
-      className={`inline-flex items-center gap-1 text-[#4F33CC] ${sizeToClasses[size]} rounded-${rounded} 
-      `}
+      className={`inline-flex items-center gap-1 text-mcpx-selected ${sizeToClasses[size]} rounded-${rounded}`}
       style={{ width: "fit-content" }}
     >
       {icon}

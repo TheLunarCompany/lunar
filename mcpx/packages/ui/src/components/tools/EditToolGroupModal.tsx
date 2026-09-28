@@ -22,15 +22,15 @@ interface EditToolGroupModalProps {
 }
 
 const styles = {
-  modalContent: "max-w-lg bg-white border-gray-200",
+  modalContent: "max-w-lg bg-mcpx-surface border-mcpx-border-subtle",
   modalSpace: "space-y-4 py-2",
   modalLabel: "text-sm font-medium",
-  modalCharacterCount: "text-xs text-gray-500",
+  modalCharacterCount: "text-xs text-mcpx-text-tertiary",
   modalFooter: "flex justify-between items-center",
   modalCancelButton:
-    "px-4 py-2 text-sm font-medium text-[#4F33CC] bg-transparent hover:bg-transparent border-0 shadow-none hover:opacity-80 transition-opacity",
+    "px-4 py-2 text-sm font-medium text-mcpx-selected bg-transparent hover:bg-transparent border-0 shadow-none hover:opacity-80 transition-opacity",
   modalSaveButton:
-    "px-4 py-2 bg-[#4F33CC] text-white rounded-md text-sm font-medium hover:bg-[#4F33CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+    "px-4 py-2 bg-mcpx-selected text-mcpx-tooltip-text rounded-md text-sm font-medium hover:bg-mcpx-selected transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
 };
 
 export function EditToolGroupModal({
@@ -48,12 +48,11 @@ export function EditToolGroupModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={styles.modalContent}>
         <DialogTitle>Update Group</DialogTitle>
-        <div className="border-t border-gray-200 w-full "></div>
         <DialogDescription className="text-black">
           Update the tool group name and description.
         </DialogDescription>
         <div className={styles.modalSpace}>
-          <div className={styles.modalSpace}>
+          <div className="py-2">
             <label htmlFor="groupName" className={styles.modalLabel}>
               Group Name
             </label>
@@ -81,7 +80,7 @@ export function EditToolGroupModal({
               autoFocus
               aria-invalid={!!error}
               aria-describedby={error ? "groupName-error" : undefined}
-              className="border-gray-200"
+              className="mt-2 border-mcpx-border-subtle"
             />
             {groupName.length > 49 && (
               <p className={styles.modalCharacterCount}>
@@ -89,7 +88,7 @@ export function EditToolGroupModal({
               </p>
             )}
           </div>
-          <div className={styles.modalSpace}>
+          <div className="py-2">
             <label htmlFor="groupDescription" className={styles.modalLabel}>
               Description <span style={{ fontSize: "12px" }}>(optional)</span>
             </label>
@@ -100,7 +99,7 @@ export function EditToolGroupModal({
               onChange={(e) => onGroupDescriptionChange?.(e.target.value)}
               rows={1}
               maxLength={200}
-              className="bg-white border-gray-200"
+              className="mt-2 border-mcpx-border-subtle"
             />
             {groupDescription.length > 190 && (
               <p className={styles.modalCharacterCount}>
@@ -109,7 +108,6 @@ export function EditToolGroupModal({
             )}
           </div>
         </div>
-        <div className="border-t border-gray-200"></div>
         <div className={styles.modalFooter}>
           <Button
             variant="ghost"
@@ -126,7 +124,7 @@ export function EditToolGroupModal({
           >
             {isSaving ? (
               <div className="flex items-center gap-2">
-                <Spinner className="text-white" />
+                <Spinner className="text-mcpx-tooltip-text" />
                 <span>Updating...</span>
               </div>
             ) : (

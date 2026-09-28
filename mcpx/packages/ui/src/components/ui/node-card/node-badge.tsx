@@ -1,43 +1,41 @@
-import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const nodeBadgeVariants = cva(
-  "h-auto w-fit max-w-full rounded-[var(--border-radius-sm)] border-transparent px-2 py-0.5 leading-[18px] whitespace-nowrap",
-  {
-    variants: {
-      variant: {
-        default: "bg-[var(--colors-gray-100)] text-[var(--colors-gray-500)]",
-        warning:
-          "bg-[var(--colors-warning-100)] text-[var(--colors-warning-500)]",
-        info: "bg-[var(--colors-info-50)] text-[var(--colors-info-700)]",
-        error: "bg-[#ffe6f5] text-[var(--colors-error-700)]",
-        disabled: "bg-[var(--colors-gray-200)] text-[var(--colors-gray-500)]",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
+const nodeBadgeVariants = cva("w-fit max-w-full border-0 whitespace-nowrap", {
+  variants: {
+    variant: {
+      default: "bg-mcpx-surface-tertiary text-mcpx-text-secondary",
+      warning: "bg-mcpx-warning-bg text-mcpx-text",
+      info: "bg-mcpx-selected-weak text-mcpx-action",
+      error: "bg-mcpx-danger-bg text-mcpx-danger-text",
+      disabled: "bg-mcpx-surface-disabled text-mcpx-text-tertiary",
     },
   },
-);
+  defaultVariants: {
+    variant: "default",
+  },
+});
 
-type NodeBadgeProps = React.ComponentProps<"span"> &
+type NodeBadgeProps = Omit<BadgeProps, "variant"> &
   VariantProps<typeof nodeBadgeVariants>;
 
 function NodeBadge({
   className,
   variant = "default",
+  size = "xs",
   ...props
 }: NodeBadgeProps) {
+  const nodeVariant = variant ?? "default";
+
   return (
     <Badge
       data-slot="node-badge"
-      data-variant={variant}
+      data-variant={nodeVariant}
       variant="secondary"
-      size="md"
-      className={cn(nodeBadgeVariants({ variant }), className)}
+      size={size ?? "xs"}
+      className={cn(nodeBadgeVariants({ variant: nodeVariant }), className)}
       {...props}
     />
   );

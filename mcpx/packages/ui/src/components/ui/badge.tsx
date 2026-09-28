@@ -9,11 +9,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        default:
+          "bg-mcpx-selected text-primary-foreground [a]:hover:bg-mcpx-selected-hover",
         secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
+          "bg-mcpx-surface-subtle text-secondary-foreground [a]:hover:bg-mcpx-surface-hover",
         destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+          "bg-mcpx-danger-bg text-mcpx-danger-text focus-visible:ring-destructive/20 [a]:hover:bg-mcpx-danger-bg",
         outline:
           "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         success:
@@ -25,9 +26,8 @@ const badgeVariants = cva(
         info: "border-badge-info-border bg-badge-info-bg text-badge-info-fg",
         purple:
           "border-badge-purple-border bg-badge-purple-bg text-badge-purple-fg",
-        ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
+        ghost: "hover:bg-mcpx-surface-hover hover:text-muted-foreground",
+        link: "text-mcpx-info-text underline-offset-4 hover:underline",
       },
       size: {
         xs: "h-4 px-1 text-[10px] leading-none",

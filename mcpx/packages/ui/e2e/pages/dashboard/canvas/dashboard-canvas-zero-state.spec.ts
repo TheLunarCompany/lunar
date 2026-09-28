@@ -1,18 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { mockSystemStates, setupMockedSystemState } from "../../../helpers";
-import {
-  DELAY_2_SEC,
-  TIMEOUT_5_SEC,
-  TIMEOUT_10_SEC,
-} from "../../../constants/delays";
+import { DELAY_2_SEC, TIMEOUT_5_SEC } from "../../../constants/delays";
 
 test.describe("Dashboard Canvas Zero State", () => {
   test.beforeEach(async ({ page }) => {
     await setupMockedSystemState(page, mockSystemStates.zero);
-
-    await page.waitForSelector('[class*="bg-gray-100"]', {
-      timeout: TIMEOUT_10_SEC,
-    });
   });
 
   test("should display zero state when no servers are connected", async ({
@@ -55,9 +47,9 @@ test.describe("Dashboard Canvas Zero State", () => {
   }) => {
     await page.waitForTimeout(DELAY_2_SEC);
 
-    const noServersCard = page
-      .locator('div[class*="border-dashed"][class*="border-[#5147E4]"]')
-      .filter({ hasText: /No MCP Server/i });
+    const noServersCard = page.locator(
+      '.react-flow__node[data-id="no-servers"]',
+    );
 
     await expect(noServersCard).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
@@ -84,9 +76,9 @@ test.describe("Dashboard Canvas Zero State", () => {
     await expect(noServersNode).toBeVisible({ timeout: TIMEOUT_5_SEC });
     await expect(noAgentsNode).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
-    const noServersCard = page
-      .locator('div[class*="border-dashed"][class*="border-[#5147E4]"]')
-      .filter({ hasText: /No MCP Server/i });
+    const noServersCard = page.locator(
+      '.react-flow__node[data-id="no-servers"]',
+    );
 
     await expect(noServersCard).toBeVisible();
     await expect(noServersCard).toContainText("No MCP Server");

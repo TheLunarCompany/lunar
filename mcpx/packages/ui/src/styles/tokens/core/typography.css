@@ -1,8 +1,8 @@
 /* Core Typography Tokens */
 :root {
   /* Font families */
-  --font-families-heading: "Inter", sans-serif;
-  --font-families-body: "Roboto", sans-serif;
+  --font-families-heading: var(--exo-font-brand);
+  --font-families-body: var(--exo-font-family);
 
   /* Line heights */
   --line-heights-heading: 1.1;

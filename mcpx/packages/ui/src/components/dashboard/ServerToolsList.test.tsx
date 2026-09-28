@@ -24,7 +24,7 @@ describe("ServerPromptsList", () => {
     expect(screen.queryByText("Search tools...")).toBeNull();
     expect(screen.getByTestId("server-prompt-icon")).toBeInTheDocument();
     expect(screen.getByTestId("server-prompt-badge")).toHaveClass(
-      "bg-[var(--colors-success-100)]",
+      "bg-mcpx-success-bg",
     );
   });
 });

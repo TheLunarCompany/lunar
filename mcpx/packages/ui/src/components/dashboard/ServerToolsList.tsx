@@ -7,7 +7,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import GitBranchIcon from "@/components/capabilities/icons/git-branch-01.svg?react";
 import PromptIcon from "@/components/capabilities/icons/prompt.svg?react";
+import { McpServerCapabilityCard } from "@/components/mcp-servers/McpServerCapabilityCards";
 import type { McpServerPrompt, McpServerTool } from "@/types/mcp-server";
 
 type ServerCapability = McpServerTool | McpServerPrompt;
@@ -26,17 +28,19 @@ function CapabilityCard({
 
   const header = (
     <div className="flex flex-wrap items-center gap-2">
-      <span
+      <McpServerCapabilityCard.TitleBadge
         data-testid={isPrompt ? "server-prompt-badge" : undefined}
-        className={`inline-flex items-center gap-2 rounded-[6px] px-1.5 py-1 text-sm font-medium text-foreground ${
-          isPrompt ? "bg-[var(--colors-success-100)]" : "bg-[#EBE6FB]"
-        }`}
+        variant={isPrompt ? "success" : "interactive"}
+        icon={
+          isPrompt ? (
+            <PromptIcon data-testid="server-prompt-icon" />
+          ) : (
+            <GitBranchIcon aria-label="Capability type icon" />
+          )
+        }
       >
-        {isPrompt && (
-          <PromptIcon data-testid="server-prompt-icon" className="size-4" />
-        )}
         {item.name}
-      </span>
+      </McpServerCapabilityCard.TitleBadge>
 
       {item.invocations > 0 && (
         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -58,7 +62,7 @@ function CapabilityCard({
 
   if (!hasDescription) {
     return (
-      <div className="rounded-lg border border-border bg-white p-3 text-sm">
+      <div className="rounded-lg border border-border bg-mcpx-surface p-3 text-sm">
         {header}
       </div>
     );
@@ -68,7 +72,7 @@ function CapabilityCard({
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="rounded-lg border border-border bg-white p-3 text-sm"
+      className="rounded-lg border border-border bg-mcpx-surface p-3 text-sm"
     >
       <CollapsibleTrigger className="w-full cursor-pointer">
         {header}

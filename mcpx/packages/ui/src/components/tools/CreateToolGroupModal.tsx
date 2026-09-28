@@ -38,8 +38,8 @@ export function CreateToolGroupModal({
 }: CreateToolGroupModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:max-w-[600px] overflow-x-hidden max-h-[85vh] w-[90vw] flex flex-col p-0 bg-white border border-gray-200 rounded-lg h-auto! [&>button:last-child]:hidden">
-        <div className="flex items-center justify-between pb-4 px-6 pt-6 border-b border-gray-200">
+      <DialogContent className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:max-w-[600px] overflow-x-hidden max-h-[85vh] w-[90vw] flex flex-col p-0 bg-mcpx-surface border border-mcpx-border-subtle rounded-lg h-auto! [&>button:last-child]:hidden">
+        <div className="flex items-center justify-between pb-4 px-6 pt-6 border-b border-mcpx-border-subtle">
           <DialogTitle className="text-[24px] text-foreground font-semibold">
             Create Tool Group
           </DialogTitle>
@@ -90,7 +90,7 @@ export function CreateToolGroupModal({
                 aria-describedby={error ? "groupName-error" : undefined}
               />
               {newGroupName.length > 49 && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-mcpx-text-tertiary">
                   {newGroupName.length}/50 characters
                 </p>
               )}
@@ -109,23 +109,22 @@ export function CreateToolGroupModal({
                 onChange={(e) => onGroupDescriptionChange?.(e.target.value)}
                 rows={3}
                 maxLength={200}
-                className="bg-white"
               />
               {newGroupDescription.length > 190 && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-mcpx-text-tertiary">
                   {newGroupDescription.length}/200 characters
                 </p>
               )}
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center justify-between border-t border-gray-300 pt-6 px-6 pb-6 bg-white">
+        <div className="flex shrink-0 items-center justify-between border-t border-mcpx-border pt-6 px-6 pb-6 bg-mcpx-surface">
           <Button
             type="button"
             variant="ghost"
             onClick={onClose}
             disabled={isCreating}
-            className="text-gray-700 hover:text-primary/80"
+            className="text-mcpx-text-secondary hover:text-primary/80"
           >
             Cancel
           </Button>
@@ -135,11 +134,11 @@ export function CreateToolGroupModal({
             disabled={
               !newGroupName.trim() || isCreating || selectedToolsCount === 0
             }
-            className="bg-[#4F33CC] hover:bg-[#4F33CC]/90 text-white"
+            className="bg-mcpx-selected hover:bg-mcpx-selected/90 text-mcpx-tooltip-text"
           >
             {isCreating ? (
               <div className="flex items-center gap-2">
-                <Spinner className="text-white" />
+                <Spinner className="text-mcpx-tooltip-text" />
                 <span>Creating...</span>
               </div>
             ) : (

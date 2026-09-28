@@ -128,7 +128,7 @@ export function ProviderCard({
 
   return (
     <div
-      className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+      className="bg-mcpx-surface rounded-lg border border-mcpx-border-subtle hover:shadow-[var(--mcpx-shadow-moderate)] transition-shadow"
       data-provider-name={provider.name}
     >
       <div
@@ -149,7 +149,7 @@ export function ProviderCard({
             <div>
               <h3
                 className={`font-semibold capitalize text-lg ${
-                  isInactive ? "text-[#C3C4CD]" : "text-gray-900"
+                  isInactive ? "text-mcpx-text-disabled" : "text-mcpx-text"
                 }`}
               >
                 {provider.name}
@@ -169,7 +169,7 @@ export function ProviderCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs h-7 px-2 text-[#4F33CC] hover:text-[#4F33CC] hover:bg-[#4F33CC]/10"
+                  className="text-xs h-7 px-2 text-mcpx-selected hover:text-mcpx-selected hover:bg-mcpx-selected/10"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectAllTools?.(provider.name);
@@ -181,14 +181,14 @@ export function ProviderCard({
 
             {/* Usage Count */}
             <span
-              className={`text-sm ${isInactive ? "text-[#C3C4CD]" : "text-gray-600"}`}
+              className={`text-sm ${isInactive ? "text-mcpx-text-disabled" : "text-mcpx-text-secondary"}`}
             >
               {provider.originalTools.length} tools
             </span>
 
             {/* Dropdown Arrow */}
             <ChevronRight
-              className={`w-5 h-5 text-gray-400 ${isExpanded ? "rotate-90" : ""}`}
+              className={`w-5 h-5 text-mcpx-text-disabled ${isExpanded ? "rotate-90" : ""}`}
               style={{
                 transition: `transform ${durationMs}ms ease-out`,
               }}
@@ -207,7 +207,7 @@ export function ProviderCard({
       >
         <div
           ref={contentRef}
-          className="min-h-0 overflow-hidden border-t border-gray-100"
+          className="min-h-0 overflow-hidden border-t border-mcpx-border-subtle"
         >
           <div
             className="px-4 pb-4 pt-4"
@@ -290,7 +290,7 @@ export function ProviderCard({
                   })
                   .filter(Boolean)
               ) : (
-                <div className="col-span-full text-center py-8 text-gray-500 text-sm">
+                <div className="col-span-full text-center py-8 text-mcpx-text-tertiary text-sm">
                   No tools available
                 </div>
               )}

@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -78,31 +79,34 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="flex h-[830px] max-h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white p-0 sm:max-w-6xl [&>button]:top-6">
-        <DialogHeader className="shrink-0 border-b border-gray-200 px-6 pt-6 pb-4">
+      <DialogContent className="flex h-[760px] max-h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-0 sm:max-w-5xl [&>button]:top-6">
+        <DialogHeader className="shrink-0 border-b border-mcpx-border-subtle px-6 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle className="text-xl font-semibold  text-gray-900">
+              <DialogTitle className="text-xl font-semibold  text-mcpx-text">
                 Add AI Agent
               </DialogTitle>
             </div>
           </div>
         </DialogHeader>
-        <div className="shrink-0 px-6 text-sm text-[#1E1B4B]">
+        <DialogDescription className="shrink-0 px-6 text-sm text-mcpx-text">
           Select your agent type and copy the configuration{" "}
           {isToml ? "TOML" : "JSON"} to get started.
-        </div>
+        </DialogDescription>
 
-        <div className="m-6 mt-0 flex min-h-0 flex-1 overflow-hidden rounded-[8px] border border-[#D8DCED]">
-          <div className="min-h-0 w-64 overflow-y-auto border-r border-gray-200 bg-gray-50 p-4">
+        <div className="m-6 mt-0 flex min-h-0 flex-1 overflow-hidden rounded-[8px] border border-mcpx-border">
+          <div className="min-h-0 w-64 overflow-y-auto border-r border-mcpx-border-subtle bg-mcpx-surface-subtle p-4">
             <div className="space-y-2">
               {AGENT_TYPES.map((type) => (
                 <button
                   key={type.value}
                   onClick={() => handleAgentTypeChange(type.value)}
+                  aria-pressed={selectedAgentType === type.value}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
-                    selectedAgentType === type.value && "bg-[#F3F5FA]",
+                    "flex w-full items-center gap-3 rounded-lg border border-transparent p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mcpx-focus",
+                    selectedAgentType === type.value
+                      ? "border-mcpx-selected bg-mcpx-selected-weak text-mcpx-selected hover:bg-mcpx-selected-weak"
+                      : "hover:bg-mcpx-surface-hover",
                   )}
                 >
                   <img
@@ -123,7 +127,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                 <div className="mb-4">
                   <h3
                     className="font-semibold"
-                    style={{ fontSize: "16px", color: "#1E1B4B" }}
+                    style={{ fontSize: "16px", color: "var(--mcpx-text)" }}
                   >
                     {selectedConfig.label}
                   </h3>
@@ -158,7 +162,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                           title={copied ? "Copied!" : "Copy"}
                         >
                           {copied ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <CheckCircle className="w-4 h-4 text-mcpx-success-text" />
                           ) : (
                             <Copy className="w-4 h-4" />
                           )}

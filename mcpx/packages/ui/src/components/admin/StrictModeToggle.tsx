@@ -50,7 +50,7 @@ export const StrictModeToggle: FC<StrictModeToggleProps> = ({
   if (isLoading) {
     return (
       <div className="flex items-center justify-between px-3 py-2">
-        <span className="text-sm text-gray-700">Strict mode</span>
+        <span className="text-sm text-mcpx-text-secondary">Strict mode</span>
         <Spinner className="w-4 h-4" />
       </div>
     );
@@ -61,7 +61,7 @@ export const StrictModeToggle: FC<StrictModeToggleProps> = ({
   return (
     <div className="flex items-center justify-between px-3 py-2">
       <div className="flex items-center gap-1">
-        <span className="text-sm text-gray-700">Strict mode</span>
+        <span className="text-sm text-mcpx-text-secondary">Strict mode</span>
         <StrictModeHelp />
       </div>
       <Switch
@@ -76,11 +76,14 @@ export const StrictModeToggle: FC<StrictModeToggleProps> = ({
 const StrictModeHelp: FC = () => (
   <Popover>
     <PopoverTrigger asChild>
-      <button className="text-gray-400 hover:text-gray-600 transition-colors">
+      <button className="text-mcpx-text-tertiary transition-colors hover:text-mcpx-text-secondary">
         <HelpCircle className="h-3.5 w-3.5" />
       </button>
     </PopoverTrigger>
-    <PopoverContent side="top" className="w-56 text-sm text-gray-600">
+    <PopoverContent
+      side="top"
+      className="w-56 text-sm text-mcpx-text-secondary"
+    >
       When off, unlisted MCP servers and restricted tools become available.
     </PopoverContent>
   </Popover>

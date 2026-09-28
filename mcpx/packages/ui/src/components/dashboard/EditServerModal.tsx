@@ -279,7 +279,7 @@ export const EditServerModal = ({
                   <img
                     src={domainIconUrl}
                     alt="Domain Icon"
-                    className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
+                    className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-mcpx-surface"
                   />
                 )}
               </div>

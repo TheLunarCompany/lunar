@@ -40,7 +40,7 @@ const meta = {
   component: CapabilityToolCard,
   decorators: [
     (Story) => (
-      <div className="min-h-[260px] bg-[var(--colors-white)] p-8">
+      <div className="min-h-[260px] bg-mcpx-surface p-8">
         <Story />
       </div>
     ),

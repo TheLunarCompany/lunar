@@ -355,11 +355,11 @@ export const HeadersEditor = ({
                   exit={LIST_ITEM_MOTION.exit}
                   transition={LIST_ITEM_MOTION.transition}
                 >
-                  <div className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]">
+                  <div className="rounded-lg border border-border overflow-hidden bg-mcpx-surface-subtle">
                     <div className="flex items-center justify-between gap-2 px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <div className="bg-lunar-purpleNew/10 px-1.5 py-0.5 rounded-[4px] w-fit">
-                          <span className="text-xs text-lunar-purpleNew">
+                        <div className="w-fit rounded-[4px] bg-mcpx-selected-weak px-1.5 py-0.5">
+                          <span className="text-xs text-mcpx-selected">
                             {key}
                           </span>
                         </div>
@@ -368,7 +368,7 @@ export const HeadersEditor = ({
                           key,
                           entry.segments,
                         ) && (
-                          <TriangleAlert className="w-4 h-4 text-orange-500 shrink-0" />
+                          <TriangleAlert className="w-4 h-4 text-mcpx-warning-strong shrink-0" />
                         )}
                       </div>
                       <Button
@@ -403,7 +403,7 @@ export const HeadersEditor = ({
                       <div className="px-3 pb-3 space-y-2">
                         <TemplatePreview segments={entry.segments} />
                         {headerErrors[key] && (
-                          <p className="text-xs text-red-500 mt-1">
+                          <p className="text-xs text-mcpx-danger-text mt-1">
                             {headerErrors[key]}
                           </p>
                         )}
@@ -454,14 +454,14 @@ export const HeadersEditor = ({
                                     key,
                                     seg,
                                   ) && (
-                                    <TriangleAlert className="w-4 h-4 text-orange-500 shrink-0" />
+                                    <TriangleAlert className="w-4 h-4 text-mcpx-warning-strong shrink-0" />
                                   )}
                                 </div>
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-mcpx-danger-text hover:bg-mcpx-danger-bg"
                                   onClick={() =>
                                     handleRemoveSegment(key, seg.id)
                                   }
@@ -491,7 +491,7 @@ export const HeadersEditor = ({
                                     key,
                                     seg,
                                   ) && (
-                                    <p className="text-amber-500 text-[10px] font-medium whitespace-nowrap">
+                                    <p className="text-mcpx-warning-strong text-[10px] font-medium whitespace-nowrap">
                                       Missing Environment variable. Try another
                                       value or contact your admin.
                                     </p>
@@ -540,7 +540,7 @@ export const HeadersEditor = ({
         <Button
           variant="default"
           size="sm"
-          className="bg-lunar-purpleNew"
+          className="bg-mcpx-selected"
           onClick={handleSave}
           disabled={isSaving}
         >

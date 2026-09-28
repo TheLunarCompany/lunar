@@ -26,7 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Hexagon, Eraser } from "lucide-react";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
@@ -56,6 +56,7 @@ export const McpxDetailsModal = ({
   isOpen,
   onClose,
 }: McpxDetailsModalProps) => {
+  const titleRef = useRef<HTMLParagraphElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingServerToggles, setPendingServerToggles] = useState<
     Map<string, boolean>
@@ -269,8 +270,12 @@ export const McpxDetailsModal = ({
         >
           <SheetContent
             side="right"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              titleRef.current?.focus();
+            }}
             aria-describedby={undefined}
-            className="w-[600px]! max-w-[600px]! gap-0 border-l border-border bg-background p-0 flex flex-col [&>button]:hidden"
+            className="w-[600px]! max-w-[600px]! gap-0 border-l border-border bg-mcpx-surface p-0 flex flex-col [&>button]:hidden"
           >
             <VisuallyHidden>
               <SheetTitle>MCPX</SheetTitle>
@@ -279,20 +284,26 @@ export const McpxDetailsModal = ({
               <div className="flex items-center gap-2">
                 <ServerStatusBadge status={mcpxStatus} />
               </div>
-              <div className="flex space-y-0 gap-1.5 items-center text-muted-foreground">
+              <div className="flex items-center gap-1">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       onClick={handleStartFreshClick}
+                      aria-label="Start Fresh"
                     >
                       <Eraser />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">Start Fresh</TooltipContent>
                 </Tooltip>
-                <Button variant="ghost" size="icon-sm" onClick={handleClose}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={handleClose}
+                  aria-label="Close MCPX details"
+                >
                   <ArrowRightIcon />
                 </Button>
               </div>
@@ -300,11 +311,20 @@ export const McpxDetailsModal = ({
 
             <div className="px-6 py-2 flex flex-col overflow-y-auto">
               <div className="flex items-end gap-2 text-lg font-semibold mt-2 mb-1">
-                <div className="w-12 h-12 rounded-[12px] flex items-center justify-center bg-linear-to-b from-primary to-(--color-fg-primary-accent)">
-                  <Hexagon className="text-white w-6 h-6" strokeWidth={1} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-[12px] border border-mcpx-surface-tertiary bg-mcpx-selected-weak">
+                  <Hexagon
+                    className="h-6 w-6 text-mcpx-selected"
+                    strokeWidth={1}
+                  />
                 </div>
                 <div className="flex flex-col items-start">
-                  <p className="text-2xl font-medium capitalize">MCPX</p>
+                  <p
+                    ref={titleRef}
+                    tabIndex={-1}
+                    className="text-2xl font-medium capitalize"
+                  >
+                    MCPX
+                  </p>
                   <div className="flex items-center px-1 text-[10px] h-[20px] rounded-[4px] border border-border text-muted-foreground">
                     <span>
                       Version {getVersionNumber(mcpxData.version || "Unknown")}
@@ -337,7 +357,6 @@ export const McpxDetailsModal = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   wrapperClassName="flex-1 shrink-0"
-                  className="bg-background"
                 />
               </div>
 
@@ -374,7 +393,7 @@ export const McpxDetailsModal = ({
               </div>
             </div>
 
-            <div className="shrink-0 border-t border-border bg-background p-4">
+            <div className="shrink-0 border-t border-border bg-mcpx-surface p-4">
               <div className="flex gap-3 justify-end">
                 <Button onClick={saveConfiguration} disabled={!hasChanges}>
                   Save

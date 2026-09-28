@@ -203,7 +203,7 @@ export function SkillsGrid() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search..."
             wrapperClassName="w-full sm:w-40 md:w-48 lg:w-[280px]"
-            className="h-9 rounded-lg border-[var(--structure-color-border-primary)] bg-background"
+            className="h-9 border-mcpx-border-subtle"
           />
           <Sort
             title="Sort"
@@ -235,7 +235,7 @@ export function SkillsGrid() {
                 <ListFilter className="mr-2 size-4" />
                 Agents
                 {selectedAgents.length > 0 ? (
-                  <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+                  <span className="ml-1.5 text-xs text-mcpx-text-tertiary">
                     ({selectedAgents.length})
                   </span>
                 ) : null}
@@ -263,7 +263,7 @@ export function SkillsGrid() {
                 <ListFilter className="mr-2 size-4" />
                 MCP servers
                 {selectedServers.length > 0 ? (
-                  <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+                  <span className="ml-1.5 text-xs text-mcpx-text-tertiary">
                     ({selectedServers.length})
                   </span>
                 ) : null}
@@ -283,6 +283,7 @@ export function SkillsGrid() {
           )}
           <Button
             type="button"
+            size="lg"
             className="w-full sm:ml-auto sm:w-auto"
             onClick={() => navigate(routes.skillNew)}
           >

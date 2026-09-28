@@ -65,9 +65,9 @@ const annotationFilterOptions: {
   label: string;
   dot: string;
 }[] = [
-  { value: "read-only", label: "Read-only", dot: "bg-green-500" },
-  { value: "write", label: "Write", dot: "bg-amber-500" },
-  { value: "destructive", label: "Destructive", dot: "bg-red-500" },
+  { value: "read-only", label: "Read-only", dot: "bg-mcpx-success-text" },
+  { value: "write", label: "Write", dot: "bg-mcpx-warning-strong" },
+  { value: "destructive", label: "Destructive", dot: "bg-mcpx-danger-text" },
 ];
 
 function AnnotationFilterDropdown({
@@ -106,7 +106,7 @@ function AnnotationFilterDropdown({
           <ListFilter className="mr-2 size-4" />
           Filter Tools
           {!isAll && (
-            <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
+            <span className="ml-1.5 text-xs text-[var(--mcpx-text-tertiary)]">
               ({selectedCount})
             </span>
           )}
@@ -374,9 +374,7 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
 
   return (
     <>
-      <h1 className="mb-5 text-[20px] font-semibold text-[#20222A]">
-        MCP Servers
-      </h1>
+      <h1 className="mcpx-page-title mb-5">MCP Servers</h1>
 
       {servers.length === 0 ? (
         <McpServersZeroState />
@@ -389,14 +387,13 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 wrapperClassName="w-[320px] max-w-full"
-                className="rounded-lg"
               />
               <AnnotationFilterDropdown
                 value={annotationFilter}
                 onChange={setAnnotationFilter}
               />
             </div>
-            <Button asChild>
+            <Button asChild size="lg">
               <Link to={routes.mcpServerAdd}>
                 <Plus className="size-4" />
                 Add Server
@@ -404,13 +401,13 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
             </Button>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-xs">
-            <h2 className="mb-5 text-base font-semibold text-[#20222A]">
+          <div className="rounded-lg border border-mcpx-border-subtle bg-mcpx-surface p-6 shadow-[var(--mcpx-shadow-weak)]">
+            <h2 className="mb-5 text-base font-semibold text-mcpx-text">
               MCP Servers Catalog
             </h2>
 
             {visibleProviders.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+              <div className="rounded-lg border border-dashed border-mcpx-border-subtle p-8 text-center text-sm text-mcpx-text-tertiary">
                 No tools available.
               </div>
             ) : (
@@ -567,7 +564,7 @@ function McpServerRow({
 
   return (
     <div
-      className="rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-sm"
+      className="rounded-lg border border-mcpx-border-subtle bg-mcpx-surface transition-shadow hover:shadow-[var(--mcpx-shadow-weak)]"
       data-server-name={server.name}
     >
       <button
@@ -586,11 +583,11 @@ function McpServerRow({
               }
             />
           ) : (
-            <div className="size-6 shrink-0 rounded bg-gray-100" />
+            <div className="size-6 shrink-0 rounded bg-mcpx-page0" />
           )}
           <span
             className={`truncate text-base font-semibold capitalize ${
-              isInactive ? "text-[#C3C4CD]" : "text-gray-900"
+              isInactive ? "text-mcpx-text-disabled" : "text-mcpx-text"
             }`}
           >
             {server.name}
@@ -606,7 +603,7 @@ function McpServerRow({
             value={server.prompts?.length ?? 0}
           />
           <ChevronRight
-            className={`size-4 text-gray-400 ${isExpanded ? "rotate-90" : ""}`}
+            className={`size-4 text-mcpx-text-disabled ${isExpanded ? "rotate-90" : ""}`}
             style={{
               transition: `transform ${durationMs}ms ease-out`,
             }}
@@ -623,7 +620,7 @@ function McpServerRow({
       >
         <div
           ref={contentRef}
-          className="min-h-0 overflow-hidden border-t border-gray-100"
+          className="min-h-0 overflow-hidden border-t border-mcpx-border-subtle"
         >
           <div
             className="pb-4"
@@ -809,7 +806,7 @@ function TabCount({ value }: { value: number }) {
 
 function EmptyTabMessage({ children }: { children: string }) {
   return (
-    <div className="col-span-full py-8 text-center text-sm text-gray-500">
+    <div className="col-span-full py-8 text-center text-sm text-mcpx-text-tertiary">
       {children}
     </div>
   );
@@ -827,10 +824,10 @@ function Metric({ icon: Icon, label, value }: MetricProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <span
-            className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-mcpx-text-secondary"
             aria-label={`${label}: ${value}`}
           >
-            <Icon className="size-4 text-gray-400 [--fill-0:currentColor]" />
+            <Icon className="size-4 text-mcpx-text-disabled [--fill-0:currentColor]" />
             {value}
           </span>
         </TooltipTrigger>

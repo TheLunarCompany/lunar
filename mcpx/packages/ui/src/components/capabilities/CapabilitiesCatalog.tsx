@@ -222,10 +222,10 @@ export function CapabilitiesCatalog() {
       {(catalog.isCreatingGroup ||
         catalog.isUpdatingGroup ||
         catalog.isDeletingGroup) && (
-        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-white/80 backdrop-blur-xs">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-[var(--mcpx-scrim)]">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="size-12 animate-spin text-primary" />
-            <p className="text-lg font-medium text-[var(--colors-gray-700)]">
+            <p className="text-lg font-medium text-mcpx-text-secondary">
               Processing...
             </p>
           </div>
@@ -249,13 +249,11 @@ export function CapabilitiesCatalog() {
         </div>
       )}
 
-      <div className="w-full bg-gray-10 p-6">
+      <div className="w-full bg-mcpx-surface p-6">
         <div className="mb-6 flex items-center justify-between gap-4">
-          <p className="text-xl font-semibold text-[var(--colors-indigo-950)]">
-            Capabilities
-          </p>
+          <h1 className="mcpx-page-title">Capabilities</h1>
           <div className="flex gap-3">
-            <Button onClick={handleCreateToolGroupClick}>
+            <Button size="lg" onClick={handleCreateToolGroupClick}>
               {isSelectionMode ? "Cancel" : "Create Capability Group"}
             </Button>
           </div>

@@ -97,7 +97,12 @@ export default function SkillAgentsEditor() {
             </SkillPage.Description>
           </SkillPage.HeaderText>
           <SkillPage.Actions>
-            <Button type="button" variant="outline" onClick={handleCancel}>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={handleCancel}
+            >
               Cancel
             </Button>
           </SkillPage.Actions>
@@ -159,7 +164,7 @@ function EditorMessage({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="grid flex-1 place-items-center gap-4 p-5 text-sm text-[var(--text-colours-color-text-secondary)]">
+    <div className="grid flex-1 place-items-center gap-4 p-5 text-sm text-mcpx-text-secondary">
       <span>{title}</span>
       {children}
     </div>

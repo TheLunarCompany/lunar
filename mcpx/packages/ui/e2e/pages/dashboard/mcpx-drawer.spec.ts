@@ -173,9 +173,7 @@ test.describe("Dashboard - MCPX Drawer", () => {
     });
 
     // Check for server cards (should have at least 3 servers)
-    const serverCards = drawer.locator(
-      'div[class*="border"][class*="bg-white"]',
-    );
+    const serverCards = drawer.locator('[data-slot="card"]');
     const cardCount = await serverCards.count();
     expect(cardCount).toBeGreaterThanOrEqual(3);
   });
@@ -232,9 +230,7 @@ test.describe("Dashboard - MCPX Drawer", () => {
     await expect(serverName).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const serverCard = serverName
-      .locator(
-        'xpath=ancestor::div[contains(@class, "border") and contains(@class, "bg-white")]',
-      )
+      .locator('xpath=ancestor::*[@data-slot="card"]')
       .first();
 
     await expect(serverCard).toBeVisible({ timeout: TIMEOUT_5_SEC });
@@ -280,9 +276,7 @@ test.describe("Dashboard - MCPX Drawer", () => {
     await expect(saveButton).toBeDisabled();
 
     // Toggle a server switch
-    const serverCard = drawer
-      .locator('div[class*="border"][class*="bg-white"]')
-      .first();
+    const serverCard = drawer.locator('[data-slot="card"]').first();
     const toggleSwitch = serverCard.locator('button[role="switch"]').first();
     await toggleSwitch.click();
     await page.waitForTimeout(DELAY_2_SEC);
@@ -316,9 +310,7 @@ test.describe("Dashboard - MCPX Drawer", () => {
     await expect(inactiveServerName).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const inactiveServerCard = inactiveServerName
-      .locator(
-        'xpath=ancestor::div[contains(@class, "border") and contains(@class, "bg-white")]',
-      )
+      .locator('xpath=ancestor::*[@data-slot="card"]')
       .first();
 
     await expect(inactiveServerCard).toBeVisible({ timeout: TIMEOUT_5_SEC });
@@ -349,9 +341,7 @@ test.describe("Dashboard - MCPX Drawer", () => {
     await page.waitForTimeout(DELAY_2_SEC);
 
     // Toggle a server switch
-    const serverCard = drawer
-      .locator('div[class*="border"][class*="bg-white"]')
-      .first();
+    const serverCard = drawer.locator('[data-slot="card"]').first();
     const toggleSwitch = serverCard.locator('button[role="switch"]').first();
     await toggleSwitch.click();
     await page.waitForTimeout(DELAY_2_SEC);
@@ -397,9 +387,7 @@ test.describe("Dashboard - MCPX Drawer", () => {
     await page.waitForTimeout(DELAY_2_SEC);
 
     // Verify only matching server is shown
-    const serverCards = drawer.locator(
-      'div[class*="border"][class*="bg-white"]',
-    );
+    const serverCards = drawer.locator('[data-slot="card"]');
     const visibleCards = serverCards.filter({ hasText: /test-server-1/i });
     await expect(visibleCards.first()).toBeVisible({ timeout: TIMEOUT_5_SEC });
   });

@@ -12,7 +12,7 @@ export function ProvisioningScreen(_props: ProvisioningScreenProps) {
       data-instance-status="approval-pending"
       data-testid="approval-pending-screen"
     >
-      <div className="flex w-full max-w-2xl flex-col items-center gap-6 rounded-3xl border border-instance-status-panel-border bg-instance-status-panel-surface px-6 py-12 shadow-[0_12px_32px_rgb(30_27_75_/_0.06)] sm:px-10 sm:py-16">
+      <div className="flex w-full max-w-2xl flex-col items-center gap-6 rounded-3xl border border-instance-status-panel-border bg-instance-status-panel-surface px-6 py-12 shadow-[var(--mcpx-shadow-moderate)] sm:px-10 sm:py-16">
         <div
           aria-hidden="true"
           className="grid size-24 shrink-0 place-items-center rounded-full bg-instance-status-initializing-artwork text-instance-status-initializing sm:size-[104px]"

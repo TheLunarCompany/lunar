@@ -15,7 +15,7 @@ describe("RadioGroupItem", () => {
 
     expect(radio).toHaveClass("border-2");
     expect(radio).toHaveClass("border-foreground/35");
-    expect(radio).toHaveClass("bg-background");
+    expect(radio).toHaveClass("bg-mcpx-surface");
     expect(radio).not.toHaveClass("border-input");
   });
 });

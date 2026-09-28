@@ -16,7 +16,7 @@ export function Breadcrumbs({ items, className, ...props }: BreadcrumbsProps) {
     <nav
       aria-label="Breadcrumb"
       className={cn(
-        "flex min-w-0 items-center text-sm font-medium text-[var(--text-colours-color-text-tertiary)]",
+        "flex min-w-0 items-center text-sm font-medium text-mcpx-text-tertiary",
         className,
       )}
       {...props}
@@ -33,7 +33,7 @@ export function Breadcrumbs({ items, className, ...props }: BreadcrumbsProps) {
               {item.to && !isCurrent ? (
                 <Link
                   to={item.to}
-                  className="shrink-0 rounded-sm transition hover:text-[var(--text-colours-color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  className="shrink-0 rounded-sm transition hover:text-mcpx-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                   {item.label}
                 </Link>
@@ -42,8 +42,7 @@ export function Breadcrumbs({ items, className, ...props }: BreadcrumbsProps) {
                   aria-current={isCurrent ? "page" : undefined}
                   className={cn(
                     "min-w-0 truncate",
-                    isCurrent &&
-                      "text-[var(--text-colours-color-text-secondary)]",
+                    isCurrent && "text-mcpx-text-secondary",
                   )}
                 >
                   {item.label}

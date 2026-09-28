@@ -85,17 +85,16 @@ const CustomTabsList = React.forwardRef<HTMLDivElement, CustomTabsListProps>(
           <div
             role="tablist"
             aria-orientation="horizontal"
-            className="flex relative border-b border-[#D8DCED]"
+            className="flex relative border-b border-mcpx-border"
           >
             {children}
             <span
               role="presentation"
               aria-hidden="true"
-              className="absolute bottom-0 h-[2px] transition-all duration-300 ease-in-out"
+              className="absolute bottom-0 h-[2px] bg-mcpx-selected transition-all duration-300 ease-in-out"
               style={{
                 width: `${activeBarStyle.width}px`,
                 left: `${activeBarStyle.left}px`,
-                backgroundColor: "#5147E4",
               }}
               data-pc-section="activebar"
             />
@@ -120,7 +119,7 @@ const CustomTabsTrigger = React.forwardRef<
       "transition-colors",
       "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       "disabled:pointer-events-none disabled:opacity-50",
-      "data-[state=active]:text-[#5147E4]",
+      "data-[state=active]:text-mcpx-selected",
       "data-[state=inactive]:text-muted-foreground",
       className,
     )}

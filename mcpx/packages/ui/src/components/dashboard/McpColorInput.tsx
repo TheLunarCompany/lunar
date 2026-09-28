@@ -38,7 +38,7 @@ export const McpColorInput = ({
         <McpIcon
           onClick={() => setIconPickerOpen(true)}
           style={{ color: icon }}
-          className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1 cursor-pointer"
+          className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-mcpx-surface p-1 cursor-pointer"
         />
       </PopoverTrigger>
 
@@ -51,17 +51,17 @@ export const McpColorInput = ({
             {iconColors.map((color) => (
               <div
                 key={color}
-                className={`cursor-pointer border-2 rounded-md border-transparent ${color === icon ? `border-2 border-[#019894]` : ""}`}
+                className={`cursor-pointer border-2 rounded-md border-transparent ${color === icon ? `border-2 border-[var(--mcpx-success-text)]` : ""}`}
                 onClick={() => setIcon(color)}
               >
                 <McpIcon
                   style={{ color }}
-                  className="min-w-10 w-10 min-h-10 h-10  rounded-md bg-white p-1"
+                  className="min-w-10 w-10 min-h-10 h-10  rounded-md bg-mcpx-surface p-1"
                 />
               </div>
             ))}
             <label htmlFor="color-picker" className="cursor-pointer">
-              <div className="font-extralight border-[#019894] text-[#019894] border-dashed border-2 pb-1 text-[36px] min-w-10 w-10 min-h-10 h-10  rounded-md bg-white cursor-pointer flex items-center justify-center">
+              <div className="font-extralight border-[var(--mcpx-success-text)] text-[var(--mcpx-success-text)] border-dashed border-2 pb-1 text-[36px] min-w-10 w-10 min-h-10 h-10  rounded-md bg-mcpx-surface cursor-pointer flex items-center justify-center">
                 +
               </div>
             </label>

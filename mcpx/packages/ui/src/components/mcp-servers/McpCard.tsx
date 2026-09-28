@@ -75,14 +75,11 @@ export function McpCard({
       className={cn(
         "relative flex h-full flex-col gap-3 rounded-lg border p-4 transition-all duration-300",
         selected
-          ? "border-[#5147E4] bg-[#F7F6FE]"
-          : "border-gray-200 bg-white hover:border-[#5147E4]",
+          ? "border-mcpx-selected bg-mcpx-selected-weak shadow-[var(--mcpx-shadow-moderate)]"
+          : "border-mcpx-border-subtle bg-mcpx-surface hover:border-mcpx-selected",
         className,
       )}
-      style={{
-        ...(selected ? { boxShadow: "0 0 15px 0 rgba(81, 71, 228, 0.5)" } : {}),
-        ...style,
-      }}
+      style={style}
       {...props}
     >
       <div className="flex items-start gap-3">
@@ -93,13 +90,13 @@ export function McpCard({
             className="size-10 shrink-0 object-contain"
           />
         ) : (
-          <div className="size-10 shrink-0 rounded bg-gray-100" />
+          <div className="size-10 shrink-0 rounded bg-mcpx-page0" />
         )}
         <div className="min-w-0 flex-1">
           <TooltipProvider delayDuration={TOOLTIP_HOVER_DELAY_MS}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <h3 className="line-clamp-2 text-base font-semibold leading-5 text-gray-900">
+                <h3 className="line-clamp-2 text-base font-semibold leading-5 text-mcpx-text">
                   {title}
                 </h3>
               </TooltipTrigger>
@@ -112,7 +109,7 @@ export function McpCard({
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="w-fit rounded-[4px] border border-[#7D7B98] px-1 text-[10px] font-medium text-muted-foreground"
+                className="w-fit rounded-[4px] border border-mcpx-border px-1 text-[10px] font-medium text-muted-foreground"
               >
                 {tag}
               </span>
@@ -125,7 +122,7 @@ export function McpCard({
       <TooltipProvider delayDuration={TOOLTIP_HOVER_DELAY_MS}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <p className="line-clamp-2 h-9 shrink-0 text-xs leading-relaxed text-gray-700">
+            <p className="line-clamp-2 h-9 shrink-0 text-xs leading-relaxed text-mcpx-text-secondary">
               {description}
             </p>
           </TooltipTrigger>
@@ -139,7 +136,7 @@ export function McpCard({
         {envVarKeys.length > 0 && (
           <>
             <hr className="border-border" />
-            <div className="flex min-w-0 items-center gap-2 overflow-hidden text-[11px] font-semibold text-[#7D7B98]">
+            <div className="flex min-w-0 items-center gap-2 overflow-hidden text-[11px] font-semibold text-mcpx-text-secondary">
               <span className="shrink-0">
                 {urlNeedsEdit ? "PARAMETERS" : "ENV. VARS"}
               </span>
@@ -147,7 +144,7 @@ export function McpCard({
                 {visibleEnvVarKeys.map((key) => (
                   <div
                     key={key}
-                    className="min-w-0 max-w-32 truncate rounded bg-[#EBE6FB] px-1.5 text-[9px] font-semibold leading-4 text-[#5147E4]"
+                    className="min-w-0 max-w-32 truncate rounded bg-mcpx-selected-weak px-1.5 text-[9px] font-semibold leading-4 text-mcpx-selected"
                     title={key}
                   >
                     {key}

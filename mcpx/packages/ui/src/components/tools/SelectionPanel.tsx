@@ -35,14 +35,14 @@ export function SelectionPanel({
 
   if (isAddCustomToolMode) {
     return (
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-mcpx-surface border border-mcpx-border-subtle rounded-lg shadow-[var(--mcpx-shadow-moderate)] p-4 z-50">
         <div className="flex items-center gap-6">
           <div className="flex items-center">
             <div className="flex items-center gap-2">
-              <span className="bg-[#4F33CC] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium">
+              <span className="bg-mcpx-selected text-mcpx-tooltip-text w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium">
                 {selectedTools.size}
               </span>
-              <span className="text-sm text-gray-700 font-medium">
+              <span className="text-sm text-mcpx-text-secondary font-medium">
                 {pluralizeWithoutCount(selectedTools.size, "Tool")} selected
               </span>
             </div>
@@ -51,14 +51,14 @@ export function SelectionPanel({
             <Button
               onClick={onCustomizeSelectedTool}
               disabled={!onCustomizeSelectedTool}
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-button-primary hover:enabled:bg-button-hover border-button-primary fill-primary-foreground text-primary-foreground shadow-sm r h-9 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-button-primary hover:enabled:bg-button-hover border-button-primary fill-primary-foreground text-primary-foreground shadow-[var(--mcpx-shadow-weak)] r h-9 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               Customize
             </Button>
             <Button
               onClick={onClearSelection}
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-button-primary hover:enabled:bg-button-hover border-button-primary fill-primary-foreground text-primary-foreground shadow-sm r h-9 px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-button-primary hover:enabled:bg-button-hover border-button-primary fill-primary-foreground text-primary-foreground shadow-[var(--mcpx-shadow-weak)] r h-9 px-2 py-2 font-medium transition-colors text-sm hover:bg-mcpx-surface-subtle"
               title="Clear all selected tools"
             >
               <X className="w-4 h-4" />
@@ -74,14 +74,14 @@ export function SelectionPanel({
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-mcpx-surface border border-mcpx-border-subtle rounded-lg shadow-[var(--mcpx-shadow-moderate)] p-4 z-50">
       <div className="flex items-center gap-6">
         <div className="flex items-center">
           <div className="flex items-center gap-2">
-            <span className="bg-[#4F33CC] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium">
+            <span className="bg-mcpx-selected text-mcpx-tooltip-text w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium">
               {selectedTools.size}
             </span>
-            <span className="text-sm text-gray-700 font-medium">
+            <span className="text-sm text-mcpx-text-secondary font-medium">
               {pluralizeWithoutCount(selectedTools.size, "Tool")} selected
             </span>
           </div>
@@ -92,13 +92,13 @@ export function SelectionPanel({
               <Button
                 onClick={onSaveGroupChanges}
                 disabled={isSavingGroupChanges}
-                className="bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-[#4F33CC] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-mcpx-selected text-mcpx-tooltip-text px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-mcpx-selected disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSavingGroupChanges ? "Saving..." : "Save Changes"}
               </Button>
               <Button
                 onClick={onClearSelection}
-                className="px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
+                className="px-2 py-2 font-medium transition-colors text-sm hover:bg-mcpx-surface-subtle"
                 title="Clear all selected tools"
               >
                 <X className="w-4 h-4" />
@@ -115,7 +115,7 @@ export function SelectionPanel({
               </Button>
               <Button
                 onClick={onClearSelection}
-                className="px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
+                className="px-2 py-2 font-medium transition-colors text-sm hover:bg-mcpx-surface-subtle"
                 title="Clear all selected tools"
               >
                 <X className="w-4 h-4" />

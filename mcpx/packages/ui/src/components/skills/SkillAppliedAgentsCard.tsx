@@ -58,13 +58,13 @@ export function SkillAppliedAgentsCard({
         ) : (
           appliedOptions.map((option) => (
             <SkillSidebarCardRow key={scopeSubjectKey(option.subject)}>
-              <SkillSidebarCardIcon className="rounded-md bg-[var(--colors-gray-100)]">
+              <SkillSidebarCardIcon className="rounded-md bg-mcpx-surface-tertiary">
                 <SkillAgentIcon name={option.label} />
               </SkillSidebarCardIcon>
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{option.label}</span>
                 {!option.connected ? (
-                  <span className="block truncate text-xs text-[var(--text-colours-color-text-secondary)]">
+                  <span className="block truncate text-xs text-mcpx-text-secondary">
                     Not currently connected
                   </span>
                 ) : null}
@@ -85,9 +85,5 @@ export function SkillAppliedAgentsCard({
 }
 
 function StatusMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="py-2 text-sm text-[var(--text-colours-color-text-secondary)]">
-      {children}
-    </p>
-  );
+  return <p className="py-2 text-sm text-mcpx-text-secondary">{children}</p>;
 }
