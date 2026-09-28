@@ -1,0 +1,33 @@
+name: CountLLMTokens
+description: token counting processor that allows you to calculate approximate amount of ai-tokens request body consist of.
+exec: count_llm_tokens_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
+parameters:
+  store_count_header:
+    type: string
+    description: custom header we wish to update with the request token count
+    default: 'x-lunar-estimated-tokens'
+    required: false
+  model_type:
+    type: string
+    description: type of AI model - ChatGPT, Claude, Gemini
+    default: ""
+    required: false
+  model:
+    type: string
+    description: 'model name - can be specific or use wildcard, to include range of models. For example: gpt-4o-*, gpt-4-*, gpt-4, gpt-4o etc.'
+    default: ""
+    required: false
+  encoding:
+    type: string
+    description: type of encoding using for tokenization
+    default: ""
+    required: false  
+
+output_streams:  
+  - type: StreamTypeRequest  
+input_stream:  
+  type: StreamTypeRequest
