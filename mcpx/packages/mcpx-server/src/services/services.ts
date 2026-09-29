@@ -356,7 +356,13 @@ export class Services {
     }
 
     this._config.registerConsumer(this._permissionManager);
-    this._config.registerConsumer(new ConfigValidator(this._envVarManager));
+    this._config.registerConsumer(
+      new ConfigValidator(
+        this._envVarManager,
+        this._catalogManager,
+        this.logger.child({ component: "ConfigValidator" }),
+      ),
+    );
     this._config.registerConsumer(this._oauthSessionManager);
 
     startupLogger.info("Initializing UpstreamHandler...");

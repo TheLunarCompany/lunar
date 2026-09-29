@@ -90,6 +90,9 @@ class StubCatalogManager implements CatalogManagerI {
   isPromptApproved() {
     return true;
   }
+  isHostInCatalog() {
+    return true;
+  }
   subscribe() {
     return () => {};
   }

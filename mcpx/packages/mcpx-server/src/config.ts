@@ -5,7 +5,7 @@ import {
   ConfigUpdateRejectedError,
 } from "@mcpx/toolkit-core/config";
 import { AsyncMutex } from "@mcpx/toolkit-core/concurrency";
-import { makeError, stringifyEq } from "@mcpx/toolkit-core/data";
+import { makeError } from "@mcpx/toolkit-core/data";
 import fs from "fs";
 import path from "path";
 import { Logger } from "winston";
@@ -191,10 +191,7 @@ export class ConfigService {
       );
     }
 
-    if (stringifyEq(newConfig, this.manager.currentConfig)) {
-      return false; // No changes, no need to update
-    }
-
+    /* always update to new config when sent */
     const prevConfig = this.manager.currentConfig;
     await this.manager.updateConfig(newConfig).catch((e: unknown) => {
       if (e instanceof ConfigUpdateRejectedError) {

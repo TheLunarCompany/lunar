@@ -109,6 +109,27 @@ describe("CatalogManager", () => {
     };
   }
 
+  describe("host lookup", () => {
+    it("tracks hosts added and removed by setCatalog", () => {
+      const manager = createCatalogManager();
+      const item = {
+        server: {
+          id: uuidv7(),
+          name: "github",
+          displayName: "github",
+          config: { type: "sse" as const, url: "https://github.com/mcp" },
+        },
+      } satisfies CatalogItemWire;
+
+      manager.setCatalog(makeCatalog(item));
+      expect(manager.isHostInCatalog("github.com")).toBe(true);
+      expect(manager.isHostInCatalog("gitlab.com")).toBe(false);
+
+      manager.setCatalog(makeCatalog());
+      expect(manager.isHostInCatalog("github.com")).toBe(false);
+    });
+  });
+
   describe("strictness based on identity", () => {
     describe("personal mode (not strict)", () => {
       it("approves all servers", () => {

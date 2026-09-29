@@ -3,21 +3,36 @@ import { DEFAULT_CONFIG } from "../config.js";
 import { Config } from "../model/config/config.js";
 import { resetEnv } from "../env.js";
 import { EnvVarManager } from "./env-var-manager.js";
+import { CatalogHostsResolver } from "./catalog-manager.js";
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 
 describe("ConfigValidator", () => {
   let validator: ConfigValidator;
   const originalEnv = { ...process.env };
 
+  function stubCatalogResolver(
+    hostsInCatalog?: string[],
+  ): CatalogHostsResolver {
+    return {
+      isHostInCatalog: (host) =>
+        hostsInCatalog ? hostsInCatalog.includes(host) : true,
+    };
+  }
+
   beforeEach(() => {
     process.env = { ...originalEnv, VERSION: "1.0.0", INSTANCE_ID: "0" };
     resetEnv();
-    validator = new ConfigValidator(new EnvVarManager(noOpLogger));
+    validator = new ConfigValidator(
+      new EnvVarManager(noOpLogger),
+      stubCatalogResolver(),
+      noOpLogger,
+    );
   });
 
   afterEach(() => {
     process.env = { ...originalEnv, VERSION: "1.0.0", INSTANCE_ID: "0" };
     resetEnv();
+    jest.restoreAllMocks();
   });
 
   const createBaseConfig = (): Config => structuredClone(DEFAULT_CONFIG);
@@ -55,7 +70,7 @@ describe("ConfigValidator", () => {
         await expect(validator.prepareConfig(config)).resolves.toBeUndefined();
       });
 
-      it("should reject client_credentials provider without client ID", async () => {
+      it("should reject when client_credentials provider is missing credentials", async () => {
         const config = createBaseConfig();
         config.staticOauth = {
           mapping: { "github.com": "github" },
@@ -82,7 +97,7 @@ describe("ConfigValidator", () => {
         );
       });
 
-      it("should reject client_credentials provider without client secret", async () => {
+      it("should reject when client_credentials provider is missing client secret", async () => {
         const config = createBaseConfig();
         config.staticOauth = {
           mapping: { "github.com": "github" },
@@ -134,7 +149,7 @@ describe("ConfigValidator", () => {
         await expect(validator.prepareConfig(config)).resolves.toBeUndefined();
       });
 
-      it("should reject device_flow provider without client ID", async () => {
+      it("should reject when device_flow provider is missing client ID", async () => {
         const config = createBaseConfig();
         config.staticOauth = {
           mapping: { "github.com": "github" },
@@ -154,7 +169,6 @@ describe("ConfigValidator", () => {
           },
         };
         delete process.env["GITHUB_CLIENT_ID"];
-
         await expect(validator.prepareConfig(config)).rejects.toThrow(
           "Device flow OAuth provider github is missing client ID. Ensure GITHUB_CLIENT_ID environment variable is available.",
         );
@@ -180,6 +194,91 @@ describe("ConfigValidator", () => {
           },
         };
         process.env["GITHUB_CLIENT_ID"] = "test-client-id";
+
+        await expect(validator.prepareConfig(config)).resolves.toBeUndefined();
+      });
+
+      it("should skip validation for a provider not used by any catalog server", async () => {
+        const config = createBaseConfig();
+        config.staticOauth = {
+          mapping: { "unused.example.com": "unused" },
+          providers: {
+            unused: {
+              authMethod: "client_credentials",
+              credentials: {
+                clientId: { type: "envRef", envName: "UNUSED_CLIENT_ID" },
+                clientSecret: {
+                  type: "envRef",
+                  envName: "UNUSED_CLIENT_SECRET",
+                },
+              },
+              scopes: [],
+              tokenAuthMethod: "client_secret_post",
+            },
+          },
+        };
+
+        const validatorWithEmptyCatalog = new ConfigValidator(
+          new EnvVarManager(noOpLogger),
+          stubCatalogResolver([]),
+          noOpLogger,
+        );
+        await expect(
+          validatorWithEmptyCatalog.prepareConfig(config),
+        ).resolves.toBeUndefined();
+      });
+
+      it("should reject a provider used by a catalog server when credentials are absent", async () => {
+        const config = createBaseConfig();
+        config.staticOauth = {
+          mapping: { "github.com": "github" },
+          providers: {
+            github: {
+              authMethod: "client_credentials",
+              credentials: {
+                clientId: { type: "envRef", envName: "GITHUB_CLIENT_ID" },
+                clientSecret: {
+                  type: "envRef",
+                  envName: "GITHUB_CLIENT_SECRET",
+                },
+              },
+              scopes: [],
+              tokenAuthMethod: "client_secret_post",
+            },
+          },
+        };
+        delete process.env["GITHUB_CLIENT_ID"];
+        delete process.env["GITHUB_CLIENT_SECRET"];
+
+        const validatorWithGithub = new ConfigValidator(
+          new EnvVarManager(noOpLogger),
+          stubCatalogResolver(["github.com"]),
+          noOpLogger,
+        );
+        await expect(validatorWithGithub.prepareConfig(config)).rejects.toThrow(
+          "Static OAuth provider github is missing credentials.",
+        );
+      });
+
+      it("should skip validation for a provider with no mapped hosts", async () => {
+        const config = createBaseConfig();
+        config.staticOauth = {
+          mapping: {},
+          providers: {
+            unused: {
+              authMethod: "device_flow",
+              credentials: {
+                clientId: { type: "envRef", envName: "UNUSED_CLIENT_ID" },
+              },
+              scopes: [],
+              endpoints: {
+                deviceAuthorizationUrl: "https://example.com/device",
+                tokenUrl: "https://example.com/token",
+                userVerificationUrl: "https://example.com/verify",
+              },
+            },
+          },
+        };
 
         await expect(validator.prepareConfig(config)).resolves.toBeUndefined();
       });

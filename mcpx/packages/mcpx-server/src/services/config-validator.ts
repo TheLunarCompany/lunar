@@ -4,19 +4,30 @@ import {
 } from "../oauth-providers/resolve-credentials.js";
 import { ConfigConsumer } from "@mcpx/toolkit-core/config";
 import { CredentialField } from "@mcpx/shared-model";
+import { Logger } from "winston";
 import { env } from "../env.js";
 import { Config } from "../model/config/config.js";
 import { OauthCredentialResolver } from "./env-var-manager.js";
+import { CatalogHostsResolver } from "./catalog-manager.js";
 import { compact } from "@mcpx/toolkit-core/data";
 
 // This class validates that a given `Config` object can
 // be used with the given environment variables.
 export class ConfigValidator implements ConfigConsumer<Config> {
-  constructor(private envVars: OauthCredentialResolver) {}
+  constructor(
+    private envVars: OauthCredentialResolver,
+    private catalogResolver: CatalogHostsResolver,
+    private logger: Logger,
+  ) {}
   readonly name = "ConfigValidator";
   async prepareConfig(newConfig: Config): Promise<void> {
     await validateAuthKey(newConfig);
-    await validateStaticOAuthProviders(newConfig, this.envVars);
+    await validateStaticOAuthProviders(
+      newConfig,
+      this.envVars,
+      this.catalogResolver,
+      this.logger,
+    );
     return Promise.resolve();
   }
   async commitConfig(): Promise<void> {
@@ -40,11 +51,32 @@ function validateAuthKey(newConfig: Config): Promise<void> {
 function validateStaticOAuthProviders(
   newConfig: Config,
   envVars: OauthCredentialResolver,
+  catalogResolver: CatalogHostsResolver,
+  logger: Logger,
 ): Promise<void> {
   if (newConfig.staticOauth) {
-    for (const [providerName, provider] of Object.entries(
-      newConfig.staticOauth.providers,
-    )) {
+    const { mapping, providers } = newConfig.staticOauth;
+    const hostsByProvider = new Map<string, string[]>();
+    for (const [host, providerName] of Object.entries(mapping)) {
+      const mappedHosts = hostsByProvider.get(providerName) ?? [];
+      mappedHosts.push(host);
+      hostsByProvider.set(providerName, mappedHosts);
+    }
+
+    for (const [providerName, provider] of Object.entries(providers)) {
+      const mappedHosts = hostsByProvider.get(providerName) ?? [];
+      const usedByCatalog = mappedHosts.some((host) =>
+        catalogResolver.isHostInCatalog(host),
+      );
+
+      if (!usedByCatalog) {
+        logger.debug(
+          "Skipping static OAuth provider because none of its mapped hosts are in the current catalog",
+          { skippedProvider: providerName, providerHosts: mappedHosts },
+        );
+        continue;
+      }
+
       if (provider.authMethod === "client_credentials") {
         if (!resolveClientCredentials(provider.credentials, envVars)) {
           return Promise.reject(
@@ -62,6 +94,11 @@ function validateStaticOAuthProviders(
           );
         }
       }
+
+      logger.debug("Resolved credentials for static OAuth provider", {
+        providerName,
+        authMethod: provider.authMethod,
+      });
     }
   }
   return Promise.resolve();

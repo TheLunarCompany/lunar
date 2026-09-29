@@ -71,6 +71,10 @@ export interface CatalogChange {
   strictnessChanged: boolean;
 }
 
+export interface CatalogHostsResolver {
+  isHostInCatalog(host: string): boolean;
+}
+
 export interface CatalogManagerI {
   setCatalog(payload: SetCatalogPayload): void;
   getCatalog(): CatalogItemWire["server"][];
@@ -86,6 +90,7 @@ export interface CatalogManagerI {
   isServerApproved(serviceName: string): boolean;
   isToolApproved(serviceName: string, toolName: string): boolean;
   isPromptApproved(serviceName: string, promptName: string): boolean;
+  isHostInCatalog(host: string): boolean;
   subscribe(callback: (change: CatalogChange) => void): () => void;
 }
 
@@ -94,6 +99,7 @@ export interface CatalogManagerI {
 // Admin can set override to bypass strictness for debugging.
 export class CatalogManager implements CatalogManagerI {
   private catalogByName: Map<string, CatalogItemWire>;
+  private hostsInCatalog: Set<string> = new Set<string>();
   private perCatalogItemOAuth: Map<string, ClientCredentialsOauthProvider> =
     new Map();
   private logger: Logger;
@@ -249,8 +255,22 @@ export class CatalogManager implements CatalogManagerI {
     this.catalogByName = new Map(
       normalizedPayload.items.map((item) => [item.server.name, item]),
     );
+    this.hostsInCatalog = new Set<string>();
+    normalizedPayload.items.forEach((item) => {
+      if (!(item.server.config.type === "stdio")) {
+        try {
+          this.hostsInCatalog.add(new URL(item.server.config.url).hostname);
+        } catch {
+          // A malformed catalog URL should not prevent catalog lookup.
+        }
+      }
+    });
 
     this.notifyListeners(change);
+  }
+
+  isHostInCatalog(host: string): boolean {
+    return this.hostsInCatalog.has(host);
   }
 
   isServerApproved(serviceName: string): boolean {
