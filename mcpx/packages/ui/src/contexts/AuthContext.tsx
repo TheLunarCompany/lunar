@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const target = redirectUri || window.location.href;
       const loginUrl = `${buildAuthBffUrl(
-        "/login",
+        "/runtime/login",
       )}?redirect_uri=${encodeURIComponent(target)}`;
       window.location.href = loginUrl;
     },
@@ -169,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
 
     const target = window.location.href;
-    const logoutUrl = `${buildAuthBffUrl("/logout")}?redirect_uri=${encodeURIComponent(target)}`;
+    const logoutUrl = `${buildAuthBffUrl("/runtime/logout")}?redirect_uri=${encodeURIComponent(target)}`;
     window.location.href = logoutUrl;
   }, [authBffBase, buildAuthBffUrl, loginRequired]);
 
