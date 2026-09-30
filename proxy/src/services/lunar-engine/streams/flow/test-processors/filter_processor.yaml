@@ -1,0 +1,28 @@
+name: Filter
+description: Processor for if-else conditions in the flow
+exec: filter_processor.go
+parameters:
+  url:
+    type: string
+    description: filtering by url
+    required: false
+  endpoint:
+    type: string
+    description: filtering by endpoint (*, or specific path)
+    required: false
+  method:
+    type: string
+    description: filtering by method
+    required: false
+  header:
+    type: string
+    description: filtering by header
+    required: false
+output_streams:
+  - name: hit
+    type: StreamTypeAny
+  - name: miss
+    type: StreamTypeAny
+input_stream:
+  name: input
+  type: StreamTypeAny
