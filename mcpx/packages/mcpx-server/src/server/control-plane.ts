@@ -519,7 +519,6 @@ export function buildControlPlaneRouter(
     // Apply the saved setup locally (this triggers setup-changed to Hub)
     try {
       await services.setupManager.applySetup({
-        source: "user",
         setupId: savedSetupId,
         targetServers: savedSetup.targetServers,
         config: savedSetup.config,

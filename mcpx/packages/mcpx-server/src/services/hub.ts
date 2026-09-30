@@ -605,7 +605,6 @@ export class HubService {
         const message = parseResult.data.payload;
         const correlationId = metadata.correlationId;
         this.logger.info("Received apply-setup message from Hub", {
-          source: message.source,
           setupId: message.setupId,
           correlationId,
         });

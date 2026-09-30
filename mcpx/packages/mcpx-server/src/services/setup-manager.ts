@@ -224,7 +224,6 @@ export class SetupManager implements SetupManagerI {
     payload: ApplySetupPayload,
   ): Promise<WebappBoundPayloadOf<"setup-change">> {
     this.logger.info("Applying setup from Hub", {
-      source: payload.source,
       setupId: payload.setupId,
     });
 
@@ -255,7 +254,6 @@ export class SetupManager implements SetupManagerI {
       });
 
       this.logger.info("Successfully applied setup", {
-        source: payload.source,
         setupId: payload.setupId,
       });
 
@@ -265,7 +263,6 @@ export class SetupManager implements SetupManagerI {
       return this.buildDigestedSetupPayload(payload.targetServers);
     } catch (e) {
       this.logger.error("Failed to apply setup", {
-        source: payload.source,
         setupId: payload.setupId,
         error: loggableError(e),
       });
@@ -281,7 +278,6 @@ export class SetupManager implements SetupManagerI {
     this.logger.info("Resetting setup to clean state");
     const emptyTargetServers: Record<string, TargetServerEntry> = {};
     return this.applySetup({
-      source: "user",
       setupId: "reset",
       targetServers: emptyTargetServers,
       config: {

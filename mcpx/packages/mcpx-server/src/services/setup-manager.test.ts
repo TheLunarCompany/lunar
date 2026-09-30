@@ -313,7 +313,6 @@ describe("SetupManager", () => {
       // `initiation` has no `name` field (the record key is the name) -
       // using inline entries here to avoid it.
       const result = await manager.applySetup({
-        source: "user",
         setupId: "setup-1",
         targetServers: {
           "echo-service": {

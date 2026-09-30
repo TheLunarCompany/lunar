@@ -34,7 +34,6 @@ function createSetupPayload(
   });
 
   return {
-    source: "profile",
     setupId,
     targetServers,
     config: {
@@ -151,7 +150,6 @@ describe("SetupManager Integration Tests", () => {
     };
 
     await harness.services.setupManager.applySetup({
-      source: "profile",
       setupId: "initial",
       targetServers: {
         [echoTargetServer.name]: toTargetServerEntry(echoTargetServer),
