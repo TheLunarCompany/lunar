@@ -254,6 +254,69 @@ describe("PermissionManager#hasPermission", () => {
     });
   });
 
+  describe("when tool-group service keys use display-case names (#68)", () => {
+    const config: Config = {
+      ...DEFAULT_CONFIG,
+      permissions: {
+        default: {
+          _type: "default-block",
+          allow: [],
+        },
+        consumers: {
+          agent: {
+            _type: "default-block",
+            allow: ["team-hub-read"],
+          },
+        },
+        clientNames: {},
+      },
+      toolGroups: [
+        {
+          name: "team-hub-read",
+          // Dashboard Create Tool Group stores the display name; capability
+          // resolution looks up the normalized lowercase form.
+          services: { MyTeamHub: ["list-items", "get-item"] },
+        },
+      ],
+    };
+
+    it("allows tools when the group key casing differs from the lookup name", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
+      expect(
+        permissionManager.hasPermission({
+          capabilityKind: "tools",
+          serviceName: "myteamhub",
+          capabilityName: "list-items",
+          consumerTag: "agent",
+        }),
+      ).toBe(true);
+      expect(
+        permissionManager.hasPermission({
+          capabilityKind: "tools",
+          serviceName: "myteamhub",
+          capabilityName: "get-item",
+          consumerTag: "agent",
+        }),
+      ).toBe(true);
+    });
+
+    it("still blocks tools outside the allowed group", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
+      expect(
+        permissionManager.hasPermission({
+          capabilityKind: "tools",
+          serviceName: "myteamhub",
+          capabilityName: "delete-item",
+          consumerTag: "agent",
+        }),
+      ).toBe(false);
+    });
+  });
+
   describe("when a consumer is blocked via profile", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
