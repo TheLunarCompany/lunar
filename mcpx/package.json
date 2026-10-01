@@ -26,12 +26,12 @@
   "devDependencies": {
     "@eslint/js": "^9.26.0",
     "concurrently": "^9.2.1",
-    "prompts": "^2.4.2",
-    "globals": "^16.0.0",
-    "typescript-eslint": "^8.31.1",
-    "typescript": "^5.8.3",
     "eslint": "^9.26.0",
-    "prettier": "3.5.3"
+    "globals": "^16.0.0",
+    "prettier": "3.5.3",
+    "prompts": "^2.4.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.1"
   },
   "overrides": {
     "zod": "3.25.76",
@@ -58,5 +58,10 @@
     "socket.io-adapter": {
       "ws": "8.21.0"
     }
+  },
+  "dependencies": {
+    "@vitest/browser-playwright": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.10",
+    "vitest": "^4.1.10"
   }
 }
