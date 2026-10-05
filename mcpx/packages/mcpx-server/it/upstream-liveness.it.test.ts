@@ -5,7 +5,7 @@ import { createServer } from "http";
 import { AddressInfo } from "net";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
-import { withAsyncPolling } from "@mcpx/toolkit-core/time";
+import { withAsyncPolling } from "@aigw/core/time";
 import { resetEnv } from "../src/env.js";
 import { TargetServer } from "../src/model/target-servers.js";
 import { getTestHarness, MCPX_BASE_URL, TestHarness } from "./utils.js";

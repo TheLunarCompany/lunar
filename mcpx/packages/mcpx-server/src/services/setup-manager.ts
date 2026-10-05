@@ -2,11 +2,11 @@ import { EventEmitter } from "events";
 import {
   indexBy,
   makeError,
-  normalizeServerName,
   stableStringify,
   stringifyEq,
-} from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+} from "@aigw/core/data";
+import { normalizeServerName } from "@mcpx/toolkit-core/data";
+import { loggableError } from "@aigw/core/logging";
 import {
   McpxBoundPayloads,
   type TargetServerEntry,

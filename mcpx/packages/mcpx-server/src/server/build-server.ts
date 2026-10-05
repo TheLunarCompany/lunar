@@ -1,8 +1,5 @@
-import {
-  compileRanges,
-  makeIpAllowlistMiddleware,
-} from "@mcpx/toolkit-core/ip-access";
-import { accessLogFor } from "@mcpx/toolkit-core/logging";
+import { compileRanges, makeIpAllowlistMiddleware } from "@aigw/core/ip-access";
+import { accessLogFor } from "@aigw/core/logging";
 import cors from "cors";
 import express from "express";
 import { createServer, Server } from "http";

@@ -4,8 +4,8 @@ import { McpxSession } from "../model/sessions.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { ManualClock } from "@mcpx/toolkit-core/time";
+import { noOpLogger } from "@aigw/core/logging";
+import { ManualClock } from "@aigw/core/time";
 import { ZodError } from "zod/v4";
 import {
   DownstreamSessionStore,

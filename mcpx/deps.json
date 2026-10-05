@@ -1,4 +1,5 @@
 [
+  { "name": "@aigw/core", "cmd": "npm run build", "cwd": "../ai-gateway-shared/public/packages/core" },
   { "name": "@mcpx/toolkit-core", "cmd": "npm run build --workspace=packages/toolkit-core" },
   { "name": "@mcpx/toolkit-llm", "cmd": "npm run build --workspace=packages/toolkit-llm" },
   { "name": "@mcpx/shared-model", "cmd": "npm run build --workspace=packages/shared-model" },

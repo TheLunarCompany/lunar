@@ -1,0 +1,7 @@
+[
+  {
+    "name": "@aigw/core",
+    "cmd": "npm run build --workspace=packages/core",
+    "packageDir": "packages/core"
+  }
+]

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
-import { ManualClock } from "@mcpx/toolkit-core/time";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { ManualClock } from "@aigw/core/time";
+import { noOpLogger } from "@aigw/core/logging";
 import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
 import { StoredTokens } from "../services/oauth-token-store.js";
 

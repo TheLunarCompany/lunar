@@ -1,4 +1,4 @@
-import { indexBy, makeError } from "@mcpx/toolkit-core/data";
+import { indexBy, makeError } from "@aigw/core/data";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
   ErrorCode,
@@ -16,7 +16,7 @@ import {
 import { z } from "zod";
 import { ZodError } from "zod/v4";
 import { Logger } from "winston";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 
 // JSON Schema property - the SDK types this as unknown but it's actually a JSON Schema object
 const jsonSchemaPropertySchema = z.object({

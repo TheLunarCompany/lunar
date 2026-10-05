@@ -12,7 +12,7 @@
 // - All of it runs twice: an AS that rotates (new refresh token each time,
 //   Okta) and one that doesn't (same refresh token forever, Google).
 
-import { withAsyncPolling } from "@mcpx/toolkit-core/time";
+import { withAsyncPolling } from "@aigw/core/time";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import {
   InvalidGrantError,

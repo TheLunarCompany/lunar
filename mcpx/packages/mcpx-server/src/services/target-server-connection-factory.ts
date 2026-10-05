@@ -1,5 +1,5 @@
-import { compactRecord } from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { compactRecord } from "@aigw/core/data";
+import { loggableError } from "@aigw/core/logging";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";

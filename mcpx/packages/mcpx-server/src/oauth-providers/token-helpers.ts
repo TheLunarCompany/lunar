@@ -1,5 +1,5 @@
 import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
-import { Clock, systemClock } from "@mcpx/toolkit-core/time";
+import { Clock, systemClock } from "@aigw/core/time";
 import { Logger } from "winston";
 import { StoredTokens } from "../services/oauth-token-store.js";
 

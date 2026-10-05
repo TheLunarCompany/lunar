@@ -3,9 +3,9 @@ import {
   ConfigConsumer,
   ConfigManager,
   ConfigUpdateRejectedError,
-} from "@mcpx/toolkit-core/config";
-import { AsyncMutex } from "@mcpx/toolkit-core/concurrency";
-import { makeError } from "@mcpx/toolkit-core/data";
+} from "@aigw/core/config";
+import { AsyncMutex } from "@aigw/core/concurrency";
+import { makeError } from "@aigw/core/data";
 import fs from "fs";
 import path from "path";
 import { Logger } from "winston";

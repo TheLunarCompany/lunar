@@ -4,7 +4,7 @@ import { Config } from "../model/config/config.js";
 import { resetEnv } from "../env.js";
 import { EnvVarManager } from "./env-var-manager.js";
 import { CatalogHostsResolver } from "./catalog-manager.js";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 
 describe("ConfigValidator", () => {
   let validator: ConfigValidator;

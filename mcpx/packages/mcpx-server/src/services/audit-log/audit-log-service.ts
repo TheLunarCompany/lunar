@@ -1,4 +1,4 @@
-import { Clock } from "@mcpx/toolkit-core/time";
+import { Clock } from "@aigw/core/time";
 import { env } from "../../env.js";
 import { AuditLog, AuditLogEvent } from "../../model/audit-log-type.js";
 import {
@@ -6,7 +6,7 @@ import {
   AuditLogReadOptions,
 } from "./audit-log-persistence.js";
 import { matchesEventTypeFilter } from "./audit-log-filter.js";
-import { LunarLogger } from "@mcpx/toolkit-core/logging";
+import { TelemetryLogger } from "@aigw/core/logging";
 
 export class AuditLogService {
   private buffer: AuditLog[] = [];
@@ -15,7 +15,7 @@ export class AuditLogService {
 
   constructor(
     private readonly clock: Clock,
-    private readonly logger: LunarLogger,
+    private readonly logger: TelemetryLogger,
     private readonly persistence: AuditLogPersistence,
     flushIntervalMs?: number,
   ) {

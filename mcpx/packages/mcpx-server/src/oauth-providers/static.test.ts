@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { StaticOAuthProvider } from "./static.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 

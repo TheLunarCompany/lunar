@@ -1,8 +1,8 @@
-import { systemClock } from "@mcpx/toolkit-core/time";
+import { systemClock } from "@aigw/core/time";
 import { AuditLogEvent } from "../../model/audit-log-type.js";
 import { AuditLogPersistence } from "./audit-log-persistence.js";
 import { AuditLogService } from "./audit-log-service.js";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 
 // ====================== noOp stub for tests ======================
 const _noOpPersistence: AuditLogPersistence = {

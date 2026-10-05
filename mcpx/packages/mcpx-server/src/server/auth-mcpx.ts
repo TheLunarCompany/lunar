@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import { Logger } from "winston";
 import { HubService } from "../services/hub.js";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import { env } from "../env.js";
 
 export function buildAuthMcpxRouter(

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { v7 as uuidv7 } from "uuid";
 import { EnabledSkills, Skill } from "@mcpx/shared-model";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { SkillScope } from "./skill-scope.js";
 
 const GITHUB_ITEM = uuidv7();

@@ -18,6 +18,7 @@ module.exports = {
   transformIgnorePatterns: ["node_modules/(?!(uuid)/)"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
+    "^@aigw/core/(.*)$": "<rootDir>/../../../ai-gateway-shared/public/packages/core/src/$1",
   },
   extensionsToTreatAsEsm: [".ts"],
   testMatch: ["**/src/**/*.test.ts", "**/it/**/*.it.test.ts"],

@@ -38,6 +38,7 @@
     {
       "path": "../toolkit-core"
     },
+    { "path": "../../../ai-gateway-shared/public/packages/core" },
     {
       "path": "../webapp-protocol"
     }

@@ -21,7 +21,8 @@ module.exports = {
   ],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
-    "^@mcpx/toolkit-core/(.*)$": "<rootDir>/../toolkit-core/src/$1",
+    "^@aigw/core/(.*)$":
+      "<rootDir>/../../../ai-gateway-shared/public/packages/core/src/$1",
   },
   extensionsToTreatAsEsm: [".ts"],
   testMatch: ["**/src/**/*.test.ts"],

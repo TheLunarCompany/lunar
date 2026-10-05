@@ -1,15 +1,16 @@
 # syntax=docker/dockerfile:1
 # check=skip=SecretsUsedInArgOrEnv
 #
+# Build from the monorepo root (the build needs ai-gateway-shared/public next to mcpx/).
 # Build targets summary:
 #   UI only:
-#     docker build -t mcpx-ui --target mcpx-ui -f ./Dockerfile ./mcpx
+#     docker build -t mcpx-ui --target mcpx-ui -f ./mcpx/Dockerfile .
 #     docker run --rm -p 5173:5173 mcpx-ui
 #   MCPX server:
-#     docker build -t mcpx-server --target mcpx-server -f ./Dockerfile ./mcpx
+#     docker build -t mcpx-server --target mcpx-server -f ./mcpx/Dockerfile .
 #     docker run --rm -p 9000:9000 -p 3000:3000 mcpx-server
 #   Combined (server + UI):
-#     docker build -t mcpx --target mcpx -f ./Dockerfile ./mcpx
+#     docker build -t mcpx --target mcpx -f ./mcpx/Dockerfile .
 #     docker run --rm -p 9000:9000 -p 5173:5173 -p 3000:3000 mcpx
 
 FROM node:22.22.3-alpine3.22 AS base
@@ -18,14 +19,17 @@ ENV HOME=/lunar
 
 WORKDIR ${HOME}
 
-COPY ./packages ./packages
-COPY ./package.json ./package.json
-COPY ./package-lock.json ./package-lock.json
-COPY ./scripts/generate-config.sh ./scripts/generate-config.sh
-COPY ./deps.json ./deps.json
-COPY ./build-deps.cjs ./build-deps.cjs
-COPY ./.version ./.version
-COPY ./rootfs ./rootfs
+COPY mcpx/packages ./packages
+COPY mcpx/package.json ./package.json
+COPY mcpx/package-lock.json ./package-lock.json
+COPY mcpx/scripts/generate-config.sh ./scripts/generate-config.sh
+COPY mcpx/deps.json ./deps.json
+COPY mcpx/build-deps.cjs ./build-deps.cjs
+COPY mcpx/.version ./.version
+COPY mcpx/rootfs ./rootfs
+
+# The `file:` dependency on @aigw/core resolves to /ai-gateway-shared/public relative to ${HOME}/packages/*
+COPY ai-gateway-shared/public /ai-gateway-shared/public
 
 RUN chmod +x ./rootfs/usr/local/bin/entrypoint.sh && \
     chmod +x ./rootfs/usr/local/bin/startup.sh
@@ -39,7 +43,7 @@ RUN npm run build:deps && npm install
 RUN npm run install:mcpx-server && npm run build:mcpx-server
 
 WORKDIR ${HOME}/packages/ui
-COPY scripts/generate-config.sh generate-config.sh
+COPY mcpx/scripts/generate-config.sh generate-config.sh
 
 # Fix ARM64/x64 rollup platform dependencies issue for Alpine/musl
 RUN ARCH=$(uname -m) && \
@@ -51,6 +55,9 @@ RUN ARCH=$(uname -m) && \
 
 WORKDIR ${HOME}
 RUN npm run install:ui && npm run build:ui
+
+# Dev deps of the shared root are not needed at runtime
+RUN cd /ai-gateway-shared/public && npm prune --omit=dev
 
 FROM node:22.22.3-alpine3.22 AS mcpx-ui
 ARG UI_PORT
@@ -182,6 +189,7 @@ RUN \
 WORKDIR ${HOME}
 
 COPY --from=base /tmp/version.env /tmp/version.env
+COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} /ai-gateway-shared/public /ai-gateway-shared/public
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/shared-model/dist packages/shared-model/dist
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/shared-model/package.json packages/shared-model/package.json
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/toolkit-core/dist packages/toolkit-core/dist

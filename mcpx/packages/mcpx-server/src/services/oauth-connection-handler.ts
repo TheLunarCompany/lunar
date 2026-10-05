@@ -1,6 +1,6 @@
-import { makeError } from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
-import { withTimeout } from "@mcpx/toolkit-core/time";
+import { makeError } from "@aigw/core/data";
+import { loggableError } from "@aigw/core/logging";
+import { withTimeout } from "@aigw/core/time";
 import {
   auth,
   UnauthorizedError,

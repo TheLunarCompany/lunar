@@ -1,5 +1,5 @@
-import { Clock } from "@mcpx/toolkit-core/time";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { Clock } from "@aigw/core/time";
+import { loggableError } from "@aigw/core/logging";
 import { auditLogEntrySchema } from "@mcpx/shared-model";
 import fs from "fs";
 import { DateTime } from "luxon";

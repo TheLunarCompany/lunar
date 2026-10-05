@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "@jest/globals";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import {
   ErrorCode,
   McpError,

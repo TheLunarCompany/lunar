@@ -5,7 +5,7 @@ import {
   SystemState,
   TargetServerRequest,
 } from "@mcpx/shared-model";
-import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
+import { loggableError, TelemetryLogger } from "@aigw/core/logging";
 import { stringify } from "yaml";
 import { ConfigService, ConfigSnapshot } from "../config.js";
 import {
@@ -46,7 +46,7 @@ export class ControlPlaneService {
   private configService: ConfigService; // Dependency in deprecation - use this.config
   private behaviorService: BehaviorService;
   private auditLog: AuditLogService;
-  private logger: LunarLogger;
+  private logger: TelemetryLogger;
   public config: ControlPlaneConfigService;
 
   constructor(
@@ -55,7 +55,7 @@ export class ControlPlaneService {
     configService: ConfigService,
     behaviorService: BehaviorService,
     auditLog: AuditLogService,
-    logger: LunarLogger,
+    logger: TelemetryLogger,
   ) {
     this.systemState = metricRecorder;
     this.upstreamHandler = upstreamHandler;

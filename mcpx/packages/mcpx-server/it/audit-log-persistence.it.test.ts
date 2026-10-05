@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { systemClock } from "@mcpx/toolkit-core/time";
+import { noOpLogger } from "@aigw/core/logging";
+import { systemClock } from "@aigw/core/time";
 import fs from "fs";
 import os from "os";
 import path from "path";

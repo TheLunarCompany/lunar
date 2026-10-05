@@ -1,5 +1,5 @@
 import { Logger } from "winston";
-import { BatchBuffer } from "@mcpx/toolkit-core/data";
+import { BatchBuffer } from "@aigw/core/data";
 import {
   WebappBoundPayloadOf,
   wrapInEnvelope,

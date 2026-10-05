@@ -8,7 +8,7 @@ import {
 import z from "zod/v4";
 import { parse, SemVer } from "semver";
 import { Logger } from "winston";
-import { headerString } from "@mcpx/toolkit-core/http";
+import { headerString } from "@aigw/core/http";
 import { AGENT_REGISTRY, resolveCanonicalName } from "@mcpx/shared-model";
 
 /** Schema for client icons (version 2025-11-25) */

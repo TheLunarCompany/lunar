@@ -1,7 +1,7 @@
-import { systemClock } from "@mcpx/toolkit-core/time";
+import { systemClock } from "@aigw/core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import path from "path";
-import { LunarLogger, loggableError } from "@mcpx/toolkit-core/logging";
+import { TelemetryLogger, loggableError } from "@aigw/core/logging";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import { OAuthSessionManager } from "../server/oauth-session-manager.js";
@@ -82,13 +82,13 @@ export class Services {
   private _skills: SkillServices;
   private _toolTokenEstimator: ToolTokenEstimator;
 
-  private logger: LunarLogger;
+  private logger: TelemetryLogger;
   private initialized = false;
 
   constructor(
     config: ConfigService,
     meterProvider: MeterProvider,
-    logger: LunarLogger,
+    logger: TelemetryLogger,
     options: ServicesOptions = {},
   ) {
     this._config = config;

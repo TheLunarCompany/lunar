@@ -3,7 +3,7 @@ export * from "./errors.js";
 export { OpenAiLlmClient } from "./openai/index.js";
 export { GoogleLlmClient } from "./google/index.js";
 
-import { withTimeout } from "@mcpx/toolkit-core/time";
+import { withTimeout } from "@aigw/core/time";
 import { LlmConfig, LlmClient, LlmCompletionParams } from "./types.js";
 import { OpenAiLlmClient } from "./openai/index.js";
 import { GoogleLlmClient } from "./google/index.js";

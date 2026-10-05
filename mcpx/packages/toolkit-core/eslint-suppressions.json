@@ -1,7 +1,1 @@
-{
-  "src/app/graceful-shutdown.ts": {
-    "no-console": {
-      "count": 4
-    }
-  }
-}
+{}

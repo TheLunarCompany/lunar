@@ -9,7 +9,7 @@ import { Socket, Server as WSServer } from "socket.io";
 import { Logger } from "winston";
 import { Services } from "../services/services.js";
 import { toClientIdentity } from "../services/identity-service.js";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import { env } from "../env.js";
 import { checkHubConnection } from "./hub-connection-guard.js";
 import { ConfigSnapshot } from "../config.js";

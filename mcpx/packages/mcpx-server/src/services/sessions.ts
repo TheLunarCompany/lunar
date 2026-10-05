@@ -1,5 +1,5 @@
-import { loggableError } from "@mcpx/toolkit-core/logging";
-import { Clock } from "@mcpx/toolkit-core/time";
+import { loggableError } from "@aigw/core/logging";
+import { Clock } from "@aigw/core/time";
 import { ConnectedClientAdapter } from "@mcpx/shared-model";
 import { Logger } from "winston";
 import {

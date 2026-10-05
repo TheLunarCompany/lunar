@@ -10,7 +10,7 @@ import { env } from "../env.js";
 import { getServer } from "./mcp-gateway.js";
 import { extractMetadata, logMetadataWarnings } from "./metadata.js";
 import { CloseSessionReason, TouchSource } from "../services/sessions.js";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import { InMemoryEventStore } from "./streamable-event-store.js";
 import { BehaviorSetting } from "../services/behavior-service.js";
 

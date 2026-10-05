@@ -1,5 +1,5 @@
 import { EnabledSkills, Skill, scopeSubjectKey } from "@mcpx/shared-model";
-import { indexBy, mapValues, partition } from "@mcpx/toolkit-core/data";
+import { indexBy, mapValues, partition } from "@aigw/core/data";
 import { Logger } from "winston";
 import { CapabilityKind } from "../capability-registry.js";
 import {

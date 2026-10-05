@@ -1,7 +1,7 @@
-import { ManualClock } from "@mcpx/toolkit-core/time";
+import { ManualClock } from "@aigw/core/time";
 import { DateTime } from "luxon";
 import { SystemStateTracker } from "./system-state.js";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 
 describe("MetricRecorder", () => {
   it("should initialize with default values", () => {

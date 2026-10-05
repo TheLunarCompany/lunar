@@ -11,8 +11,8 @@ import {
   saveSetupRequestSchema,
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
-import { makeError } from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { makeError } from "@aigw/core/data";
+import { loggableError } from "@aigw/core/logging";
 import express, { Router } from "express";
 import { Logger } from "winston";
 import z, { ZodError } from "zod/v4";

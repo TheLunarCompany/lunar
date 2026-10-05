@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { OAuthProviderFactory } from "./factory.js";
 import { DcrOAuthProvider } from "./dcr.js";
 import { OAuthClientInformationFull } from "@modelcontextprotocol/sdk/shared/auth.js";

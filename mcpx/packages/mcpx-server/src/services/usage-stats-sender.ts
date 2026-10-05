@@ -1,5 +1,5 @@
 import { Logger } from "winston";
-import { hashObject } from "@mcpx/toolkit-core/data";
+import { hashObject } from "@aigw/core/data";
 import {
   WebappBoundPayloadOf,
   wrapInEnvelope,

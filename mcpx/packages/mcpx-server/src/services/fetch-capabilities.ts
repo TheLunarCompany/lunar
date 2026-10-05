@@ -1,4 +1,4 @@
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import { Logger } from "winston";
 import { Prompt, PromptMessage } from "@modelcontextprotocol/sdk/types.js";
 import { env } from "../env.js";

@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { HubDownstreamSessionClient } from "./hub-downstream-session-client.js";
 import { HubSocketAdapter } from "./saved-setups-client.js";
 

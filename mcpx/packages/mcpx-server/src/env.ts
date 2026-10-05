@@ -1,4 +1,4 @@
-import { createEnv } from "@mcpx/toolkit-core/config";
+import { createEnv } from "@aigw/core/config";
 import { stripTrailingSlash } from "@mcpx/toolkit-core/oauth";
 import dotenv from "dotenv";
 import path from "path";

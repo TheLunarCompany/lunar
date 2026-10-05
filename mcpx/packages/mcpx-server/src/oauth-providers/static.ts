@@ -19,7 +19,7 @@ import {
 } from "./model.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
-import { appendToQueryParam } from "@mcpx/toolkit-core/http";
+import { appendToQueryParam } from "@aigw/core/http";
 
 /**
  * Generic static OAuth provider that uses pre-registered OAuth apps

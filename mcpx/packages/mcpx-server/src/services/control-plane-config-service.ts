@@ -9,16 +9,16 @@ import {
   ToolGroup,
   ToolGroupUpdate,
 } from "@mcpx/shared-model";
-import { indexBy, mapValues } from "@mcpx/toolkit-core/data";
-import { LunarLogger } from "@mcpx/toolkit-core/logging";
+import { indexBy, mapValues } from "@aigw/core/data";
+import { TelemetryLogger } from "@aigw/core/logging";
 import { ConfigService, ConfigSnapshot } from "../config.js";
 import { AlreadyExistsError, NotFoundError } from "../errors.js";
 import { Config, TargetServerAttributes } from "../model/config/config.js";
 export class ControlPlaneConfigService {
   private configService: ConfigService;
-  private logger: LunarLogger;
+  private logger: TelemetryLogger;
 
-  constructor(configService: ConfigService, logger: LunarLogger) {
+  constructor(configService: ConfigService, logger: TelemetryLogger) {
     this.configService = configService;
     this.logger = logger.child({ component: "ControlPlaneConfigService" });
   }

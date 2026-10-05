@@ -1,4 +1,4 @@
-import { ConfigConsumer } from "@mcpx/toolkit-core/config";
+import { ConfigConsumer } from "@aigw/core/config";
 import { Logger } from "winston";
 import { Config } from "../model/config/config.js";
 import type {

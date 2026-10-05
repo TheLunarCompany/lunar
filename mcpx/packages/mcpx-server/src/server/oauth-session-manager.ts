@@ -1,6 +1,6 @@
 import { StaticOAuth } from "@mcpx/shared-model";
-import { ConfigConsumer } from "@mcpx/toolkit-core/config";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { ConfigConsumer } from "@aigw/core/config";
+import { loggableError } from "@aigw/core/logging";
 import { Logger } from "winston";
 import { OAuthProviderFactory } from "../oauth-providers/factory.js";
 import { McpxOAuthProviderI } from "../oauth-providers/model.js";

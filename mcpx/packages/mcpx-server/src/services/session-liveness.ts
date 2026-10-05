@@ -1,8 +1,8 @@
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import { Logger } from "winston";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { EmptyResultSchema } from "@modelcontextprotocol/sdk/types.js";
-import { Clock } from "@mcpx/toolkit-core/time";
+import { Clock } from "@aigw/core/time";
 import {
   isInvalidResponseFormatError,
   isMethodNotFoundError,

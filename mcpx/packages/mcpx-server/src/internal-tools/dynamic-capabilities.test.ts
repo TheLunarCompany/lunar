@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import {
   DynamicCapabilitiesService,

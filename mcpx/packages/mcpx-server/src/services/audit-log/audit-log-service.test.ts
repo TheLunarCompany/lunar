@@ -7,8 +7,8 @@ import {
 import { AuditLog } from "../../model/audit-log-type.js";
 import { ToolUsedPayload } from "../../model/audit-log-type.js";
 import { matchesEventTypeFilter } from "./audit-log-filter.js";
-import { systemClock } from "@mcpx/toolkit-core/time";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { systemClock } from "@aigw/core/time";
+import { noOpLogger } from "@aigw/core/logging";
 import { resetEnv } from "../../env.js";
 
 export class InMemoryAuditLogPersistence implements AuditLogPersistence {

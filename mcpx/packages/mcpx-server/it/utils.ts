@@ -3,8 +3,8 @@ import {
   accessLogFor,
   buildLogger,
   loggableError,
-  LunarLogger,
-} from "@mcpx/toolkit-core/logging";
+  TelemetryLogger,
+} from "@aigw/core/logging";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -48,15 +48,15 @@ export const MCPX_BASE_URL = `http://localhost:${MCPX_PORT}`;
 let nextHubPort = 3030; // Start from 3030 and increment for each harness
 
 // Track all created loggers for cleanup
-const allLoggers = new Set<LunarLogger>();
+const allLoggers = new Set<TelemetryLogger>();
 
-const getTestLogger: () => LunarLogger = () => {
+const getTestLogger: () => TelemetryLogger = () => {
   const logger = buildLogger({ logLevel: "debug", label: "test" });
   allLoggers.add(logger);
   return logger;
 };
 
-export const getMcpxLogger: () => LunarLogger = () => {
+export const getMcpxLogger: () => TelemetryLogger = () => {
   const logger = buildLogger({ logLevel: "debug", label: "mcpx" });
   allLoggers.add(logger);
   return logger;
@@ -175,14 +175,14 @@ export const transportTypes: TransportType[] = [
 
 export class TestHarness {
   public clientConnectError?: Error | undefined;
-  private loggers: LunarLogger[] = [];
+  private loggers: TelemetryLogger[] = [];
   public readonly mockHubServer: MockHubServer;
 
   constructor(
     public client: Client,
     public server: Server,
     public services: Services,
-    public testLogger: LunarLogger,
+    public testLogger: TelemetryLogger,
     mockHubServer: MockHubServer,
     private clientConnectExtraHeaders: Record<string, string> = {},
     private targetServers: TargetServer[] = stdioTargetServers,
@@ -193,7 +193,7 @@ export class TestHarness {
     this.mockHubServer = mockHubServer;
   }
 
-  addLogger(logger: LunarLogger): void {
+  addLogger(logger: TelemetryLogger): void {
     this.loggers.push(logger);
   }
 
@@ -328,7 +328,7 @@ export class TestHarness {
 interface TestHarnessProps {
   config?: ConfigService;
   authGuard?: AuthGuard;
-  mcpxLogger?: LunarLogger;
+  mcpxLogger?: TelemetryLogger;
   clientConnectExtraHeaders?: Record<string, string>;
   targetServers?: TargetServer[];
   catalogItems?: CatalogMCPServerItem[];

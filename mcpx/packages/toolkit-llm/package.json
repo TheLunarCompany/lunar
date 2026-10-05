@@ -31,8 +31,8 @@
     "build:deps:one": "cd ../.. && npm run build:deps:one"
   },
   "dependencies": {
+    "@aigw/core": "file:../../../ai-gateway-shared/public/packages/core",
     "@google/genai": "^1.34.0",
-    "@mcpx/toolkit-core": "file:../toolkit-core",
     "openai": "^6.15.0",
     "winston": "^3.17.0",
     "zod": "^3.25.76"

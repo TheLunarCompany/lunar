@@ -1,6 +1,6 @@
 import { OAuthTokensSchema } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { FetchLike } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { Clock, systemClock } from "@mcpx/toolkit-core/time";
+import { Clock, systemClock } from "@aigw/core/time";
 import { Logger } from "winston";
 
 // RFC 6749 section 6, refresh token request.

@@ -13,9 +13,9 @@ import {
   buildLogger,
   loggableError,
   logFormatForEnv,
-} from "@mcpx/toolkit-core/logging";
-import { GracefulShutdown } from "@mcpx/toolkit-core/app";
-import { compileRanges } from "@mcpx/toolkit-core/ip-access";
+} from "@aigw/core/logging";
+import { GracefulShutdown } from "@aigw/core/app";
+import { compileRanges } from "@aigw/core/ip-access";
 
 const { MCPX_PORT, LOG_LEVEL } = env;
 

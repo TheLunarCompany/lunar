@@ -1,4 +1,6 @@
 // No unit test: this is a god object that interleaves pure decisions, effectful
+import { normalizeServerName } from "@mcpx/toolkit-core/data";
+
 // collaborator calls, and timers (setTimeout/setInterval/queueMicrotask), so
 // testing any behavior means mocking all ten collaborators and fighting fake
 // timers. Behavior is covered by the it/ integration tests for now. To make it
@@ -9,12 +11,8 @@
 //   - AuthRecovery: executeWithAuthRetry, handleAuthFailure, checkTokenExpiry.
 //   - Pass ENABLE_PROMPT_CAPABILITY/READ_TARGET_SERVERS_FROM_FILE via config
 //     instead of reading env inline.
-import {
-  makeError,
-  normalizeServerName,
-  stringifyEq,
-} from "@mcpx/toolkit-core/data";
-import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
+import { makeError, stringifyEq } from "@aigw/core/data";
+import { loggableError, TelemetryLogger } from "@aigw/core/logging";
 import {
   Prompt,
   PromptMessage,
@@ -153,7 +151,7 @@ export class UpstreamHandler
     private capabilityRegistry: CapabilityRegistry,
     private capabilityResolver: CapabilityResolver,
     private configService: ConfigService,
-    private logger: LunarLogger,
+    private logger: TelemetryLogger,
     config: UpstreamHandlerConfig,
   ) {
     this.logger = logger.child({ component: "UpstreamHandler" });

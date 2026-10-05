@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { EnvRequirement, EnvRequirements } from "@mcpx/shared-model";
 import { PendingInputError } from "../errors.js";
 import { EnvValue } from "../model/target-servers.js";

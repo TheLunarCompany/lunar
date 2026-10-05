@@ -2,14 +2,14 @@ import {
   resolveClientCredentials,
   resolveClientId,
 } from "../oauth-providers/resolve-credentials.js";
-import { ConfigConsumer } from "@mcpx/toolkit-core/config";
+import { ConfigConsumer } from "@aigw/core/config";
 import { CredentialField } from "@mcpx/shared-model";
 import { Logger } from "winston";
 import { env } from "../env.js";
 import { Config } from "../model/config/config.js";
 import { OauthCredentialResolver } from "./env-var-manager.js";
 import { CatalogHostsResolver } from "./catalog-manager.js";
-import { compact } from "@mcpx/toolkit-core/data";
+import { compact } from "@aigw/core/data";
 
 // This class validates that a given `Config` object can
 // be used with the given environment variables.

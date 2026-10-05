@@ -1,4 +1,4 @@
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import { Logger } from "winston";
 
 // Dispatches each listener defensively so one bad listener can't take the rest

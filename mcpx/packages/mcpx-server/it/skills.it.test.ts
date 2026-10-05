@@ -3,7 +3,7 @@ import {
   SkillCatalogResponse,
   SkillWithDraft,
 } from "@mcpx/shared-model";
-import { withAsyncPolling } from "@mcpx/toolkit-core/time";
+import { withAsyncPolling } from "@aigw/core/time";
 import { getTestHarness, MCPX_BASE_URL, TestHarness } from "./utils.js";
 
 const seedSkill: Skill = {

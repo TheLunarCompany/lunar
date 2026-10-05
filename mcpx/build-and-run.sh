@@ -8,7 +8,7 @@
 set -e
 
 echo "Building mcpx image (server + UI)..."
-docker build --target mcpx -t mcpx -f Dockerfile .
+docker build --target mcpx -t mcpx -f "$(dirname "$0")/Dockerfile" "$(dirname "$0")/.."
 
 echo "Stopping and removing existing container if it exists..."
 docker stop mcpx 2>/dev/null || true

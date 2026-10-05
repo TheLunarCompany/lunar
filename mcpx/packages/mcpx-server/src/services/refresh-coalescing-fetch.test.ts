@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { ManualClock } from "@mcpx/toolkit-core/time";
+import { noOpLogger } from "@aigw/core/logging";
+import { ManualClock } from "@aigw/core/time";
 import { refreshAuthorization } from "@modelcontextprotocol/sdk/client/auth.js";
 import { FetchLike } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {

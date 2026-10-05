@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { SetIdentityPayload } from "@mcpx/webapp-protocol/messages";
 import { IdentityService, toClientIdentity } from "./identity-service.js";
 

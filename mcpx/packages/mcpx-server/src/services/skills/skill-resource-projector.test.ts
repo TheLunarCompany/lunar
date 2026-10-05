@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { Skill, SkillInput, SkillWithDraft } from "@mcpx/shared-model";
 import { SetPersonalSkillsPayload } from "@mcpx/webapp-protocol/messages";
 import { CapabilityRegistry } from "../capability-registry.js";

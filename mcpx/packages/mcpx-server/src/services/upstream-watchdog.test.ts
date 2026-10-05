@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { UpstreamWatchdog } from "./upstream-watchdog.js";
 
 const INTERVAL_MS = 10;

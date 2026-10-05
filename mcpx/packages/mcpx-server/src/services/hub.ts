@@ -1,6 +1,6 @@
-import { Watched } from "@mcpx/toolkit-core/app";
-import { makeError } from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { Watched } from "@aigw/core/app";
+import { makeError } from "@aigw/core/data";
+import { loggableError } from "@aigw/core/logging";
 import {
   Ack,
   DynamicCapabilitiesMatchingAck,

@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { DEFAULT_CONFIG } from "../config.js";
 import { Config } from "../model/config/config.js";
 import { PermissionManager } from "./permissions.js";

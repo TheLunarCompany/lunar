@@ -9,7 +9,7 @@ import {
   extractToolParameters,
   OriginalClientI,
 } from "./client-extension.js";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { ZodError } from "zod/v4";
 
 import {

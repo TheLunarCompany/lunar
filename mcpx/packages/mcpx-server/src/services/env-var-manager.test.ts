@@ -1,4 +1,4 @@
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { EnvVarManager } from "./env-var-manager.js";
 
 // Per-test factory: each call returns a fresh manager plus closure-scoped

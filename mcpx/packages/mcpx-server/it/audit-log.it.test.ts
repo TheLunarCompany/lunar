@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it } from "@jest/globals";
-import { withAsyncPolling } from "@mcpx/toolkit-core/time";
+import { withAsyncPolling } from "@aigw/core/time";
 import fs from "fs";
 import path from "path";
 import { env, resetEnv } from "../src/env.js";

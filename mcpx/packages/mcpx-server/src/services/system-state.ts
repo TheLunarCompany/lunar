@@ -12,12 +12,9 @@ import {
   TargetServerToolParameter,
   Usage,
 } from "@mcpx/shared-model/api";
-import {
-  compact,
-  distinct,
-  normalizeServerName,
-} from "@mcpx/toolkit-core/data";
-import { Clock } from "@mcpx/toolkit-core/time";
+import { compact, distinct } from "@aigw/core/data";
+import { normalizeServerName } from "@mcpx/toolkit-core/data";
+import { Clock } from "@aigw/core/time";
 import { Logger } from "winston";
 import {
   Prompt as McpPrompt,

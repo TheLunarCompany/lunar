@@ -1,4 +1,4 @@
-import { makeError } from "@mcpx/toolkit-core/data";
+import { makeError } from "@aigw/core/data";
 import fs from "fs";
 import path from "path";
 import { Logger } from "winston";
@@ -8,7 +8,7 @@ import {
   targetServerConfigSchema,
 } from "../model/target-servers.js";
 import { InvalidSchemaError } from "../errors.js";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import { env } from "../env.js";
 
 export interface ServerConfigManager {

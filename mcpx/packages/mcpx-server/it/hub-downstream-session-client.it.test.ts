@@ -1,6 +1,6 @@
 import { io as connectSocketIO, Socket } from "socket.io-client";
 import { SemVer } from "semver";
-import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@aigw/core/logging";
 import { HubDownstreamSessionClient } from "../src/services/hub-downstream-session-client.js";
 import { HubSocketAdapter } from "../src/services/saved-setups-client.js";
 import { PersistedDownstreamSessionData } from "../src/services/downstream-session-store.js";

@@ -1,4 +1,4 @@
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import express from "express";
 import { Logger } from "winston";
 import { z } from "zod/v4";

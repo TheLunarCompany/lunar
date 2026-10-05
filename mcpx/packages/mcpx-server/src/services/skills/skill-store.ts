@@ -8,7 +8,7 @@ import {
   SetPersonalSkillsPayload,
   SetPublishedSkillsPayload,
 } from "@mcpx/webapp-protocol/messages";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import { Logger } from "winston";
 
 // Outbound authoring round-trips to Hub. The store delegates here, then ingests the

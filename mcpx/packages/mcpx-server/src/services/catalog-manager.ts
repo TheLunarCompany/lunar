@@ -5,7 +5,8 @@ import {
   McpxBoundPayloads,
   CatalogItemWire,
 } from "@mcpx/webapp-protocol/messages";
-import { normalizeServerName, stringifyEq } from "@mcpx/toolkit-core/data";
+import { normalizeServerName } from "@mcpx/toolkit-core/data";
+import { stringifyEq } from "@aigw/core/data";
 import {
   ClientCredentialsOauthProvider,
   EnvRequirement,

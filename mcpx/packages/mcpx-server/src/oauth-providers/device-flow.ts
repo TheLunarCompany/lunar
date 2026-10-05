@@ -1,4 +1,4 @@
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { loggableError } from "@aigw/core/logging";
 import {
   OAuthClientInformationFull,
   OAuthClientMetadata,

@@ -1,6 +1,6 @@
-import { makeError } from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
-import { measureNonFailable } from "@mcpx/toolkit-core/time";
+import { makeError, stableStringify } from "@aigw/core/data";
+import { loggableError } from "@aigw/core/logging";
+import { measureNonFailable } from "@aigw/core/time";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequest,
@@ -19,7 +19,6 @@ import {
 import { Logger } from "winston";
 import { env } from "../env.js";
 import { AuditLogEvent } from "../model/audit-log-type.js";
-import { stableStringify } from "@mcpx/toolkit-core/data";
 import { Services } from "../services/services.js";
 import { TokenExpiredError } from "../errors.js";
 import {
