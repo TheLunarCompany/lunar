@@ -9,15 +9,21 @@ export const isValidJson = (value: string): boolean => {
   }
 };
 
+function tryParseUrl(val: string): URL | undefined {
+  try {
+    return new URL(val);
+  } catch {
+    return undefined;
+  }
+}
+
 export const remoteUrlSchema = z.string().superRefine((val, ctx) => {
   if (!val) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "URL is required" });
     return;
   }
-  let parsed: URL;
-  try {
-    parsed = new URL(val);
-  } catch {
+  const parsed = tryParseUrl(val);
+  if (!parsed) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid URL" });
     return;
   }
@@ -98,18 +104,21 @@ export const parseServerPayload = (
     return localServerPayloadSchema.safeParse(server);
   }
 
-  const resolvedType =
-    server.type === "http"
-      ? ("streamable-http" as const)
-      : "url" in server && typeof server.url === "string"
-        ? (inferServerTypeFromUrl(server.url) ?? ("streamable-http" as const))
-        : ("streamable-http" as const);
-
   return remoteServerPayloadSchema.safeParse({
     ...server,
-    type: resolvedType,
+    type: resolveRemoteServerType(server),
   });
 };
+
+function resolveRemoteServerType(
+  server: z.input<typeof mcpServerSchema>,
+): "sse" | "streamable-http" {
+  if (server.type === "http") return "streamable-http";
+  if ("url" in server && typeof server.url === "string") {
+    return inferServerTypeFromUrl(server.url) ?? "streamable-http";
+  }
+  return "streamable-http";
+}
 
 /**
  * Maps loose MCP JSON (`mcpJsonSchema`, one object per server name) to the
@@ -203,18 +212,7 @@ export const updateJsonWithServerType = (
       return jsonContent;
     }
 
-    // Determine server type
-    let serverType: string;
-    if (serverData.type) {
-      serverType = serverData.type;
-    } else if ("url" in serverData) {
-      serverType = inferServerTypeFromUrl(serverData.url) || "sse";
-      if (serverType === "http") {
-        serverType = "streamable-http";
-      }
-    } else {
-      serverType = "stdio";
-    }
+    const serverType = resolveServerType(serverData);
 
     const { icon: _stripIcon, ...serverDataWithoutIcon } = serverData;
     const updatedJson = {
@@ -230,3 +228,14 @@ export const updateJsonWithServerType = (
     return jsonContent;
   }
 };
+
+function resolveServerType(serverData: {
+  type?: string;
+  url?: string;
+}): string {
+  if (serverData.type) return serverData.type;
+  if (serverData.url !== undefined) {
+    return inferServerTypeFromUrl(serverData.url) ?? "sse";
+  }
+  return "stdio";
+}

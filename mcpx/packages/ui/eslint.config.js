@@ -7,6 +7,7 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
+import { uiReviewRules } from "../../../eslint.review-rules.js";
 
 export default tseslint.config(
   {
@@ -22,7 +23,9 @@ export default tseslint.config(
       "**/*.test.tsx",
       "public/mockServiceWorker.js",
     ],
-  }, // TypeScript files with type-aware linting
+  },
+  { linterOptions: { reportUnusedDisableDirectives: "error" } },
+  // TypeScript files with type-aware linting
   {
     files: ["**/*.{ts,tsx}"],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -47,16 +50,17 @@ export default tseslint.config(
       ...react.configs.recommended.rules,
       ...react.configs["jsx-runtime"].rules,
       ...reactHooks.configs.recommended.rules,
+      "react-hooks/exhaustive-deps": "error",
       "react/jsx-no-target-blank": "off",
       "react-refresh/only-export-components": [
-        "warn",
+        "error",
         { allowConstantExport: true },
       ],
       "react/prop-types": "off",
       // Disabled: return types are inferrable and this is a React app
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
@@ -90,7 +94,9 @@ export default tseslint.config(
     rules: {
       "react-refresh/only-export-components": "off",
     },
-  }, // JavaScript files (legacy shadcn/ui components)
+  },
+  ...uiReviewRules,
+  // JavaScript files (legacy shadcn/ui components)
   {
     files: ["**/*.{js,jsx}"],
     extends: [js.configs.recommended],
@@ -113,9 +119,10 @@ export default tseslint.config(
       ...react.configs.recommended.rules,
       ...react.configs["jsx-runtime"].rules,
       ...reactHooks.configs.recommended.rules,
+      "react-hooks/exhaustive-deps": "error",
       "react/jsx-no-target-blank": "off",
       "react-refresh/only-export-components": [
-        "warn",
+        "error",
         { allowConstantExport: true },
       ],
       // Disable prop-types for JSX files - this is a TypeScript project
@@ -124,4 +131,15 @@ export default tseslint.config(
     },
   },
   storybook.configs["flat/recommended"],
+  {
+    files: [
+      "**/*.stories.@(ts|tsx|js|jsx|mjs|cjs)",
+      "**/*.story.@(ts|tsx|js|jsx|mjs|cjs)",
+    ],
+    rules: {
+      "storybook/hierarchy-separator": "error",
+      "storybook/no-redundant-story-name": "error",
+      "storybook/prefer-pascal-case": "error",
+    },
+  },
 );

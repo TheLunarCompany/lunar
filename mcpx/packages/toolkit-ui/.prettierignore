@@ -5,3 +5,6 @@ tsconfig.build.json
 dist
 .mcpx
 config
+
+# Written by eslint --suppress-rule / --prune-suppressions
+eslint-suppressions.json

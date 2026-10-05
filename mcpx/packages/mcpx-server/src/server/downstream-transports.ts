@@ -567,6 +567,7 @@ class DownstreamTransportFactory {
     type SdkTransportInternals = {
       _webStandardTransport: { _initialized: boolean; sessionId: string };
     };
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- reads MCP SDK transport internals
     const inner = (streamableTransport as unknown as SdkTransportInternals)
       ._webStandardTransport;
     inner._initialized = true;

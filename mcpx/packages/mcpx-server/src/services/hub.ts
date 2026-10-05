@@ -483,11 +483,7 @@ export class HubService {
     isError: boolean;
     isCallFailure: boolean;
   }): void {
-    const errorType = params.isError
-      ? params.isCallFailure
-        ? "call_failed"
-        : "tool_error"
-      : null;
+    const errorType = errorTypeOf(params);
 
     this.toolCallBatcher.add([
       {
@@ -1047,4 +1043,12 @@ export class HubService {
       void this.connect(this.lastConnectProps);
     }, delay);
   }
+}
+
+function errorTypeOf(params: {
+  isError: boolean;
+  isCallFailure: boolean;
+}): "call_failed" | "tool_error" | null {
+  if (!params.isError) return null;
+  return params.isCallFailure ? "call_failed" : "tool_error";
 }

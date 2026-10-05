@@ -113,6 +113,29 @@ describe("AuditLogService", () => {
 
       expect(persistence.getEvents()).toHaveLength(2);
     });
+
+    it("rejects with the persistence error when the final flush fails", async () => {
+      const persistError = new Error("disk full");
+      const failingPersistence: AuditLogPersistence = {
+        persist: async () => {
+          throw persistError;
+        },
+        cleanup: async () => {},
+        read: async () => [],
+      };
+      const failingService = new AuditLogService(
+        systemClock,
+        noOpLogger,
+        failingPersistence,
+        60_000,
+      );
+      failingService.log({
+        eventType: "target_server_added",
+        payload: { name: "slack" },
+      });
+
+      await expect(failingService.shutdown()).rejects.toBe(persistError);
+    });
   });
 
   describe("read", () => {

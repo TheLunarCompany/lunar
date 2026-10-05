@@ -128,9 +128,10 @@ export const auditLogsQuerySchema = z.object({
   eventType: z
     .union([auditLogEventTypeSchema, z.array(auditLogEventTypeSchema)])
     .optional()
-    .transform((v) =>
-      v === undefined ? undefined : Array.isArray(v) ? v : [v],
-    ),
+    .transform((v) => {
+      if (v === undefined) return undefined;
+      return Array.isArray(v) ? v : [v];
+    }),
   limit: z.coerce.number().int().min(1).max(500).optional().default(100),
 });
 

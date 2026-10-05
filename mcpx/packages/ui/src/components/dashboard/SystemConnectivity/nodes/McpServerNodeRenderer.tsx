@@ -60,7 +60,7 @@ const McpServerNodeRenderer = ({
   const domainIconUrl = useDomainIcon(data.name);
 
   const isShowErrorFrame =
-    data.tools?.length == 0 && status === SERVER_STATUS.connection_failed;
+    data.tools?.length === 0 && status === SERVER_STATUS.connection_failed;
   const isPendingInput = status === SERVER_STATUS.pending_input;
   const isPendingAuth = status === SERVER_STATUS.pending_auth;
   const isInactive = status === SERVER_STATUS.connected_inactive;

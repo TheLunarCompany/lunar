@@ -40,7 +40,7 @@ export class AuditLogService {
       await this.persistence.persist(eventsToFlush);
     } catch (error) {
       this.logger.error("Error during audit log persistence", { error });
-      Promise.reject(error);
+      throw error;
     }
   }
 

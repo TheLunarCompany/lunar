@@ -3,6 +3,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 import * as jestPlugin from "eslint-plugin-jest";
+import { backendReviewRules } from "../../../eslint.review-rules.js";
 
 export default defineConfig([
   {
@@ -10,6 +11,8 @@ export default defineConfig([
     plugins: { js },
     extends: ["js/recommended"],
   },
+  tseslint.configs.recommended,
+  { linterOptions: { reportUnusedDisableDirectives: "error" } },
   {
     files: ["**/*.{js,mjs,cjs,ts}"],
     languageOptions: {
@@ -19,9 +22,9 @@ export default defineConfig([
   },
   {
     rules: {
-      "@typescript-eslint/explicit-function-return-type": "warn",
+      "@typescript-eslint/explicit-function-return-type": "error",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
@@ -50,6 +53,7 @@ export default defineConfig([
     },
   },
 
+  ...backendReviewRules,
+
   globalIgnores(["./eslint.config.js", "./jest.config.cjs", "./dist"]),
-  tseslint.configs.recommended,
 ]);

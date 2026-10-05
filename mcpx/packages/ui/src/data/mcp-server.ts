@@ -12,7 +12,7 @@ export function addMcpServer({
   payload: RawCreateTargetServerRequest;
 }): Promise<TargetServer> {
   // if a env variable was left empty - replace it with an explicit "null"
-  if (payload.type && payload.type == "stdio") {
+  if (payload.type && payload.type === "stdio") {
     if (payload.env) {
       for (const key of Object.keys(payload.env)) {
         // Convert empty string to null

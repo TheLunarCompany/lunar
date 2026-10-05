@@ -54,10 +54,12 @@ export interface ManualIntervalClock extends IntervalClock {
 }
 
 export function createManualIntervalClock(): ManualIntervalClock {
+  // eslint-disable-next-line no-restricted-syntax -- the fake clock's registered callback is its state
   let registeredFn: (() => void) | null = null;
   return {
     setInterval(fn): NodeJS.Timeout {
       registeredFn = fn;
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- fake timer handle
       return 0 as unknown as NodeJS.Timeout;
     },
     clearInterval(): void {

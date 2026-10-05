@@ -97,7 +97,7 @@ export class ControlPlaneConfigService {
 
       const effectiveName = updates.name ?? name;
       const isNameChange = effectiveName !== name;
-      if (isNameChange && toolGroupsByName[updates.name!]) {
+      if (isNameChange && toolGroupsByName[effectiveName]) {
         throw new AlreadyExistsError(
           `Tool group name '${updates.name}' is already in use`,
         );

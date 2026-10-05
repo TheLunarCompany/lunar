@@ -3,6 +3,10 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 import * as jestPlugin from "eslint-plugin-jest";
+import {
+  backendReviewRules,
+  serviceEntrypointRules,
+} from "../../../eslint.review-rules.js";
 
 export default defineConfig([
   {
@@ -10,6 +14,8 @@ export default defineConfig([
     plugins: { js },
     extends: ["js/recommended"],
   },
+  tseslint.configs.recommended,
+  { linterOptions: { reportUnusedDisableDirectives: "error" } },
   {
     files: ["**/*.{js,mjs,cjs,ts}"],
     languageOptions: {
@@ -19,10 +25,10 @@ export default defineConfig([
   },
   {
     rules: {
-      "@typescript-eslint/explicit-function-return-type": "warn",
+      "@typescript-eslint/explicit-function-return-type": "error",
       // allowing only for `_` to be an unused var
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
@@ -55,6 +61,9 @@ export default defineConfig([
     },
   },
 
+  ...backendReviewRules,
+  serviceEntrypointRules,
+
   globalIgnores([
     "./lunar-interceptor.ts",
     "./eslint.config.js",
@@ -63,5 +72,4 @@ export default defineConfig([
     "./loader.mjs",
     "./dist",
   ]),
-  tseslint.configs.recommended,
 ]);

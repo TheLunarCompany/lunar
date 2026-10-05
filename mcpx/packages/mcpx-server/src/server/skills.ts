@@ -6,6 +6,7 @@ import {
   Skill,
   SkillCatalogResponse,
   SkillInput,
+  SkillCapabilityGroup,
   SkillWithDraft,
   updateSkillCapabilitiesRequestSchema,
   updateSkillDetailsRequestSchema,
@@ -175,17 +176,15 @@ export function buildSkillsRouter(
       return;
     }
 
-    const nextCapabilityGroup = parsed.data.capabilityGroup;
     const input: SkillInput = {
       name: existing.name,
       description: existing.description,
       body: existing.body,
       exposeAsPrompt: existing.exposeAsPrompt,
-      ...(nextCapabilityGroup === undefined
-        ? { capabilityGroup: existing.capabilityGroup }
-        : nextCapabilityGroup?.items.length
-          ? { capabilityGroup: { items: nextCapabilityGroup.items } }
-          : {}),
+      ...capabilityGroupUpdate({
+        requested: parsed.data.capabilityGroup,
+        current: existing.capabilityGroup,
+      }),
     };
 
     try {
@@ -380,4 +379,19 @@ export function buildSkillsRouter(
   });
 
   return router;
+}
+
+// undefined keeps the current group; null or an empty group clears it.
+function capabilityGroupUpdate(params: {
+  requested: SkillCapabilityGroup | null | undefined;
+  current: Skill["capabilityGroup"];
+}): Pick<SkillInput, "capabilityGroup"> {
+  const { requested, current } = params;
+  if (requested === undefined) {
+    return { capabilityGroup: current };
+  }
+  if (requested?.items.length) {
+    return { capabilityGroup: { items: requested.items } };
+  }
+  return {};
 }
