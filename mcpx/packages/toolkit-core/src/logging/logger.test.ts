@@ -332,6 +332,34 @@ describe("redactUrl", () => {
   it("matches param names case-insensitively", () => {
     expect(redactUrl("/cb?Access_Token=abc")).toContain("%5BREDACTED%5D");
   });
+
+  it("redacts secrets inside a URL nested in a param value", () => {
+    const callback = "https://router.example/auth/callback?code=secret&state=s";
+    const redacted = redactUrl(
+      `/runtime/login?redirect_uri=${encodeURIComponent(callback)}`,
+    );
+
+    const redirectUri = new URLSearchParams(redacted.split("?")[1]).get(
+      "redirect_uri",
+    );
+    expect(redirectUri).toBe(
+      "https://router.example/auth/callback?code=%5BREDACTED%5D&state=s",
+    );
+  });
+
+  it("bounds nesting on a crafted deep URL instead of overflowing the stack", () => {
+    const url = `/x?${"a=?".repeat(10_000)}`;
+
+    const redacted = redactUrl(url);
+
+    expect(redacted).toContain("REDACTED");
+    expect(redacted.length).toBeLessThan(100);
+  });
+
+  it("leaves a nested URL without sensitive params unchanged", () => {
+    const url = `/login?redirect_uri=${encodeURIComponent("https://app.example/admin?tab=2")}`;
+    expect(redactUrl(url)).toBe(url);
+  });
 });
 
 describe("DEFAULT_REDACT_KEYS", () => {

@@ -321,24 +321,59 @@ export function buildLogger(
 // OAuth ?code=…). `code` isn't caught by the key stems, hence the extra set.
 const SENSITIVE_URL_PARAMS = new Set(["code"].map(normalizeKey));
 
+// Nested URLs inspected below the top level. Deeper values that still carry a
+// query are redacted whole: unbounded recursion lets a crafted URL overflow the
+// stack inside the access log's `finish` handler.
+const MAX_NESTED_URL_DEPTH = 2;
+
 export function redactUrl(url: string): string {
+  return redactUrlAtDepth({ url, depth: 0 });
+}
+
+function redactUrlAtDepth(params: { url: string; depth: number }): string {
+  const { url, depth } = params;
   const queryStart = url.indexOf("?");
   if (queryStart === -1) {
     return url;
   }
   const path = url.slice(0, queryStart);
-  const params = new URLSearchParams(url.slice(queryStart + 1));
-  let redacted = false;
-  for (const key of new Set(params.keys())) {
-    if (
-      isSensitiveKey(key, DEFAULT_REDACT_KEYS) ||
-      SENSITIVE_URL_PARAMS.has(normalizeKey(key))
-    ) {
-      params.set(key, "[REDACTED]");
-      redacted = true;
-    }
+  const entries = [...new URLSearchParams(url.slice(queryStart + 1))].map(
+    ([key, value]) => ({
+      key,
+      value,
+      redacted: redactParam({ key, value, depth }),
+    }),
+  );
+  if (entries.every(({ value, redacted }) => value === redacted)) {
+    return url;
   }
-  return redacted ? `${path}?${params.toString()}` : url;
+  const query = new URLSearchParams(
+    entries.map(({ key, redacted }) => [key, redacted]),
+  );
+  return `${path}?${query.toString()}`;
+}
+
+// A value can itself be a URL with secrets in its query, e.g. a login
+// `redirect_uri` pointing at an OAuth callback that carries `?code=…`.
+function redactParam(params: {
+  key: string;
+  value: string;
+  depth: number;
+}): string {
+  const { key, value, depth } = params;
+  if (
+    isSensitiveKey(key, DEFAULT_REDACT_KEYS) ||
+    SENSITIVE_URL_PARAMS.has(normalizeKey(key))
+  ) {
+    return "[REDACTED]";
+  }
+  if (!value.includes("?")) {
+    return value;
+  }
+  if (depth >= MAX_NESTED_URL_DEPTH) {
+    return "[REDACTED]";
+  }
+  return redactUrlAtDepth({ url: value, depth: depth + 1 });
 }
 
 export const REQUEST_ID_HEADER = "x-request-id";
