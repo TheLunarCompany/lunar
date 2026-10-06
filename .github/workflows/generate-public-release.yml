@@ -1,0 +1,48 @@
+name: Create Public Draft Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Release for service type"
+        required: true
+        type: string
+      tag:
+        description: "Release Tag"
+        required: true
+        type: string
+      name:
+        description: "Release Name"
+        required: true
+        type: string
+      body:
+          description: "Release Message"
+          required: true
+          type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create_release:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Decode Base64
+        run: |
+          decoded_string=$(echo "${{ inputs.body }}" | base64 -d)
+          
+          echo "Decoded string: $decoded_string"
+
+          cat > ${{ github.workspace }}/body.txt <<-EOF
+          $decoded_string
+          EOF
+
+      - name: Create Public Draft Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: ${{ github.workspace }}/body.txt
+          draft: true
+          name: "${{ inputs.name }}"
+          tag_name: "${{ inputs.tag }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
