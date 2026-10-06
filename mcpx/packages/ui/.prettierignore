@@ -1,0 +1,10 @@
+# Ignore artifacts:
+build
+coverage
+tsconfig.build.json
+
+# Generated files
+public/mockServiceWorker.js
+
+# Written by eslint --suppress-rule / --prune-suppressions
+eslint-suppressions.json

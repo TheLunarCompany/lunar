@@ -1,0 +1,25 @@
+name: TransformAPICall
+description: A processor that transforms request according to the provided rules
+exec: transform_api_call_processor.go
+parameters:
+  set:
+    type: map_of_strings
+    description: "Map of key/value for set operation to be performed on the request. The key is JSON path to the field to be set and the value is the value to be set."
+    required: false
+
+  obfuscate:
+    type: list_of_strings
+    description: "List of fields for obfuscate operation to be performed on the request. Each value is JSON path to the field to be obfuscated"
+    default: []
+    required: false
+
+  delete:
+    type: list_of_strings
+    description: "List of fields for delete operation to be performed on the request. Each value is JSON path to the field to be deleted"
+    default: []
+    required: false
+  
+output_streams:  
+    - type: StreamTypeAny
+input_stream:  
+  type: StreamTypeAny
