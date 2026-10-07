@@ -1,0 +1,519 @@
+{
+  "src/components/ConnectionManager.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/components/MarkdownContent.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/capabilities/CapabilitiesCatalog.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/capabilities/CapabilityGroupSheet.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/components/capabilities/CapabilityItemDetailsDialog.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/capabilities/CapabilityPromptCard.tsx": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/capabilities/CapabilityProvidersSection.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/capabilities/CustomCapabilityToolDialog.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/capabilities/current-tool-capabilities.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    }
+  },
+  "src/components/dashboard/AddServerModal.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 5
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/AgentDetailsModal.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 6
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    },
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/AgentSkillsSection.tsx": {
+    "no-nested-ternary": {
+      "count": 3
+    }
+  },
+  "src/components/dashboard/DomainBadge.tsx": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/EnvVarsEditor/EnvVarRow.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/components/dashboard/EnvVarsEditor/EnvVarsEditor.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    }
+  },
+  "src/components/dashboard/EnvVarsEditor/inputs/EnvReferenceInput.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 3
+    }
+  },
+  "src/components/dashboard/McpxDetailsModal.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/McpxServerCard.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/ServerDetailsModal.tsx": {
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/components/dashboard/SystemConnectivity/ConnectivityDiagram.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 4
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 2
+    }
+  },
+  "src/components/dashboard/SystemConnectivity/nodes/AddAgentModal.tsx": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/SystemConnectivity/nodes/AgentInstructions/CustomInstructions.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/SystemConnectivity/nodes/CustomCurvedEdge.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/SystemConnectivity/nodes/use-react-flow-data.ts": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/dashboard/helpers.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/layout/Layout.tsx": {
+    "no-nested-ternary": {
+      "count": 3
+    }
+  },
+  "src/components/mcp-servers/McpServerCatalogCard.tsx": {
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/components/mcp-servers/McpServersSection.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/saved-setups/SavedSetupSheet.tsx": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/skills/SkillAppliedAgents.tsx": {
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/components/skills/SkillAppliedAgentsCard.tsx": {
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/components/skills/SkillAppliedAgentsSummary.tsx": {
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/components/skills/SkillCapabilityPicker.tsx": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/skills/SkillLinkedCapabilities.tsx": {
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 1
+    }
+  },
+  "src/components/skills/SkillsGrid.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 3
+    }
+  },
+  "src/components/skills/skill-capability-picker-view-model.ts": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/tools/CustomToolDialog.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    },
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/tools/CustomToolModal.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 10
+    },
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/components/tools/DynamicJsonForm.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 8
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/components/tools/JsonEditor.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/tools/ToolCard.tsx": {
+    "no-nested-ternary": {
+      "count": 3
+    }
+  },
+  "src/components/tools/ToolDetailsDialog.tsx": {
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 4
+    }
+  },
+  "src/components/tools/ToolGroupSheet.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    }
+  },
+  "src/components/tools/ToolSelector.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/tools/ToolsCatalogSection.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/ui/chart.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 8
+    }
+  },
+  "src/components/ui/creatable-combobox.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 5
+    }
+  },
+  "src/components/ui/custom-monaco-editor.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/ui/custom-tabs.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 3
+    }
+  },
+  "src/components/ui/input-group.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/ui/json-upload.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/components/ui/node-card/node-indicator-badge.tsx": {
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 1
+    }
+  },
+  "src/components/ui/sidebar.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 3
+    }
+  },
+  "src/components/ui/toast.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/config/runtime-config.ts": {
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 2
+    }
+  },
+  "src/contexts/AuthContext.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/contexts/FeatureFlagsContext.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 3
+    }
+  },
+  "src/data/saved-setups.ts": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 3
+    }
+  },
+  "src/data/skills.ts": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 6
+    }
+  },
+  "src/hooks/use-color-scheme.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/hooks/useMcpxProbe.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/hooks/useServerInactive.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  },
+  "src/hooks/useToolCatalog.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 13
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    },
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 1
+    }
+  },
+  "src/main.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/mocks/handlers.ts": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/monaco/init-monaco.ts": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/pages/AuditLog.tsx": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/pages/Catalog.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 5
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 3
+    }
+  },
+  "src/pages/Dashboard.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/pages/McpRegistry.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 5
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 2
+    }
+  },
+  "src/pages/McpServerAdd.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/pages/NewToolCatalog.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/pages/SavedSetups.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/pages/SkillAgentsEditor.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/pages/SkillCapabilitiesEditor.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/pages/SkillCreateStart.tsx": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "count": 3
+    }
+  },
+  "src/pages/SkillDetail.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 3
+    }
+  },
+  "src/pages/SkillEditor.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/store/access-controls.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    }
+  },
+  "src/store/tools.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 7
+    }
+  },
+  "src/utils/index.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 3
+    }
+  },
+  "src/utils/jsonUtils.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    }
+  },
+  "src/utils/override-params.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 1
+    }
+  }
+}
