@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ "$TLS_PASSTHROUGH_ON" = "false" ] || [ -z "$TLS_PASSTHROUGH_ON" ]; then
+    exit 0
+else 
+    if ! pgrep -x "squid" > /dev/null; then
+      echo "Starting TLS passthrough on port: ${TLS_PASSTHROUGH_PORT:-8001}"
+      squid -N > /dev/null 2>&1
+    fi
+fi
