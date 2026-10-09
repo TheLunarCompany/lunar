@@ -30,6 +30,7 @@ import {
   UpstreamHandlerOAuthHandler,
   TargetServerChangeNotifier,
 } from "./upstream-handler.js";
+import { ReArmBackoff } from "./hub-backoff.js";
 import { ThrottledSender } from "./throttled-sender.js";
 import { createToolCallBatcher, ToolCallBatcher } from "./tool-call-batcher.js";
 import { UsageStatsSender } from "./usage-stats-sender.js";
@@ -176,6 +177,7 @@ export interface HubServiceOptions {
   authTokensDir?: string;
   connectionTimeout?: number;
   reconnectionDelayMax?: number;
+  handshakeRetryDelayMax?: number;
   toolCallBatchIntervalMs?: number;
 }
 
@@ -211,7 +213,7 @@ export class HubService {
   // rejection (socket.active === false). This retries that case, which is
   // usually transient (not yet provisioned, token rotation, Hub restarting).
   private reArmTimeoutId: NodeJS.Timeout | null = null;
-  private reArmAttempts = 0;
+  private readonly reArmBackoff = new ReArmBackoff();
   private isShuttingDown = false;
   // True only while disconnect() is mid-teardown; connect() no-ops during it.
   private disconnecting = false;
@@ -220,6 +222,7 @@ export class HubService {
   private readonly hubUrl: string;
   private readonly connectionTimeout: number;
   private readonly reconnectionDelayMax: number;
+  private readonly handshakeRetryDelayMax: number;
   private readonly setupChangeSender: ThrottledSender;
   private readonly usageStatsSender: UsageStatsSender;
   private readonly toolCallBatcher: ToolCallBatcher;
@@ -264,6 +267,8 @@ export class HubService {
       options.connectionTimeout ?? env.HUB_CONNECTION_TIMEOUT_MS;
     this.reconnectionDelayMax =
       options.reconnectionDelayMax ?? env.HUB_RECONNECT_DELAY_MAX_MS;
+    this.handshakeRetryDelayMax =
+      options.handshakeRetryDelayMax ?? env.HUB_HANDSHAKE_RETRY_DELAY_MAX_MS;
 
     const createSender =
       (eventName: WebappBoundEventName) =>
@@ -450,7 +455,7 @@ export class HubService {
     // stranding the instance. While disconnecting, connect() is a no-op.
     this.disconnecting = true;
     this.clearReArmTimer();
-    this.reArmAttempts = 0;
+    this.reArmBackoff.reset();
     this.usageStatsSender.stop();
     try {
       await this.toolCallBatcher.shutdown();
@@ -546,9 +551,9 @@ export class HubService {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      // Connected: stop any pending re-arm and reset its backoff.
+      // Connected: stop any pending re-arm. The backoff resets only once the Hub
+      // accepts us (behavior received), since a connect the Hub then drops is no success.
       this.clearReArmTimer();
-      this.reArmAttempts = 0;
       this.logger.info("Connected to Hub");
       this._status.set({ status: "authenticated" });
       this.bootPhaseHistory = [];
@@ -568,7 +573,7 @@ export class HubService {
           cause: error,
         }),
       });
-      this.handleConnectionDrop();
+      this.handleConnectionDrop({ afterConnect: false });
     });
 
     this.socket.on("disconnect", (reason, details) => {
@@ -584,7 +589,7 @@ export class HubService {
           `Disconnected from Hub: ${reason}`,
         ),
       });
-      this.handleConnectionDrop();
+      this.handleConnectionDrop({ afterConnect: true });
     });
 
     this.socket.on("apply-setup", async (envelope) => {
@@ -712,15 +717,14 @@ export class HubService {
             policies: Object.keys(message.mcpxBehaviorSettings.policies),
             messageTimestamp: message.timestamp,
           });
-          const isLiveUpdate = this.bootPhaseHistory.some(
-            (e) => e.phase === "behavior-received",
-          );
+          const isLiveUpdate = this.handshakeAccepted;
           const applied = this.behaviorService.applyBehaviorSettings({
             newValues: message.mcpxBehaviorSettings,
             timestamp: message.timestamp,
           });
           if (applied && !isLiveUpdate) {
             this.transitionBootPhase("behavior-received");
+            this.reArmBackoff.reset();
           }
           ack?.({ ok: true } satisfies Ack);
         } catch (e) {
@@ -999,10 +1003,23 @@ export class HubService {
     });
   }
 
+  // The Hub sends the behavior first and aborts the handshake if it is not acked,
+  // so receiving it is the earliest sign the Hub accepted this connection.
+  private get handshakeAccepted(): boolean {
+    return this.bootPhaseHistory.some((e) => e.phase === "behavior-received");
+  }
+
   // socket.io retries while socket.active; we only step in once it gives up.
-  private handleConnectionDrop(): void {
+  // A drop after connect but before the handshake gets the long cap, so a Hub
+  // that keeps rejecting us is not hammered; plain connect errors retry fast.
+  private handleConnectionDrop(params: { afterConnect: boolean }): void {
     if (this.socket?.active) return;
-    this.scheduleReArm();
+    const rejectedMidHandshake = params.afterConnect && !this.handshakeAccepted;
+    this.scheduleReArm({
+      capMs: rejectedMidHandshake
+        ? this.handshakeRetryDelayMax
+        : this.reconnectionDelayMax,
+    });
   }
 
   private clearReArmTimer(): void {
@@ -1012,26 +1029,15 @@ export class HubService {
     }
   }
 
-  private scheduleReArm(): void {
+  private scheduleReArm(params: { capMs: number }): void {
     if (this.isShuttingDown || this.reArmTimeoutId || !this.lastConnectProps) {
       return;
     }
-    // Exponential backoff, capped, with jitter. Clamp after jitter so the
-    // delay never exceeds the cap (matches socket.io's own backoff).
-    const base = Math.min(
-      HUB_RECONNECT_DELAY_MS * 2 ** this.reArmAttempts,
-      this.reconnectionDelayMax,
-    );
-    const jitter =
-      base * HUB_RECONNECT_RANDOMIZATION_FACTOR * (Math.random() * 2 - 1);
-    const delay = Math.min(
-      this.reconnectionDelayMax,
-      Math.max(0, Math.round(base + jitter)),
-    );
-    this.reArmAttempts++;
+    const delay = this.reArmBackoff.next({ capMs: params.capMs });
     this.logger.info("Scheduling Hub re-arm reconnect", {
       delayMs: delay,
-      attempt: this.reArmAttempts,
+      attempt: this.reArmBackoff.attemptCount,
+      capMs: params.capMs,
     });
     this.reArmTimeoutId = setTimeout(() => {
       this.reArmTimeoutId = null;

@@ -4,6 +4,7 @@ import {
   AuthStatus,
   ConfigServiceForHub,
   HubService,
+  HubServiceOptions,
 } from "../src/services/hub.js";
 import { CurrentSetup, SetupManagerI } from "../src/services/setup-manager.js";
 import { IdentityServiceI } from "../src/services/identity-service.js";
@@ -222,7 +223,7 @@ describe("HubService", () => {
   const stubEnvVarManager = new EnvVarManager(logger);
   const stubGetUsageStats = () => ({ agents: [], targetServers: [] });
 
-  const makeHub = (options: { connectionTimeout?: number } = {}): HubService =>
+  const makeHub = (options: HubServiceOptions = {}): HubService =>
     new HubService(
       logger,
       stubSetupManager,
@@ -718,6 +719,68 @@ describe("HubService", () => {
       mockHubServer.setValidTokens([VALID_USER_ID]);
       await waitForStatus(hubService, "authenticated", 10000);
       expect(hubService.status.status).toBe("authenticated");
+    }, 15000);
+  });
+
+  describe("Re-arm backoff", () => {
+    // Kicks every client as soon as it connects, and returns how many distinct
+    // connections the Hub saw (each re-arm builds a new socket with a new id).
+    const kickEveryClientFor = async (durationMs: number): Promise<number> => {
+      const seen = new Set<string>();
+      const timer = setInterval(() => {
+        mockHubServer.getConnectedClients().forEach((id) => {
+          seen.add(id);
+          mockHubServer.disconnectClient(id);
+        });
+      }, 10);
+      await new Promise((resolve) => setTimeout(resolve, durationMs));
+      clearInterval(timer);
+      return seen.size;
+    };
+
+    it("backs off when the Hub drops us before the handshake completes", async () => {
+      // No behavior is sent, so the Hub never accepts us: handshake cap applies.
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+      hubService = makeHub({
+        reconnectionDelayMax: 50,
+        handshakeRetryDelayMax: 5000,
+      });
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+
+      const connections = await kickEveryClientFor(3500);
+
+      // 1s, 2s, 4s...: at most 3 connections in 3.5s (a 50ms cap would give dozens).
+      expect(connections).toBeLessThanOrEqual(3);
+    }, 15000);
+
+    it("retries fast when the Hub accepted us before dropping us", async () => {
+      await mockHubServer.close();
+      mockHubServer = new MockHubServer({
+        port: HUB_PORT,
+        logger,
+        behaviorPayload: {
+          mcpxBehaviorSettings: {
+            featureFlags: { enableResourceCapability: false },
+            policies: {
+              stdioServersEnabled: true,
+              dockerInDockerEnabled: false,
+            },
+          },
+          timestamp: 0,
+        },
+      });
+      await mockHubServer.waitForListening();
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+      hubService = makeHub({
+        reconnectionDelayMax: 50,
+        handshakeRetryDelayMax: 5000,
+      });
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+
+      const connections = await kickEveryClientFor(3500);
+
+      // Behavior received resets the backoff each time, so the 50ms cap holds.
+      expect(connections).toBeGreaterThan(5);
     }, 15000);
   });
 

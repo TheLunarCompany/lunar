@@ -129,6 +129,8 @@ const envSchema = z
     HUB_CONNECTION_TIMEOUT_MS: z.coerce.number().default(20000),
     // Max delay between reconnect attempts; caps the jittered backoff.
     HUB_RECONNECT_DELAY_MAX_MS: z.coerce.number().default(10000),
+    // Cap for the same backoff when the Hub drops us after connect but before the handshake completes.
+    HUB_HANDSHAKE_RETRY_DELAY_MAX_MS: z.coerce.number().default(300000),
     UPSTREAM_PING_INTERVAL_MS: z.coerce.number().default(30_000),
     UPSTREAM_PING_TIMEOUT_MS: z.coerce.number().default(10_000),
     // Consecutive failures (pings and tool calls) before a server is declared unreachable.
@@ -223,6 +225,7 @@ const NON_SECRET_KEYS = [
   "CONNECTION_TIMEOUT_MS",
   "HUB_CONNECTION_TIMEOUT_MS",
   "HUB_RECONNECT_DELAY_MAX_MS",
+  "HUB_HANDSHAKE_RETRY_DELAY_MAX_MS",
   "UPSTREAM_PING_INTERVAL_MS",
   "UPSTREAM_PING_TIMEOUT_MS",
   "UPSTREAM_PING_FAILURE_THRESHOLD",
