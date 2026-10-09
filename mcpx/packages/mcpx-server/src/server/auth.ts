@@ -56,3 +56,42 @@ export function buildApiKeyGuard(
     next();
   };
 }
+
+export function checkSocketAuth(
+  config: ConfigService,
+  logger: Logger,
+  apiKey: string | undefined,
+  headers: Record<string, string | string[] | undefined>,
+  auth: Record<string, any> | undefined,
+): { allowed: boolean; error?: string } {
+  if (!config.getConfig().auth?.enabled) {
+    return { allowed: true };
+  }
+  if (!apiKey) {
+    return { allowed: true };
+  }
+
+  const headerName = (
+    config.getConfig().auth.header ?? DEFAULT_API_KEY_HEADER
+  ).toLowerCase();
+
+  const supplied =
+    (headers[headerName] as string | undefined) ||
+    (typeof headers["authorization"] === "string"
+      ? headers["authorization"].replace(/^Bearer /i, "")
+      : undefined) ||
+    (auth?.apiKey as string | undefined) ||
+    (auth?.token as string | undefined);
+
+  if (!supplied) {
+    logger.warn("API key not provided for WebSocket connection");
+    return { allowed: false, error: "Unauthorized: API key required" };
+  }
+
+  if (supplied !== apiKey) {
+    logger.warn("Invalid API key provided for WebSocket connection");
+    return { allowed: false, error: "Forbidden: Invalid API key" };
+  }
+
+  return { allowed: true };
+}
