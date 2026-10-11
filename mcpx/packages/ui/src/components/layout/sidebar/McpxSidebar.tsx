@@ -48,14 +48,10 @@ const menuItemVariants = cva(
 );
 
 export type SidebarBrandProps = ComponentPropsWithoutRef<"div"> & {
-  title?: string;
-  subtitle?: string;
   isBoomi?: boolean;
 };
 
 export function SidebarBrand({
-  title = "MCPX USER",
-  subtitle,
   isBoomi = false,
   className,
   ...props
@@ -69,16 +65,9 @@ export function SidebarBrand({
       {...props}
     >
       <McpxBrandLogo placement="sidebar" isBoomi={isBoomi} />
-      <div className="flex flex-col text-mcpx-tooltip-text">
-        <p className="text-base font-semibold leading-[1.4] tracking-[0]">
-          {title}
-        </p>
-        {subtitle && (
-          <p className="text-xs leading-none tracking-[0] text-mcpx-tooltip-text/60">
-            {subtitle}
-          </p>
-        )}
-      </div>
+      <p className="text-base font-semibold leading-[1.4] tracking-[0] text-mcpx-tooltip-text">
+        {isBoomi ? "AI GATEWAY" : "MCPX USER"}
+      </p>
     </div>
   );
 }

@@ -114,15 +114,18 @@ beforeAll(() => {
 });
 
 describe("SidebarBrand", () => {
-  it("renders the configured brand title and subtitle", () => {
-    const { container } = render(
+  it.each([
+    { isBoomi: false, title: "MCPX USER" },
+    { isBoomi: true, title: "AI GATEWAY" },
+  ])("renders $title when Boomi is $isBoomi", ({ isBoomi, title }) => {
+    render(
       <MemoryRouter>
-        <SidebarBrand title="MCPX USER" subtitle="by lunar.dev" />
+        <SidebarBrand isBoomi={isBoomi} />
       </MemoryRouter>,
     );
 
-    expect(container.textContent).toContain("MCPX USER");
-    expect(container.textContent).toContain("by lunar.dev");
+    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(screen.queryByText("by lunar.dev")).not.toBeInTheDocument();
   });
 });
 
