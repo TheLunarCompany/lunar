@@ -1,0 +1,22 @@
+# Write glob rules for ignored files.
+# Check syntax on https://deepcode.freshdesk.com/support/solutions/articles/60000531055-how-can-i-ignore-files-or-directories-
+# Check examples on https://github.com/github/gitignore
+
+# Hidden directories
+.*/
+.history/
+ **.history/
+
+# No Validation
+readme-files/*
+sandbox/grafana/*
+sandbox/lunar-proxy/*
+sandbox/prometheus/*
+
+# Tests directories
+**test**
+interceptors/integration-tests/*
+interceptors/lunar-ts-interceptor/test-client/*
+interceptors/lunar-python-interceptor/test-client/*
+interceptors/lunar-java-interceptor/test-client/*
+proxy/integration-tests/*
