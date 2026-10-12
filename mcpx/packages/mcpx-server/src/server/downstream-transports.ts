@@ -12,6 +12,7 @@ import { extractMetadata, logMetadataWarnings } from "./metadata.js";
 import { CloseSessionReason, TouchSource } from "../services/sessions.js";
 import { loggableError } from "@aigw/core/logging";
 import { InMemoryEventStore } from "./streamable-event-store.js";
+import { markSessionInitialized } from "./streamable-session-init.js";
 import { BehaviorSetting } from "../services/behavior-service.js";
 
 type DownstreamTransportType = McpxSession["transport"]["type"];
@@ -561,17 +562,7 @@ class DownstreamTransportFactory {
       eventStore,
     });
 
-    // No public SDK API exists for pre-seeding session state (tracking: sdk#1786).
-    // Set the private fields directly to make validateSession() pass for
-    // non-initialize requests without requiring a client round-trip.
-    type SdkTransportInternals = {
-      _webStandardTransport: { _initialized: boolean; sessionId: string };
-    };
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- reads MCP SDK transport internals
-    const inner = (streamableTransport as unknown as SdkTransportInternals)
-      ._webStandardTransport;
-    inner._initialized = true;
-    inner.sessionId = sessionIdHint;
+    markSessionInitialized(streamableTransport, sessionIdHint);
 
     await server.connect(streamableTransport);
 

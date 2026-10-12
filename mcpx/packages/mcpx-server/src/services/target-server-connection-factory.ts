@@ -145,12 +145,12 @@ export class TargetServerConnectionFactory {
       JWT_AUDIENCE: env.MCPX_AUTH_JWT_AUDIENCE,
     });
     const childEnv = env.STDIO_INHERIT_PROCESS_ENV
-      ? ({
-          ...process.env,
+      ? {
+          ...inheritedProcessEnv(),
           ...this.envVars.getTargetServerEnv(),
           ...mcpxAuthEnv,
           ...resolvedEnv,
-        } as Record<string, string>)
+        }
       : { ...mcpxAuthEnv, ...resolvedEnv };
     const transport = new StdioClientTransport({
       command,
@@ -228,6 +228,16 @@ export class TargetServerConnectionFactory {
     });
     return extendedClient;
   }
+}
+
+// Empty strings are kept: `FOO=` is a value the child process can observe.
+function inheritedProcessEnv(): Record<string, string> {
+  return Object.fromEntries(
+    // eslint-disable-next-line no-restricted-properties -- STDIO_INHERIT_PROCESS_ENV opts target servers into the whole process env, so there is no fixed key set to declare in env.ts
+    Object.entries(process.env).flatMap(([key, value]): [string, string][] =>
+      value === undefined ? [] : [[key, value]],
+    ),
+  );
 }
 
 export function buildClient(targetServiceName: string): Client {

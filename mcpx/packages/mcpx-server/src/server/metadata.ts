@@ -2,7 +2,6 @@ import { IncomingHttpHeaders } from "http";
 import {
   McpClientAdapter,
   McpClientInfo,
-  McpClientIcon,
   McpxSession,
 } from "../model/sessions.js";
 import z from "zod/v4";
@@ -119,7 +118,7 @@ function parseClientInfo(body: unknown): McpClientInfo {
     version: rawInfo.version,
     title: rawInfo.title,
     websiteUrl: rawInfo.websiteUrl,
-    icons: rawInfo.icons as McpClientIcon[] | undefined,
+    icons: rawInfo.icons,
     adapter: adapterResult?.adapter,
   };
 }

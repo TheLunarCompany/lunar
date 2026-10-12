@@ -144,7 +144,11 @@ async function main(): Promise<void> {
 
   await mcpxServer.listen(MCPX_PORT, () => {
     logger.info(`MCPX server started on port ${MCPX_PORT}`);
-    logStatusSummary(logger);
+    logStatusSummary(logger).catch((error) => {
+      logger.warn("Failed to log status summary", {
+        error: loggableError(error),
+      });
+    });
   });
 }
 

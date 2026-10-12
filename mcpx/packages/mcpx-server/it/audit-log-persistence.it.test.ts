@@ -122,4 +122,18 @@ describe("AuditLogService with FileAuditLogPersistence (integration)", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.eventType).toBe("target_server_added");
   });
+
+  it("creates a missing audit log directory on initialize", async () => {
+    const nestedDir = path.join(tmpDir, "nested", "audit-logs");
+    const persistence = new FileAuditLogPersistence(
+      nestedDir,
+      24,
+      systemClock,
+      noOpLogger,
+    );
+
+    await persistence.initialize();
+
+    expect(fs.statSync(nestedDir).isDirectory()).toBe(true);
+  });
 });

@@ -6,6 +6,7 @@ import { noOpLogger } from "@aigw/core/logging";
 
 // ====================== noOp stub for tests ======================
 const _noOpPersistence: AuditLogPersistence = {
+  initialize: async () => {},
   persist: async () => {},
   cleanup: async () => {},
   read: async () => [],

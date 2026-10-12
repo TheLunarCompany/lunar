@@ -180,7 +180,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
       if (result) this.cachedTokens = result;
       return result;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (error instanceof Error && Reflect.get(error, "code") === "ENOENT") {
         return undefined;
       }
       throw error;

@@ -21,6 +21,10 @@ export class AuditLogService {
   ) {
     this.flushIntervalMs =
       flushIntervalMs ?? env.AUDIT_LOG_FLUSH_INTERVAL_IN_SEC * 1000;
+  }
+
+  async initialize(): Promise<void> {
+    await this.persistence.initialize();
     this.startFlushTimer();
   }
 

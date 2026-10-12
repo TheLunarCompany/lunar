@@ -59,14 +59,6 @@ export default defineConfig([
   },
 
   ...backendReviewRules,
-  // env factory: reads process.env by design, and its Proxy needs casts
-  {
-    files: ["src/config/env-factory.ts"],
-    rules: {
-      "no-restricted-properties": "off",
-      "@typescript-eslint/consistent-type-assertions": "off",
-    },
-  },
 
   globalIgnores([
     "./lunar-interceptor.ts",

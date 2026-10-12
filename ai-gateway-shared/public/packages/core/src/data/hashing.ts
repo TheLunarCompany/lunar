@@ -26,8 +26,7 @@ export function normalizeForHashing(obj: unknown): unknown {
 
   if (typeof obj === "object") {
     // Convert object to *sorted* array of [key, value] tuples
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- walks arbitrary JSON values
-    return Object.entries(obj as Record<string, unknown>)
+    return Object.entries(obj)
       .map(([key, value]): [string, unknown] => [
         key,
         normalizeForHashing(value),
@@ -61,12 +60,10 @@ export function stableStringify(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map((item) => stableStringify(item)).join(",")}]`;
   }
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- walks arbitrary JSON values
-  const record = value as Record<string, unknown>;
-  const keys = Object.keys(record).sort();
-  const entries = keys.map(
-    (key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`,
-  );
+  const fields = new Map<string, unknown>(Object.entries(value));
+  const entries = [...fields.keys()]
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(fields.get(key))}`);
   return `{${entries.join(",")}}`;
 }
 

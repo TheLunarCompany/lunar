@@ -107,6 +107,19 @@ function sameStringSet(a: Set<string>, b: Set<string>): boolean {
   return a.size === b.size && [...a].every((x) => b.has(x));
 }
 
+type RemoteConnectedTargetClient = ConnectedTargetClient & {
+  targetServer: RemoteTargetServer;
+};
+
+function hasRemoteTargetServer(
+  client: ConnectedTargetClient,
+): client is RemoteConnectedTargetClient {
+  return (
+    client.targetServer.type === "sse" ||
+    client.targetServer.type === "streamable-http"
+  );
+}
+
 // This class manages connections to upstream MCP servers, via initializing
 // `Client` instances, extending them into `ExtendedClient` instances,
 // storing them in a map, and providing methods to add, remove, and list clients.
@@ -1275,18 +1288,13 @@ export class UpstreamHandler
     // a 401, which blocks on an unresolved Promise until the user re-auths —
     // causing a request hang rather than a fast TokenExpiredError.
     if (
-      (client.targetServer.type === "sse" ||
-        client.targetServer.type === "streamable-http") &&
+      hasRemoteTargetServer(client) &&
       this.isOAuthServer(client.targetServer.name) &&
       (await this.oauthConnectionHandler.isTokenExpiredForServer(
         client.targetServer,
       ))
     ) {
-      await this.transitionClientToExpired(
-        client as ConnectedTargetClient & {
-          targetServer: RemoteTargetServer;
-        },
-      );
+      await this.transitionClientToExpired(client);
       throw new TokenExpiredError(client.targetServer.name);
     }
 
@@ -1475,15 +1483,10 @@ export class UpstreamHandler
 
   private async checkTokenExpiry(): Promise<void> {
     const clients = Array.from(this._clientsByService.values()).filter(
-      (
-        client,
-      ): client is ConnectedTargetClient & {
-        targetServer: RemoteTargetServer;
-      } =>
+      (client): client is RemoteConnectedTargetClient =>
         isConnected(client) &&
         this.isOAuthServer(client.targetServer.name) &&
-        (client.targetServer.type === "sse" ||
-          client.targetServer.type === "streamable-http"),
+        hasRemoteTargetServer(client),
     );
 
     const results = await Promise.all(
@@ -1514,7 +1517,7 @@ export class UpstreamHandler
   }
 
   private async transitionClientToExpired(
-    client: ConnectedTargetClient & { targetServer: RemoteTargetServer },
+    client: RemoteConnectedTargetClient,
   ): Promise<void> {
     this.logger.info(
       "Token expired for connected OAuth server, transitioning to pending-auth",

@@ -14,6 +14,8 @@ import { resetEnv } from "../../env.js";
 export class InMemoryAuditLogPersistence implements AuditLogPersistence {
   private events: AuditLog[] = [];
 
+  async initialize(): Promise<void> {}
+
   async persist(events: AuditLog[]): Promise<void> {
     this.events.push(...events);
   }
@@ -43,7 +45,7 @@ describe("AuditLogService", () => {
   let auditLogService: AuditLogService;
   let persistence: InMemoryAuditLogPersistence;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env["VERSION"] = "test-version";
     process.env["INSTANCE_ID"] = "test-instance";
     resetEnv();
@@ -55,6 +57,7 @@ describe("AuditLogService", () => {
       persistence,
       1000,
     );
+    await auditLogService.initialize();
   });
 
   afterEach(() => {
@@ -117,6 +120,7 @@ describe("AuditLogService", () => {
     it("rejects with the persistence error when the final flush fails", async () => {
       const persistError = new Error("disk full");
       const failingPersistence: AuditLogPersistence = {
+        initialize: async () => {},
         persist: async () => {
           throw persistError;
         },

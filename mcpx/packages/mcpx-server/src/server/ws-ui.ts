@@ -111,7 +111,7 @@ export function bindUIWebsocket(
     // Handle events from UI
     Object.entries(UI_ServerBoundMessage).forEach(([_, eventName]) => {
       socket.on(eventName, async (payload) => {
-        handleWsEvent(services, logger, socket, eventName, payload);
+        await handleWsEvent(services, logger, socket, eventName, payload);
       });
     });
   });

@@ -882,34 +882,33 @@ export function isInvalidGrantError(error: unknown): boolean {
   if (error instanceof InvalidGrantError) {
     return true;
   }
-  if (typeof error === "object" && error !== null) {
-    const err = error as Record<string, unknown>;
-    return (
-      err["errorCode"] === "invalid_grant" ||
-      err["error"] === "invalid_grant" ||
-      err["name"] === "InvalidGrantError" ||
-      (typeof err["message"] === "string" &&
-        err["message"].includes("invalid_grant"))
-    );
-  }
-  return false;
+  const message = readProp(error, "message");
+  return (
+    readProp(error, "errorCode") === "invalid_grant" ||
+    readProp(error, "error") === "invalid_grant" ||
+    readProp(error, "name") === "InvalidGrantError" ||
+    (typeof message === "string" && message.includes("invalid_grant"))
+  );
 }
 
 export function isAuthenticationError(error: unknown): boolean {
   if (error instanceof UnauthorizedError) {
     return true;
   }
-  if (typeof error === "object" && error !== null) {
-    const err = error as Record<string, unknown>;
-    return (
-      (err?.["response"] as Record<string, unknown>)?.["status"] === 401 ||
-      err?.["status"] === 401 ||
-      err?.["code"] === 401 ||
-      (typeof err?.["message"] === "string" &&
-        err["message"].includes("401")) ||
-      (typeof err?.["message"] === "string" &&
-        err["message"].includes("Unauthorized"))
-    );
-  }
-  return false;
+  const message = readProp(error, "message");
+  return (
+    readProp(readProp(error, "response"), "status") === 401 ||
+    readProp(error, "status") === 401 ||
+    readProp(error, "code") === 401 ||
+    (typeof message === "string" &&
+      (message.includes("401") || message.includes("Unauthorized")))
+  );
+}
+
+// `message` and `name` live on Error's prototype chain, so a spread or
+// Object.entries copy would miss them.
+function readProp(value: unknown, key: string): unknown {
+  return typeof value === "object" && value !== null
+    ? Reflect.get(value, key)
+    : undefined;
 }

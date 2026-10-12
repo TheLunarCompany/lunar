@@ -39,7 +39,8 @@ export function buildApiKeyGuard(
       config.getConfig().auth.header ?? DEFAULT_API_KEY_HEADER
     ).toLowerCase();
 
-    const supplied = req.headers[headerName] as string | undefined;
+    const header = req.headers[headerName];
+    const supplied = typeof header === "string" ? header : undefined;
 
     if (!supplied) {
       logger.warn("API key not provided in headers, will not allow connection");

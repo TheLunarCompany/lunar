@@ -6,39 +6,41 @@ import { z } from "zod/v4";
  * @param nonSecretKeys  Keys that may be logged or surfaced in plain text.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createEnv<S extends z.ZodType<any>>(
+export function createEnv<S extends z.ZodType<object>>(
   schema: S,
   nonSecretKeys: readonly (keyof z.infer<S>)[]
 ): {
   env: z.infer<S>;
   getEnv: (vars?: NodeJS.ProcessEnv) => z.infer<S>;
   resetEnv: (vars?: NodeJS.ProcessEnv) => void;
-  redactEnv: <T extends Record<string, unknown>>(obj: T) => T;
+  redactEnv: (obj: Partial<z.infer<S>>) => Record<string, unknown>;
 } {
   type Env = z.infer<S>;
   let cachedEnv: Env;
 
   /** Parse once, then cache. */
+  // eslint-disable-next-line no-restricted-properties -- this factory is what every env.ts is built on, so it is the one place that reads process.env
   function getEnv(vars: NodeJS.ProcessEnv = process.env): Env {
     if (!cachedEnv) cachedEnv = schema.parse(vars);
     return cachedEnv;
   }
 
   /** Re‑parse, useful in tests. */
+  // eslint-disable-next-line no-restricted-properties -- this factory is what every env.ts is built on, so it is the one place that reads process.env
   function resetEnv(vars: NodeJS.ProcessEnv = process.env): void {
     cachedEnv = schema.parse(vars);
   }
 
   /** Redact every property except those in nonSecretKeys. */
-  function redactEnv<T extends Record<string, unknown>>(obj: T): T {
-    return redactExcept(obj, nonSecretKeys as readonly (keyof T)[]);
+  function redactEnv(obj: Partial<Env>): Record<string, unknown> {
+    return redactExcept<Partial<Env>>(obj, nonSecretKeys);
   }
 
   /** Proxy so callers can keep writing `env.X` without running getEnv first. */
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- the Proxy stands in for Env and serves every read from getEnv(), so its empty target is never read
   const env: Env = new Proxy({} as Env, {
     get(_, prop: string | symbol): unknown {
-      return getEnv()[prop as keyof Env];
+      return Reflect.get(getEnv(), prop);
     },
     ownKeys(): (string | symbol)[] {
       return Reflect.ownKeys(getEnv());
@@ -52,15 +54,15 @@ export function createEnv<S extends z.ZodType<any>>(
 }
 
 /** Redact every property of an env-like object except the allow-listed keys. */
-export function redactExcept<T extends Record<string, unknown>>(
+export function redactExcept<T extends object>(
   obj: T,
   nonSecretKeys: readonly (keyof T)[]
-): T {
+): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(obj).map(([k, v]) =>
-      nonSecretKeys.includes(k) ? [k, v] : [k, "***REDACTED***"]
+      nonSecretKeys.some((key) => key === k) ? [k, v] : [k, "***REDACTED***"]
     )
-  ) as T;
+  );
 }
 
 // A group of env vars that only applies when a feature flag is on.
@@ -76,6 +78,7 @@ export function parseGatedEnvGroup<S extends z.ZodType>(params: {
   schema: S;
   vars?: NodeJS.ProcessEnv;
 }): z.infer<S> | undefined {
+  // eslint-disable-next-line no-restricted-properties -- this factory is what every env.ts is built on, so it is the one place that reads process.env
   const { enabled, flagName, schema, vars = process.env } = params;
   if (!enabled) return undefined;
   const parsed = schema.safeParse(vars);

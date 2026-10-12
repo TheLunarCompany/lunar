@@ -57,10 +57,12 @@ export function createManualIntervalClock(): ManualIntervalClock {
   // eslint-disable-next-line no-restricted-syntax -- the fake clock's registered callback is its state
   let registeredFn: (() => void) | null = null;
   return {
-    setInterval(fn): NodeJS.Timeout {
+    setInterval(fn, ms): NodeJS.Timeout {
       registeredFn = fn;
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- fake timer handle
-      return 0 as unknown as NodeJS.Timeout;
+      // A real handle, cleared at once: only tick() ever runs the callback.
+      const handle = setInterval(() => {}, ms);
+      clearInterval(handle);
+      return handle;
     },
     clearInterval(): void {
       registeredFn = null;

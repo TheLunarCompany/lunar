@@ -367,7 +367,7 @@ export class MockHubServer {
       this.clientChangeResolvers = [];
       this.toolCallBatchResolvers = [];
 
-      this.io.close(() => {
+      void this.io.close(() => {
         this.httpServer.close(() => {
           console.log("Mock Hub server closed");
           resolve();

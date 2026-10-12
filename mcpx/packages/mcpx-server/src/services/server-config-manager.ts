@@ -148,9 +148,10 @@ export class FileServerConfigManager implements ServerConfigManager {
         configPath: this.configPath,
       });
     } catch (e: unknown) {
-      const error = loggableError(e);
-      this.logger.error("Failed to write target servers config", { error });
-      throw error;
+      this.logger.error("Failed to write target servers config", {
+        error: loggableError(e),
+      });
+      throw makeError(e);
     }
   }
 }

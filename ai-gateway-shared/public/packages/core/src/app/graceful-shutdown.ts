@@ -13,6 +13,7 @@ export class GracefulShutdown {
     this.cleanupFns.unshift({ name, fn: wrapped });
   }
 
+  /* eslint-disable no-console -- cleanups tear down the logger's own transports, so console is the only output that survives to the exit */
   static async shutdown(): Promise<void> {
     for (const { name, fn } of this.cleanupFns) {
       try {
@@ -32,4 +33,5 @@ export class GracefulShutdown {
     );
     process.exit(0);
   }
+  /* eslint-enable no-console */
 }

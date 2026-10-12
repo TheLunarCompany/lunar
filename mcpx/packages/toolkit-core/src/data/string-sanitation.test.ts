@@ -1,5 +1,13 @@
 import { sanitizeFilename, slugifyServerName } from "./string-sanitation.js";
 
+const codeRange = (from: number, to: number): number[] =>
+  Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+const charCase = (code: number): [string, string] => [
+  `U+${code.toString(16).toUpperCase().padStart(4, "0")}`,
+  String.fromCharCode(code),
+];
+
 describe("slugifyServerName", () => {
   it("lowercases and keeps already-valid names", () => {
     expect(slugifyServerName("Zulip")).toBe("zulip");
@@ -66,6 +74,25 @@ describe("sanitizeFilename", () => {
   it("handles control characters", () => {
     expect(sanitizeFilename("foo\u0000bar")).toBe("foo_bar");
     expect(sanitizeFilename("foo\nbar")).toBe("foo_bar");
+  });
+
+  it.each(codeRange(0x00, 0x1f).map(charCase))(
+    "replaces the C0 control %s",
+    (_label, char) => {
+      expect(sanitizeFilename(`foo${char}bar`)).toBe("foo_bar");
+    },
+  );
+
+  it.each([0x7f, ...codeRange(0x80, 0x9f)].map(charCase))(
+    "replaces the DEL/C1 control %s",
+    (_label, char) => {
+      expect(sanitizeFilename(`foo${char}bar`)).toBe("foo_bar");
+    },
+  );
+
+  it("keeps the printable characters next to the control ranges", () => {
+    expect(sanitizeFilename("foo~bar")).toBe("foo~bar");
+    expect(sanitizeFilename("foo¡bar")).toBe("foo¡bar");
   });
 
   it("normalizes to NFC and keeps unicode", () => {

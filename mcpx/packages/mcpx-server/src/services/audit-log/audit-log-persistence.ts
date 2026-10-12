@@ -15,6 +15,7 @@ export interface AuditLogReadOptions {
 }
 
 export interface AuditLogPersistence {
+  initialize(): Promise<void>;
   persist(events: AuditLog[]): Promise<void>;
   cleanup(): Promise<void>;
   read(options: AuditLogReadOptions): Promise<AuditLog[]>;
@@ -26,8 +27,10 @@ export class FileAuditLogPersistence implements AuditLogPersistence {
     private readonly retentionHours: number,
     private readonly clock: Clock,
     private readonly logger: Logger,
-  ) {
-    this.ensureDirectoryExists();
+  ) {}
+
+  async initialize(): Promise<void> {
+    await this.ensureDirectoryExists();
   }
 
   async persist(events: AuditLog[]): Promise<void> {

@@ -32,6 +32,13 @@ import {
   enforceFixedEnvVars,
 } from "../services/env-resolver.js";
 
+// Repeated or nested params (`?code=a&code=b`) are dropped rather than forwarded.
+const oauthCallbackQuerySchema = z.object({
+  code: z.string().optional().catch(undefined),
+  state: z.string().optional().catch(undefined),
+  error: z.string().optional().catch(undefined),
+});
+
 function buildTargetServerRequest(
   server: CatalogMCPServerItem,
   request: CreateServerFromCatalogRequest,
@@ -615,13 +622,12 @@ export function buildControlPlaneRouter(
   router.get(
     "/auth/callback",
     (req: express.Request, res: express.Response) => {
-      const { code, state, error } = req.query;
-
       // Redirect to the OAuth callback endpoint with the same query parameters
-      const queryParams = new URLSearchParams();
-      if (code) queryParams.set("code", code as string);
-      if (state) queryParams.set("state", state as string);
-      if (error) queryParams.set("error", error as string);
+      const queryParams = new URLSearchParams(
+        Object.entries(oauthCallbackQuerySchema.parse(req.query)).flatMap(
+          ([key, value]): [string, string][] => (value ? [[key, value]] : []),
+        ),
+      );
 
       const redirectUrl = `/oauth/callback${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
       res.redirect(redirectUrl);

@@ -53,12 +53,13 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   }) {
     this.serverName = options.serverName;
 
-    if (options.config.authMethod !== "client_credentials") {
+    const { config } = options;
+    if (config.authMethod !== "client_credentials") {
       throw new Error(
-        `StaticOAuthProvider only supports client_credentials auth method, got: ${options.config.authMethod}`,
+        `StaticOAuthProvider only supports client_credentials auth method, got: ${config.authMethod}`,
       );
     }
-    this.config = options.config as ClientCredentialsConfig;
+    this.config = config;
     this.callbackPath = options.callbackPath || "/oauth/callback";
     this.callbackUrl = options.callbackUrl;
     this._state = randomUUID();

@@ -105,12 +105,12 @@ export class EnvVarManager
     return (
       this.profileSecrets.get(name) ??
       this.prefilledLiterals.get(name) ??
-      process.env[name]
+      readProcessEnv(name)
     );
   }
 
   resolveOauthCredential(name: string): string | undefined {
-    return this.oauthCredentials.get(name) ?? process.env[name];
+    return this.oauthCredentials.get(name) ?? readProcessEnv(name);
   }
 
   // Includes prefilledLiterals so target servers can resolve catalog-protected
@@ -126,4 +126,9 @@ export class EnvVarManager
   getProfileSecretKeys(): string[] {
     return Array.from(this.profileSecrets.keys());
   }
+}
+
+function readProcessEnv(name: string): string | undefined {
+  // eslint-disable-next-line no-restricted-properties -- names come from server configs (fromEnv refs), so they cannot be declared in env.ts
+  return process.env[name];
 }

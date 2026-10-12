@@ -345,6 +345,8 @@ export class Services {
     const startupLogger = this.logger.child({ component: "Services" });
     startupLogger.info("Initializing services...");
 
+    await this._auditLogService.initialize();
+
     // A static import would eagerly build js-tiktoken's ~5MB vocab map on every
     // boot, so load it dynamically and only for sandbox-analysis. Must precede
     // upstreamHandler.initialize(), which can trigger the first estimateTokens().
