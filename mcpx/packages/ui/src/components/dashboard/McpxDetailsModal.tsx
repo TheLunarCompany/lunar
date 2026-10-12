@@ -40,6 +40,7 @@ import { ServerStatusBadge } from "./ServerStatusBadge";
 import type { McpServerStatus } from "@/types";
 import { ServerMetricCard } from "./ServerMetricCards";
 import { pluralizeWithCount } from "@mcpx/toolkit-ui/src/utils/string-utils";
+import { useFeatureFlag } from "@/contexts/feature-flags";
 
 const DRAWER_CLOSING_DELAY_MS = 100;
 
@@ -66,6 +67,7 @@ export const McpxDetailsModal = ({
   );
   const [saveDescription, setSaveDescription] = useState("");
 
+  const isBoomi = useFeatureFlag("VITE_IS_BOOMI");
   const navigate = useNavigate();
   const resetMutation = useResetSetup();
   const saveMutation = useSaveSetup();
@@ -325,11 +327,14 @@ export const McpxDetailsModal = ({
                   >
                     MCPX
                   </p>
-                  <div className="flex items-center px-1 text-[10px] h-[20px] rounded-[4px] border border-border text-muted-foreground">
-                    <span>
-                      Version {getVersionNumber(mcpxData.version || "Unknown")}
-                    </span>
-                  </div>
+                  {!isBoomi && (
+                    <div className="flex items-center px-1 text-[10px] h-[20px] rounded-[4px] border border-border text-muted-foreground">
+                      <span>
+                        Version{" "}
+                        {getVersionNumber(mcpxData.version || "Unknown")}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

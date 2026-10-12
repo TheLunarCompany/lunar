@@ -15,11 +15,13 @@ import {
 import { User, LogOut, Building2 } from "lucide-react";
 import { FC } from "react";
 import { useStrictness } from "@/data/strictness";
+import { useFeatureFlag } from "@/contexts/feature-flags";
 
 export const UserDetails: FC = () => {
   const { user, logout } = useAuth();
   const { data: identityData } = useIdentity();
   const { data, isLoading } = useStrictness();
+  const isBoomi = useFeatureFlag("VITE_IS_BOOMI");
 
   const identity = identityData?.identity;
   const isAdmin = identity ? isAdminIdentity(identity) : false;
@@ -69,7 +71,8 @@ export const UserDetails: FC = () => {
             </div>
           </div>
 
-          {data?.strictnessFeatureEnabled &&
+          {!isBoomi &&
+            data?.strictnessFeatureEnabled &&
             isAdmin && ( // toggle is visible only when strictness is enabled and only for admins
               <>
                 <div className="px-2">
