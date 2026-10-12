@@ -8,6 +8,7 @@ import {
 import { env, redactEnv } from "./env.js";
 import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
+import { installDnsCache } from "./services/dns-cache.js";
 import { startMetricsEndpoint } from "./server/prometheus.js";
 import {
   buildLogger,
@@ -76,6 +77,9 @@ async function logStatusSummary(
 }
 
 async function main(): Promise<void> {
+  if (env.ENABLE_UPSTREAM_DNS_CACHE) {
+    installDnsCache();
+  }
   const telemetry = env.LUNAR_TELEMETRY
     ? {
         service: "mcpx",

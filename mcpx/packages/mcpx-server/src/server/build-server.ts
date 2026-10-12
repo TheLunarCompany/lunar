@@ -29,6 +29,11 @@ export async function buildMcpxServer(
 ): Promise<Server> {
   const app = express();
   const server = createServer(app);
+  // Node's 5s default closed idle sockets between the router's calls to a quiet
+  // gateway, so nearly every call reconnected and re-resolved DNS. Headers
+  // must be allowed longer than the keep-alive idle window.
+  server.keepAliveTimeout = env.HTTP_KEEP_ALIVE_TIMEOUT_MS;
+  server.headersTimeout = env.HTTP_KEEP_ALIVE_TIMEOUT_MS + 5_000;
 
   // Configure CORS for UI requests
   // Default to localhost:5173 (UI dev server) if CORS_ORIGINS is not set

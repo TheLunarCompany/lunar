@@ -77,6 +77,14 @@ const envSchema = z
     ),
     AUTH_KEY: z.string().optional(),
     MCPX_PORT: z.coerce.number().default(9523),
+    // 65s keeps a gateway called ~once a minute on one socket (Node's 5s reconnected every call).
+    HTTP_KEEP_ALIVE_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(65_000),
+    // Kill switch for the cached DNS lookups on outbound fetch.
+    ENABLE_UPSTREAM_DNS_CACHE: z.stringbool().default(true),
     PING_INTERVAL_MS: z.coerce.number().default(5000),
     DOWNSTREAM_KEEPALIVE_INTERVAL_MS: z.coerce.number().default(25000),
     ENABLE_TOOL_CALL_CACHE: z.stringbool().default(false),
@@ -245,6 +253,8 @@ const NON_SECRET_KEYS = [
   "MCPX_AUTH_JWKS_URI",
   "MCPX_AUTH_JWT_ISSUER",
   "MCPX_AUTH_JWT_AUDIENCE",
+  "HTTP_KEEP_ALIVE_TIMEOUT_MS",
+  "ENABLE_UPSTREAM_DNS_CACHE",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(
