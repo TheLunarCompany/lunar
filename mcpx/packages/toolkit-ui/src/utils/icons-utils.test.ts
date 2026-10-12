@@ -196,6 +196,24 @@ describe("matchRegistryKey", () => {
   it("returns null for unknown server", () => {
     expect(matchRegistryKey("unknown-server", serverKeys)).toBeNull();
   });
+
+  it("normalized exact: strips punctuation and separators", () => {
+    expect(matchRegistryKey("Aha!", serverKeys)).toBe("aha");
+    expect(matchRegistryKey("aha!", serverKeys)).toBe("aha");
+  });
+
+  it("allowSubstringMatch=false: rejects known false-positive substrings", () => {
+    expect(matchRegistryKey("xtrf", serverKeys, false)).toBeNull();
+    expect(matchRegistryKey("sometime", serverKeys, false)).toBeNull();
+    expect(matchRegistryKey("nextdns", serverKeys, false)).toBeNull();
+  });
+
+  it("allowSubstringMatch=false: exact and token matching still work", () => {
+    expect(matchRegistryKey("x", serverKeys, false)).toBe("x");
+    expect(matchRegistryKey("time", serverKeys, false)).toBe("time");
+    expect(matchRegistryKey("next-devtools", serverKeys, false)).toBe("next");
+    expect(matchRegistryKey("github-mcp", serverKeys, false)).toBe("github");
+  });
 });
 
 describe("lookupRegistryKey", () => {

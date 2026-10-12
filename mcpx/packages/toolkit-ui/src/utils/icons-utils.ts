@@ -66,14 +66,17 @@ export function isSafeIconUrl(url: string): boolean {
 export function matchRegistryKey(
   name: string,
   registryKeys: string[],
+  // false for autoCreated: they have the connectorId join as a safer fallback than a coincidental substring hit.
+  allowSubstringMatch = true,
 ): string | null {
   const lowerName = name.toLowerCase().trim();
 
   // exact match
   if (registryKeys.includes(lowerName)) return lowerName;
 
-  // normalized exact: strip separators from input, handles, "claude code" → "claudecode"
-  const stripped = lowerName.replace(/[-_.\s/]+/g, "");
+  // normalized exact: strip separators and trailing punctuation, handles
+  // "claude code" → "claudecode" and "Aha!" → "aha".
+  const stripped = lowerName.replace(/[-_.\s/!]+/g, "");
   if (registryKeys.includes(stripped)) return stripped;
 
   // token scan: each word in the name checked against keys; longest match wins
@@ -82,6 +85,8 @@ export function matchRegistryKey(
   if (tokenMatches.length > 0) {
     return tokenMatches.reduce((a, b) => (a.length >= b.length ? a : b));
   }
+
+  if (!allowSubstringMatch) return null;
 
   // substring: last resort for no-separator concatenations like "notionmcp"
   const substringMatches = registryKeys.filter((k) =>
@@ -111,11 +116,14 @@ export function extractPrefix(name: string): string {
 export function lookupServerIcon(
   name: string,
   displayName?: string,
+  allowSubstringMatch = true,
 ): { key: string; entry: ServerIconEntry } | null {
   const iconKeys = Object.keys(SERVER_ICON_REGISTRY);
   const key =
-    matchRegistryKey(name, iconKeys) ??
-    (displayName ? matchRegistryKey(displayName, iconKeys) : null);
+    matchRegistryKey(name, iconKeys, allowSubstringMatch) ??
+    (displayName
+      ? matchRegistryKey(displayName, iconKeys, allowSubstringMatch)
+      : null);
   if (key) {
     const entry = SERVER_ICON_REGISTRY[key];
     if (entry) return { key, entry };
