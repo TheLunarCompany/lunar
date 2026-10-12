@@ -794,7 +794,7 @@ export const AgentDetailsModal = ({
     >
       <SheetContent
         side="right"
-        className="w-[600px]! max-w-[600px]! gap-0 bg-background p-0 text-foreground shadow-xl [&>button]:hidden"
+        className="w-[600px]! max-w-[600px]! gap-0 bg-card p-0 text-foreground shadow-xl [&>button]:hidden"
       >
         <SheetHeader className="flex flex-row items-center justify-between gap-2 border-b border-border px-6 py-3">
           <VisuallyHidden>
@@ -827,7 +827,7 @@ export const AgentDetailsModal = ({
             <img
               src={display?.icon.src ?? currentAgentData.icon}
               alt={display?.icon.alt ?? `${currentAgentData.name} Agent Avatar`}
-              className="size-10 rounded-lg bg-muted/40 ring-1 ring-border"
+              className="size-10 rounded-md bg-muted/40 ring-1 ring-border"
             />
             <div className="flex min-w-0 flex-col items-start">
               <p className="truncate text-xl font-semibold leading-tight tracking-tight">
@@ -870,7 +870,7 @@ export const AgentDetailsModal = ({
 
         <div className="shrink-0 px-6">
           <div className="grid w-full grid-cols-3 gap-3 text-sm">
-            <div className="rounded-xl border border-border bg-muted/20 p-3 text-left">
+            <div className="rounded-lg border border-border bg-muted/20 p-3 text-left">
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Status
               </div>
@@ -882,7 +882,7 @@ export const AgentDetailsModal = ({
                 {CONNECTION_BADGE[liveConnectionState].label}
               </Badge>
             </div>
-            <div className="rounded-xl border border-border bg-muted/20 p-3 text-left">
+            <div className="rounded-lg border border-border bg-muted/20 p-3 text-left">
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Calls
               </div>
@@ -890,7 +890,7 @@ export const AgentDetailsModal = ({
                 {liveUsage?.callCount || 0}
               </div>
             </div>
-            <div className="rounded-xl border border-border bg-muted/20 p-3 text-left">
+            <div className="rounded-lg border border-border bg-muted/20 p-3 text-left">
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Last Call
               </div>
@@ -927,7 +927,7 @@ export const AgentDetailsModal = ({
                 Tools Access
               </div>
 
-              <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border border-border bg-muted/20 p-3">
+              <div className="mb-3 flex shrink-0 items-center justify-between rounded-lg border border-border bg-muted/20 p-3">
                 <h3 className="text-sm font-semibold text-foreground">
                   All Server Tools ({totalConnectedTools})
                 </h3>
@@ -940,7 +940,7 @@ export const AgentDetailsModal = ({
               </div>
 
               {/* Tool Groups List */}
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3 pb-4">
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/20 p-3 pb-4">
                 <div className="mb-3 text-sm font-semibold text-foreground">
                   Tools
                 </div>
@@ -951,7 +951,7 @@ export const AgentDetailsModal = ({
                   wrapperClassName="mb-3 flex-1 shrink-0"
                 />
                 {agentToolGroups.length === 0 ? (
-                  <div className="rounded-lg border border-border bg-background px-4 py-8 text-center">
+                  <div className="rounded-md border border-border bg-card px-4 py-8 text-center">
                     <h4 className="mb-2 font-semibold text-foreground">
                       No Tool Groups Defined
                     </h4>
@@ -974,7 +974,7 @@ export const AgentDetailsModal = ({
                     return (
                       <Card
                         key={group.id}
-                        className="cursor-pointer gap-3 rounded-lg border-border bg-background py-3 shadow-xs ring-0 transition-colors hover:border-primary/30 hover:bg-muted/20"
+                        className="cursor-pointer gap-3 rounded-md border-border bg-card py-3 shadow-xs ring-0 transition-colors hover:border-primary/30 hover:bg-muted/20"
                         onClick={() => toggleGroupExpansion(group.id)}
                       >
                         <CardHeader className="px-3 py-0">
@@ -984,7 +984,7 @@ export const AgentDetailsModal = ({
                                 type="button"
                                 variant="ghost"
                                 size="icon-xs"
-                                className="mt-0.5 size-5 rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                className="mt-0.5 size-5 rounded-sm p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
                                 aria-label={
                                   expandedGroups.has(group.id)
                                     ? "Collapse tool group"
@@ -1094,7 +1094,7 @@ export const AgentDetailsModal = ({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-border bg-background p-4">
+        <div className="shrink-0 border-t border-border bg-card p-4">
           <div className="flex justify-end gap-3">
             <Button
               className="disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"

@@ -69,7 +69,7 @@ export function AgentSkillsSection({
         Tools Access
       </h3>
 
-      <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border border-border bg-muted/20 p-3">
+      <div className="mb-3 flex shrink-0 items-center justify-between rounded-lg border border-border bg-muted/20 p-3">
         <h3 className="text-sm font-semibold text-foreground">
           All Server Tools ({totalToolsCount})
         </h3>
@@ -81,7 +81,7 @@ export function AgentSkillsSection({
         />
       </div>
 
-      <div className="mb-4 flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-muted/20 p-3">
+      <div className="mb-4 flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-muted/20 p-3">
         <div className="mb-3 shrink-0 text-sm font-semibold text-foreground">
           Skills
         </div>
@@ -105,7 +105,7 @@ export function AgentSkillsSection({
             filteredSkills.map((skill) => (
               <Card
                 key={skill.id}
-                className="gap-3 rounded-lg border-border bg-background py-3 shadow-xs ring-0 transition-colors hover:border-primary/30 hover:bg-muted/20"
+                className="gap-3 rounded-md border-border bg-card py-3 shadow-xs ring-0 transition-colors hover:border-primary/30 hover:bg-muted/20"
               >
                 <CardHeader className="px-3 py-0">
                   <div className="flex items-start justify-between gap-2">
@@ -176,7 +176,7 @@ function formatCapabilityCount(toolsCount: number, promptsCount: number) {
 
 function StatusMessage({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-lg border border-border bg-background px-3 py-4 text-center text-sm text-muted-foreground">
+    <p className="rounded-md border border-border bg-card px-3 py-4 text-center text-sm text-muted-foreground">
       {children}
     </p>
   );
