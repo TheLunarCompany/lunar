@@ -7,8 +7,10 @@ import {
   oauthCatalogItem,
   echoTargetServer,
   calculatorTargetServer,
-  MCPX_BASE_URL,
+  echoCatalogItem,
+  calculatorCatalogItem,
   allCatalogItems,
+  MCPX_BASE_URL,
 } from "./utils.js";
 import { CatalogMCPServerItem, CatalogMCPServerList } from "@mcpx/shared-model";
 
@@ -60,6 +62,52 @@ describe("set-catalog integration test", () => {
 
       const catalogRes = await response.json();
       checkReturnedCatalog(catalogRes, backendDefaultServers);
+    });
+  });
+
+  describe("strict agent connector space", () => {
+    let harness: ReturnType<typeof getTestHarness>;
+
+    beforeAll(async () => {
+      process.env["STRICTNESS_REQUIRED"] = "true";
+      resetEnv();
+      harness = getTestHarness();
+      await harness.initialize("StreamableHTTP");
+    });
+
+    afterAll(async () => {
+      await harness.shutdown();
+      delete process.env["STRICTNESS_REQUIRED"];
+      resetEnv();
+    });
+
+    it("lists only approved tools for an agent connector space", async () => {
+      harness.emitIdentity({
+        entityType: "space",
+        spaceKind: "AGENT_CONNECTOR",
+      });
+
+      const catalogUpdated = new Promise<void>((resolve) => {
+        const unsubscribe = harness.services.catalogManager.subscribe(() => {
+          unsubscribe();
+          resolve();
+        });
+      });
+      harness.emitCatalog({
+        items: [
+          { server: echoCatalogItem, adminConfig: { approvedTools: [] } },
+          {
+            server: calculatorCatalogItem,
+            adminConfig: { approvedTools: ["add"] },
+          },
+        ],
+      });
+      await catalogUpdated;
+
+      const { tools } = await harness.client.listTools();
+      expect(tools.map((tool) => tool.name)).toEqual([
+        "calculator-service__add",
+      ]);
     });
   });
 
@@ -189,13 +237,16 @@ describe("set-catalog integration test", () => {
       };
     }
 
-    describe("non-strict mode (space identity)", () => {
+    describe("non-strict mode (sandbox analysis identity)", () => {
       const harness = getTestHarness();
 
       beforeAll(async () => {
         await harness.initialize("StreamableHTTP");
-        // Switch to non-strict mode by setting space identity
-        harness.emitIdentity({ entityType: "space" });
+        // Sandbox analysis bypasses catalog strictness.
+        harness.emitIdentity({
+          entityType: "space",
+          spaceKind: "SANDBOX_ANALYSIS",
+        });
       });
 
       afterAll(async () => {

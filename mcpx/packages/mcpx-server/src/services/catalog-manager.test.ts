@@ -36,7 +36,7 @@ const enterpriseUserIdentity: Identity = {
 };
 const enterpriseSpaceIdentity: Identity = {
   mode: "enterprise",
-  entity: { entityType: "space" },
+  entity: { entityType: "space", spaceKind: "SANDBOX_ANALYSIS" },
 };
 
 describe("CatalogManager", () => {
@@ -172,7 +172,23 @@ describe("CatalogManager", () => {
       });
     });
 
-    describe("enterprise space mode (not strict)", () => {
+    // Undefined covers a space identity whose optional spaceKind was omitted.
+    it.each(["AGENT_CONNECTOR", "HOSTED_MCP_SERVER", undefined] as const)(
+      "enforces the catalog for %s spaces",
+      (spaceKind) => {
+        const manager = createCatalogManager(
+          createStubIdentityService({
+            mode: "enterprise",
+            entity: { entityType: "space", spaceKind },
+          }),
+        );
+        manager.setCatalog(makeCatalog(createCatalogItem("slack", ["read"])));
+        expect(manager.isToolApproved("slack", "read")).toBe(true);
+        expect(manager.isToolApproved("slack", "write")).toBe(false);
+      },
+    );
+
+    describe("sandbox analysis space (not strict)", () => {
       it("approves all servers", () => {
         const manager = createCatalogManager(
           createStubIdentityService(enterpriseSpaceIdentity),

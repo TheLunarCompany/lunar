@@ -96,7 +96,7 @@ export interface CatalogManagerI {
 }
 
 // CatalogManager interprets identity to derive strictness.
-// Personal mode: not strict. Enterprise space: not strict. Enterprise user: strict.
+// Personal mode and sandbox analysis spaces: not strict. Other enterprise identities: strict.
 // Admin can set override to bypass strictness for debugging.
 export class CatalogManager implements CatalogManagerI {
   private catalogByName: Map<string, CatalogItemWire>;
@@ -185,8 +185,10 @@ export class CatalogManager implements CatalogManagerI {
     if (identity.mode === "personal") {
       return false;
     }
-    // space is not strict, but actual users are strict
-    return identity.entity.entityType === "user";
+    if (identity.entity.entityType === "user") {
+      return true;
+    }
+    return identity.entity.spaceKind !== "SANDBOX_ANALYSIS";
   }
 
   setAdminStrictnessOverride(override: boolean): void {

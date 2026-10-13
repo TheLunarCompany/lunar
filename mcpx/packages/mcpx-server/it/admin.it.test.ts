@@ -54,19 +54,43 @@ describe("Admin Endpoints when permissions enabled", () => {
       });
     });
 
-    describe("when identity is space", () => {
+    describe("when identity is an agent connector space", () => {
       beforeAll(() => {
-        harness.emitIdentity({ entityType: "space" });
+        harness.emitIdentity({
+          entityType: "space",
+          spaceKind: "AGENT_CONNECTOR",
+        });
       });
 
-      it("should return strictness state for spaces too", async () => {
+      it("should report strictness for agent connector spaces", async () => {
         const response = await fetch(`${MCPX_BASE_URL}/admin/strictness`);
         expect(response.status).toBe(200);
 
         const body = await response.json();
         expect(body).toEqual({
           strictnessFeatureEnabled: true,
-          isStrict: false, // spaces are not strict when derives from identity
+          isStrict: true,
+          adminOverride: false,
+        });
+      });
+    });
+
+    describe("when identity is a sandbox analysis space", () => {
+      beforeAll(() => {
+        harness.emitIdentity({
+          entityType: "space",
+          spaceKind: "SANDBOX_ANALYSIS",
+        });
+      });
+
+      it("should report sandbox analysis as non-strict", async () => {
+        const response = await fetch(`${MCPX_BASE_URL}/admin/strictness`);
+        expect(response.status).toBe(200);
+
+        const body = await response.json();
+        expect(body).toEqual({
+          strictnessFeatureEnabled: true,
+          isStrict: false,
           adminOverride: false,
         });
       });
