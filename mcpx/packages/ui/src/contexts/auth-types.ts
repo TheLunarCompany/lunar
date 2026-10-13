@@ -3,6 +3,7 @@ export type AuthUser = {
   email?: string;
   name?: string;
   role?: string;
+  userType: "user" | "adminUser"; // stored from /me, not used yet
 };
 
 export type AuthState = {

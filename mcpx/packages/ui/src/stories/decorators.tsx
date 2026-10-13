@@ -35,7 +35,12 @@ export const withQueryClient: Decorator = (Story) => (
 // ── Auth decorator ───────────────────────────────────────────────────────────
 
 const defaultAuthValue: AuthContextValue = {
-  user: { id: "user-1", email: "user@example.com", name: "Test User" },
+  user: {
+    id: "user-1",
+    email: "user@example.com",
+    name: "Test User",
+    userType: "user",
+  },
   isAuthenticated: true,
   loading: false,
   error: null,

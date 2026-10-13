@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
 
     try {
-      const response = await fetch(buildAuthBffUrl("/me"), {
+      const response = await fetch(buildAuthBffUrl("/runtime/me"), {
         method: "GET",
         credentials: "include",
         mode: "cors",
