@@ -180,9 +180,47 @@ describe("transformConfigurationData live-state mapping", () => {
       ["old", "new"],
     );
 
-    const [agent] = transformConfigurationData(state).agents;
+    const { agents } = transformConfigurationData(state);
 
-    expect(agent.connectionState).toBe("connected");
+    expect(agents).toHaveLength(1);
+    expect(agents[0]?.connectionState).toBe("connected");
+    expect(agents[0]?.sessionIds).toEqual(["old", "new"]);
+  });
+
+  it("keeps distinct consumer-tagged clients as separate agents", () => {
+    const state: SystemState = {
+      targetServers: [],
+      connectedClients: [
+        buildConnectedClientMock({
+          sessionId: "kw-1",
+          connectionState: "connected",
+        }),
+        buildConnectedClientMock({
+          sessionId: "kw-2",
+          connectionState: "connected",
+        }),
+      ],
+      connectedClientClusters: [
+        {
+          identityType: "consumerTag",
+          consumerTag: "local-agent-mcp-a",
+          clientNames: ["Claude Desktop"],
+          sessionIds: ["kw-1"],
+          usage: { callCount: 0 },
+        },
+        {
+          identityType: "consumerTag",
+          consumerTag: "local-agent-mcp-b",
+          clientNames: ["Claude Desktop"],
+          sessionIds: ["kw-2"],
+          usage: { callCount: 0 },
+        },
+      ],
+      usage: { callCount: 0 },
+      lastUpdatedAt: new Date("2026-10-13T00:00:00Z"),
+    };
+
+    expect(transformConfigurationData(state).agents).toHaveLength(2);
   });
 
   it("is disconnected only when every session is disconnected", () => {

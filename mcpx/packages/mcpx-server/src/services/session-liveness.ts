@@ -10,6 +10,7 @@ import {
 import {
   CloseSessionReason,
   McpxSession,
+  SessionLiveness,
   SessionLivenessConfig,
   SessionLivenessStore,
   TouchSource,
@@ -29,6 +30,9 @@ export class SessionLivenessManager {
   private _clock: Clock;
   private _onLivenessChanged: OnLivenessChanged;
   private _probeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  // Manager-wide so a generation is never reused: a stale close from an earlier
+  // stream can never match a newer one.
+  private _nextStreamGeneration = 0;
 
   constructor(
     store: SessionLivenessStore,
@@ -69,6 +73,7 @@ export class SessionLivenessManager {
     // Any inbound activity or ping success proves liveness: reset the miss streak
     // and clear staleness so an active client isn't reaped for undeliverable pings.
     session.liveness.consecutiveMisses = 0;
+    leaveReconnecting(session.liveness);
     this.setUnresponsive(sessionId, false);
     this._logger.silly("Session liveness touch", {
       sessionId,
@@ -77,10 +82,115 @@ export class SessionLivenessManager {
     });
   }
 
-  // Flag a session unresponsive now (e.g. its notification stream dropped),
-  // via the same path as a missed ping. Activity/ping then restores or reaps it.
-  markUnresponsive(sessionId: string): void {
-    this.setUnresponsive(sessionId, true);
+  // Total: creates the liveness record if the session has none, so callers
+  // never depend on "onSessionAdded ran first".
+  private getOrInitLiveness(sessionId: string): SessionLiveness | undefined {
+    const session = this._store.getSession(sessionId);
+    if (!session) {
+      return undefined;
+    }
+    session.liveness ??= this.createLiveness(session, (): void => {});
+    return session.liveness;
+  }
+
+  private createLiveness(
+    session: McpxSession,
+    stopPing: () => void,
+  ): SessionLiveness {
+    return {
+      lastSeenAt: this._clock.now().getTime(),
+      unresponsive: false,
+      consecutiveMisses: 0,
+      pingSupport: "unknown",
+      stopPing,
+      // SSE's stream is permanently open; generation 0 is reserved for it.
+      notificationStream:
+        session.transport.type === "sse"
+          ? { _type: "open", generation: 0 }
+          : { _type: "none" },
+    };
+  }
+
+  // A GET arrived. It supersedes whatever stream state existed (including
+  // "open" — the new GET isn't accepted yet, so pings must not be delivered
+  // until markNotificationStreamOpen).
+  beginNotificationStream(sessionId: string): number {
+    const liveness = this.getOrInitLiveness(sessionId);
+    if (!liveness) {
+      return 0;
+    }
+    leaveReconnecting(liveness);
+    const generation = ++this._nextStreamGeneration;
+    liveness.notificationStream = { _type: "opening", generation };
+    return generation;
+  }
+
+  // No-ops unless this generation is the one currently "opening".
+  markNotificationStreamOpen(props: {
+    sessionId: string;
+    generation: number;
+  }): void {
+    const { sessionId, generation } = props;
+    const liveness = this.getOrInitLiveness(sessionId);
+    const stream = liveness?.notificationStream;
+    if (
+      !liveness ||
+      stream?._type !== "opening" ||
+      stream.generation !== generation
+    ) {
+      return;
+    }
+    liveness.notificationStream = { _type: "open", generation };
+  }
+
+  // No-ops for stale or already-closed generations (so a duplicate close does
+  // not restart the grace timer). Never closes the session: after the grace
+  // period it only flags it unresponsive.
+  markNotificationStreamClosed(props: {
+    sessionId: string;
+    generation: number;
+  }): void {
+    const { sessionId, generation } = props;
+    const liveness = this.getOrInitLiveness(sessionId);
+    const stream = liveness?.notificationStream;
+    if (
+      !liveness ||
+      (stream?._type !== "opening" && stream?._type !== "open") ||
+      stream.generation !== generation
+    ) {
+      return;
+    }
+    const graceMs = this._config.notificationStreamReconnectGraceMs;
+    if (graceMs <= 0) {
+      liveness.notificationStream = { _type: "none" };
+      this.setUnresponsive(sessionId, true);
+      return;
+    }
+    liveness.notificationStream = {
+      _type: "reconnecting",
+      generation,
+      cancelGrace: this.startReconnectGrace({ sessionId, generation, graceMs }),
+    };
+  }
+
+  // A real ping answer: proves the client handles ping (so later misses are
+  // meaningful) and is proof of life like any inbound activity.
+  recordPingAnswered(sessionId: string): void {
+    const liveness = this.getOrInitLiveness(sessionId);
+    if (!liveness) {
+      return;
+    }
+    liveness.pingSupport = "answered";
+    this.touchSession(sessionId, TouchSource.Ping);
+  }
+
+  markPingUnsupported(sessionId: string): void {
+    const liveness = this.getOrInitLiveness(sessionId);
+    if (!liveness) {
+      return;
+    }
+    liveness.pingSupport = "unsupported";
+    this.setUnresponsive(sessionId, false);
   }
 
   onSessionAdded(sessionId: string): void {
@@ -166,6 +276,37 @@ export class SessionLivenessManager {
     this._gcStopper?.();
   }
 
+  // Starts the reconnect-grace timer for a stream that just dropped and
+  // returns its cancel function. The caller stores that function inside the
+  // "reconnecting" state, which is what makes cancellation reliable: every
+  // way out of "reconnecting" (a new GET → beginNotificationStream, inbound
+  // activity → touchSession, session removal → stopSessionLiveness) goes
+  // through leaveReconnecting(), which calls cancelGrace(). If none of them
+  // happens, the timer fires and flags the session unresponsive — it never
+  // closes it: a dropped GET doesn't prove the client is gone, and a wrong
+  // close costs the user a reconnect, a wrong badge costs almost nothing.
+  private startReconnectGrace(props: {
+    sessionId: string;
+    generation: number;
+    graceMs: number;
+  }): () => void {
+    const { sessionId, generation, graceMs } = props;
+    const timeout = setTimeout(() => {
+      const liveness = this._store.getSession(sessionId)?.liveness;
+      const stream = liveness?.notificationStream;
+      if (
+        !liveness ||
+        stream?._type !== "reconnecting" ||
+        stream.generation !== generation
+      ) {
+        return;
+      }
+      liveness.notificationStream = { _type: "none" };
+      this.setUnresponsive(sessionId, true);
+    }, graceMs);
+    return (): void => clearTimeout(timeout);
+  }
+
   private stopSessionLiveness(sessionId: string): void {
     const probeTimer = this._probeTimers.get(sessionId);
     if (probeTimer !== undefined) {
@@ -177,6 +318,7 @@ export class SessionLivenessManager {
       return;
     }
     session.liveness.stopPing();
+    leaveReconnecting(session.liveness);
     delete session.liveness;
   }
 
@@ -202,24 +344,20 @@ export class SessionLivenessManager {
     }
 
     // Stop any prior loop before replacing it so its timer can't leak.
-    session.liveness?.stopPing();
+    if (session.liveness) {
+      session.liveness.stopPing();
+      leaveReconnecting(session.liveness);
+    }
 
-    // Only clients with a deliverable ping channel (see isPingCapable) get the
-    // ping loop. The rest rely on the idle TTL, reset by inbound activity.
-    const stopPing = this.isPingCapable(session)
-      ? this.setupPingMonitoring(
-          session.server,
-          sessionId,
-          session.metadata,
-          options,
-        )
-      : (): void => {};
-    session.liveness = {
-      lastSeenAt: this._clock.now().getTime(),
-      unresponsive: false,
-      consecutiveMisses: 0,
-      stopPing,
-    };
+    // Every transport gets the ping loop; the tick itself skips while there is
+    // no open notification stream to deliver on (see canDeliverPing).
+    const stopPing = this.setupPingMonitoring(
+      session.server,
+      sessionId,
+      session.metadata,
+      options,
+    );
+    session.liveness = this.createLiveness(session, stopPing);
     return;
   }
 
@@ -255,17 +393,33 @@ export class SessionLivenessManager {
       if (stopped || running) {
         return;
       }
+      if (
+        this._store.getSession(sessionId)?.liveness?.pingSupport ===
+        "unsupported"
+      ) {
+        stopPing(); // learned elsewhere (e.g. a downstream keepalive)
+        return;
+      }
+      if (!this.canDeliverPing(sessionId)) {
+        timer = setTimeout(() => void tick(), pingIntervalMs);
+        return;
+      }
       running = true;
       try {
         await server.request({ method: "ping" }, EmptyResultSchema, {
           timeout: pingTimeoutMs,
         });
         if (stopped) return;
-        this.touchSession(sessionId, TouchSource.Ping);
+        this.recordPingAnswered(sessionId);
       } catch (error) {
         if (stopped) return;
         if (isPingUnsupportedError(error)) {
-          this.handlePingUnsupported(sessionId, metadata, stopPing);
+          this._logger.debug(
+            "Client does not support ping (method-not-found / invalid-format), stopping ping monitoring",
+            { sessionId, metadata },
+          );
+          this.markPingUnsupported(sessionId);
+          stopPing();
           return;
         }
         await this.recordMissedPing(sessionId, metadata, error);
@@ -319,46 +473,39 @@ export class SessionLivenessManager {
     });
     this.setUnresponsive(sessionId, true);
     const max = this._config.pingMaxConsecutiveTimeouts;
-    if (max > 0 && consecutiveMisses >= max) {
-      this._logger.debug("Reaping session after consecutive missed pings", {
+    if (max <= 0 || consecutiveMisses < max) {
+      return;
+    }
+    if (!canReapOnMissedPings(session)) {
+      this._logger.debug("Not reaping: client never answered a ping", {
         sessionId,
         metadata,
         consecutiveMisses,
-        max,
       });
-      await this._store
-        .closeSession(sessionId, CloseSessionReason.PingTimeout)
-        .catch((error) => {
-          this._logger.warn("Failed to close unresponsive session", {
-            sessionId,
-            metadata,
-            error: loggableError(error),
-          });
+      return;
+    }
+    this._logger.debug("Reaping session after consecutive missed pings", {
+      sessionId,
+      metadata,
+      consecutiveMisses,
+      max,
+    });
+    await this._store
+      .closeSession(sessionId, CloseSessionReason.PingTimeout)
+      .catch((error) => {
+        this._logger.warn("Failed to close unresponsive session", {
+          sessionId,
+          metadata,
+          error: loggableError(error),
         });
-    }
+      });
   }
 
-  private handlePingUnsupported(
-    sessionId: string,
-    metadata: McpxSession["metadata"],
-    stopPing: () => void,
-  ): void {
-    this._logger.debug(
-      "Client does not support ping (method-not-found / invalid-format), stopping ping monitoring",
-      { sessionId, metadata },
-    );
-    this.setUnresponsive(sessionId, false);
-    stopPing();
-  }
-
-  // Ping is deliverable on SSE (stream always open) or a client that advertises
-  // ping support. Others (including `ping === false`) fall back to the idle TTL.
-  private isPingCapable(session: McpxSession): boolean {
-    const pingSupport = session.metadata.clientInfo.adapter?.support?.ping;
-    if (pingSupport === false) {
-      return false;
-    }
-    return session.transport.type === "sse" || pingSupport === true;
+  // A server-initiated ping only reaches the client over the standalone
+  // notification stream; without one, the SDK would silently drop it.
+  private canDeliverPing(sessionId: string): boolean {
+    const liveness = this._store.getSession(sessionId)?.liveness;
+    return liveness?.notificationStream._type === "open";
   }
 
   private shouldSkipPingMonitoring(
@@ -397,8 +544,29 @@ export class SessionLivenessManager {
   }
 }
 
+// Every way out of "reconnecting" must cancel its timer, or it would later
+// fire against a stream that has since moved on.
+function leaveReconnecting(liveness: SessionLiveness): void {
+  if (liveness.notificationStream._type !== "reconnecting") {
+    return;
+  }
+  liveness.notificationStream.cancelGrace();
+  liveness.notificationStream = { _type: "none" };
+}
+
+// SSE's stream is permanently open, so its misses are real signals. A
+// streamableHttp client that never answered a ping may simply not handle it
+// (hang instead of rejecting), so only one that answered before is reaped
+// when it goes silent. Everything else relies on DELETE and the idle TTL.
+function canReapOnMissedPings(session: McpxSession): boolean {
+  return (
+    session.transport.type === "sse" ||
+    session.liveness?.pingSupport === "answered"
+  );
+}
+
 // Reachable but no working ping (method-not-found or invalid result shape),
 // reusing ExtendedClient's classification. Other errors are genuine misses.
-function isPingUnsupportedError(error: unknown): boolean {
+export function isPingUnsupportedError(error: unknown): boolean {
   return isMethodNotFoundError(error) || isInvalidResponseFormatError(error);
 }

@@ -46,7 +46,7 @@ export class SessionsManager {
   private logger: Logger;
   private config: SessionsManagerConfig;
   private behaviorService: BehaviorServiceI;
-  private liveness: SessionLivenessManager;
+  readonly liveness: SessionLivenessManager;
   private sessionStore: DownstreamSessionStore;
   private clock: Clock;
   private recoveryLoaded = false;
@@ -129,12 +129,6 @@ export class SessionsManager {
     };
   }
 
-  // Flag a session unresponsive now (e.g. its notification stream dropped),
-  // via the same liveness path as a missed ping.
-  markSessionUnresponsive(sessionId: string): void {
-    this.liveness.markUnresponsive(sessionId);
-  }
-
   // Best-effort: a streamable client receives this only while its GET stream is
   // open (replay buffer backstops brief drops), and must re-list to apply it.
   async broadcastListChanged(kind: CapabilityKind): Promise<void> {
@@ -212,10 +206,6 @@ export class SessionsManager {
     }
 
     session.metadata = metadata;
-
-    if (metadata.clientInfo.adapter?.support?.ping === false) {
-      session.liveness?.stopPing();
-    }
 
     if (!metadata.isProbe) {
       void this.sessionStore.store(sessionId, { metadata }).catch((e) => {

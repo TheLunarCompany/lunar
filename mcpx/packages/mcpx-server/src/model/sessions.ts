@@ -31,6 +31,7 @@ export interface SessionsManagerConfig {
   sessionSweepIntervalMin?: number;
   // Consecutive missed pings before the session is reaped.
   pingMaxConsecutiveTimeouts: number;
+  notificationStreamReconnectGraceMs: number;
 }
 
 export interface SessionLivenessConfig {
@@ -39,6 +40,29 @@ export interface SessionLivenessConfig {
   sessionTtlMin: number;
   sessionSweepIntervalMin?: number;
   pingMaxConsecutiveTimeouts: number;
+  notificationStreamReconnectGraceMs: number;
+}
+
+export type NotificationStream =
+  | { _type: "none" } // no GET yet, or it closed and activity cancelled the wait
+  | { _type: "opening"; generation: number } // GET arrived; SDK hasn't accepted it yet
+  | { _type: "open"; generation: number } // SSE response confirmed; pings can go
+  | { _type: "reconnecting"; generation: number; cancelGrace: () => void }; // dropped; waiting out the grace period
+
+// Learned from actual ping responses rather than client/version metadata.
+export type PingSupport = "unknown" | "answered" | "unsupported";
+
+export interface SessionLiveness {
+  lastSeenAt: number;
+  // Missed at least one ping, or the notification stream stayed down past the
+  // grace period. Never closes the session by itself.
+  unresponsive: boolean;
+  // Consecutive missed pings, reset by any inbound activity or ping success.
+  consecutiveMisses: number;
+  pingSupport: PingSupport;
+  stopPing: () => void;
+  // State of the streamableHttp standalone GET/notification stream.
+  notificationStream: NotificationStream;
 }
 
 export interface McpxSession {
@@ -49,14 +73,7 @@ export interface McpxSession {
   consumerConfig: ConsumerConfig | undefined | null; // undefined if not searched yet, null if not found
   metadata: McpxSessionMetadata;
   toolCallCache?: Map<string, ToolCallCacheEntry>;
-  liveness?: {
-    lastSeenAt: number;
-    // Missed at least one ping but not yet reaped.
-    unresponsive: boolean;
-    // Consecutive missed pings, reset by any inbound activity or ping success.
-    consecutiveMisses: number;
-    stopPing: () => void;
-  };
+  liveness?: SessionLiveness;
 }
 
 export type ToolCallResultUnion = CallToolResult | CompatibilityCallToolResult;

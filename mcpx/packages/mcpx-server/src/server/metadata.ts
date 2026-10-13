@@ -5,8 +5,7 @@ import {
   McpxSession,
 } from "../model/sessions.js";
 import z from "zod/v4";
-import { parse, SemVer } from "semver";
-import { Logger } from "winston";
+import { parse } from "semver";
 import { headerString } from "@aigw/core/http";
 import { AGENT_REGISTRY, resolveCanonicalName } from "@mcpx/shared-model";
 
@@ -44,27 +43,8 @@ const PROBE_CLIENT_NAMES = new Set(["mcp-remote-fallback-test"]);
 const MCP_REMOTE_VERSION_PATTERN =
   /via mcp-remote[ /-]?([0-9]+\.[0-9]+\.[0-9]+)/;
 
-const LATEST_SUPPORTED_MCP_REMOTE_VERSION = new SemVer("0.1.36");
-const LEGACY_MAX_SUPPORTED_MCP_REMOTE_VERSION = new SemVer("0.1.21");
-
 export function isProbeClient(clientName?: string): boolean {
   return clientName ? PROBE_CLIENT_NAMES.has(clientName) : false;
-}
-
-export function logMetadataWarnings(
-  metadata: McpxSession["metadata"],
-  sessionId: string | undefined,
-  logger: Logger,
-): void {
-  const { adapter } = metadata.clientInfo;
-  if (adapter?.name === "mcp-remote" && adapter.support?.ping === false) {
-    logger.warn(
-      `Detected usage of mcp-remote out of supported versions range. ` +
-        `We recommend anchoring your mcp-remote version in the agent configuration. ` +
-        `Replace \`mcp-remote\` with \`mcp-remote@${LATEST_SUPPORTED_MCP_REMOTE_VERSION.version}\``,
-      { sessionId, metadata },
-    );
-  }
 }
 
 export function extractMetadata(
@@ -136,24 +116,9 @@ function extractAdapter(
   const version = versionString
     ? (parse(versionString) ?? undefined)
     : undefined;
-  const support = getAdapterSupport("mcp-remote", version);
 
   return {
-    adapter: { name: "mcp-remote", version, support },
+    adapter: { name: "mcp-remote", version },
     nameWithoutAdapter: clientName.substring(0, viaIdx),
   };
-}
-
-function getAdapterSupport(
-  name: string,
-  version: SemVer | undefined,
-): McpClientAdapter["support"] | undefined {
-  if (name !== "mcp-remote" || !version) {
-    return undefined;
-  }
-
-  const supportsPing =
-    version.compare(LEGACY_MAX_SUPPORTED_MCP_REMOTE_VERSION) <= 0 ||
-    version.compare(LATEST_SUPPORTED_MCP_REMOTE_VERSION) === 0;
-  return { ping: supportsPing };
 }

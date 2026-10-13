@@ -86,6 +86,10 @@ const envSchema = z
     // Kill switch for the cached DNS lookups on outbound fetch.
     ENABLE_UPSTREAM_DNS_CACHE: z.stringbool().default(true),
     PING_INTERVAL_MS: z.coerce.number().default(5000),
+    // How long a dropped notification stream may stay down before the session
+    // is flagged unresponsive. Covers the SDK's two reconnect attempts
+    // (1s + 1.5s) plus network slack. 0 disables the grace period.
+    NOTIFICATION_STREAM_RECONNECT_GRACE_MS: z.coerce.number().default(15_000),
     DOWNSTREAM_KEEPALIVE_INTERVAL_MS: z.coerce.number().default(25000),
     ENABLE_TOOL_CALL_CACHE: z.stringbool().default(false),
     TOOL_CALL_CACHE_TTL_MS: z.coerce.number().default(5 * 60_000),
@@ -192,6 +196,7 @@ const NON_SECRET_KEYS = [
   "LOG_HIDE_TAGS",
   "MCPX_PORT",
   "PING_INTERVAL_MS",
+  "NOTIFICATION_STREAM_RECONNECT_GRACE_MS",
   "DOWNSTREAM_KEEPALIVE_INTERVAL_MS",
   "ENABLE_TOOL_CALL_CACHE",
   "TOOL_CALL_CACHE_TTL_MS",

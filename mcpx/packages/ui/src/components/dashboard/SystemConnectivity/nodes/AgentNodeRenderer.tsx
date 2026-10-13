@@ -80,7 +80,7 @@ const AgentNodeRenderer = ({
               </TooltipTrigger>
               <TooltipContent>
                 {data.connectionState === "unresponsive"
-                  ? "Missing pings (unresponsive)"
+                  ? "Connection unstable"
                   : "Disconnected"}
               </TooltipContent>
             </Tooltip>

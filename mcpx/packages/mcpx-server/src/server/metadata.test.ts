@@ -22,7 +22,6 @@ describe("metadata extraction", () => {
       expect(metadata.clientInfo.adapter?.version?.major).toBe(0);
       expect(metadata.clientInfo.adapter?.version?.minor).toBe(1);
       expect(metadata.clientInfo.adapter?.version?.patch).toBe(15);
-      expect(metadata.clientInfo.adapter?.support?.ping).toBe(true);
     });
 
     it("should detect mcp-remote without version", () => {
@@ -41,29 +40,6 @@ describe("metadata extraction", () => {
       expect(metadata.clientInfo.name).toBe("Claude Desktop"); // resolveCanonicalName(nameWithoutAdapter, AGENT_REGISTRY)
       expect(metadata.clientInfo.adapter?.name).toBe("mcp-remote");
       expect(metadata.clientInfo.adapter?.version).toBeUndefined();
-      expect(metadata.clientInfo.adapter?.support).toBeUndefined();
-    });
-
-    it("should determine ping support based on version", () => {
-      const cases: [string, boolean][] = [
-        ["claude-ai (via mcp-remote-0.1.19)", true], // older than legacy max — supported
-        ["claude-ai (via mcp-remote-0.1.21)", true], // legacy max — supported
-        ["claude-ai (via mcp-remote-0.1.22)", false], // in the gap — not supported
-        ["claude-ai (via mcp-remote-0.1.23)", false], // in the gap — not supported
-        ["claude-ai (via mcp-remote-0.1.36)", true], // pinned version — supported
-        ["claude-ai (via mcp-remote-0.1.50)", false], // beyond latest — not supported
-      ];
-
-      for (const [name, expectedPing] of cases) {
-        const body = {
-          params: {
-            protocolVersion: "0.1.0",
-            clientInfo: { name, version: "1.0.0" },
-          },
-        };
-        const metadata = extractMetadata({}, body);
-        expect(metadata.clientInfo.adapter?.support?.ping).toBe(expectedPing);
-      }
     });
 
     it("should handle malformed request body gracefully", () => {

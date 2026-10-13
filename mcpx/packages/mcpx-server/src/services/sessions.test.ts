@@ -25,6 +25,7 @@ const baseConfig = {
   probeClientsGraceLivenessPeriodMs: 1000,
   sessionTtlMin: 60,
   pingMaxConsecutiveTimeouts: 3,
+  notificationStreamReconnectGraceMs: 5000,
 };
 
 describe("SessionsManager", () => {
@@ -346,6 +347,34 @@ describe("SessionsManager", () => {
     );
   });
 
+  it("shares runtime unsupported-ping detection with downstream keepalives", async () => {
+    sessionsManager = new SessionsManager(
+      { ...baseConfig, pingIntervalMs: 10 },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+
+    const sessionId = "runtime-no-ping";
+    const session = createMockSession({
+      ping: async () => {
+        throw new McpError(ErrorCode.MethodNotFound, "Method not found: ping");
+      },
+    });
+    await sessionsManager.addSession(sessionId, session);
+
+    expect(sessionsManager.getSession(sessionId)?.liveness?.pingSupport).toBe(
+      "unknown",
+    );
+    await waitFor(30);
+    expect(sessionsManager.getSession(sessionId)?.liveness?.pingSupport).toBe(
+      "unsupported",
+    );
+  });
+
   it("stops pinging once the session is closed (no leaked ping loop)", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 1000 },
@@ -471,37 +500,6 @@ describe("SessionsManager", () => {
     );
   });
 
-  it("markSessionUnresponsive flips state via the liveness path, cleared by activity", async () => {
-    sessionsManager = new SessionsManager(
-      baseConfig,
-      stubBehaviorService(),
-      systemState,
-      noOpLogger,
-      clock,
-      noopSessionStore,
-    );
-    await sessionsManager.initialize();
-    await sessionsManager.addSession(
-      "s",
-      createMockSession({ clientName: "cursor" }),
-    );
-
-    sessionsManager.markSessionUnresponsive("s");
-    expect(sessionsManager.getSessionLiveness("s")?.unresponsive).toBe(true);
-    expect(
-      systemState.export().connectedClients.find((c) => c.sessionId === "s")
-        ?.connectionState,
-    ).toBe("unresponsive");
-
-    // Inbound activity restores it through the same path.
-    sessionsManager.touchSession("s");
-    expect(sessionsManager.getSessionLiveness("s")?.unresponsive).toBe(false);
-    expect(
-      systemState.export().connectedClients.find((c) => c.sessionId === "s")
-        ?.connectionState,
-    ).toBe("connected");
-  });
-
   it("does not reap an actively-touched session even when pings fail", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 2 },
@@ -552,7 +550,7 @@ describe("SessionsManager", () => {
     expect(sessionsManager.getSession(sessionId)).toBeDefined();
   });
 
-  it("does not ping-reap a streamable client without ping support", async () => {
+  it("does not ping (or count misses) a streamable client with no open notification stream", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 2 },
       stubBehaviorService(),
@@ -564,7 +562,6 @@ describe("SessionsManager", () => {
     await sessionsManager.initialize();
 
     let pingCalls = 0;
-    // No advertised ping support and no channel: must not be pinged or reaped.
     const session = createMockSession({
       transportType: "streamableHttp",
       ping: async () => {
@@ -572,14 +569,14 @@ describe("SessionsManager", () => {
         throw new Error("no channel");
       },
     });
-    await sessionsManager.addSession("no-ping-streamable", session);
+    await sessionsManager.addSession("no-stream-streamable", session);
 
     await waitFor(80);
-    expect(sessionsManager.getSession("no-ping-streamable")).toBeDefined();
+    expect(sessionsManager.getSession("no-stream-streamable")).toBeDefined();
     expect(pingCalls).toBe(0);
   });
 
-  it("ping-reaps a streamable client that advertises ping support", async () => {
+  it("flags a streamable client that never answers a ping unresponsive but never reaps it", async () => {
     sessionsManager = new SessionsManager(
       { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 2 },
       stubBehaviorService(),
@@ -589,18 +586,559 @@ describe("SessionsManager", () => {
       noopSessionStore,
     );
     await sessionsManager.initialize();
-
-    const session = createMockSession({
-      transportType: "streamableHttp",
-      pingSupported: true,
-      ping: async () => {
-        throw new Error("client gone");
-      },
-    });
-    await sessionsManager.addSession("ping-streamable", session);
+    const sessionId = "hangs-on-ping";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({
+        transportType: "streamableHttp",
+        ping: async () => {
+          throw new McpError(ErrorCode.RequestTimeout, "Request timed out");
+        },
+      }),
+    );
+    openNotificationStream(sessionsManager, sessionId);
 
     await waitFor(120);
-    expect(sessionsManager.getSession("ping-streamable")).toBeUndefined();
+    expect(sessionsManager.getSession(sessionId)).toBeDefined();
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      true,
+    );
+    expect(sessionsManager.getSession(sessionId)?.liveness?.pingSupport).toBe(
+      "unknown",
+    );
+  });
+
+  it("ping-reaps a streamable client that answered pings and then stops responding", async () => {
+    sessionsManager = new SessionsManager(
+      { ...baseConfig, pingIntervalMs: 10, pingMaxConsecutiveTimeouts: 2 },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    let answered = 0;
+    const sessionId = "answers-then-dies";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({
+        transportType: "streamableHttp",
+        ping: async () => {
+          if (answered < 2) {
+            answered += 1;
+            return;
+          }
+          throw new Error("client gone");
+        },
+      }),
+    );
+    openNotificationStream(sessionsManager, sessionId);
+
+    await waitFor(200);
+    expect(sessionsManager.getSession(sessionId)).toBeUndefined();
+  });
+
+  it("does not deliver pings on a replacement stream until the SDK accepts it", async () => {
+    sessionsManager = new SessionsManager(
+      { ...baseConfig, pingIntervalMs: 10 },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    let pingCalls = 0;
+    const sessionId = "replacement-stream";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({
+        transportType: "streamableHttp",
+        ping: async () => {
+          pingCalls += 1;
+        },
+      }),
+    );
+    openNotificationStream(sessionsManager, sessionId);
+    await waitFor(40);
+    expect(pingCalls).toBeGreaterThan(0);
+
+    // New GET arrives: the previous stream is superseded, the new one isn't
+    // open yet.
+    const generation =
+      sessionsManager.liveness.beginNotificationStream(sessionId);
+    pingCalls = 0;
+    await waitFor(50);
+    expect(pingCalls).toBe(0);
+
+    sessionsManager.liveness.markNotificationStreamOpen({
+      sessionId,
+      generation,
+    });
+    await waitFor(40);
+    expect(pingCalls).toBeGreaterThan(0);
+  });
+
+  it("does not mark a session unresponsive when a stale (superseded) stream closes late", async () => {
+    sessionsManager = new SessionsManager(
+      baseConfig,
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+
+    const sessionId = "reconnect-race";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+
+    const staleGeneration = openNotificationStream(sessionsManager, sessionId);
+    const currentGeneration = openNotificationStream(
+      sessionsManager,
+      sessionId,
+    );
+
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation: staleGeneration,
+    });
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      false,
+    );
+    expect(
+      sessionsManager.getSession(sessionId)?.liveness?.notificationStream,
+    ).toEqual({ _type: "open", generation: currentGeneration });
+  });
+
+  it("does not open a superseded stream generation", async () => {
+    sessionsManager = new SessionsManager(
+      { ...baseConfig, pingIntervalMs: 10 },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+
+    const sessionId = "rejected-stream-race";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+
+    const staleGeneration =
+      sessionsManager.liveness.beginNotificationStream(sessionId);
+    const currentGeneration =
+      sessionsManager.liveness.beginNotificationStream(sessionId);
+    sessionsManager.liveness.markNotificationStreamOpen({
+      sessionId,
+      generation: staleGeneration,
+    });
+    expect(
+      sessionsManager.getSession(sessionId)?.liveness?.notificationStream,
+    ).toEqual({ _type: "opening", generation: currentGeneration });
+
+    let pingCalls = 0;
+    const session = sessionsManager.getSession(sessionId);
+    if (!session) throw new Error("session missing");
+    session.server.request = jest.fn(async () => {
+      pingCalls += 1;
+      return {};
+    }) as typeof session.server.request;
+
+    await waitFor(30);
+    expect(pingCalls).toBe(0);
+  });
+
+  it("flags unresponsive only after the grace period and never closes the session", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        ...baseConfig,
+        pingIntervalMs: 0,
+        notificationStreamReconnectGraceMs: 20,
+      },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    const sessionId = "grace-expires";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    const generation = openNotificationStream(sessionsManager, sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+
+    // Inside the grace window a routine reconnect must not flicker the UI.
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      false,
+    );
+    await waitFor(60);
+    expect(sessionsManager.getSession(sessionId)).toBeDefined();
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      true,
+    );
+    expect(
+      systemState
+        .export()
+        .connectedClients.find((c) => c.sessionId === sessionId)
+        ?.connectionState,
+    ).toBe("unresponsive");
+  });
+
+  it("flags unresponsive immediately when the grace period is disabled", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        ...baseConfig,
+        pingIntervalMs: 0,
+        notificationStreamReconnectGraceMs: 0,
+      },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    const sessionId = "no-grace";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    const generation = openNotificationStream(sessionsManager, sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      true,
+    );
+  });
+
+  it("ignores a duplicate close for the same generation instead of restarting the grace timer", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        ...baseConfig,
+        pingIntervalMs: 0,
+        notificationStreamReconnectGraceMs: 40,
+      },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    const sessionId = "double-close";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    const generation = openNotificationStream(sessionsManager, sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+    await waitFor(25);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+    await waitFor(25); // 50ms total > 40ms grace measured from the FIRST close
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      true,
+    );
+  });
+
+  it("keeps a streamable client connected when its notification stream reconnects within the grace period", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        ...baseConfig,
+        pingIntervalMs: 0,
+        notificationStreamReconnectGraceMs: 40,
+      },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+
+    const sessionId = "stream-reconnects";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    const closedGeneration = openNotificationStream(sessionsManager, sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation: closedGeneration,
+    });
+
+    // No touchSession: beginNotificationStream alone must cancel the timer.
+    await waitFor(10);
+    openNotificationStream(sessionsManager, sessionId);
+
+    await waitFor(50);
+    expect(sessionsManager.getSession(sessionId)).toBeDefined();
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      false,
+    );
+
+    const snapshot = systemState.export();
+    expect(snapshot.connectedClients).toHaveLength(1);
+    expect(snapshot.connectedClients[0]).toMatchObject({
+      sessionId,
+      connectionState: "connected",
+    });
+    expect(snapshot.connectedClientClusters).toHaveLength(1);
+    expect(snapshot.connectedClientClusters[0]?.sessionIds).toEqual([
+      sessionId,
+    ]);
+  });
+
+  it("keeps a streamable client connected when inbound activity resumes during the grace period", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        ...baseConfig,
+        pingIntervalMs: 0,
+        notificationStreamReconnectGraceMs: 40,
+      },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+
+    const sessionId = "activity-resumes";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    const generation = openNotificationStream(sessionsManager, sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+
+    await waitFor(10);
+    sessionsManager.touchSession(sessionId);
+
+    await waitFor(50);
+    expect(sessionsManager.getSession(sessionId)).toBeDefined();
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      false,
+    );
+    expect(
+      sessionsManager.getSession(sessionId)?.liveness?.notificationStream._type,
+    ).toBe("none");
+  });
+
+  it("clears unresponsive when the stream reopens after the grace period expired", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        ...baseConfig,
+        pingIntervalMs: 0,
+        notificationStreamReconnectGraceMs: 20,
+      },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    const sessionId = "late-reconnect";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    const generation = openNotificationStream(sessionsManager, sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+    await waitFor(40);
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      true,
+    );
+
+    // Mirrors handleStreamableGet: touch first, then begin/open.
+    sessionsManager.touchSession(sessionId);
+    openNotificationStream(sessionsManager, sessionId);
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      false,
+    );
+  });
+
+  it("starts the grace clock when a stream is rejected before it ever opened", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        ...baseConfig,
+        pingIntervalMs: 0,
+        notificationStreamReconnectGraceMs: 20,
+      },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    const sessionId = "rejected-get";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    // Mirrors handleStreamableGet's rejected-GET branch: begin, never open, close.
+    const generation =
+      sessionsManager.liveness.beginNotificationStream(sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+    expect(
+      sessionsManager.getSession(sessionId)?.liveness?.notificationStream._type,
+    ).toBe("reconnecting");
+
+    // A late open for the rejected generation must not resurrect it.
+    sessionsManager.liveness.markNotificationStreamOpen({
+      sessionId,
+      generation,
+    });
+    expect(
+      sessionsManager.getSession(sessionId)?.liveness?.notificationStream._type,
+    ).toBe("reconnecting");
+
+    await waitFor(60);
+    expect(sessionsManager.getSession(sessionId)).toBeDefined();
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      true,
+    );
+  });
+
+  it("recordPingAnswered marks the client as answering and restores connected", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        ...baseConfig,
+        pingIntervalMs: 0,
+        notificationStreamReconnectGraceMs: 0,
+      },
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    const sessionId = "answered";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    const generation = openNotificationStream(sessionsManager, sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      true,
+    );
+
+    sessionsManager.liveness.recordPingAnswered(sessionId);
+    expect(sessionsManager.getSession(sessionId)?.liveness?.pingSupport).toBe(
+      "answered",
+    );
+    expect(sessionsManager.getSessionLiveness(sessionId)?.unresponsive).toBe(
+      false,
+    );
+  });
+
+  it("stream and ping mutators are total: they initialise liveness when it is missing", async () => {
+    sessionsManager = new SessionsManager(
+      { ...baseConfig, sessionTtlMin: 0 }, // monitoring never creates liveness
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    const sessionId = "no-liveness-yet";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    expect(sessionsManager.getSession(sessionId)?.liveness).toBeUndefined();
+
+    const generation =
+      sessionsManager.liveness.beginNotificationStream(sessionId);
+    expect(generation).toBeGreaterThan(0);
+    sessionsManager.liveness.markPingUnsupported(sessionId);
+    expect(sessionsManager.getSession(sessionId)?.liveness?.pingSupport).toBe(
+      "unsupported",
+    );
+    expect(
+      sessionsManager.getSession(sessionId)?.liveness?.notificationStream,
+    ).toEqual({ _type: "opening", generation });
+  });
+
+  it("cancels a pending grace timer on shutdown", async () => {
+    jest.useFakeTimers();
+    try {
+      sessionsManager = new SessionsManager(
+        {
+          ...baseConfig,
+          pingIntervalMs: 0,
+          notificationStreamReconnectGraceMs: 1000,
+        },
+        stubBehaviorService(),
+        systemState,
+        noOpLogger,
+        clock,
+        noopSessionStore,
+      );
+      await sessionsManager.initialize();
+      const sessionId = "shutdown-in-grace";
+      await sessionsManager.addSession(
+        sessionId,
+        createMockSession({ transportType: "streamableHttp" }),
+      );
+      const generation = openNotificationStream(sessionsManager, sessionId);
+      sessionsManager.liveness.markNotificationStreamClosed({
+        sessionId,
+        generation,
+      });
+      const stream =
+        sessionsManager.getSession(sessionId)?.liveness?.notificationStream;
+      if (stream?._type !== "reconnecting") {
+        throw new Error(`expected reconnecting, got ${stream?._type}`);
+      }
+      const timersWhileReconnecting = jest.getTimerCount();
+
+      sessionsManager.liveness.shutdown();
+      // The grace timer is gone (the GC interval goes with it).
+      expect(jest.getTimerCount()).toBe(timersWhileReconnecting - 2);
+      await sessionsManager.shutdown();
+      jest.advanceTimersByTime(2000); // a leaked timer would fire here
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
@@ -721,11 +1259,19 @@ describe("SessionsManager recovery", () => {
       createMockSession({ clientName: "cursor" }),
     );
 
-    const online = systemState
-      .export()
-      .connectedClients.find((c) => c.sessionId === "restored-session");
-    expect(online?.connectionState).toBe("connected");
-    expect(online?.disconnectedAt).toBeUndefined();
+    const restoredSnapshot = systemState.export();
+    expect(restoredSnapshot.connectedClients).toHaveLength(1);
+    expect(restoredSnapshot.connectedClients[0]).toMatchObject({
+      sessionId: "restored-session",
+      connectionState: "connected",
+    });
+    expect(
+      restoredSnapshot.connectedClients[0]?.disconnectedAt,
+    ).toBeUndefined();
+    expect(restoredSnapshot.connectedClientClusters).toHaveLength(1);
+    expect(restoredSnapshot.connectedClientClusters[0]?.sessionIds).toEqual([
+      "restored-session",
+    ]);
 
     await manager.shutdown();
   });
@@ -924,7 +1470,6 @@ function createMockSession(overrides?: {
   consumerTag?: string;
   clientName?: string;
   transportType?: "sse" | "streamableHttp";
-  pingSupported?: boolean;
 }): McpxSession {
   // Route the test ping through server.request(), which liveness calls.
   const pingImpl = overrides?.ping ?? (async () => {});
@@ -939,17 +1484,9 @@ function createMockSession(overrides?: {
   const mockTransport = {
     close: async () => {},
   } as unknown as Transport;
-  const adapter =
-    overrides?.pingSupported === undefined
-      ? undefined
-      : {
-          name: "mcp-remote" as const,
-          support: { ping: overrides.pingSupported },
-        };
-  const clientInfo = {
-    ...(overrides?.clientName ? { name: overrides.clientName } : {}),
-    ...(adapter ? { adapter } : {}),
-  };
+  const clientInfo = overrides?.clientName
+    ? { name: overrides.clientName }
+    : {};
   const session: McpxSession = {
     transport: {
       type: overrides?.transportType ?? "sse",
@@ -965,6 +1502,15 @@ function createMockSession(overrides?: {
     server: mockServer,
   };
   return session;
+}
+
+function openNotificationStream(
+  manager: SessionsManager,
+  sessionId: string,
+): number {
+  const generation = manager.liveness.beginNotificationStream(sessionId);
+  manager.liveness.markNotificationStreamOpen({ sessionId, generation });
+  return generation;
 }
 
 async function waitFor(ms: number): Promise<void> {

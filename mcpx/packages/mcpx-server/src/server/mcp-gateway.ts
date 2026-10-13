@@ -37,6 +37,7 @@ import {
   UnknownInternalCapabilityError,
 } from "../services/internal-capabilities-service.js";
 import { BehaviorSetting } from "../services/behavior-service.js";
+import { isPingUnsupportedError } from "../services/session-liveness.js";
 const MIN_PROTOCOL_VERSION_FOR_KEEPALIVE = "2025-11-25";
 const MAX_KEEPALIVE_TIMEOUT_RATIO = 0.8;
 type RequestHandler = Parameters<Server["setRequestHandler"]>[1];
@@ -254,6 +255,13 @@ export async function getServer(
         sendNotification,
         sendRequest,
         signal,
+        onPingAnswered: sessionId
+          ? (): void => services.sessions.liveness.recordPingAnswered(sessionId)
+          : undefined,
+        onPingUnsupported: sessionId
+          ? (): void =>
+              services.sessions.liveness.markPingUnsupported(sessionId)
+          : undefined,
         logger,
       });
       const consumerTag = session?.metadata.consumerTag;
@@ -302,8 +310,10 @@ function supportsDownstreamPing(
   if (!sessionId) {
     return true;
   }
-  const session = services.sessions.getSession(sessionId);
-  return session?.metadata.clientInfo.adapter?.support?.ping !== false;
+  return (
+    services.sessions.getSession(sessionId)?.liveness?.pingSupport !==
+    "unsupported"
+  );
 }
 
 function supportsDownstreamKeepalive(
@@ -339,6 +349,8 @@ function setupDownstreamKeepalive(options: {
   sendNotification?: SendNotification;
   sendRequest?: SendRequest;
   signal?: AbortSignal;
+  onPingAnswered?: () => void;
+  onPingUnsupported?: () => void;
   logger?: Logger;
 }): () => void {
   const {
@@ -348,6 +360,8 @@ function setupDownstreamKeepalive(options: {
     sendNotification,
     sendRequest,
     signal,
+    onPingAnswered,
+    onPingUnsupported,
     logger,
   } = options;
 
@@ -400,7 +414,14 @@ function setupDownstreamKeepalive(options: {
       );
       await sendRequest?.({ method: "ping" }, EmptyResultSchema, {
         timeout,
-      }).catch(() => {});
+      })
+        .then(() => onPingAnswered?.())
+        .catch((error) => {
+          if (isPingUnsupportedError(error)) {
+            onPingUnsupported?.();
+            stop();
+          }
+        });
     } catch (error) {
       logger?.debug("Downstream keepalive failed", {
         error: loggableError(error),

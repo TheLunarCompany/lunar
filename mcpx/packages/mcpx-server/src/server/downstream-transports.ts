@@ -8,7 +8,7 @@ import { McpxSession } from "../model/sessions.js";
 import { Services } from "../services/services.js";
 import { env } from "../env.js";
 import { getServer } from "./mcp-gateway.js";
-import { extractMetadata, logMetadataWarnings } from "./metadata.js";
+import { extractMetadata } from "./metadata.js";
 import { CloseSessionReason, TouchSource } from "../services/sessions.js";
 import { loggableError } from "@aigw/core/logging";
 import { InMemoryEventStore } from "./streamable-event-store.js";
@@ -63,7 +63,6 @@ function registerLegacySseMessagesRoute(
   router.post("/messages", authGuard, async (req, res) => {
     const sessionId = getSessionIdFromQuery(req.query);
     const metadata = extractMetadata(req.headers, req.body);
-    logMetadataWarnings(metadata, sessionId, routeLogger);
 
     if (!sessionId) {
       respondMissingSessionId(res);
@@ -118,6 +117,52 @@ function registerTransportRoutes(
   const transportType = transportFactory.transportType;
   const routeLogger = baseLogger.child({ transportType });
 
+  async function handleStreamableGet(props: {
+    sessionId: string;
+    transport: StreamableHTTPServerTransport;
+    req: express.Request;
+    res: express.Response;
+  }): Promise<void> {
+    const { sessionId, transport, req, res } = props;
+    const { liveness } = services.sessions;
+    services.sessions.touchSession(sessionId, TouchSource.TransportGetMcp);
+    const generation = liveness.beginNotificationStream(sessionId);
+    res.on("close", () => {
+      if (res.writableEnded) {
+        return;
+      }
+      liveness.markNotificationStreamClosed({ sessionId, generation });
+    });
+    try {
+      transport.closeStandaloneSSEStream();
+    } catch (error) {
+      routeLogger.debug("Failed to close standalone SSE stream", {
+        sessionId,
+        error,
+      });
+    }
+    const handling = transport.handleRequest(req, res);
+    try {
+      await Promise.race([handling, waitForHeadersSent(res)]);
+    } catch (error) {
+      liveness.markNotificationStreamClosed({ sessionId, generation });
+      throw error;
+    }
+    const contentType = res.getHeader("content-type");
+    if (
+      res.statusCode >= 200 &&
+      res.statusCode < 300 &&
+      typeof contentType === "string" &&
+      contentType.startsWith("text/event-stream")
+    ) {
+      liveness.markNotificationStreamOpen({ sessionId, generation });
+    } else {
+      // A rejected GET (406/409/…) is not an open stream.
+      liveness.markNotificationStreamClosed({ sessionId, generation });
+    }
+    await handling;
+  }
+
   async function tryRestoreStreamableSession(
     sessionId: string,
     req: express.Request,
@@ -145,26 +190,29 @@ function registerTransportRoutes(
       restoredFromHub: true,
       metadata: resolvedMetadata,
     });
-    return transportFactory
-      .getStreamableTransportRestored({
+    try {
+      const transport = await transportFactory.getStreamableTransportRestored({
         metadata: resolvedMetadata,
         sessionIdHint: sessionId,
-      })
-      .then((transport) => transport.handleRequest(req, res, body))
-      .then(() => true)
-      .catch((error) => {
-        routeLogger.error("Transparent session restoration failed", {
-          sessionId,
-          error: loggableError(error),
-        });
-        return false;
       });
+      if (req.method === "GET") {
+        await handleStreamableGet({ sessionId, transport, req, res });
+      } else {
+        await transport.handleRequest(req, res, body);
+      }
+      return true;
+    } catch (error) {
+      routeLogger.error("Transparent session restoration failed", {
+        sessionId,
+        error: loggableError(error),
+      });
+      return false;
+    }
   }
 
   router.post(basePath, authGuard, async (req, res) => {
     const sessionId = getSessionIdFromRequest(req, transportType);
     const metadata = extractMetadata(req.headers, req.body);
-    logMetadataWarnings(metadata, sessionId, routeLogger);
 
     // Initial session creation
     if (!sessionId) {
@@ -269,7 +317,6 @@ function registerTransportRoutes(
         return;
       }
       const metadata = extractMetadata(req.headers, req.body);
-      logMetadataWarnings(metadata, sessionId, routeLogger);
       // SSE GET only establishes the long-lived transport/session; MCP messages are sent later via POST.
       await transportFactory.getSseTransport({
         metadata,
@@ -303,24 +350,12 @@ function registerTransportRoutes(
       return;
     }
 
-    services.sessions.touchSession(sessionId, TouchSource.TransportGetMcp);
-    // If the notification stream drops before we end it, flag the agent
-    // unresponsive now. Later activity or a ping restores or reaps it.
-    res.on("close", () => {
-      if (res.writableEnded) {
-        return;
-      }
-      services.sessions.markSessionUnresponsive(sessionId);
+    await handleStreamableGet({
+      sessionId,
+      transport: session.transport.transport,
+      req,
+      res,
     });
-    try {
-      session.transport.transport.closeStandaloneSSEStream();
-    } catch (error) {
-      routeLogger.debug("Failed to close standalone SSE stream", {
-        sessionId,
-        error,
-      });
-    }
-    await session.transport.transport.handleRequest(req, res);
   });
 
   // Handle DELETE requests for session termination
@@ -355,6 +390,22 @@ function registerTransportRoutes(
       CloseSessionReason.TransportDelete,
     );
     res.status(200).send();
+  });
+}
+
+function waitForHeadersSent(res: express.Response): Promise<void> {
+  if (res.headersSent) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const poll = (): void => {
+      if (res.headersSent || res.writableEnded || res.destroyed) {
+        resolve();
+        return;
+      }
+      setImmediate(poll);
+    };
+    poll();
   });
 }
 

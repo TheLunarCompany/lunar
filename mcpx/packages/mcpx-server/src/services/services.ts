@@ -266,6 +266,8 @@ export class Services {
         sessionTtlMin: env.AGENT_SESSION_TTL_MIN,
         sessionSweepIntervalMin: env.KEEPALIVE_SWEEP_INTERVAL_MIN,
         pingMaxConsecutiveTimeouts: env.PING_MAX_CONSECUTIVE_TIMEOUTS,
+        notificationStreamReconnectGraceMs:
+          env.NOTIFICATION_STREAM_RECONNECT_GRACE_MS,
       },
       this._behaviorService,
       systemStateTracker,
