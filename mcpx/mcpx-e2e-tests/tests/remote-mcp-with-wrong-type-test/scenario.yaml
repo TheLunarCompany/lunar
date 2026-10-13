@@ -1,0 +1,53 @@
+# Verifies that a remote MCP server with wrong type field shows error
+name: "Remote MCP Server with wrong type field"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+env: {}
+dependentContainers: []
+configMount: config
+cleanConfigMount: false
+verboseOutput: false
+
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for “Configuration Error” banner
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Configuration Error"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Configuration Error"
+
+  - name: Verify invalid MCP config message
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const text = (document.body.innerText || document.body.textContent || '');
+          const hay = text.toLowerCase();
+
+          const hasHeader = hay.includes('configuration error');
+          const hasValidation = hay.includes('configuration validation failed');
+          const mentionsInvalid = hay.includes('invalid input');
+          const mentionsMcpServers = /mcpservers\.[\w.-]+/i.test(text);
+
+          if (hasHeader && hasValidation && mentionsMcpServers) {
+            return 'ok-invalid-mcp';
+          }
+          // Debug payload if something shifts
+          return JSON.stringify({ hasHeader, hasValidation, mentionsInvalid, mentionsMcpServers, sample: text.slice(0,200) });
+        }
+    expected:
+      mode: contains
+      value: ok-invalid-mcp
