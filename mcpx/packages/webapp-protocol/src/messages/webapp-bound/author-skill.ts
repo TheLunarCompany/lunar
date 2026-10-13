@@ -4,6 +4,7 @@ import {
   skillInputSchema,
   skillWithDraftSchema,
 } from "@mcpx/shared-model";
+import { webappBoundAckSchema } from "../shared/ack.js";
 
 export const saveSkillPayloadSchema = skillInputSchema;
 export type SaveSkillPayload = z.output<typeof saveSkillPayloadSchema>;
@@ -48,28 +49,12 @@ export type DiscardSkillDraftPayload = z.output<
   typeof discardSkillDraftPayloadSchema
 >;
 
-// stale_base: the skill's updatedAt moved past the draft save's baseUpdatedAt.
-export const skillErrorCodeSchema = z.enum(["not_found", "stale_base"]);
-export type SkillErrorCode = z.infer<typeof skillErrorCodeSchema>;
-
 // Writes return the persisted resource, the same shape set-personal-skills
 // carries (draft attached when one exists).
-export const skillWriteAckSchema = z.discriminatedUnion("success", [
-  z.object({ success: z.literal(true), skill: skillWithDraftSchema }),
-  z.object({
-    success: z.literal(false),
-    error: z.string(),
-    errorCode: skillErrorCodeSchema.optional(),
-  }),
-]);
+export const skillWriteAckSchema = webappBoundAckSchema({
+  skill: skillWithDraftSchema,
+});
 export type SkillWriteAck = z.infer<typeof skillWriteAckSchema>;
 
-export const deleteSkillAckSchema = z.discriminatedUnion("success", [
-  z.object({ success: z.literal(true) }),
-  z.object({
-    success: z.literal(false),
-    error: z.string(),
-    errorCode: skillErrorCodeSchema.optional(),
-  }),
-]);
+export const deleteSkillAckSchema = webappBoundAckSchema({});
 export type DeleteSkillAck = z.infer<typeof deleteSkillAckSchema>;

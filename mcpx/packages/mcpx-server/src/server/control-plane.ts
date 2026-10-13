@@ -452,7 +452,14 @@ export function buildControlPlaneRouter(
 
   router.get("/saved-setups", authGuard, async (_req, res) => {
     const result = await services.hubService.savedSetups.listSavedSetups();
-    res.status(200).json(result satisfies ListSavedSetupsResponse);
+    if (!result.success) {
+      logger.error("Failed to list saved setups", { error: result.error });
+      res.status(500).json({ message: result.error });
+      return;
+    }
+    res
+      .status(200)
+      .json({ setups: result.setups } satisfies ListSavedSetupsResponse);
   });
 
   router.delete("/saved-setups/:id", authGuard, async (req, res) => {
@@ -517,6 +524,14 @@ export function buildControlPlaneRouter(
 
     // Get the saved setup from the list
     const listResult = await services.hubService.savedSetups.listSavedSetups();
+    if (!listResult.success) {
+      logger.error("Failed to list saved setups for restore", {
+        savedSetupId,
+        error: listResult.error,
+      });
+      res.status(500).json({ message: listResult.error });
+      return;
+    }
     const savedSetup = listResult.setups.find((s) => s.id === savedSetupId);
     if (!savedSetup) {
       res.status(404).json({ message: "Saved setup not found" });

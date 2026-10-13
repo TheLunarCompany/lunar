@@ -85,6 +85,14 @@ describe("Saved Setups Endpoints", () => {
         body.setups.map((s: { description: string }) => s.description),
       ).toContain("Setup 2");
     });
+
+    it("should return 500 when the hub fails to list", async () => {
+      harness.mockHubServer.failListSavedSetups("db down");
+
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`);
+
+      expect(response.status).toBe(500);
+    });
   });
 
   describe("DELETE /saved-setups/:id", () => {
@@ -211,6 +219,24 @@ describe("Saved Setups Endpoints", () => {
 
       const body = await response.json();
       expect(body.message).toBe("Saved setup not found");
+    });
+
+    it("should return 500 when the hub fails to list", async () => {
+      const createResponse = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: "Setup to restore" }),
+      });
+      const { savedSetupId } = await createResponse.json();
+      harness.mockHubServer.failListSavedSetups("db down");
+
+      const response = await fetch(
+        `${MCPX_BASE_URL}/saved-setups/${savedSetupId}/restore`,
+        { method: "POST" },
+      );
+
+      // A failed listing must not read as "Saved setup not found".
+      expect(response.status).toBe(500);
     });
   });
 });

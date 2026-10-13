@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { webappBoundAckSchema } from "../shared/ack.js";
 
 const wireAdapterSchema = z.object({
   name: z.literal("mcp-remote"),
@@ -49,10 +50,7 @@ export const storeDownstreamSessionPayloadSchema = z.object({
   data: persistedDownstreamSessionDataSchema,
 });
 
-export const storeDownstreamSessionAckSchema = z.discriminatedUnion("success", [
-  z.object({ success: z.literal(true) }),
-  z.object({ success: z.literal(false), error: z.string() }),
-]);
+export const storeDownstreamSessionAckSchema = webappBoundAckSchema({});
 
 export type StoreDownstreamSessionAck = z.infer<
   typeof storeDownstreamSessionAckSchema
@@ -62,13 +60,9 @@ export const loadDownstreamSessionPayloadSchema = z.object({
   sessionId: z.string(),
 });
 
-export const loadDownstreamSessionAckSchema = z.discriminatedUnion("success", [
-  z.object({
-    success: z.literal(true),
-    data: persistedDownstreamSessionDataSchema.optional(),
-  }),
-  z.object({ success: z.literal(false), error: z.string() }),
-]);
+export const loadDownstreamSessionAckSchema = webappBoundAckSchema({
+  data: persistedDownstreamSessionDataSchema.optional(),
+});
 
 export type LoadDownstreamSessionAck = z.infer<
   typeof loadDownstreamSessionAckSchema
@@ -78,13 +72,7 @@ export const deleteDownstreamSessionPayloadSchema = z.object({
   sessionId: z.string(),
 });
 
-export const deleteDownstreamSessionAckSchema = z.discriminatedUnion(
-  "success",
-  [
-    z.object({ success: z.literal(true) }),
-    z.object({ success: z.literal(false), error: z.string() }),
-  ],
-);
+export const deleteDownstreamSessionAckSchema = webappBoundAckSchema({});
 
 export type DeleteDownstreamSessionAck = z.infer<
   typeof deleteDownstreamSessionAckSchema
@@ -102,13 +90,9 @@ export type PersistedDownstreamSessionEntryWire = z.infer<
   typeof persistedDownstreamSessionEntrySchema
 >;
 
-export const listDownstreamSessionsAckSchema = z.discriminatedUnion("success", [
-  z.object({
-    success: z.literal(true),
-    sessions: z.array(persistedDownstreamSessionEntrySchema),
-  }),
-  z.object({ success: z.literal(false), error: z.string() }),
-]);
+export const listDownstreamSessionsAckSchema = webappBoundAckSchema({
+  sessions: z.array(persistedDownstreamSessionEntrySchema),
+});
 
 export type ListDownstreamSessionsAck = z.infer<
   typeof listDownstreamSessionsAckSchema

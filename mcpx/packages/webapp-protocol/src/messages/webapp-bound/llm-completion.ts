@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { webappBoundAckSchema } from "../shared/ack.js";
 
 // ============================================================================
 // Dynamic Capabilities Matching Schemas
@@ -18,37 +19,9 @@ export const dynamicCapabilitiesMatchingResponseSchema = z.object({
   ),
 });
 
-// ============================================================================
-// Ack Schema Builder
-// ============================================================================
-
-function buildAckSchema<T extends z.ZodSchema>(
-  resultSchema: T,
-): z.ZodDiscriminatedUnion<
-  [
-    z.ZodObject<{ status: z.ZodLiteral<"success">; result: T }>,
-    z.ZodObject<{ status: z.ZodLiteral<"error">; error: z.ZodString }>,
-    z.ZodObject<{ status: z.ZodLiteral<"unsupported"> }>,
-  ]
-> {
-  return z.discriminatedUnion("status", [
-    z.object({
-      status: z.literal("success"),
-      result: resultSchema,
-    }),
-    z.object({
-      status: z.literal("error"),
-      error: z.string(),
-    }),
-    z.object({
-      status: z.literal("unsupported"),
-    }),
-  ]);
-}
-
-export const dynamicCapabilitiesMatchingAckSchema = buildAckSchema(
-  dynamicCapabilitiesMatchingResponseSchema,
-);
+export const dynamicCapabilitiesMatchingAckSchema = webappBoundAckSchema({
+  result: dynamicCapabilitiesMatchingResponseSchema,
+});
 
 // ============================================================================
 // Types

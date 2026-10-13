@@ -13,7 +13,15 @@ export {
   type EnvValue,
 } from "./setup.js";
 
-export { ackSchema, type Ack } from "./ack.js";
+export {
+  ackSchema,
+  webappBoundAckSchema,
+  webappBoundFailureAckSchema,
+  webappBoundErrorCodeSchema,
+  type Ack,
+  type WebappBoundFailureAck,
+  type WebappBoundErrorCode,
+} from "./ack.js";
 
 // Re-export schemas from shared-model for convenience
 export {

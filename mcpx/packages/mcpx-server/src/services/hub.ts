@@ -514,7 +514,7 @@ export class HubService {
     payload: DynamicCapabilitiesMatchingPayload,
   ): Promise<DynamicCapabilitiesMatchingAck> {
     if (!this.socket || this.status.status !== "authenticated") {
-      return { status: "error", error: "Not connected to Hub" };
+      return { success: false, error: "Not connected to Hub" };
     }
     const envelope = wrapInEnvelope({ payload });
     this.logger.debug("Sending dynamic-capabilities-matching to Hub", {
@@ -536,14 +536,14 @@ export class HubService {
             ack,
           },
         );
-        return { status: "error", error: "Invalid response from Hub" };
+        return { success: false, error: "Invalid response from Hub" };
       }
       return parsed.data;
     } catch (e) {
       this.logger.error("dynamic-capabilities-matching request failed", {
         ...loggableError(e),
       });
-      return { status: "error", error: "Request failed" };
+      return { success: false, error: "Request failed" };
     }
   }
 

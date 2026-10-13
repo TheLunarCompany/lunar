@@ -69,13 +69,14 @@ export class MockHubServer {
   private identityPayload: SetIdentityPayload;
   private behaviorPayload: SetMcpxBehaviorPayload | undefined;
   private savedSetups: Map<string, SavedSetupItem> = new Map();
+  private listSavedSetupsFailure: string | null = null;
   private skills: Map<string, SkillWithDraft> = new Map();
   private downstreamSessions: Map<string, PersistedDownstreamSessionDataWire> =
     new Map();
   // OAuth tokens, verifiers and client info, keyed by "<serverName>:<tokenType>".
   private oauthTokens: Map<string, unknown> = new Map();
   private dynamicCapabilitiesResponse: DynamicCapabilitiesMatchingAck = {
-    status: "success",
+    success: true,
     result: { tools: [] },
   };
 
@@ -516,9 +517,17 @@ export class MockHubServer {
       socket.on(
         WEBAPP_BOUND_EVENTS.LIST_SAVED_SETUPS,
         (_envelope: unknown, ack: (res: unknown) => void) => {
+          if (this.listSavedSetupsFailure !== null) {
+            ack({
+              success: false,
+              error: this.listSavedSetupsFailure,
+              errorCode: "internal_error",
+            });
+            return;
+          }
           const setups = Array.from(this.savedSetups.values());
           this.logger.info("Listing saved setups", { count: setups.length });
-          ack({ setups });
+          ack({ success: true, setups });
         },
       );
 
@@ -714,7 +723,7 @@ export class MockHubServer {
             ack({
               success: false,
               error: "Skill changed since the draft's base",
-              errorCode: "stale_base",
+              errorCode: "conflict",
             });
             return;
           }
@@ -796,7 +805,7 @@ export class MockHubServer {
 
           this.logger.info("Returning configured response", {
             socketId: socket.id,
-            status: this.dynamicCapabilitiesResponse.status,
+            success: this.dynamicCapabilitiesResponse.success,
           });
 
           ack(this.dynamicCapabilitiesResponse);
@@ -904,6 +913,11 @@ export class MockHubServer {
 
   clearSavedSetups(): void {
     this.savedSetups.clear();
+    this.listSavedSetupsFailure = null;
+  }
+
+  failListSavedSetups(error: string): void {
+    this.listSavedSetupsFailure = error;
   }
 
   getDownstreamSession(

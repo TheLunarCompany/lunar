@@ -55,12 +55,10 @@ export {
   unpublishSkillPayloadSchema,
   saveSkillDraftPayloadSchema,
   discardSkillDraftPayloadSchema,
-  skillErrorCodeSchema,
   skillWriteAckSchema,
   deleteSkillAckSchema,
 } from "./webapp-bound/author-skill.js";
 export type {
-  SkillErrorCode,
   SkillWriteAck,
   DeleteSkillAck,
   SaveSkillPayload,

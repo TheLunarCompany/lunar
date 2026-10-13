@@ -88,7 +88,7 @@ export class HubSkillClient implements SkillHubClient {
       throw new Error(`Invalid ${event} response from Hub`);
     }
     if (!parsed.data.success) {
-      if (parsed.data.errorCode === "stale_base") {
+      if (parsed.data.errorCode === "conflict") {
         throw new StaleDraftBaseError();
       }
       throw new Error(parsed.data.error);

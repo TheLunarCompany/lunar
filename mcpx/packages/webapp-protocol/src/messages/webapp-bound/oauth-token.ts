@@ -3,6 +3,7 @@ import {
   OAuthClientInformationFullSchema,
   OAuthTokensSchema,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { webappBoundAckSchema } from "../shared/ack.js";
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 
@@ -39,10 +40,7 @@ export const saveOAuthTokenPayloadSchema = z.discriminatedUnion("tokenType", [
   }),
 ]);
 
-export const saveOAuthTokenAckSchema = z.discriminatedUnion("success", [
-  z.object({ success: z.literal(true) }),
-  z.object({ success: z.literal(false), error: z.string() }),
-]);
+export const saveOAuthTokenAckSchema = webappBoundAckSchema({});
 
 export type SaveOAuthTokenAck = z.infer<typeof saveOAuthTokenAckSchema>;
 export type SaveOAuthTokenPayload = z.infer<typeof saveOAuthTokenPayloadSchema>;
@@ -54,13 +52,9 @@ export const loadOAuthTokenPayloadSchema = z.object({
   tokenType: z.enum(["tokens", "verifier", "client"]),
 });
 
-export const loadOAuthTokenAckSchema = z.discriminatedUnion("success", [
-  z.object({
-    success: z.literal(true),
-    data: tokenDataSchema.optional(),
-  }),
-  z.object({ success: z.literal(false), error: z.string() }),
-]);
+export const loadOAuthTokenAckSchema = webappBoundAckSchema({
+  data: tokenDataSchema.optional(),
+});
 
 export type LoadOAuthTokenAck = z.infer<typeof loadOAuthTokenAckSchema>;
 
@@ -70,9 +64,6 @@ export const deleteOAuthTokensPayloadSchema = z.object({
   serverName: z.string(),
 });
 
-export const deleteOAuthTokensAckSchema = z.discriminatedUnion("success", [
-  z.object({ success: z.literal(true) }),
-  z.object({ success: z.literal(false), error: z.string() }),
-]);
+export const deleteOAuthTokensAckSchema = webappBoundAckSchema({});
 
 export type DeleteOAuthTokensAck = z.infer<typeof deleteOAuthTokensAckSchema>;

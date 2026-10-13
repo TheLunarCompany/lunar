@@ -49,7 +49,7 @@ export class SavedSetupsClient {
   async listSavedSetups(): Promise<z.infer<typeof listSavedSetupsAckSchema>> {
     const socket = this.getSocket();
     if (!socket) {
-      return { setups: [] };
+      return { success: false, error: "Not connected to Hub" };
     }
     const envelope = wrapInEnvelope({ payload: {} });
     this.logger.debug("Sending list-saved-setups to Hub");
@@ -60,7 +60,7 @@ export class SavedSetupsClient {
         error: parsed.error,
         ack,
       });
-      return { setups: [] };
+      return { success: false, error: "Invalid response from Hub" };
     }
     return parsed.data;
   }

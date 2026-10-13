@@ -95,26 +95,21 @@ export class HubLLMService implements LLMService {
       userMessage: buildToolMatchingUserMessage(intent, availableTools),
     });
 
-    switch (response.status) {
-      case "success":
-        this.logger.debug("Received matched tools from Hub", {
-          matchedCount: response.result.tools.length,
-        });
-        return response.result.tools;
-      case "error":
-        this.logger.error(
-          "Hub returned error for dynamic capabilities matching",
-          {
-            error: response.error,
-          },
-        );
-        throw new Error(
-          `Dynamic capabilities matching failed: ${response.error}`,
-        );
-      case "unsupported":
-        this.logger.warn("Hub does not support dynamic capabilities matching");
-        throw new Error("Dynamic capabilities matching is not enabled.");
+    if (!response.success) {
+      this.logger.error(
+        "Hub returned error for dynamic capabilities matching",
+        {
+          error: response.error,
+        },
+      );
+      throw new Error(
+        `Dynamic capabilities matching failed: ${response.error}`,
+      );
     }
+    this.logger.debug("Received matched tools from Hub", {
+      matchedCount: response.result.tools.length,
+    });
+    return response.result.tools;
   }
 }
 
