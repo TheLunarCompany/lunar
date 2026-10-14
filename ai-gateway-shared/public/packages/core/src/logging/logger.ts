@@ -391,6 +391,7 @@ export function accessLogFor(
   ignore: { method: string; path: string }[] = [],
   level: LogLevel = "info",
 ): Middleware<AccessLogRequest, AccessLogResponse> {
+  const primitiveIgnore = new Set(ignore.map((i) => `${i.method}:::${i.path}`));
   return function accessLog(req, res, next): void {
     const { method, originalUrl } = req;
     const requestId = extractRequestId(req);
@@ -398,9 +399,6 @@ export function accessLogFor(
 
     // Ignored routes skip only the access-log line — the request id context
     // still wraps them so their downstream logs stay correlated.
-    const primitiveIgnore = new Set(
-      ignore.map((i) => `${i.method}:::${i.path}`),
-    );
     if (primitiveIgnore.has(`${method}:::${originalUrl}`)) {
       return runWithRequestId(requestId, next);
     }
