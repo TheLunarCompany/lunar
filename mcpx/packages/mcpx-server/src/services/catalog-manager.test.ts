@@ -93,11 +93,12 @@ describe("CatalogManager", () => {
     tokenAuthMethod: "client_secret_basic",
   };
 
-  function createCatalogItemWithOAuth(
-    name: string,
-    id: string,
-    oauthConfig: ClientCredentialsOauthProvider = BASE_CATALOG_OAUTH_CONFIG,
-  ): CatalogItemWire {
+  function createCatalogItemWithOAuth(params: {
+    name: string;
+    id: string;
+    oauthConfig?: ClientCredentialsOauthProvider;
+  }): CatalogItemWire {
+    const { name, id, oauthConfig = BASE_CATALOG_OAUTH_CONFIG } = params;
     return {
       server: {
         id,
@@ -558,6 +559,53 @@ describe("CatalogManager", () => {
       expect(changes[0]?.addedServers).toEqual(["slack"]);
       expect(changes[0]?.approvedToolsChanges).toEqual([]);
     });
+
+    it("does not report new servers as having changed static OAuth", () => {
+      // The first catalog after a restart is diffed against an empty catalog;
+      // reporting a change here deletes the server's persisted OAuth tokens.
+      const manager = createCatalogManager();
+      const changes: CatalogChange[] = [];
+      manager.subscribe((change) => changes.push(change));
+
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItemWithOAuth({ name: "gmail", id: "gmail-id" }),
+        ),
+      );
+
+      expect(changes[0]?.addedServers).toEqual(["gmail"]);
+      expect(changes[0]?.staticOauthPerServersChange).toEqual([]);
+    });
+
+    it("detects static OAuth changes on existing servers", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItemWithOAuth({ name: "gmail", id: "gmail-id" }),
+        ),
+      );
+
+      const changes: CatalogChange[] = [];
+      manager.subscribe((change) => changes.push(change));
+
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItemWithOAuth({
+            name: "gmail",
+            id: "gmail-id",
+            oauthConfig: {
+              ...BASE_CATALOG_OAUTH_CONFIG,
+              credentials: {
+                ...BASE_CATALOG_OAUTH_CONFIG.credentials,
+                clientId: { type: "literal", value: "client-id-456" },
+              },
+            },
+          }),
+        ),
+      );
+
+      expect(changes[0]?.staticOauthPerServersChange).toEqual(["gmail"]);
+    });
   });
 
   describe("#getCatalog", () => {
@@ -614,7 +662,7 @@ describe("CatalogManager", () => {
       const itemId = uuidv7();
 
       manager.setCatalog(
-        makeCatalog(createCatalogItemWithOAuth("slack", itemId)),
+        makeCatalog(createCatalogItemWithOAuth({ name: "slack", id: itemId })),
       );
 
       expect(manager.getPerCatalogItemOAuth(itemId)).toEqual(
@@ -625,7 +673,9 @@ describe("CatalogManager", () => {
     it("returns undefined for an id not present in the catalog", () => {
       const manager = createCatalogManager();
       manager.setCatalog(
-        makeCatalog(createCatalogItemWithOAuth("slack", uuidv7())),
+        makeCatalog(
+          createCatalogItemWithOAuth({ name: "slack", id: uuidv7() }),
+        ),
       );
 
       expect(manager.getPerCatalogItemOAuth("non-existent-id")).toBeUndefined();
@@ -637,12 +687,12 @@ describe("CatalogManager", () => {
       const newId = uuidv7();
 
       manager.setCatalog(
-        makeCatalog(createCatalogItemWithOAuth("slack", oldId)),
+        makeCatalog(createCatalogItemWithOAuth({ name: "slack", id: oldId })),
       );
       expect(manager.getPerCatalogItemOAuth(oldId)).toBeDefined();
 
       manager.setCatalog(
-        makeCatalog(createCatalogItemWithOAuth("github", newId)),
+        makeCatalog(createCatalogItemWithOAuth({ name: "github", id: newId })),
       );
 
       expect(manager.getPerCatalogItemOAuth(oldId)).toBeUndefined();

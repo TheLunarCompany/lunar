@@ -117,6 +117,20 @@ export class MockHubServer {
     this.logger.info(`Updated valid tokens`, { count: tokens.length });
   }
 
+  /** Replace the catalog sent on connect, e.g. to include adminConfig the harness's catalogItems can't carry. */
+  setCatalogPayload(payload: SetCatalogPayload): void {
+    this.catalogPayload = payload;
+  }
+
+  getOAuthTokens(): Map<string, unknown> {
+    return new Map(this.oauthTokens);
+  }
+
+  /** Pre-load tokens a previous MCPX instance saved, to simulate a pod restart. */
+  seedOAuthTokens(tokens: Map<string, unknown>): void {
+    tokens.forEach((data, key) => this.oauthTokens.set(key, data));
+  }
+
   /** Emit catalog to all connected clients. Useful after subscribing to ensure catalog is received. */
   emitCatalogToAll(): void {
     if (!this.catalogPayload) {

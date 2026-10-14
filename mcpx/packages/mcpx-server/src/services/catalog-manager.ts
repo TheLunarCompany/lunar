@@ -326,18 +326,20 @@ export class CatalogManager implements CatalogManagerI {
       (name) => !newNames.has(name),
     );
 
-    const staticOauthPerServersChange: string[] = [];
-    for (const item of payload.items) {
-      const oldItem = this.catalogByName.get(item.server.name);
-      if (
-        !stringifyEq(
-          oldItem?.adminConfig?.staticOauthConfig,
-          item.adminConfig?.staticOauthConfig,
-        )
-      ) {
-        staticOauthPerServersChange.push(item.server.name);
-      }
-    }
+    // New items are skipped: on boot the first catalog diffs against an empty
+    // one, and a reported change here deletes the server's persisted tokens.
+    const staticOauthPerServersChange = payload.items
+      .filter((item) => {
+        const oldItem = this.catalogByName.get(item.server.name);
+        return (
+          oldItem !== undefined &&
+          !stringifyEq(
+            oldItem.adminConfig?.staticOauthConfig,
+            item.adminConfig?.staticOauthConfig,
+          )
+        );
+      })
+      .map((item) => item.server.name);
 
     return {
       addedServers,
