@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "time": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "LOCAL_TIMEZONE",
+        "mcp/time"
+      ],
+      "env": {
+        "LOCAL_TIMEZONE": "UTC"
+      }
+    },
+    "slack": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "slack-mcp-server@latest",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "SLACK_TEAM_ID": "T03TDLYAKM2",
+        "SLACK_CHANNEL_IDS": "C08NRRKPSTC",
+        "SLACK_MCP_ADD_MESSAGE_TOOL": "1"
+      }
+    }
+  }
+}
