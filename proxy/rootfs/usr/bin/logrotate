@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+
+# --- Determine Interval in Seconds ---
+INTERVAL_SECONDS=3600 # Default: hourly (3600 seconds)
+DEFAULT_MSG="Defaulting to hourly interval (3600 seconds)."
+LOG_ROTATE_SIZE="${LOG_ROTATE_SIZE:-10M}"
+LOG_ROTATE_RETAIN="${LOG_ROTATE_RETAIN:-3}"
+
+case "${LOG_ROTATE_INTERVAL}" in
+  "5min")  INTERVAL_SECONDS=300 ;;
+  "10min") INTERVAL_SECONDS=600 ;;
+  "30min") INTERVAL_SECONDS=1800 ;;
+  "hourly"|"") INTERVAL_SECONDS=3600 ;; # Default if empty or hourly
+  "daily")  INTERVAL_SECONDS=86400 ;;
+  "weekly") INTERVAL_SECONDS=604800 ;;
+  *)
+    ;;
+esac
+
+# # Overwrite the default logrotate configuration based on environment variables
+tee /etc/logrotate.d/lunar_gateway > /dev/null <<EOF
+/var/log/lunar-proxy/*.log /var/log/squid/*.log {
+  size ${LOG_ROTATE_SIZE}
+  rotate ${LOG_ROTATE_RETAIN}
+  missingok
+  notifempty
+  compress
+  sharedscripts
+  postrotate
+      [ ! -x /usr/lib/rsyslog/rsyslog-rotate ] || /usr/lib/rsyslog/rsyslog-rotate
+      test ! -e /run/squid.pid || test ! -x /usr/sbin/squid || /usr/sbin/squid -k rotate 2>/dev/null
+  endscript
+}
+EOF
+
+echo "Setting up logrotate configuration with size: $LOG_ROTATE_SIZE and retain: $LOG_ROTATE_RETAIN"
+
+while true; do
+    sleep "${INTERVAL_SECONDS}"
+    logrotate /etc/logrotate.d/lunar_gateway --state /var/lib/logrotate/status
+done
