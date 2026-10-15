@@ -256,6 +256,48 @@ describe("redactObject", () => {
     });
   });
 
+  it("preserves booleans under sensitive keys", () => {
+    const obj = {
+      hasRefreshToken: false,
+      secret: true,
+      password: false,
+    };
+    const result = redactObject(obj, new Set());
+    expect(result).toEqual({
+      hasRefreshToken: false,
+      secret: true,
+      password: false,
+    });
+  });
+
+  it("preserves numbers under sensitive keys containing count", () => {
+    const obj = {
+      secretCount: 42,
+      profileSecretCount: 3,
+      tokenCount: 7,
+      secret: "some-secret",
+    };
+    const result = redactObject(obj, new Set());
+    expect(result).toEqual({
+      secretCount: 42,
+      profileSecretCount: 3,
+      tokenCount: 7,
+      secret: "[REDACTED]",
+    });
+  });
+
+  it("still redacts sensitive strings and numbers outside count keys", () => {
+    const obj = {
+      secretCount: "abc",
+      secret: 1234,
+    };
+    const result = redactObject(obj, new Set());
+    expect(result).toEqual({
+      secretCount: "[REDACTED]",
+      secret: "[REDACTED]",
+    });
+  });
+
   it("does not redact innocent fields that merely contain a stem", () => {
     const obj = {
       tokenCount: 42,

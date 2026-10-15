@@ -123,6 +123,12 @@ function redactObjectInternal(
   const result = Object.fromEntries(
     Object.entries(obj).map(([key, value]) => {
       if (isSensitiveKey(key, normalizedKeys)) {
+        if (typeof value === "boolean") {
+          return [key, value];
+        }
+        if (typeof value === "number" && normalizeKey(key).includes("count")) {
+          return [key, value];
+        }
         return [key, "[REDACTED]"];
       }
       return [key, redactValue(value, normalizedKeys, seen, depth)];

@@ -58,10 +58,5 @@
     "socket.io-adapter": {
       "ws": "8.21.0"
     }
-  },
-  "dependencies": {
-    "@vitest/browser-playwright": "^4.1.10",
-    "@vitest/coverage-v8": "^4.1.10",
-    "vitest": "^4.1.10"
   }
 }
