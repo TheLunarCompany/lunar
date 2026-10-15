@@ -1,5 +1,6 @@
 import YAML from "yaml";
 import { z } from "zod/v4";
+import { setupDescriptionSchema } from "../validation/setup-description-config.js";
 
 export const HEADER_VALIDATION_REGEX =
   /^(?:[^{}]|\{(?!\{)|\}(?!\})|\{\{[^{}]+\}\})*$/;
@@ -168,7 +169,7 @@ export const initiateServerAuthRequestSchema = z.object({
 });
 
 export const saveSetupRequestSchema = z.object({
-  description: z.string().min(1),
+  description: setupDescriptionSchema,
 });
 
 // Create server from catalog item

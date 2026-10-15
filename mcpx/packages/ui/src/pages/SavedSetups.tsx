@@ -24,15 +24,18 @@ import {
   useSaveSetup,
 } from "@/data/saved-setups";
 import type { SavedSetupItem } from "@mcpx/shared-model";
+import { SETUP_DESCRIPTION_CONFIG } from "@mcpx/shared-model";
 import {
   Eye,
   Hammer,
+  Info,
   MonitorCog,
   Plus,
   RefreshCw,
   RotateCcw,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import { SavedSetupSheet } from "@/components/saved-setups/SavedSetupSheet";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -82,6 +85,17 @@ function ServerIconCell({ name }: { name: string }) {
       className="w-4 h-4 rounded-[2px] object-contain shrink-0"
     />
   );
+}
+
+function getInvalidCharacters(text: string): string {
+  const pattern = SETUP_DESCRIPTION_CONFIG.allowedCharPattern;
+  const invalidChars = new Set<string>();
+  for (const char of text) {
+    if (!pattern.test(char)) {
+      invalidChars.add(char);
+    }
+  }
+  return Array.from(invalidChars).join(", ");
 }
 
 function getActionConfig(
@@ -160,6 +174,9 @@ export default function SavedSetups() {
 
   const isActionPending =
     restoreMutation.isPending || overwriteMutation.isPending;
+  const hasInvalidCharacters =
+    description.length > 0 &&
+    !SETUP_DESCRIPTION_CONFIG.allowedCharPattern.test(description);
 
   const executeAction = (action: PendingAction) => {
     switch (action.type) {
@@ -204,7 +221,7 @@ export default function SavedSetups() {
   };
 
   const handleSave = () => {
-    if (!description.trim()) return;
+    if (!description.trim() || hasInvalidCharacters) return;
     saveMutation.mutate(description.trim(), {
       onSuccess: (result) => {
         if (result.success) {
@@ -530,7 +547,13 @@ export default function SavedSetups() {
           </div>
         )}
 
-        <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <Dialog
+          open={isSaveDialogOpen}
+          onOpenChange={() => {
+            setIsSaveDialogOpen(false);
+            setDescription("");
+          }}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Save Current Setup</DialogTitle>
@@ -539,19 +562,52 @@ export default function SavedSetups() {
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <Label htmlFor="description">Description</Label>
+              <div className="flex items-center gap-1">
+                <Label htmlFor="description">Description</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      Only {SETUP_DESCRIPTION_CONFIG.allowedCharDescription}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                maxLength={SETUP_DESCRIPTION_CONFIG.maxLength}
                 placeholder="e.g., Production config with GitHub and Slack"
                 className="mt-2"
+                aria-invalid={hasInvalidCharacters}
+                aria-describedby={
+                  hasInvalidCharacters ? "description-error" : undefined
+                }
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && description.trim()) {
+                  if (e.key === "Enter") {
                     handleSave();
                   }
                 }}
               />
+              <div className="mt-1 flex justify-between items-start">
+                <div className="text-xs">
+                  {hasInvalidCharacters && (
+                    <div
+                      id="description-error"
+                      className="text-destructive flex items-center gap-1"
+                    >
+                      <X className="w-3 h-3" />
+                      Invalid characters: {getInvalidCharacters(description)}
+                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {description.length} / {SETUP_DESCRIPTION_CONFIG.maxLength}
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -566,7 +622,11 @@ export default function SavedSetups() {
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={!description.trim() || saveMutation.isPending}
+                disabled={
+                  !description.trim() ||
+                  hasInvalidCharacters ||
+                  saveMutation.isPending
+                }
                 className="bg-primary hover:bg-primary/80 text-primary-foreground"
               >
                 {saveMutation.isPending ? "Saving..." : "Save Setup"}

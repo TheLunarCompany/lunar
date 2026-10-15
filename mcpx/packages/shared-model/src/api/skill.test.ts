@@ -1,3 +1,4 @@
+import { describe, expect, it } from "@jest/globals";
 import { skillNameSlugRegex } from "./skill.js";
 
 // The one hand-written piece in these schemas; everything else is declarative zod.

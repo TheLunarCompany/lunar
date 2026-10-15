@@ -1,3 +1,11 @@
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  it,
+  expect,
+} from "@jest/globals";
 import { getTestHarness, MCPX_BASE_URL, TestHarness } from "./utils.js";
 
 describe("Saved Setups Endpoints", () => {
@@ -46,6 +54,108 @@ describe("Saved Setups Endpoints", () => {
       });
 
       expect(response.status).toBe(400);
+    });
+
+    it("should accept exactly 200-character description", async () => {
+      const desc200 = "a".repeat(200);
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: desc200 }),
+      });
+
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.description).toBe(desc200);
+    });
+
+    it("should reject 201-character description", async () => {
+      const desc201 = "a".repeat(201);
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: desc201 }),
+      });
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.message).toBe("Invalid request schema");
+      expect(JSON.stringify(body.error)).toContain("cannot exceed 200");
+    });
+
+    it("should reject empty description", async () => {
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: "" }),
+      });
+
+      expect(response.status).toBe(400);
+    });
+
+    it("should reject whitespace-only description", async () => {
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: "   \t  " }),
+      });
+
+      expect(response.status).toBe(400);
+    });
+
+    it("should reject description with disallowed character (@)", async () => {
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: "user@example.com" }),
+      });
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.message).toBe("Invalid request schema");
+      expect(JSON.stringify(body.error)).toContain("Invalid characters");
+    });
+
+    it("should reject description with emoji", async () => {
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: "🚀 Production" }),
+      });
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.message).toBe("Invalid request schema");
+      expect(JSON.stringify(body.error)).toContain("Invalid characters");
+    });
+
+    it("should accept description with allowed special characters", async () => {
+      const descWithSpecial = "GitHub & Slack (prod), v1.0!";
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: descWithSpecial }),
+      });
+
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.description).toBe(descWithSpecial);
+    });
+
+    it("should trim and accept description with leading/trailing whitespace", async () => {
+      const descWithSpace = "  Valid Description  ";
+      const response = await fetch(`${MCPX_BASE_URL}/saved-setups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: descWithSpace }),
+      });
+
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.description).toBe("Valid Description");
     });
   });
 

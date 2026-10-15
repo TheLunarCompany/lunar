@@ -1,3 +1,4 @@
+import { describe, expect, it } from "@jest/globals";
 import { connectedClientSchema } from "../api/system-state.js";
 import {
   buildConnectedClientMock,
