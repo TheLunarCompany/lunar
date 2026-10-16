@@ -13,7 +13,7 @@ dotenv.config();
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL =
-  process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022";
+  process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 
 const MAX_RESPONSE_TOKENS = Number(process.env.MAX_RESPONSE_TOKENS) || 500;
 const MCPX_HOST = process.env.MCPX_HOST || "http://localhost:9000";
