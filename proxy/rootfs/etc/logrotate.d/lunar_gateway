@@ -1,0 +1,12 @@
+/var/log/lunar-proxy/*.log /var/log/squid/*.log {
+  size 10M
+  rotate 3
+  missingok
+  notifempty
+  compress
+  sharedscripts
+  postrotate
+      [ ! -x /usr/lib/rsyslog/rsyslog-rotate ] || /usr/lib/rsyslog/rsyslog-rotate
+      su -c "test ! -e /run/squid.pid || test ! -x /usr/sbin/squid || /usr/sbin/squid -k rotate" lunar 2>/dev/null
+  endscript
+}
