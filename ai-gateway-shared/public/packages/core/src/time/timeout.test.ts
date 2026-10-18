@@ -1,7 +1,60 @@
-import { describe, it, expect } from "@jest/globals";
+import {
+  describe,
+  it,
+  expect,
+  jest,
+  beforeEach,
+  afterEach,
+} from "@jest/globals";
+import { getEventListeners } from "node:events";
+import { PollingAbortedError } from "./polling.js";
 import { withTimeout, TimeoutError } from "./timeout.js";
 
 describe("withTimeout", () => {
+  describe("cancellation", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it.each([true, false])(
+      "aborts promptly (already aborted: %s)",
+      async (alreadyAborted) => {
+        const controller = new AbortController();
+        if (alreadyAborted) controller.abort();
+        const errors: unknown[] = [];
+        const result = withTimeout(
+          new Promise<void>(() => {}),
+          300_000,
+          "LLM",
+          controller.signal,
+        ).catch((error: unknown) => errors.push(error));
+        controller.abort();
+        await jest.advanceTimersByTimeAsync(0);
+
+        try {
+          expect(errors[0]).toBeInstanceOf(PollingAbortedError);
+          expect(jest.getTimerCount()).toBe(0);
+          expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+        } finally {
+          await jest.runAllTimersAsync();
+          await result;
+        }
+      },
+    );
+
+    it("releases the abort listener and timer after success", async () => {
+      const controller = new AbortController();
+      await expect(
+        withTimeout(Promise.resolve("done"), 300_000, "LLM", controller.signal),
+      ).resolves.toBe("done");
+      expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+  });
+
   describe("successful resolution", () => {
     it("returns value when promise resolves before timeout", async () => {
       const promise = Promise.resolve("success");

@@ -12,19 +12,41 @@ type TestResponse = z.infer<typeof testSchema>;
 
 class FakeOpenAiClient implements OpenAiClientInterface {
   calls: ResponsesParseParams[] = [];
+  options: Array<{ signal?: AbortSignal } | undefined> = [];
   responseToReturn: { output_parsed: TestResponse | null } = {
     output_parsed: null,
   };
 
   responses = {
-    parse: async <T>(params: ResponsesParseParams) => {
+    parse: async <T>(
+      params: ResponsesParseParams,
+      options?: { signal?: AbortSignal },
+    ) => {
       this.calls.push(params);
+      this.options.push(options);
       return this.responseToReturn as { output_parsed: T | null };
     },
   };
 }
 
 describe("OpenAiLlmClient", () => {
+  it("passes cancellation to the provider request", async () => {
+    const fake = new FakeOpenAiClient();
+    fake.responseToReturn = { output_parsed: { answer: "42" } };
+    const client = new OpenAiLlmClient("key", "gpt-4o", fake);
+    const controller = new AbortController();
+    const params = {
+      systemPrompt: "test",
+      messages: [{ role: "user" as const, content: "test" }],
+      responseSchema: testSchema,
+      abortSignal: controller.signal,
+    };
+
+    await client.complete(params);
+
+    expect(fake.options[0]?.signal).toBe(controller.signal);
+  });
+
   it("should transform systemPrompt and messages into input array", async () => {
     const fake = new FakeOpenAiClient();
     fake.responseToReturn = { output_parsed: { answer: "42" } };

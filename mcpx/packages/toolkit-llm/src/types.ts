@@ -22,6 +22,7 @@ export interface LlmCompletionParams<T> {
   systemPrompt: string;
   messages: LlmMessage[];
   responseSchema: z.ZodSchema<T>;
+  abortSignal?: AbortSignal;
 }
 
 /**

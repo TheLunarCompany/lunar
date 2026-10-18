@@ -22,6 +22,25 @@ class FakeGoogleClient implements GoogleGenAiClientInterface {
 }
 
 describe("GoogleLlmClient", () => {
+  it("passes cancellation to the provider request", async () => {
+    const fake = new FakeGoogleClient();
+    fake.responseToReturn = { text: JSON.stringify({ answer: "42" }) };
+    const client = new GoogleLlmClient("key", "gemini-2.0-flash", fake);
+    const controller = new AbortController();
+    const params = {
+      systemPrompt: "test",
+      messages: [{ role: "user" as const, content: "test" }],
+      responseSchema: testSchema,
+      abortSignal: controller.signal,
+    };
+
+    await client.complete(params);
+
+    expect(fake.calls[0]?.config).toMatchObject({
+      abortSignal: controller.signal,
+    });
+  });
+
   it("should pass systemPrompt to config.systemInstruction", async () => {
     const fake = new FakeGoogleClient();
     fake.responseToReturn = { text: JSON.stringify({ answer: "42" }) };

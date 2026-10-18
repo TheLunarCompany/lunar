@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type GenerateContentConfig } from "@google/genai";
 import { z } from "zod/v4";
 import { LlmClient, LlmCompletionParams, LlmMessage } from "../types.js";
 import { LlmApiError, LlmParseError } from "../errors.js";
@@ -14,6 +14,7 @@ export interface GenerateContentParams {
     systemInstruction: string;
     responseMimeType: string;
     responseJsonSchema: unknown;
+    abortSignal?: GenerateContentConfig["abortSignal"];
   };
 }
 
@@ -48,8 +49,13 @@ export class GoogleLlmClient implements LlmClient {
   }
 
   async complete<T>(params: LlmCompletionParams<T>): Promise<T> {
-    const { systemPrompt, messages, responseSchema } = params;
-    const response = await this.callApi(systemPrompt, messages, responseSchema);
+    const { systemPrompt, messages, responseSchema, abortSignal } = params;
+    const response = await this.callApi(
+      systemPrompt,
+      messages,
+      responseSchema,
+      abortSignal,
+    );
 
     const parsed = responseSchema.safeParse(JSON.parse(response.text || "{}"));
     if (!parsed.success) {
@@ -66,6 +72,7 @@ export class GoogleLlmClient implements LlmClient {
     systemPrompt: string,
     messages: LlmMessage[],
     responseSchema: z.ZodSchema<T>,
+    abortSignal?: AbortSignal,
   ): Promise<GenerateContentResponse> {
     const userContent = messages.map((m) => m.content).join("\n");
 
@@ -77,6 +84,7 @@ export class GoogleLlmClient implements LlmClient {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
           responseJsonSchema: z.toJSONSchema(responseSchema),
+          abortSignal,
         },
       });
     } catch (e) {
