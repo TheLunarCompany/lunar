@@ -167,7 +167,7 @@ RUN apk add --no-cache \
     python3=3.12.15-r0 \
     py3-pip=25.1.1-r0 \
     uv=0.7.22-r0 \
-    ca-certificates=20260909-r0 \
+    ca-certificates=20261020-r0 \
     libexpat=2.9.0-r0 \
     su-exec=0.2-r3
 
