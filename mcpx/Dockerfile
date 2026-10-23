@@ -13,7 +13,7 @@
 #     docker build -t mcpx --target mcpx -f ./mcpx/Dockerfile .
 #     docker run --rm -p 9000:9000 -p 5173:5173 -p 3000:3000 mcpx
 
-FROM node:22.22.3-alpine3.22 AS base
+FROM node:22.23.4-alpine3.23 AS base
 
 ENV HOME=/lunar
 
@@ -59,7 +59,7 @@ RUN npm run install:ui && npm run build:ui
 # Dev deps of the shared root are not needed at runtime
 RUN cd /ai-gateway-shared/public && npm prune --omit=dev
 
-FROM node:22.22.3-alpine3.22 AS mcpx-ui
+FROM node:22.23.4-alpine3.23 AS mcpx-ui
 ARG UI_PORT
 
 ENV LOG_LEVEL="info"
@@ -154,9 +154,14 @@ ENV DIND_ENABLED=true
 
 WORKDIR ${HOME}
 
-RUN apk add --no-cache \
-    "nodejs~=22" \
-    npm=11.6.4-r0
+# Node comes from the official image: Alpine 3.22's nodejs package lags behind Node security releases
+RUN apk add --no-cache libstdc++ libgcc
+COPY --from=base /usr/local/bin/node /usr/local/bin/node
+COPY --from=base /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+    ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+    npm install -g npm@11.6.4 --cache /tmp/empty-cache && \
+    rm -rf /tmp/empty-cache
 
 # Log build platform information for debugging
 RUN echo "Building on: $BUILDPLATFORM for: $TARGETPLATFORM" && \
