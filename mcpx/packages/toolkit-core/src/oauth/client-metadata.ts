@@ -10,9 +10,8 @@ import { z } from "zod";
 /** Where the document is served, and therefore what its `client_id` is. */
 export const CLIENT_METADATA_PATH = "/.well-known/oauth-client-metadata.json";
 
-/** Space flow (router) and analyze flow (webserver) callback paths. */
-const ROUTER_REDIRECT_PATH = "/auth/callback";
-const WEBSERVER_REDIRECT_PATH = "/oauth/callback";
+/** The MCPX callback, the one every OAuth flow is sent back to. */
+const REDIRECT_PATH = "/auth/callback";
 
 /** How the client names itself, here and in a DCR registration. */
 export const CLIENT_NAME = "mcpx-server";
@@ -49,25 +48,15 @@ export function stripTrailingSlash(origin: string): string {
   return origin.replace(/\/+$/, "");
 }
 
-/** Builds the CIMD document. Optional `webserverPublicUrl` for analyze callback. */
 export function buildClientMetadataDocument(params: {
   baseUrl: string;
-  webserverPublicUrl?: string;
 }): ClientMetadataDocument {
   const baseUrl = stripTrailingSlash(params.baseUrl);
-  const webserverPublicUrl = params.webserverPublicUrl
-    ? stripTrailingSlash(params.webserverPublicUrl)
-    : undefined;
   return {
     client_id: `${baseUrl}${CLIENT_METADATA_PATH}`,
     client_name: CLIENT_NAME,
     client_uri: CLIENT_URI,
-    redirect_uris: [
-      `${baseUrl}${ROUTER_REDIRECT_PATH}`,
-      ...(webserverPublicUrl
-        ? [`${webserverPublicUrl}${WEBSERVER_REDIRECT_PATH}`]
-        : []),
-    ],
+    redirect_uris: [`${baseUrl}${REDIRECT_PATH}`],
     grant_types: ["authorization_code", "refresh_token"],
     response_types: ["code"],
     token_endpoint_auth_method: "none",

@@ -96,6 +96,19 @@ export function getSpaceKindLabel(identity: Identity): string {
   }
 }
 
+type SpaceEntity = Extract<
+  Extract<Identity, { mode: "enterprise" }>["entity"],
+  { entityType: "space" }
+>;
+export type SpaceKind = NonNullable<SpaceEntity["spaceKind"]>;
+
+export function getSpaceKind(identity: Identity): SpaceKind | undefined {
+  if (identity.mode === "personal" || identity.entity.entityType !== "space") {
+    return undefined;
+  }
+  return identity.entity.spaceKind;
+}
+
 export function getSpaceName(identity: Identity): string | undefined {
   if (identity.mode === "personal" || identity.entity.entityType !== "space") {
     return undefined;

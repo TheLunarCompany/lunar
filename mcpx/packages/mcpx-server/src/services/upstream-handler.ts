@@ -100,7 +100,6 @@ export interface UpstreamHandlerOAuthHandler {
     targetServerName: string,
     callbackUrl?: string,
   ): Promise<InitiateOAuthResult>;
-  completeOAuthByState(state: string, code: string): Promise<void>;
 }
 
 function sameStringSet(a: Set<string>, b: Set<string>): boolean {

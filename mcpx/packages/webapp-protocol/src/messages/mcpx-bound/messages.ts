@@ -5,7 +5,6 @@ import { setCatalogPayloadSchema } from "./set-catalog.js";
 import { setProfileSecretsPayloadSchema } from "./set-profile-secrets.js";
 import { setIdentityPayloadSchema } from "./set-identity.js";
 import { initiateOAuthPayloadSchema } from "./initiate-oauth.js";
-import { completeOAuthPayloadSchema } from "./complete-oauth.js";
 import { setOauthCredentialsPayloadSchema } from "./set-oauth-credentials.js";
 import {
   setPersonalSkillsPayloadSchema,
@@ -23,7 +22,6 @@ export const McpxBoundPayloads = {
   setIdentity: setIdentityPayloadSchema,
   setMcpxBehavior: setMcpxBehaviorPayloadSchema,
   initiateOAuth: initiateOAuthPayloadSchema,
-  completeOAuth: completeOAuthPayloadSchema,
   setPersonalSkills: setPersonalSkillsPayloadSchema,
   setPublishedSkills: setPublishedSkillsPayloadSchema,
   bootComplete: bootCompletePayloadSchema,
@@ -40,7 +38,6 @@ export const MCPX_BOUND_EVENTS = {
   SET_IDENTITY: "set-identity",
   SET_MCPX_BEHAVIOR: "set-mcpx-behavior",
   INITIATE_OAUTH: "initiate-oauth",
-  COMPLETE_OAUTH: "complete-oauth",
   SET_PERSONAL_SKILLS: "set-personal-skills",
   SET_PUBLISHED_SKILLS: "set-published-skills",
   BOOT_COMPLETE: "boot-complete",
@@ -59,7 +56,6 @@ export const mcpxBoundSchemasByEvent = {
   [MCPX_BOUND_EVENTS.SET_IDENTITY]: setIdentityPayloadSchema,
   [MCPX_BOUND_EVENTS.SET_MCPX_BEHAVIOR]: setMcpxBehaviorPayloadSchema,
   [MCPX_BOUND_EVENTS.INITIATE_OAUTH]: initiateOAuthPayloadSchema,
-  [MCPX_BOUND_EVENTS.COMPLETE_OAUTH]: completeOAuthPayloadSchema,
   [MCPX_BOUND_EVENTS.SET_PERSONAL_SKILLS]: setPersonalSkillsPayloadSchema,
   [MCPX_BOUND_EVENTS.SET_PUBLISHED_SKILLS]: setPublishedSkillsPayloadSchema,
   [MCPX_BOUND_EVENTS.BOOT_COMPLETE]: bootCompletePayloadSchema,

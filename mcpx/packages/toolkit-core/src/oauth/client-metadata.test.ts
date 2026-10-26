@@ -4,43 +4,30 @@ import {
   CLIENT_METADATA_PATH,
 } from "./client-metadata.js";
 
-const ROUTER = "https://mcpx-stg.lunar.dev";
-const WEBSERVER = "https://app-stg.lunar.dev";
+const MCPX_URL = "https://mcpx-stg.lunar.dev";
 
 describe("buildClientMetadataDocument", () => {
   it("client_id equals the URL the document is served from", () => {
     // Servers reject the document when these disagree.
-    expect(buildClientMetadataDocument({ baseUrl: ROUTER }).client_id).toBe(
-      `${ROUTER}${CLIENT_METADATA_PATH}`,
+    expect(buildClientMetadataDocument({ baseUrl: MCPX_URL }).client_id).toBe(
+      `${MCPX_URL}${CLIENT_METADATA_PATH}`,
     );
   });
 
-  it("advertises the callback the space flow is sent back to", () => {
+  it("advertises only the MCPX callback, which every flow is sent back to", () => {
     expect(
-      buildClientMetadataDocument({ baseUrl: ROUTER }).redirect_uris,
-    ).toEqual([`${ROUTER}/auth/callback`]);
+      buildClientMetadataDocument({ baseUrl: MCPX_URL }).redirect_uris,
+    ).toEqual([`${MCPX_URL}/auth/callback`]);
   });
 
-  it("adds the webserver's callback, which catalog analysis uses", () => {
+  it("strips trailing slashes so the redirect_uri stays byte-equal", () => {
     expect(
-      buildClientMetadataDocument({
-        baseUrl: ROUTER,
-        webserverPublicUrl: WEBSERVER,
-      }).redirect_uris,
-    ).toEqual([`${ROUTER}/auth/callback`, `${WEBSERVER}/oauth/callback`]);
-  });
-
-  it("strips trailing slashes so redirect_uris stay byte-equal to PUBLIC_URL", () => {
-    expect(
-      buildClientMetadataDocument({
-        baseUrl: `${ROUTER}/`,
-        webserverPublicUrl: `${WEBSERVER}/`,
-      }).redirect_uris,
-    ).toEqual([`${ROUTER}/auth/callback`, `${WEBSERVER}/oauth/callback`]);
+      buildClientMetadataDocument({ baseUrl: `${MCPX_URL}/` }).redirect_uris,
+    ).toEqual([`${MCPX_URL}/auth/callback`]);
   });
 
   it("describes a public client, with no secret", () => {
-    const doc = buildClientMetadataDocument({ baseUrl: ROUTER });
+    const doc = buildClientMetadataDocument({ baseUrl: MCPX_URL });
     expect(doc.token_endpoint_auth_method).toBe("none");
     expect(doc.grant_types).toEqual(["authorization_code", "refresh_token"]);
     expect(doc.response_types).toEqual(["code"]);
@@ -49,10 +36,7 @@ describe("buildClientMetadataDocument", () => {
 
 describe("clientMetadataDocumentSchema", () => {
   it("reads back what the builder produces", () => {
-    const doc = buildClientMetadataDocument({
-      baseUrl: ROUTER,
-      webserverPublicUrl: WEBSERVER,
-    });
+    const doc = buildClientMetadataDocument({ baseUrl: MCPX_URL });
     const parsed = clientMetadataDocumentSchema.safeParse(
       JSON.parse(JSON.stringify(doc)),
     );

@@ -140,19 +140,20 @@ describe("IdentityService", () => {
       });
     });
 
-    it("drops a space kind the client can't render (SANDBOX_ANALYSIS) to undefined", () => {
+    it("keeps a SANDBOX_ANALYSIS space's kind and the admin authorizing its scan", () => {
       const identity = enterpriseIdentity({
         entityType: "space",
         spaceKind: "SANDBOX_ANALYSIS",
         spaceName: "Scan",
+        editedBy: { adminDisplayName: "Alice" },
       });
       expect(toClientIdentity(identity)).toEqual({
         mode: "enterprise",
         entity: {
           entityType: "space",
-          spaceKind: undefined,
+          spaceKind: "SANDBOX_ANALYSIS",
           spaceName: "Scan",
-          editedBy: undefined,
+          editedBy: { adminDisplayName: "Alice" },
         },
       });
     });

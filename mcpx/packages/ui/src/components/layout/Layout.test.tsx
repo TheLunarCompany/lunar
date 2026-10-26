@@ -27,6 +27,7 @@ vi.mock("@/data/identity", () => ({
   useIdentity: () => ({ data: undefined }),
   useIdentityLiveSync: () => {},
   getSpaceEditedByLabel: () => undefined,
+  getSpaceKind: () => undefined,
   getSpaceKindLabel: () => "space",
   getSpaceName: () => undefined,
 }));

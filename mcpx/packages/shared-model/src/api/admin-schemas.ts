@@ -24,7 +24,9 @@ const enterpriseIdentitySchema = z.object({
   entity: z.discriminatedUnion("entityType", [
     z.object({
       entityType: z.literal("space"),
-      spaceKind: z.enum(["HOSTED_MCP_SERVER", "AGENT_CONNECTOR"]).optional(),
+      spaceKind: z
+        .enum(["HOSTED_MCP_SERVER", "AGENT_CONNECTOR", "SANDBOX_ANALYSIS"])
+        .optional(),
       spaceName: z.string().optional(),
       editedBy: oboEditorSchema.optional(),
     }),

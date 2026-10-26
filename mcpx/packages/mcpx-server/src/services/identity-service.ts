@@ -115,8 +115,7 @@ export function isSpace(identity: Identity): boolean {
   return identity.entity.entityType === "space";
 }
 
-// Narrows the internal identity to the client contract: the UI only knows the
-// space kinds it renders, so any other kind is dropped to undefined.
+// Narrows the internal identity to the client contract.
 export function toClientIdentity(identity: Identity): ClientIdentity {
   const mode = identity.mode;
   if (mode === "personal") {
@@ -134,16 +133,11 @@ export function toClientIdentity(identity: Identity): ClientIdentity {
       },
     };
   }
-  const spaceKind =
-    entity.spaceKind === "HOSTED_MCP_SERVER" ||
-    entity.spaceKind === "AGENT_CONNECTOR"
-      ? entity.spaceKind
-      : undefined;
   return {
     mode,
     entity: {
       entityType,
-      spaceKind,
+      spaceKind: entity.spaceKind,
       spaceName: entity.spaceName,
       editedBy: entity.editedBy,
     },
