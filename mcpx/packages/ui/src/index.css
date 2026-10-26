@@ -1,0 +1,370 @@
+@import "@boomi/exosphere/dist/styles.css";
+@import "./styles/tokens/index.css" layer(base);
+
+@import "tailwindcss";
+
+@import "tw-animate-css";
+
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --breakpoint-3xl: 3000px;
+
+  --radius-sm: var(--border-radius-sm);
+  --radius-md: var(--border-radius-md);
+  --radius-lg: var(--border-radius-lg);
+  --radius-xl: var(--border-radius-xl);
+
+  --color-background: var(--mcpx-page);
+  --color-foreground: var(--mcpx-text);
+
+  --color-select-primary: var(--mcpx-selected-weak);
+  --color-select-primary-hover: var(--mcpx-surface-hover);
+
+  --color-component-primary: var(--mcpx-selected);
+  --color-component-primary-hover: var(--mcpx-selected-hover);
+  --color-component-secondary: var(--mcpx-selected-weak);
+
+  --color-button-primary: var(--mcpx-action);
+  --color-button-hover: var(--mcpx-action-hover);
+  --color-button-secondary: var(--mcpx-surface-subtle);
+  --color-button-secondary-hover: var(--mcpx-surface-hover);
+  --color-button-danger: var(--mcpx-danger-action);
+  --color-button-danger-hover: var(--mcpx-danger-action-hover);
+
+  --color-card: var(--mcpx-surface);
+  --color-card-foreground: var(--mcpx-text);
+
+  --color-popover: var(--mcpx-surface);
+  --color-popover-foreground: var(--mcpx-text);
+
+  --color-primary: var(--mcpx-selected);
+  --color-primary-foreground: var(--mcpx-text-inverse);
+
+  --color-secondary: var(--mcpx-surface-subtle);
+  --color-secondary-foreground: var(--mcpx-text);
+
+  --color-muted: var(--mcpx-surface-subtle);
+  --color-muted-foreground: var(--mcpx-text-secondary);
+
+  --color-accent: var(--mcpx-surface-hover);
+  --color-accent-foreground: var(--mcpx-text);
+
+  --color-destructive: var(--mcpx-danger-action);
+  --color-destructive-foreground: var(--mcpx-text-inverse);
+
+  --color-badge-success-fg: var(--mcpx-success-text);
+  --color-badge-success-bg: var(--mcpx-success-bg);
+  --color-badge-success-border: var(--mcpx-success-text);
+  --color-badge-danger-fg: var(--mcpx-danger-text);
+  --color-badge-danger-bg: var(--mcpx-danger-bg);
+  --color-badge-danger-border: var(--mcpx-danger-text);
+  --color-badge-warning-fg: var(--mcpx-warning-strong);
+  --color-badge-warning-bg: var(--mcpx-warning-bg);
+  --color-badge-warning-border: var(--mcpx-warning-strong);
+  --color-badge-info-fg: var(--mcpx-info-text);
+  --color-badge-info-bg: var(--mcpx-info-bg);
+  --color-badge-info-border: var(--mcpx-info-text);
+  --color-badge-purple-fg: var(--mcpx-data-purple);
+  --color-badge-purple-bg: var(--mcpx-selected-weak);
+  --color-badge-purple-border: var(--mcpx-data-purple);
+
+  --color-border: var(--mcpx-border);
+  --color-input: var(--mcpx-border);
+  --color-ring: var(--mcpx-focus);
+
+  --color-mcpx-page: var(--mcpx-page);
+  --color-mcpx-surface: var(--mcpx-surface);
+  --color-mcpx-surface-subtle: var(--mcpx-surface-subtle);
+  --color-mcpx-surface-tertiary: var(--mcpx-surface-tertiary);
+  --color-mcpx-surface-hover: var(--mcpx-surface-hover);
+  --color-mcpx-surface-disabled: var(--mcpx-surface-disabled);
+  --color-mcpx-text: var(--mcpx-text);
+  --color-mcpx-text-secondary: var(--mcpx-text-secondary);
+  --color-mcpx-text-tertiary: var(--mcpx-text-tertiary);
+  --color-mcpx-text-disabled: var(--mcpx-text-disabled);
+  --color-mcpx-border: var(--mcpx-border);
+  --color-mcpx-border-subtle: var(--mcpx-border-subtle);
+  --color-mcpx-focus: var(--mcpx-focus);
+  --color-mcpx-action: var(--mcpx-action);
+  --color-mcpx-action-hover: var(--mcpx-action-hover);
+  --color-mcpx-selected: var(--mcpx-selected);
+  --color-mcpx-selected-hover: var(--mcpx-selected-hover);
+  --color-mcpx-selected-weak: var(--mcpx-selected-weak);
+  --color-mcpx-success-bg: var(--mcpx-success-bg);
+  --color-mcpx-success-text: var(--mcpx-success-text);
+  --color-mcpx-warning-bg: var(--mcpx-warning-bg);
+  --color-mcpx-warning-strong: var(--mcpx-warning-strong);
+  --color-mcpx-danger-bg: var(--mcpx-danger-bg);
+  --color-mcpx-danger-text: var(--mcpx-danger-text);
+  --color-mcpx-info-bg: var(--mcpx-info-bg);
+  --color-mcpx-info-text: var(--mcpx-info-text);
+  --color-mcpx-data-gray: var(--mcpx-data-gray);
+  --color-mcpx-data-blue: var(--mcpx-data-blue);
+  --color-mcpx-data-coral: var(--mcpx-data-coral);
+  --color-mcpx-data-green: var(--mcpx-data-green);
+  --color-mcpx-data-navy: var(--mcpx-data-navy);
+  --color-mcpx-data-periwinkle: var(--mcpx-data-periwinkle);
+  --color-mcpx-data-purple: var(--mcpx-data-purple);
+  --color-mcpx-inverse-surface: var(--mcpx-inverse-surface);
+  --color-mcpx-inverse-hover: var(--mcpx-inverse-hover);
+  --color-mcpx-tooltip: var(--mcpx-tooltip);
+  --color-mcpx-tooltip-text: var(--mcpx-tooltip-text);
+  --color-mcpx-node-agent: var(--mcpx-node-agent);
+  --color-mcpx-node-server: var(--mcpx-node-server);
+  --color-mcpx-node-hub: var(--mcpx-node-hub);
+  --color-mcpx-route: var(--mcpx-route);
+  --color-mcpx-route-inactive: var(--mcpx-route-inactive);
+  --color-mcpx-route-active: var(--mcpx-route-active);
+  --color-mcpx-route-warning: var(--mcpx-route-warning);
+  --color-mcpx-route-danger: var(--mcpx-route-danger);
+
+  --color-chart-1: var(--mcpx-data-blue);
+  --color-chart-2: var(--mcpx-data-green);
+  --color-chart-3: var(--mcpx-data-coral);
+  --color-chart-4: var(--mcpx-data-purple);
+  --color-chart-5: var(--mcpx-data-navy);
+
+  --color-sidebar: var(--mcpx-surface);
+  --color-sidebar-foreground: var(--mcpx-text);
+  --color-sidebar-primary: var(--mcpx-selected);
+  --color-sidebar-primary-foreground: var(--mcpx-text-inverse);
+  --color-sidebar-accent: var(--mcpx-surface-hover);
+  --color-sidebar-accent-foreground: var(--mcpx-text);
+  --color-sidebar-border: var(--mcpx-border-subtle);
+  --color-sidebar-ring: var(--mcpx-focus);
+
+  --color-instance-status-initializing: var(--mcpx-selected);
+  --color-instance-status-idle: var(--mcpx-success-text);
+  --color-instance-status-working: var(--mcpx-data-green);
+  --color-instance-status-error: var(--mcpx-danger-action);
+  --color-instance-status-offline: var(--mcpx-text-disabled);
+  --color-instance-status-initializing-artwork: var(--mcpx-selected-weak);
+  --color-instance-status-panel-background: var(--mcpx-page);
+  --color-instance-status-panel-surface: var(--mcpx-surface);
+  --color-instance-status-panel-border: var(--mcpx-border);
+  --color-instance-status-panel-heading: var(--mcpx-text);
+  --color-instance-status-panel-description: var(--mcpx-text-secondary);
+  --color-instance-status-artwork: var(--mcpx-surface-tertiary);
+  --color-instance-status-error-artwork: var(--mcpx-danger-bg);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  --scale-200: 2;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  --font-brand: var(--exo-font-brand);
+  --font-heading: var(--font-sans);
+  --font-sans: var(--exo-font-family);
+  --font-mono: var(--exo-font-monospace);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  color-scheme: light;
+
+  --background: var(--mcpx-page);
+  --foreground: var(--mcpx-text);
+  --card: var(--mcpx-surface);
+  --card-foreground: var(--mcpx-text);
+  --popover: var(--mcpx-surface);
+  --popover-foreground: var(--mcpx-text);
+  --primary: var(--mcpx-selected);
+  --text-primary: var(--mcpx-text);
+  --primary-foreground: var(--mcpx-text-inverse);
+  --secondary: var(--mcpx-surface-subtle);
+  --secondary-foreground: var(--mcpx-text);
+  --muted: var(--mcpx-surface-subtle);
+  --muted-foreground: var(--mcpx-text-secondary);
+  --accent: var(--mcpx-surface-hover);
+  --accent-foreground: var(--mcpx-text);
+  --destructive: var(--mcpx-danger-action);
+  --destructive-foreground: var(--mcpx-text-inverse);
+  --border: var(--mcpx-border);
+  --input: var(--mcpx-border);
+  --ring: var(--mcpx-focus);
+  --radius: 0.625rem;
+  --radix-accordion-content-height: 0px;
+  --radix-popper-transform-origin: center;
+}
+
+html,
+body {
+  font-family: var(--exo-font-family);
+}
+
+@keyframes pulse-line {
+  0% {
+    stroke-dashoffset: 20;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1 {
+    @apply font-brand;
+  }
+
+  [data-radix-popper-content-wrapper] {
+    transform-origin: var(--radix-popper-transform-origin);
+    will-change: transform, opacity;
+  }
+
+  .react-flow__node-selectorNode {
+    font-size: 12px;
+    background: var(--mcpx-surface-subtle);
+    border: 1px solid var(--mcpx-border);
+    border-radius: 5px;
+    text-align: center;
+  }
+  .react-flow__handle-flow__handle.react-flow__handle-flow__handle {
+    border: none !important;
+  }
+  .react-flow__handle.connectionindicator {
+    border: none !important;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  .mcpx-page-title {
+    @apply font-brand text-xl leading-[1.25] font-semibold text-mcpx-text;
+  }
+}
+
+.pulsing-line {
+  stroke-dasharray: 10 10;
+  animation: pulse-line 2.5s linear infinite;
+}
+
+.monacoHighlightField {
+  color: var(--mcpx-editor-highlight-text) !important;
+  background-color: var(--mcpx-editor-highlight);
+  padding-block: 4px;
+  border-radius: 4px;
+}
+
+.monaco-bg-light-blue .monaco-editor-background {
+  background-color: var(--mcpx-editor-surface) !important;
+}
+
+.monaco-bg-light-blue .margin {
+  background-color: var(--mcpx-editor-surface) !important;
+}
+
+.monaco-bg-light-blue .margin-view-overlays .line-numbers {
+  opacity: 0.2 !important;
+}
+
+.monaco-bg-light-blue .view-lines .view-line {
+  color: var(--mcpx-editor-text) !important;
+}
+
+.monaco-bg-light-blue {
+  overflow: hidden !important;
+  padding: 16px 0 !important;
+  border: none !important;
+}
+
+.monaco-bg-light-blue .monaco-editor {
+  border: none !important;
+  outline: none !important;
+}
+
+.monaco-bg-light-blue .monaco-editor .overflow-guard {
+  border: none !important;
+}
+
+.monaco-editor-container {
+  background-color: var(--mcpx-editor-surface) !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--mcpx-border) !important;
+  overflow: hidden !important;
+}
+
+.monaco-bg-light-blue .decorationsOverviewRuler {
+  display: none !important;
+}
+
+.react-flow__handle {
+  visibility: hidden !important;
+}
+
+.react-flow__pane {
+  background-color: var(--mcpx-canvas) !important;
+  background-image: none !important;
+  margin: 0 !important;
+}
+
+.react-flow__controls {
+  gap: 1px;
+  box-shadow: none !important;
+}
+
+.react-flow__controls-button {
+  width: 24px !important;
+  height: 24px !important;
+  padding: 4px !important;
+  border: 0 !important;
+  border-radius: var(--border-radius-sm) !important;
+  background: var(--mcpx-sidebar) !important;
+  color: var(--mcpx-text-inverse) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--mcpx-sidebar-active) !important;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor !important;
+}
+
+@keyframes mcpxStatusPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
