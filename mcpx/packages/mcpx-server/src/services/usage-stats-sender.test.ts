@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
+import { Writable } from "node:stream";
+import { createLogger, format, Logger, transports } from "winston";
 import { noOpLogger } from "@aigw/core/logging";
 import {
   UsageStatsSender,
   UsageStatsSocket,
   buildUsageStatsPayload,
 } from "./usage-stats-sender.js";
-import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
+import {
+  HUB_SOCKET_MAX_MESSAGE_BYTES,
+  WebappBoundPayloadOf,
+} from "@mcpx/webapp-protocol/messages";
 import {
   SystemState,
   StdioTargetServer,
@@ -223,6 +228,126 @@ describe("UsageStatsSender", () => {
     expect(emittedMessages.length).toBeGreaterThanOrEqual(3);
   });
 
+  describe("Hub socket limit", () => {
+    // A real winston logger whose entries land in an array.
+    const recordingLogger = (): { logger: Logger; entries: unknown[] } => {
+      const entries: unknown[] = [];
+      const stream = new Writable({
+        write(chunk, _encoding, callback): void {
+          entries.push(JSON.parse(chunk.toString()));
+          callback();
+        },
+      });
+      const logger = createLogger({
+        format: format.json(),
+        transports: [new transports.Stream({ stream })],
+      });
+      return { logger, entries };
+    };
+    const flushLogs = (): Promise<void> =>
+      new Promise((resolve) => setImmediate(resolve));
+
+    it("sends an oversized payload trimmed to fit, with a warning", async () => {
+      const { logger, entries } = recordingLogger();
+      const description = "x".repeat(HUB_SOCKET_MAX_MESSAGE_BYTES);
+      payloadGenerator = () =>
+        createPayload(1, ["server1"], {
+          big: { description, isCustom: false, usage: { callCount: 2 } },
+        });
+      sender = new UsageStatsSender(logger, payloadGenerator, 1000);
+
+      sender.sendNow(mockSocket);
+      await flushLogs();
+
+      expect(emittedMessages).toHaveLength(1);
+      const [envelope] = emittedMessages as Array<{
+        payload: WebappBoundPayloadOf<"usage-stats">;
+      }>;
+      const tool = envelope?.payload.targetServers[0]?.tools?.["big"];
+      expect(tool?.usage.callCount).toBe(2);
+      expect(tool?.description?.length).toBeLessThan(description.length);
+      expect(Buffer.byteLength(JSON.stringify(envelope))).toBeLessThan(
+        HUB_SOCKET_MAX_MESSAGE_BYTES,
+      );
+      expect(entries).toContainEqual(
+        expect.objectContaining({
+          level: "warn",
+          message: "Trimmed usage stats to fit the Hub's socket limit",
+        }),
+      );
+      expect(entries).not.toContainEqual(
+        expect.objectContaining({ level: "error" }),
+      );
+    });
+
+    it("sends emptied servers without tools or prompts, and logs an error naming them", async () => {
+      const { logger, entries } = recordingLogger();
+      const manyTools = Object.fromEntries(
+        Array.from({ length: 20_000 }, (_, i) => [
+          `a-fairly-long-tool-name-${i}`,
+          { isCustom: false, usage: { callCount: 0 } },
+        ]),
+      );
+      payloadGenerator = () => ({
+        agents: [],
+        targetServers: [
+          {
+            name: "small",
+            type: "stdio",
+            status: "connected",
+            tools: {
+              kept: {
+                description: "kept",
+                isCustom: false,
+                usage: { callCount: 1 },
+              },
+            },
+          },
+          {
+            name: "huge",
+            type: "streamable-http",
+            status: "connected",
+            tools: manyTools,
+          },
+        ],
+      });
+      sender = new UsageStatsSender(logger, payloadGenerator, 1000);
+
+      sender.sendNow(mockSocket);
+      await flushLogs();
+
+      const [envelope] = emittedMessages as Array<{
+        payload: WebappBoundPayloadOf<"usage-stats">;
+      }>;
+      expect(envelope?.payload.targetServers).toEqual([
+        expect.objectContaining({
+          name: "small",
+          tools: { kept: expect.objectContaining({ description: "kept" }) },
+        }),
+        expect.objectContaining({ name: "huge", tools: {}, prompts: {} }),
+      ]);
+      expect(entries).toContainEqual(
+        expect.objectContaining({ level: "error", emptiedServers: ["huge"] }),
+      );
+    });
+
+    it("does not send a payload that can't fit even when trimmed", () => {
+      payloadGenerator = () => ({
+        agents: [
+          {
+            clientInfo: { name: "a".repeat(HUB_SOCKET_MAX_MESSAGE_BYTES) },
+          },
+        ],
+        targetServers: [],
+      });
+      sender = new UsageStatsSender(noOpLogger, payloadGenerator, 1000);
+
+      sender.sendNow(mockSocket);
+
+      expect(emittedMessages).toHaveLength(0);
+    });
+  });
+
   describe("tool usage deduplication", () => {
     it("should send when tool callCount changes", async () => {
       const tools: ToolsConfig = {
@@ -386,7 +511,7 @@ describe("buildUsageStatsPayload", () => {
   });
 
   describe("prompt message stripping", () => {
-    it("caps text, drops media data, keeps resource text", () => {
+    it("keeps text, drops media data, keeps resource text", () => {
       const longText = "x".repeat(25_000);
       const state = createBaseState();
       state.targetServers = [
@@ -426,12 +551,8 @@ describe("buildUsageStatsPayload", () => {
       const payload = buildUsageStatsPayload(state);
       const messages = payload.targetServers[0]?.prompts?.["p"]?.messages ?? [];
 
-      // Text is truncated below the original length.
-      expect(messages[0]?.content.type).toBe("text");
-      expect(messages[0]?.content.text?.endsWith("… (truncated)")).toBe(true);
-      expect(messages[0]?.content.text?.length ?? 0).toBeLessThan(
-        longText.length,
-      );
+      // Text is kept whole; the sender's byte budget bounds it, not this mapping.
+      expect(messages[0]?.content).toEqual({ type: "text", text: longText });
       // Image: metadata only, base64 data dropped.
       expect(messages[1]?.content).toEqual({
         type: "image",

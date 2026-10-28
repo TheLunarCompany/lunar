@@ -21,7 +21,9 @@ import {
   HubSourcedMcpxBehaviors,
 } from "../src/services/behavior-service.js";
 import {
+  HUB_SOCKET_MAX_MESSAGE_BYTES,
   McpxBehaviorSettings,
+  WebappBoundPayloadOf,
   wrapInEnvelope,
 } from "@mcpx/webapp-protocol/messages";
 
@@ -1000,5 +1002,60 @@ describe("HubService", () => {
     // microtasks/callbacks, and the server-side handler may not fire before the test
     // assertion runs — even though the data was sent. The BatchBuffer unit test covers
     // the shutdown-flush logic at the pure level.
+  });
+
+  describe("Usage stats size", () => {
+    beforeEach(() => {
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+    });
+
+    it("delivers usage stats bigger than the Hub's socket limit, trimmed to fit", async () => {
+      const longDescription = "x".repeat(HUB_SOCKET_MAX_MESSAGE_BYTES);
+      const getOversizedUsageStats =
+        (): WebappBoundPayloadOf<"usage-stats"> => ({
+          agents: [],
+          targetServers: [
+            {
+              name: "big-server",
+              type: "streamable-http",
+              status: "connected",
+              tools: {
+                "big-tool": {
+                  description: longDescription,
+                  isCustom: false,
+                  usage: { callCount: 3 },
+                },
+              },
+            },
+          ],
+        });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubCatalogManager,
+        stubEnvVarManager,
+        stubConfigService,
+        stubIdentityService,
+        stubBehaviorService,
+        stubTargetClients,
+        getOversizedUsageStats,
+        { hubUrl: HUB_URL, connectionTimeout: 5000 },
+      );
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+
+      const envelope = await mockHubServer.waitForUsageStats(3000);
+      const { payload } = envelope as {
+        payload: WebappBoundPayloadOf<"usage-stats">;
+      };
+
+      const tool = payload.targetServers[0]?.tools?.["big-tool"];
+      expect(tool?.usage.callCount).toBe(3);
+      expect(tool?.description?.length).toBeLessThan(longDescription.length);
+      expect(Buffer.byteLength(JSON.stringify(envelope))).toBeLessThanOrEqual(
+        HUB_SOCKET_MAX_MESSAGE_BYTES,
+      );
+      expect(hubService.status.status).toBe("authenticated");
+      expect(mockHubServer.getConnectedClients()).toHaveLength(1);
+    });
   });
 });

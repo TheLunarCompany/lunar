@@ -1,6 +1,7 @@
 import { Logger } from "winston";
 import { hashObject } from "@aigw/core/data";
 import {
+  HUB_SOCKET_MAX_MESSAGE_BYTES,
   WebappBoundPayloadOf,
   wrapInEnvelope,
   EnvelopedMessage,
@@ -9,6 +10,13 @@ import {
 } from "@mcpx/webapp-protocol/messages";
 import { SystemState, TargetServer } from "@mcpx/shared-model";
 import type { PromptMessage } from "@modelcontextprotocol/sdk/types.js";
+import {
+  fitUsageStatsToBudget,
+  TrimmedUsageStats,
+} from "./usage-stats-budget.js";
+
+// Headroom below the Hub's limit for the envelope and socket.io framing.
+const USAGE_STATS_BUDGET_BYTES = Math.floor(HUB_SOCKET_MAX_MESSAGE_BYTES * 0.9);
 
 type ReportableTargetServer = TargetServer & {
   state: Exclude<TargetServer["state"], { type: "connecting" }>;
@@ -66,13 +74,52 @@ export class UsageStatsSender {
     if (payloadHash === this.lastPayloadHash) {
       return;
     }
+    this.lastPayloadHash = payloadHash;
 
-    const envelopedMessage = wrapInEnvelope({ payload });
+    const fit = fitUsageStatsToBudget({
+      payload,
+      budgetBytes: USAGE_STATS_BUDGET_BYTES,
+    });
+    if (fit.outcome === "too-big") {
+      this.logger.error(
+        "Usage stats exceed the Hub's socket limit even with every server emptied, not sending",
+        {
+          originalBytes: fit.originalBytes,
+          bytes: fit.bytes,
+          emptiedServers: fit.emptiedServers,
+        },
+      );
+      return;
+    }
+    if (fit.outcome === "trimmed") {
+      this.logTrim(fit);
+    }
+
+    const envelopedMessage = wrapInEnvelope({ payload: fit.payload });
     this.logger.debug("Sending usage stats to Hub", {
       messageId: envelopedMessage.metadata.id,
     });
     socket.emit("usage-stats", envelopedMessage);
-    this.lastPayloadHash = payloadHash;
+  }
+
+  private logTrim(trim: TrimmedUsageStats): void {
+    const report = {
+      originalBytes: trim.originalBytes,
+      bytes: trim.bytes,
+      textCut: trim.textCut,
+      emptiedServers: trim.emptiedServers,
+    };
+    if (trim.emptiedServers.length > 0) {
+      this.logger.error(
+        "Usage stats over the Hub's socket limit: sent emptiedServers WITHOUT their tools and prompts, the Hub shows them as having none",
+        report,
+      );
+      return;
+    }
+    this.logger.warn(
+      "Trimmed usage stats to fit the Hub's socket limit",
+      report,
+    );
   }
 
   private hashPayload(payload: WebappBoundPayloadOf<"usage-stats">): string {
@@ -143,19 +190,8 @@ function buildPromptsRecord(
   );
 }
 
-// Per-message text cap, so one huge template can't push the payload past the
-// socket limit (which drops ALL stats).
-const MAX_PROMPT_TEXT_LENGTH = 20_000;
-
-function capText(text: string | undefined): string | undefined {
-  if (text === undefined) return undefined;
-  return text.length > MAX_PROMPT_TEXT_LENGTH
-    ? `${text.slice(0, MAX_PROMPT_TEXT_LENGTH)}… (truncated)`
-    : text;
-}
-
-// Persisted downstream, so drop base64 media `data` (only text renders). Text is
-// capped; resource text is kept, its blob dropped.
+// Persisted downstream, so drop base64 media `data` (only text renders); resource
+// text is kept, its blob dropped.
 function stripPromptMessages(
   messages: PromptMessage[] | undefined,
 ): UsageStatsPromptMessage[] | undefined {
@@ -163,7 +199,7 @@ function stripPromptMessages(
   return messages.map((message) => {
     const { role, content } = message;
     if (content.type === "text") {
-      return { role, content: { type: "text", text: capText(content.text) } };
+      return { role, content: { type: "text", text: content.text } };
     }
     if (content.type === "resource") {
       const resource = content.resource;
@@ -171,7 +207,7 @@ function stripPromptMessages(
         role,
         content: {
           type: "resource",
-          text: "text" in resource ? capText(resource.text) : undefined,
+          text: "text" in resource ? resource.text : undefined,
           mimeType: resource.mimeType,
         },
       };
