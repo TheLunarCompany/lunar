@@ -13,10 +13,15 @@ import { serversEqual } from "@/utils/server-comparison";
 import { transformConfigurationData } from "@/mapping/system-state";
 import { SystemState } from "@mcpx/shared-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 // TODO: Split this component into smaller pieces for better maintainability
 export default function Dashboard() {
+  useEffect(() => {
+    trackPendoEvent(PENDO_EVENTS.dashboardViewed);
+  }, []);
+
   // Use separate selectors to get stable references - Zustand will only re-render when these specific values change
   const configurationData = useSocketStore((s) => s.systemState);
 

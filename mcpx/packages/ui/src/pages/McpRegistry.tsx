@@ -31,6 +31,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
+import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 import { CustomAddCheckboxText } from "@/config/runtime-config";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useAddMcpServer } from "@/data/mcp-server";
@@ -164,6 +165,10 @@ function MultiServerAddWarningDescription({
 }
 
 export default function McpRegistry() {
+  useEffect(() => {
+    trackPendoEvent(PENDO_EVENTS.mcpRegistryViewed);
+  }, []);
+
   const navigate = useNavigate();
   const systemState = useSocketStore((s) => s.systemState);
   const targetServers = useSocketStore(
@@ -584,6 +589,12 @@ export default function McpRegistry() {
             onValueChange={(value: string) => {
               const newTab = value as TabValue;
               if (!canAddCustom && newTab !== TABS.ALL) return;
+              const tabEvent = {
+                all: PENDO_EVENTS.registryAllTabSelected,
+                custom: PENDO_EVENTS.registryCustomTabSelected,
+                migrate: PENDO_EVENTS.registryMigrateTabSelected,
+              }[newTab];
+              trackPendoEvent(tabEvent);
               setActiveTab(newTab);
             }}
           >
@@ -608,6 +619,11 @@ export default function McpRegistry() {
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <SearchInput
                     onChange={(event) => setSearch(event.target.value)}
+                    onBlur={() => {
+                      if (search.trim()) {
+                        trackPendoEvent(PENDO_EVENTS.registrySearchUsed);
+                      }
+                    }}
                     placeholder="Search..."
                     wrapperClassName="w-[320px] max-w-full ml-[3px]"
                     className="h-9 border-mcpx-border"

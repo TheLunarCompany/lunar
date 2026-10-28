@@ -26,6 +26,59 @@ describe("runtime config feature helpers", () => {
     expect(isMcpServersShown()).toBe(true);
   });
 
+  it("disables Pendo by default", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ VITE_MCPX_SERVER_URL: "http://localhost:9523" }),
+      ),
+    );
+    const { isPendoEnabled, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isPendoEnabled()).toBe(false);
+  });
+
+  it("enables Pendo only when both runtime gates are true", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          VITE_MCPX_SERVER_URL: "http://localhost:9523",
+          VITE_ENABLE_PENDO: "true",
+          VITE_IS_BOOMI: "true",
+        }),
+      ),
+    );
+    const { isPendoEnabled, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isPendoEnabled()).toBe(true);
+  });
+
+  it("keeps Pendo disabled when the Boomi gate is false", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          VITE_MCPX_SERVER_URL: "http://localhost:9523",
+          VITE_ENABLE_PENDO: "true",
+          VITE_IS_BOOMI: "false",
+        }),
+      ),
+    );
+    const { isPendoEnabled, loadRuntimeConfig } = await import(
+      "./runtime-config"
+    );
+
+    await loadRuntimeConfig();
+
+    expect(isPendoEnabled()).toBe(false);
+  });
+
   it("hides MCP Servers by default", async () => {
     vi.stubEnv("VITE_SHOW_MCP_SERVERS", "false");
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("missing"));

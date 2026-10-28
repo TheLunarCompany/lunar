@@ -33,6 +33,7 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
           VITE_SHOW_MCP_SERVERS: process.env.VITE_SHOW_MCP_SERVERS || "false",
           VITE_IS_BOOMI: process.env.VITE_IS_BOOMI || "false",
+          VITE_ENABLE_PENDO: process.env.VITE_ENABLE_PENDO || "false",
           VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
       case "production":
@@ -52,6 +53,7 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
           VITE_SHOW_MCP_SERVERS: process.env.VITE_SHOW_MCP_SERVERS || "false",
           VITE_IS_BOOMI: process.env.VITE_IS_BOOMI || "false",
+          VITE_ENABLE_PENDO: process.env.VITE_ENABLE_PENDO || "false",
           VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
       default:
@@ -76,6 +78,7 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
           VITE_SHOW_MCP_SERVERS: process.env.VITE_SHOW_MCP_SERVERS || "false",
           VITE_IS_BOOMI: process.env.VITE_IS_BOOMI || "false",
+          VITE_ENABLE_PENDO: process.env.VITE_ENABLE_PENDO || "false",
           VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
     }
@@ -181,6 +184,9 @@ export default defineConfig(({ command, mode }) => {
       ),
       "import.meta.env.VITE_IS_BOOMI": JSON.stringify(
         env.VITE_IS_BOOMI || envDefaults.VITE_IS_BOOMI,
+      ),
+      "import.meta.env.VITE_ENABLE_PENDO": JSON.stringify(
+        env.VITE_ENABLE_PENDO || envDefaults.VITE_ENABLE_PENDO,
       ),
     },
   };

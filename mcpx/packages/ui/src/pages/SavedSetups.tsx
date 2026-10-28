@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/use-toast";
+import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 import {
   Tooltip,
   TooltipContent,
@@ -42,7 +43,7 @@ import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
 import { Separator } from "@/components/ui/separator";
 import { routes } from "@/routes";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDateTimeLong } from "@/utils";
 import { useSocketStore } from "@/store";
@@ -132,6 +133,10 @@ function getActionConfig(
 }
 
 export default function SavedSetups() {
+  useEffect(() => {
+    trackPendoEvent(PENDO_EVENTS.savedSetupsViewed);
+  }, []);
+
   const navigate = useNavigate();
   const skillsFeatureEnabled = useSkillsFeatureEnabled().data ?? false;
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -225,6 +230,7 @@ export default function SavedSetups() {
     saveMutation.mutate(description.trim(), {
       onSuccess: (result) => {
         if (result.success) {
+          trackPendoEvent(PENDO_EVENTS.setupSaved);
           toast({
             title: "Setup saved",
             description: `Saved as "${result.description}"`,
@@ -336,7 +342,10 @@ export default function SavedSetups() {
         <div className="flex justify-end mb-4">
           <Button
             size={"lg"}
-            onClick={() => setIsSaveDialogOpen(true)}
+            onClick={() => {
+              trackPendoEvent(PENDO_EVENTS.setupSaveClicked);
+              setIsSaveDialogOpen(true);
+            }}
             className="bg-primary hover:bg-primary/80 text-primary-foreground"
           >
             <Plus className="w-4 h-4" />

@@ -51,6 +51,7 @@ const runtimeConfig: RuntimeConfig = {
   VITE_UI_SIDEBAR_RESTRUCTURE: "false",
   VITE_SHOW_MCP_SERVERS: "false",
   VITE_IS_BOOMI: "false",
+  VITE_ENABLE_PENDO: "false",
 };
 
 vi.mock("@/config/runtime-config", async (importOriginal) => {

@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { getAgentIcon } from "@/lib/agent-icons";
 import { AgentInstructions } from "./AgentInstructions/AgentInstructions";
 import { getAgentConfigs } from "./AgentInstructions/agentConfigs";
+import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 
 interface AddAgentModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
     const text =
       "toml" in config ? config.toml : JSON.stringify(config, null, 2);
     await navigator.clipboard.writeText(text);
+    trackPendoEvent(PENDO_EVENTS.agentConfigCopied);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -60,6 +62,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
   };
 
   const handleAgentTypeChange = (agentType: string) => {
+    trackPendoEvent(PENDO_EVENTS.agentTypeSelected);
     setSelectedAgentType(agentType);
     setActiveTab(
       instructionsOnlyClients.has(agentType) ? "instructions" : "json",
@@ -134,7 +137,10 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                 </div>
                 <CustomTabs
                   value={activeTab}
-                  onValueChange={setActiveTab}
+                  onValueChange={(value) => {
+                    trackPendoEvent(PENDO_EVENTS.agentConfigTabOpened);
+                    setActiveTab(value);
+                  }}
                   className="flex min-h-0 flex-1 flex-col"
                 >
                   <CustomTabsList>

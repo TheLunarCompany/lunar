@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { getAuthBffUrl, isEnterpriseEnabled } from "@/config/runtime-config";
+import { suspendPendo } from "@/components/pendo";
 import { AuthContext } from "./auth-internal";
 import { AuthContextValue, AuthState } from "./auth-types";
 
@@ -159,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    suspendPendo();
     if (!loginRequired || !authBffBase) {
       if (typeof window !== "undefined") {
         window.location.reload();

@@ -48,6 +48,11 @@ import { CustomAddCheckboxText } from "@/config/runtime-config";
 import type { McpServerStatus } from "@/types";
 import { getMcpServerStatusFromTargetServer } from "./helpers";
 import { getAddServerErrorMessage } from "@/lib/api-errors";
+import {
+  PENDO_EVENTS,
+  trackPendoEvent,
+  type PendoEvent,
+} from "@/components/pendo";
 import { Sort } from "@/components/Sort";
 import {
   buildInstalledCatalogServerLookup,
@@ -140,6 +145,15 @@ const TABS = {
   CUSTOM: "custom" as const,
   MIGRATE: "migrate" as const,
 } as const;
+
+function getAddServerTabEvent(tab: TabValue): PendoEvent {
+  const events: Record<TabValue, PendoEvent> = {
+    all: PENDO_EVENTS.addServerAllTabSelected,
+    custom: PENDO_EVENTS.addServerCustomTabSelected,
+    migrate: PENDO_EVENTS.addServerMigrateTabSelected,
+  };
+  return events[tab];
+}
 
 function getFailedServerDetails(
   failedServers: string[],
@@ -701,6 +715,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 if (!canAddCustom && newTab !== TABS.ALL) {
                   return;
                 }
+                trackPendoEvent(getAddServerTabEvent(newTab));
                 if (activeTab === TABS.MIGRATE && newTab !== TABS.MIGRATE) {
                   setHasUploadedFile(false);
                 }

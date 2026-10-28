@@ -29,6 +29,7 @@ import { MultiSelectFilterDropdown } from "@/components/ui/multi-select-filter-d
 import { SearchInput } from "@/components/ui/search-input";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { getApiErrorMessage } from "@/lib/api-errors";
+import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 import { cn } from "@/lib/utils";
 import {
   McpServerPromptCard,
@@ -292,6 +293,7 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
   );
 
   const handleServerClick = (serverName: string) => {
+    trackPendoEvent(PENDO_EVENTS.serverRowClicked);
     setExpandedServers((current) => {
       const next = new Set(current);
       if (next.has(serverName)) {
@@ -386,6 +388,11 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
                 placeholder="Search tools, prompts and resources"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
+                onBlur={() => {
+                  if (searchQuery.trim()) {
+                    trackPendoEvent(PENDO_EVENTS.serverSearchUsed);
+                  }
+                }}
                 wrapperClassName="w-[320px] max-w-full"
               />
               <AnnotationFilterDropdown

@@ -19,6 +19,11 @@ import { InstanceStatusRow } from "@/components/instance-status/InstanceStatusRo
 import { McpxBrandLogo } from "@/components/branding/McpxBrandLogo";
 import type { InstanceStatus } from "@/model/instance-status";
 import { useFeatureFlag } from "@/contexts/feature-flags";
+import {
+  PENDO_EVENTS,
+  trackPendoEvent,
+  type PendoEvent,
+} from "@/components/pendo";
 
 type SidebarIcon = ElementType<{ className?: string }>;
 
@@ -186,6 +191,13 @@ function McpxSidebarMenuItem({
   const Icon = item.icon;
 
   const buttonClassName = menuItemVariants({ isActive });
+  const navigationEvents: Partial<Record<McpxSidebarItem["id"], PendoEvent>> = {
+    dashboard: PENDO_EVENTS.navigationDashboardClicked,
+    "mcp-servers": PENDO_EVENTS.navigationMcpServersClicked,
+    "saved-setups": PENDO_EVENTS.navigationSavedSetupsClicked,
+    "audit-log": PENDO_EVENTS.navigationAuditLogClicked,
+    "mcp-registry": PENDO_EVENTS.navigationMcpRegistryClicked,
+  };
 
   if (item.url && !item.disabled) {
     return (
@@ -196,7 +208,13 @@ function McpxSidebarMenuItem({
           tooltip={item.label}
           className={buttonClassName}
         >
-          <Link to={item.url}>
+          <Link
+            to={item.url}
+            onClick={() => {
+              const event = navigationEvents[item.id];
+              if (event) trackPendoEvent(event);
+            }}
+          >
             <Icon />
             <span>{item.label}</span>
           </Link>

@@ -16,6 +16,7 @@ export interface RuntimeConfig {
   VITE_UI_SIDEBAR_RESTRUCTURE: string;
   VITE_SHOW_MCP_SERVERS: string;
   VITE_IS_BOOMI: string;
+  VITE_ENABLE_PENDO: string;
 }
 
 let cachedConfig: RuntimeConfig | null = null;
@@ -54,6 +55,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         ...config,
         VITE_AUTH_BFF_URL: config.VITE_AUTH_BFF_URL || "",
         VITE_IS_BOOMI: config.VITE_IS_BOOMI || "false",
+        VITE_ENABLE_PENDO: config.VITE_ENABLE_PENDO || "false",
       };
       return cachedConfig!;
     } catch (_error) {
@@ -84,6 +86,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
           import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
         VITE_SHOW_MCP_SERVERS: import.meta.env.VITE_SHOW_MCP_SERVERS || "false",
         VITE_IS_BOOMI: import.meta.env.VITE_IS_BOOMI || "false",
+        VITE_ENABLE_PENDO: import.meta.env.VITE_ENABLE_PENDO || "false",
       };
 
       cachedConfig = fallbackConfig;
@@ -123,6 +126,7 @@ export function getRuntimeConfigSync(): RuntimeConfig {
       import.meta.env.VITE_UI_SIDEBAR_RESTRUCTURE || "false",
     VITE_SHOW_MCP_SERVERS: import.meta.env.VITE_SHOW_MCP_SERVERS || "false",
     VITE_IS_BOOMI: import.meta.env.VITE_IS_BOOMI || "false",
+    VITE_ENABLE_PENDO: import.meta.env.VITE_ENABLE_PENDO || "false",
   };
 }
 
@@ -148,6 +152,11 @@ export function CustomAddCheckboxText(): string | undefined {
 export function isEnterpriseEnabled(): boolean {
   const config = getRuntimeConfigSync();
   return config.VITE_ENABLE_ENTERPRISE === "true";
+}
+
+export function isPendoEnabled(): boolean {
+  const config = getRuntimeConfigSync();
+  return config.VITE_ENABLE_PENDO === "true" && config.VITE_IS_BOOMI === "true";
 }
 
 export function isPermissionsEnabled(): boolean {

@@ -12,6 +12,7 @@ import { DevIndicators } from "@/components/DevIndicators";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { FeatureFlagsProvider } from "@/contexts/FeatureFlagsContext";
 import { FeatureFlagOverridePanel } from "@/components/FeatureFlagOverridePanel";
+import { PendoBootstrap } from "@/components/PendoBootstrap";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <ReactFlowProvider>
+              <PendoBootstrap />
               <Pages />
               <Toaster />
               <DevIndicators />

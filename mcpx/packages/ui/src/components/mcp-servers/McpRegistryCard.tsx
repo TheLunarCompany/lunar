@@ -10,6 +10,7 @@ import { McpCard } from "@/components/mcp-servers/McpCard";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import type { McpServerStatus } from "@/types";
+import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 
 export type McpRegistryCardProps = {
   server: CatalogMCPServerConfigByNameItem;
@@ -40,6 +41,7 @@ export function McpRegistryCard({
   const urlNeedsEdit = isRemoteUrlNeedEdit(serverConfig);
 
   const handleAddServer = (): void => {
+    trackPendoEvent(PENDO_EVENTS.registryAddServerClicked);
     if (serverConfig.type === "stdio") {
       const finalEnv: Record<string, EnvValue> = convertRequirementsToValues(
         serverConfig.env ?? {},

@@ -26,6 +26,7 @@ import { AddServerModal } from "../AddServerModal";
 import { AgentDetailsModal } from "../AgentDetailsModal";
 import { McpxDetailsModal } from "../McpxDetailsModal";
 import { useToast } from "@/components/ui/use-toast";
+import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 import { ServerContextMenu } from "./nodes/ServerContextMenu";
 import {
   useDeleteMcpServer,
@@ -154,11 +155,13 @@ const ConnectivityDiagramComponent = ({
   const { mutate: deleteServer } = useDeleteMcpServer();
 
   const handleAddAgent = useCallback(() => {
+    trackPendoEvent(PENDO_EVENTS.addAgentClicked);
     dismiss();
     setIsAddAgentModalOpen(true);
   }, [dismiss]);
 
   const handleAddServer = useCallback(() => {
+    trackPendoEvent(PENDO_EVENTS.addServerClicked);
     dismiss();
     setIsAddServerModalOpen(true);
   }, [dismiss]);
