@@ -1,0 +1,122 @@
+# Validates Gemini CLI can use time and Slack MCP servers to share the current Jerusalem time.
+# Steps:
+# 1) Gemini CLI prompt should call time__get_current_time and slack__conversations_add_message
+# 2) Slack message must contain the mcpx-e2e-test marker and an emoji
+# 3) Dashboard should report two requests (one per tool call)
+#
+# How to run locally:
+#   SLACK_MCP_XOXP_TOKEN='xoxp-****' GEMINI_API_KEY='AIzaSy***' npm run test-scenario -- tests/gemini-cli-slack-time-test
+name: "Gemini CLI Slack time message test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+configMount: config
+cleanConfigMount: false
+env:
+  GEMINI_API_KEY: "${GEMINI_API_KEY}"
+  SLACK_MCP_XOXP_TOKEN: "${SLACK_MCP_XOXP_TOKEN}"
+aiAgent:
+  type: gemini-cli
+  transport: http
+  scope: project
+  serverName: mcpx
+  url: http://127.0.0.1:9000/mcp
+  headers:
+    x-lunar-consumer-tag: Gemini CLI
+verboseOutput: false
+
+dependentContainers: []
+
+cleanup:
+  slackMessages:
+    - channelId: C08NRRKPSTC
+      textFragment: "This is a message from mcpx-e2e-test"
+      maxAgeMinutes: 30
+      messageLimit: 5
+
+steps:
+  - name: Prompt Gemini CLI to post Jerusalem time to Slack
+    kind: agent
+    toolName: gemini-cli/prompt
+    payload:
+      args:
+        - --output-format
+        - json
+        - --approval-mode
+        - yolo
+        - --allowed-mcp-server-names
+        - mcpx
+        - -p
+        - >-
+          You can access the MCP server "mcpx" which offers the tools time__get_current_time and slack__conversations_add_message.
+          1. Call time__get_current_time with timezone "Asia/Jerusalem" and record the current time using a 24-hour HH:MM format plus the timezone abbreviation in parentheses.
+          2. Post the result to Slack channel #mcpx-public with slack__conversations_add_message using content_type "text/markdown" and this message template:
+             :alarm_clock: Current Jerusalem time is HH:MM (TZ). This is a message from mcpx-e2e-test :rocket:
+             Replace HH:MM (TZ) with the value you retrieved.
+          After completing both tool calls, reply exactly with:
+             Posted to Slack channel mcpx-public with message ":alarm_clock: Current Jerusalem time is HH:MM (TZ). This is a message from mcpx-e2e-test :rocket:".
+          Do not add extra commentary.
+    expected:
+      mode: json-schema
+      value:
+        type: object
+        required:
+          - response
+        properties:
+          response:
+            type: string
+            pattern: 'Posted to Slack channel mcpx-public with message ":alarm_clock: Current Jerusalem time is \d{1,2}:\d{2} \([^"]+\)\. This is a message from mcpx-e2e-test :rocket:"'
+
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Total Requests label
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Total Requests"
+      time: 20
+    expected:
+      mode: contains
+      value: "Waited for Total Requests"
+
+  - name: Verify Connected MCP servers equals 2
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const text = document.body?.innerText || '';
+          const match = text.match(/Connected MCP servers\s*(\d+)/i);
+          return match ? Number(match[1]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?2\"?"
+
+  - name: Verify Total Requests equals 2
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            if (value >= 2 || Date.now() - start > 20000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
+    expected:
+      mode: regex
+      value: "\"?[2-9]\\d*\"?"
