@@ -1,4 +1,4 @@
-import { makeError } from "@aigw/core/data";
+import { makeError, readProp } from "@aigw/core/data";
 import { loggableError } from "@aigw/core/logging";
 import { withTimeout } from "@aigw/core/time";
 import {
@@ -903,12 +903,4 @@ export function isAuthenticationError(error: unknown): boolean {
     (typeof message === "string" &&
       (message.includes("401") || message.includes("Unauthorized")))
   );
-}
-
-// `message` and `name` live on Error's prototype chain, so a spread or
-// Object.entries copy would miss them.
-function readProp(value: unknown, key: string): unknown {
-  return typeof value === "object" && value !== null
-    ? Reflect.get(value, key)
-    : undefined;
 }

@@ -4,6 +4,7 @@ import {
   McpError,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
+import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
   ExtendedClient,
   extractToolParameters,
@@ -520,6 +521,58 @@ describe("ExtendedClient.isAlive", () => {
     expect(result instanceof Error && result.message).toBe(
       "connection refused",
     );
+  });
+
+  it("returns null when the server answers 429 — rate limited means alive", async () => {
+    const client = mockOriginalClientWithPing(async () => {
+      throw new StreamableHTTPError(
+        429,
+        "Error POSTing to endpoint: Rate limit exceeded",
+      );
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      noOpLogger,
+    );
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+  });
+
+  it("does not call ping after a 429 — subsequent calls are a no-op returning no-signal", async () => {
+    let pingCallCount = 0;
+    const client = mockOriginalClientWithPing(async () => {
+      pingCallCount++;
+      throw new StreamableHTTPError(
+        429,
+        "Error POSTing to endpoint: Rate limit exceeded",
+      );
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      noOpLogger,
+    );
+
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+    expect(pingCallCount).toBe(1);
+
+    expect(await extendedClient.isAlive(1000)).toBe("no-signal");
+    expect(pingCallCount).toBe(1); // no second network call
+  });
+
+  it("returns an Error when the server answers 500 — only 429 is treated as alive", async () => {
+    const client = mockOriginalClientWithPing(async () => {
+      throw new StreamableHTTPError(500, "Error POSTing to endpoint: boom");
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      noOpLogger,
+    );
+    expect(await extendedClient.isAlive(1000)).toBeInstanceOf(Error);
   });
 });
 

@@ -26,6 +26,7 @@ ping tick ──► pingServer ──► PingOutcome
                               │ "no-signal" (nothing checked) skipped
 tool call ─► executeWithAuthRetry
                               │ result, or any McpError    ─► counter = 0
+                              │ HTTP 429                   ─► counter = 0
                               │ transport error (not 401)  ─► counter + 1
 counter reaches threshold ─► unwatch ─► onServerUnreachable
                               ─► close client, state connection-failed
@@ -38,9 +39,12 @@ Key files: `src/services/upstream-watchdog.ts` (counter, ping loop, `reportSucce
 ## Rules worth knowing
 
 1. **An answer is proof of life.** A JSON-RPC error (`McpError`) means the server received and processed the request, so it resets the counter. Only transport-level failures count against a server. 401s are excluded from both and go through the OAuth recovery path instead.
+   An HTTP 429 is an answer too: the server is throttling us, not gone, so it resets the counter like an `McpError`.
 2. **`null` is not the only non-failure ping result.** `isAlive` returns `"no-signal"` when the server answered ping with `-32601` (method not found) or when no client is connected. The watchdog must skip it. Treating it as success wiped the tool-call failures on every ping tick and kept a dead ping-less server `connected` forever. `it/upstream-liveness.it.test.ts` covers this.
+   A malformed ping body and an HTTP 429 lead to `"no-signal"` the same way. The ping that discovers it returns `null`.
 3. **Servers without ping support are still watched.** They are registered with a no-op ping stopper so reported tool calls keep counting. This is what PR #2887 wanted: such servers must still reconnect.
 4. **`isTransportError` is broad on purpose.** Any `Error` that is not an `McpError`, so aborts and Zod failures count too. Harmless now that it only ticks a counter.
+   The one exception is a 429: it is an answer (rule 1).
 5. **Shutdown sets a flag.** `shutdown` clears the queued reconnect timers, but a reconnect already in flight would re-enqueue itself afterwards. `enqueueReconnect` is a no-op once `shuttingDown` is set. Symptom when this regresses: an IT passes, then "Jest did not exit".
 
 ## History, so the numbers make sense
@@ -52,9 +56,11 @@ Key files: `src/services/upstream-watchdog.ts` (counter, ping loop, `reportSucce
 | #3058 (Jun 2026)          | Base delay 1s to 30s, cap 1h: each reconnect of an OAuth upstream opened a browser tab. Flow dedupe was the real fix, the delay is a second belt |
 | #3400, GAT-148 (Sep 2026) | Ping timeout 3s to 10s, 3-miss threshold on the ping path. Under load the ping answer queued behind 5MB tool results                             |
 | #3423, GAT-165 (Sep 2026) | Tool-call outcomes feed the same counter; `PingOutcome`; shutdown flag                                                                           |
+| #3656 AIGW-337 (Oct 2026) | HTTP 429 counts as an answer. Ping stops after the first 429, so pings stop using the upstream's rate-limit quota                                |
 
 ## Known debt
 
 - The base delay serves the OAuth path but is also the first delay after a real teardown, so a recovered server waits a full base delay before the first retry. A reason-aware schedule (immediate first attempt for transport teardown, slow for pending auth) is the follow-up. Talk to Eitan before touching it.
 - Under jest, undici's `TypeError: fetch failed` is created in another realm and fails `instanceof Error`, so `makeError` yields "Unknown error" and `isTransportError` returns false. ITs take an upstream down with a 503 instead of closing the socket. Making error detection realm-safe is its own ticket.
 - The tool-call cache (`ENABLE_TOOL_CALL_CACHE`, on in the IT mock hub) answers identical calls without touching the upstream. ITs that need the upstream hit must vary the arguments.
+- After a 429, MCPX stops pinging that client until it reconnects, with no timed cooldown. The SDK's `StreamableHTTPError` drops `Retry-After`. Only tool calls can then detect a server that dies with no traffic. This is accepted: more pings would use up more of the quota. Revisit if the SDK exposes the response headers.

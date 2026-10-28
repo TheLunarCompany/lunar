@@ -6,3 +6,12 @@ export function makeError(error: unknown): Error {
   }
   return error;
 }
+
+// Reads a property off an unknown value without narrowing it first.
+// `message` and `name` live on Error's prototype chain, so a spread or
+// Object.entries copy would miss them.
+export function readProp(value: unknown, key: string): unknown {
+  return typeof value === "object" && value !== null
+    ? Reflect.get(value, key)
+    : undefined;
+}
