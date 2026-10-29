@@ -17,9 +17,10 @@ import {
   McpxOAuthProviderI,
   OAuthProviderType,
 } from "./model.js";
+import { applyAuthorizationParams } from "./authorization-params.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
-import { appendToQueryParam } from "@aigw/core/http";
+import { mergeScopes } from "./scopes.js";
 
 /**
  * Generic static OAuth provider that uses pre-registered OAuth apps
@@ -38,7 +39,7 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   private tokenStore: OAuthTokenStoreI;
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
-  private discoveredScope: string | null = null;
+  private discoveredScopes: string[] = [];
   private extraAuthorizationParams: ExtraAuthorizationParams = {};
 
   constructor(options: {
@@ -78,11 +79,7 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   }
 
   get clientMetadata(): OAuthClientMetadata {
-    const baseScopes = this.config.scopes.join(" ");
-    const scope =
-      this.discoveredScope && !this.config.scopes.includes(this.discoveredScope)
-        ? `${baseScopes} ${this.discoveredScope}`
-        : baseScopes;
+    const scope = mergeScopes(this.config.scopes, this.discoveredScopes);
     return {
       redirect_uris: [this.redirectUrl],
       token_endpoint_auth_method: this.config.tokenAuthMethod,
@@ -94,8 +91,8 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     };
   }
 
-  setDiscoveredScope(scope: string): void {
-    this.discoveredScope = scope;
+  setDiscoveredScopes(scopes: string[]): void {
+    this.discoveredScopes = scopes;
   }
 
   setExtraAuthorizationParams(params: ExtraAuthorizationParams): void {
@@ -163,25 +160,7 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   // -> finishAuth() path; silent token reuse fails fast instead of hanging on a
   // user who may never come back.
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
-    const { access_type, prompt } = this.extraAuthorizationParams;
-    if (access_type) {
-      authorizationUrl.searchParams.set("access_type", access_type);
-    }
-    if (prompt) {
-      appendToQueryParam({
-        searchParams: authorizationUrl.searchParams,
-        paramName: "prompt",
-        valueToAppend: prompt,
-        delimiter: " ",
-      });
-    }
-    // Force account selection so users can switch accounts via delete+re-add
-    appendToQueryParam({
-      searchParams: authorizationUrl.searchParams,
-      paramName: "prompt",
-      valueToAppend: "select_account",
-      delimiter: " ", // prompt is Space-delimited (reference in OpenId Connect Core docs)
-    });
+    applyAuthorizationParams(authorizationUrl, this.extraAuthorizationParams);
     this.authorizationUrl = authorizationUrl;
     this.logger.info("OAuth authorization required", {
       serverName: this.serverName,

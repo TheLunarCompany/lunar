@@ -10,6 +10,7 @@ import {
   CLIENT_URI,
 } from "@mcpx/toolkit-core/oauth";
 import { randomUUID } from "node:crypto";
+import { mergeScopes } from "./scopes.js";
 import { Logger } from "winston";
 import { env } from "../env.js";
 import {
@@ -17,9 +18,9 @@ import {
   McpxOAuthProviderI,
   OAuthProviderType,
 } from "./model.js";
+import { applyAuthorizationParams } from "./authorization-params.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
-import { appendToQueryParam } from "@aigw/core/http";
 
 /**
  * Generic static OAuth provider for Dynamic Client Registration (DCR) flow.
@@ -39,7 +40,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   private tokenStore: OAuthTokenStoreI;
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
-  private discoveredScope: string | null = null;
+  private discoveredScopes: string[] = [];
   private extraAuthorizationParams: ExtraAuthorizationParams = {};
   private _clientMetadataUrl?: string;
   private _clientMetadataSkipReason?: string;
@@ -146,6 +147,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   }
 
   get clientMetadata(): OAuthClientMetadata {
+    const scope = mergeScopes(this.discoveredScopes);
     return {
       redirect_uris: [this.redirectUrl],
       token_endpoint_auth_method: "none",
@@ -155,12 +157,12 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
       client_uri: this.clientUri,
       software_id: this.softwareId,
       software_version: this.softwareVersion,
-      ...(this.discoveredScope ? { scope: this.discoveredScope } : {}),
+      ...(scope ? { scope } : {}),
     };
   }
 
-  setDiscoveredScope(scope: string): void {
-    this.discoveredScope = scope;
+  setDiscoveredScopes(scopes: string[]): void {
+    this.discoveredScopes = scopes;
   }
 
   setExtraAuthorizationParams(params: ExtraAuthorizationParams): void {
@@ -243,25 +245,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   // -> finishAuth() path; silent token reuse fails fast instead of hanging on a
   // user who may never come back.
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
-    const { access_type, prompt } = this.extraAuthorizationParams;
-    if (access_type) {
-      authorizationUrl.searchParams.set("access_type", access_type);
-    }
-    if (prompt) {
-      appendToQueryParam({
-        searchParams: authorizationUrl.searchParams,
-        paramName: "prompt",
-        valueToAppend: prompt,
-        delimiter: " ",
-      });
-    }
-    // Force account selection so users can switch accounts via delete+re-add
-    appendToQueryParam({
-      searchParams: authorizationUrl.searchParams,
-      paramName: "prompt",
-      valueToAppend: "select_account",
-      delimiter: " ", // prompt is Space-delimited (reference in OpenId Connect Core docs)
-    });
+    applyAuthorizationParams(authorizationUrl, this.extraAuthorizationParams);
     this.authorizationUrl = authorizationUrl;
 
     this.logger.info("OAuth authorization required", {

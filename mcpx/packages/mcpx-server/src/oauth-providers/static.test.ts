@@ -45,18 +45,18 @@ describe("StaticOAuthProvider#redirectToAuthorization", () => {
     ).resolves.toBeUndefined();
   }, 100);
 
-  it("stores the authorization URL with prompt=select_account for the callback flow", async () => {
+  it("stores the authorization URL without adding a prompt", async () => {
     const provider = makeProvider();
     const authUrl = new URL("https://github.com/login/oauth/authorize");
 
     await provider.redirectToAuthorization(authUrl);
 
     expect(provider.getAuthorizationUrl()?.toString()).toBe(
-      "https://github.com/login/oauth/authorize?prompt=select_account",
+      "https://github.com/login/oauth/authorize",
     );
   });
 
-  it("appends select_account to an existing prompt param without overriding it", async () => {
+  it("removes an SDK prompt when no prompt was selected", async () => {
     const provider = makeProvider();
     const authUrl = new URL("https://github.com/login/oauth/authorize");
     authUrl.searchParams.set("prompt", "login");
@@ -64,7 +64,7 @@ describe("StaticOAuthProvider#redirectToAuthorization", () => {
     await provider.redirectToAuthorization(authUrl);
 
     expect(provider.getAuthorizationUrl()?.searchParams.get("prompt")).toBe(
-      "login select_account",
+      null,
     );
   });
 
@@ -72,24 +72,21 @@ describe("StaticOAuthProvider#redirectToAuthorization", () => {
     const provider = makeProvider();
     provider.setExtraAuthorizationParams({
       access_type: "offline",
-      prompt: "consent",
+      prompt: ["consent"],
     });
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
 
     await provider.redirectToAuthorization(authUrl);
 
     expect(authUrl.searchParams.get("access_type")).toBe("offline");
-    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual([
-      "consent",
-      "select_account",
-    ]);
+    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual(["consent"]);
   });
 
-  it("overwrites access_type and preserves existing prompts without duplicating consent", async () => {
+  it("overwrites SDK defaults with the selected authorization parameters", async () => {
     const provider = makeProvider();
     provider.setExtraAuthorizationParams({
       access_type: "offline",
-      prompt: "consent",
+      prompt: ["consent"],
     });
     const authUrl = new URL(
       "https://accounts.google.com/o/oauth2/v2/auth?access_type=online&prompt=login%20consent",
@@ -98,11 +95,7 @@ describe("StaticOAuthProvider#redirectToAuthorization", () => {
     await provider.redirectToAuthorization(authUrl);
 
     expect(authUrl.searchParams.getAll("access_type")).toEqual(["offline"]);
-    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual([
-      "login",
-      "consent",
-      "select_account",
-    ]);
+    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual(["consent"]);
   });
 
   it("clears the stored URL when authorization completes", async () => {

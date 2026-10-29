@@ -11,7 +11,7 @@ const OAuthCallbackQuerySchema = z.looseObject({
 });
 
 export function buildOAuthRouter(
-  upstreamHandler: UpstreamHandler,
+  upstreamHandler: Pick<UpstreamHandler, "completeOAuthByState">,
   logger: Logger,
 ): express.Router {
   const router = express.Router();

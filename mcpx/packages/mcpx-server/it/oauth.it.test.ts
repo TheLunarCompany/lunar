@@ -1,11 +1,146 @@
+import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import {
   allCatalogItems,
   allTargetServers,
   buildConfig,
   getTestHarness,
+  MCPX_BASE_URL,
   TestHarness,
   transportTypes,
 } from "./utils.js";
+import {
+  MockOAuthServers,
+  readServerStateType,
+  startMockOAuthServers,
+} from "./mock-oauth-servers.js";
+
+describe.each([
+  { providerType: "dcr", authorizationError: "invalid_request" },
+  { providerType: "dcr", authorizationError: "access_denied" },
+  { providerType: "static", authorizationError: "invalid_request" },
+  { providerType: "static", authorizationError: "access_denied" },
+] as const)(
+  "OAuth prompt compatibility with $providerType and $authorizationError",
+  ({ providerType, authorizationError }) => {
+    const serverName = "prompt-rejecting-mcp";
+    const callbackUrl = `${MCPX_BASE_URL}/auth/callback`;
+    let harness: TestHarness | undefined;
+    let oauthServers: MockOAuthServers | undefined;
+
+    afterEach(async () => {
+      await harness?.shutdown();
+      await oauthServers?.stop();
+      harness = undefined;
+      oauthServers = undefined;
+    });
+
+    async function runOAuthFlow(rejectAuthorization: "prompt" | "always") {
+      oauthServers = await startMockOAuthServers({
+        scopesSupported: ["openid", "offline_access"],
+        rotate: false,
+        accessTokenTtlMs: 60_000,
+        rejectAuthorization,
+        authorizationError,
+        staticClients: [
+          {
+            client_id: "prompt-test-client",
+            client_secret: "prompt-test-secret",
+            redirect_uris: [callbackUrl],
+          },
+        ],
+      });
+      harness = getTestHarness({
+        config: buildConfig({
+          staticOauth:
+            providerType === "static"
+              ? {
+                  mapping: { localhost: "prompt-test" },
+                  providers: {
+                    "prompt-test": {
+                      authMethod: "client_credentials",
+                      credentials: {
+                        clientId: {
+                          type: "literal",
+                          value: "prompt-test-client",
+                        },
+                        clientSecret: {
+                          type: "literal",
+                          value: "prompt-test-secret",
+                        },
+                      },
+                      scopes: [],
+                      tokenAuthMethod: "client_secret_post",
+                    },
+                  },
+                }
+              : undefined,
+        }),
+        targetServers: [
+          {
+            type: "streamable-http",
+            name: serverName,
+            url: oauthServers.resourceServerUrl,
+          },
+        ],
+      });
+      await harness.initialize("StreamableHTTP");
+
+      const initiation = await fetch(
+        `${MCPX_BASE_URL}/auth/initiate/${serverName}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ callbackUrl }),
+        },
+      );
+      expect(initiation.status).toBe(202);
+      const { authorizationUrl } = await initiation.json();
+      const initialUrl = new URL(authorizationUrl);
+      expect(initialUrl.searchParams.get("prompt")).toBeNull();
+      expect(initialUrl.searchParams.get("state")).toBeTruthy();
+      expect(initialUrl.searchParams.get("code_challenge")).toBeTruthy();
+      expect(initialUrl.searchParams.get("code_challenge_method")).toBe("S256");
+
+      const authorization = await fetch(initialUrl, { redirect: "manual" });
+      expect(authorization.status).toBe(302);
+      const callback = new URL(authorization.headers.get("location")!);
+      expect(callback.searchParams.get("state")).toBe(
+        initialUrl.searchParams.get("state"),
+      );
+      const completion = await fetch(callback, { redirect: "manual" });
+      expect(completion.status).toBe(302);
+      const result = await fetch(
+        new URL(completion.headers.get("location")!, MCPX_BASE_URL),
+        { redirect: "manual" },
+      );
+      expect(result.headers.get("location")).toBeNull();
+      return { harness, callback, result };
+    }
+
+    it("connects without sending an unadvertised prompt", async () => {
+      const { harness, callback, result } = await runOAuthFlow("prompt");
+
+      expect(result.status).toBe(200);
+      expect(callback.searchParams.get("code")).toBeTruthy();
+      expect(await result.text()).toContain("Authorization Complete");
+      expect(await readServerStateType(serverName)).toBe("connected");
+      const toolResult = await harness.client.callTool({
+        name: `${serverName}__whoami`,
+        arguments: { n: 1 },
+      });
+      expect(toolResult.content).toEqual([{ type: "text", text: "call 1" }]);
+    }, 30_000);
+
+    it("returns authorization errors without retrying", async () => {
+      const { callback, result } = await runOAuthFlow("always");
+
+      expect(result.status).toBe(400);
+      expect(callback.searchParams.get("error")).toBe(authorizationError);
+      expect(await result.text()).toBe(`OAuth error: ${authorizationError}`);
+      expect(await readServerStateType(serverName)).toBe("pending-auth");
+    }, 30_000);
+  },
+);
 
 const OAUTH_MOCK_SERVER_URL = "http://localhost:9001";
 

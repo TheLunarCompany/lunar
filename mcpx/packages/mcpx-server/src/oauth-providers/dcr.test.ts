@@ -50,28 +50,47 @@ describe("DcrOAuthProvider#redirectToAuthorization", () => {
     expect(provider.getAuthorizationUrl()?.host).toBe("mcp.notion.com");
   });
 
+  it("removes an SDK prompt when no prompt was selected", async () => {
+    const provider = makeProvider();
+    const authUrl = new URL("https://mcp.notion.com/authorize?prompt=consent");
+    await provider.redirectToAuthorization(authUrl);
+    expect(authUrl.searchParams.has("prompt")).toBe(false);
+  });
+
+  it("keeps supported SDK consent with account selection", async () => {
+    const provider = makeProvider();
+    provider.setExtraAuthorizationParams({
+      consentSupported: true,
+      prompt: ["select_account"],
+    });
+    const authUrl = new URL("https://mcp.notion.com/authorize?prompt=consent");
+
+    await provider.redirectToAuthorization(authUrl);
+
+    expect(authUrl.searchParams.getAll("prompt")).toEqual([
+      "consent select_account",
+    ]);
+  });
+
   it("adds Google offline access and consent to the authorization URL", async () => {
     const provider = makeProvider();
     provider.setExtraAuthorizationParams({
       access_type: "offline",
-      prompt: "consent",
+      prompt: ["consent"],
     });
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
 
     await provider.redirectToAuthorization(authUrl);
 
     expect(authUrl.searchParams.get("access_type")).toBe("offline");
-    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual([
-      "consent",
-      "select_account",
-    ]);
+    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual(["consent"]);
   });
 
-  it("overwrites access_type and preserves existing prompts without duplicating consent", async () => {
+  it("overwrites SDK defaults with the selected authorization parameters", async () => {
     const provider = makeProvider();
     provider.setExtraAuthorizationParams({
       access_type: "offline",
-      prompt: "consent",
+      prompt: ["consent"],
     });
     const authUrl = new URL(
       "https://accounts.google.com/o/oauth2/v2/auth?access_type=online&prompt=login%20consent",
@@ -80,11 +99,7 @@ describe("DcrOAuthProvider#redirectToAuthorization", () => {
     await provider.redirectToAuthorization(authUrl);
 
     expect(authUrl.searchParams.getAll("access_type")).toEqual(["offline"]);
-    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual([
-      "login",
-      "consent",
-      "select_account",
-    ]);
+    expect(authUrl.searchParams.get("prompt")?.split(" ")).toEqual(["consent"]);
   });
 });
 

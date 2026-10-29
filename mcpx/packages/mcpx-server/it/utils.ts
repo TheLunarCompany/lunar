@@ -42,6 +42,7 @@ import { buildCatalogRouter } from "../src/server/catalog.js";
 import { buildAdminRouter } from "../src/server/admin.js";
 import { buildIdentityRouter } from "../src/server/identity.js";
 import { buildSkillsRouter } from "../src/server/skills.js";
+import { buildOAuthRouter } from "../src/server/oauth-router.js";
 
 const MCPX_PORT = 9523;
 export const MCPX_BASE_URL = `http://localhost:${MCPX_PORT}`;
@@ -404,6 +405,13 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   const adminRouter = buildAdminRouter(authGuard, services, mcpxLogger);
   const identityRouter = buildIdentityRouter(authGuard, services);
   const skillsRouter = buildSkillsRouter(authGuard, services, mcpxLogger);
+  const oauthRouter = buildOAuthRouter(
+    {
+      completeOAuthByState: (state, code) =>
+        services.upstreamHandler.completeOAuthByState(state, code),
+    },
+    mcpxLogger,
+  );
 
   const app = express();
   const httpServer = createServer(app);
@@ -411,6 +419,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   httpServer.keepAliveTimeout = 100;
   app.use(express.json());
   app.use(accessLogFor(mcpxLogger));
+  app.use(oauthRouter);
   app.use(downstreamTransportsRouter);
   app.use(controlPlaneRouter);
   app.use("/config", controlPlaneAppConfigRouter);

@@ -20,6 +20,7 @@ import {
   StoredTokens,
 } from "../services/oauth-token-store.js";
 import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
+import { mergeScopes } from "./scopes.js";
 
 // Special signal indicating device flow has completed and tokens are ready
 // This is not a real authorization code but a signal to the handler.
@@ -78,7 +79,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
   private deviceCode: string | null = null;
-  private discoveredScope: string | null = null;
+  private discoveredScopes: string[] = [];
   private userCode: string | null = null;
   private expiresAt: number | null = null;
   private cachedTokens: StoredTokens | null = null;
@@ -115,11 +116,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   }
 
   get clientMetadata(): OAuthClientMetadata {
-    const baseScopes = this.config.scopes.join(" ");
-    const scope =
-      this.discoveredScope && !this.config.scopes.includes(this.discoveredScope)
-        ? `${baseScopes} ${this.discoveredScope}`
-        : baseScopes;
+    const scope = mergeScopes(this.config.scopes, this.discoveredScopes);
     return {
       redirect_uris: [this.redirectUrl],
       token_endpoint_auth_method: "none", // Device flow doesn't use client secret
@@ -131,8 +128,8 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
     };
   }
 
-  setDiscoveredScope(scope: string): void {
-    this.discoveredScope = scope;
+  setDiscoveredScopes(scopes: string[]): void {
+    this.discoveredScopes = scopes;
   }
 
   // Browser authorization parameters do not apply to RFC 8628 device flow.

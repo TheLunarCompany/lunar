@@ -17,6 +17,7 @@ import {
 import { discoverAuthorizationServerMetadata } from "@modelcontextprotocol/sdk/client/auth.js";
 import { PublishedClientMetadata } from "@mcpx/toolkit-core/oauth";
 import { StaticOAuthProvider } from "../oauth-providers/static.js";
+import { DcrOAuthProvider } from "../oauth-providers/dcr.js";
 import { OAuthTokenStoreI } from "./oauth-token-store.js";
 
 type AuthorizationServerMeta = Awaited<
@@ -141,7 +142,7 @@ describe("OAuthConnectionHandler", () => {
         redirectToAuthorization: async (_url: URL) => {},
         saveCodeVerifier: async (_verifier: string) => {},
         codeVerifier: async () => "",
-        setDiscoveredScope: () => {},
+        setDiscoveredScopes: () => {},
         setExtraAuthorizationParams: () => {},
         ...overrides,
       } as McpxOAuthProviderI;
@@ -708,7 +709,7 @@ describe("OAuthConnectionHandler", () => {
         url: "https://example.com/mcp",
       };
 
-      // Discovery is stubbed away so applyDiscoveredScope makes no network calls.
+      // Discovery is stubbed away so applyDiscoveredScopes makes no network calls.
       function buildHandler(opts: {
         provider: McpxOAuthProviderI;
         auth: NonNullable<OAuthDiscovery["auth"]>;
@@ -772,6 +773,15 @@ describe("OAuthConnectionHandler", () => {
         return "REDIRECT";
       };
 
+      const recordSdkConsentAuthorizationUrl: NonNullable<
+        OAuthDiscovery["auth"]
+      > = async (provider) => {
+        await provider.redirectToAuthorization(
+          new URL("https://auth.example.com/authorize?prompt=consent"),
+        );
+        return "REDIRECT";
+      };
+
       it("returns the URL recorded by redirectToAuthorization", async () => {
         const handler = buildHandler({
           provider: createMockProvider(),
@@ -810,12 +820,82 @@ describe("OAuthConnectionHandler", () => {
           );
           expect(
             authorizationUrl.searchParams.get("prompt")?.split(" "),
-          ).toEqual(["consent", "select_account"]);
+          ).toEqual(["consent"]);
           expect(provider.clientMetadata.scope).toBe(
             scopesSupported ? "openid offline_access" : "openid",
           );
         },
       );
+
+      it.each([
+        {
+          supported: ["select_account", "consent"],
+          expected: "consent select_account",
+        },
+        { supported: ["consent"], expected: "consent" },
+        { supported: [], expected: null },
+        { supported: undefined, expected: null },
+        { supported: "select_account", expected: null },
+        { supported: ["select_account", 42], expected: null },
+      ])(
+        "selects prompt from metadata $supported",
+        async ({ supported, expected }) => {
+          const handler = buildHandler({
+            provider: createStaticProvider(),
+            auth: recordSdkConsentAuthorizationUrl,
+            authMeta: {
+              issuer: "https://auth.example.com",
+              authorization_endpoint: "https://auth.example.com/authorize",
+              response_types_supported: ["code"],
+              token_endpoint: "https://auth.example.com/token",
+              scopes_supported: ["openid", "offline_access"],
+              prompt_values_supported: supported,
+            } as AuthorizationServerMeta,
+          });
+          const result = await handler.initiateOAuth(remoteServer);
+          expect(
+            new URL(result.authorizationUrl).searchParams.get("prompt"),
+          ).toBe(expected);
+        },
+      );
+
+      it("does not add consent when the SDK did not request it", async () => {
+        const handler = buildHandler({
+          provider: createStaticProvider(),
+          auth: recordAuthorizationUrl,
+          authMeta: {
+            issuer: "https://auth.example.com",
+            authorization_endpoint: "https://auth.example.com/authorize",
+            token_endpoint: "https://auth.example.com/token",
+            response_types_supported: ["code"],
+            prompt_values_supported: ["consent"],
+          } as AuthorizationServerMeta,
+        });
+
+        const result = await handler.initiateOAuth(remoteServer);
+        expect(
+          new URL(result.authorizationUrl).searchParams.has("prompt"),
+        ).toBe(false);
+      });
+
+      it("combines Google consent with advertised account selection", async () => {
+        const handler = buildHandler({
+          provider: createStaticProvider(),
+          auth: recordAuthorizationUrl,
+          authMeta: {
+            issuer: "https://accounts.google.com",
+            authorization_endpoint:
+              "https://accounts.google.com/o/oauth2/v2/auth",
+            response_types_supported: ["code"],
+            token_endpoint: "https://accounts.google.com/token",
+            prompt_values_supported: ["consent", "select_account"],
+          } as AuthorizationServerMeta,
+        });
+        const result = await handler.initiateOAuth(remoteServer);
+        expect(
+          new URL(result.authorizationUrl).searchParams.get("prompt"),
+        ).toBe("consent select_account");
+      });
 
       it("keeps offline_access scope behavior separate for non-Google issuers", async () => {
         const provider = createStaticProvider();
@@ -834,11 +914,48 @@ describe("OAuthConnectionHandler", () => {
         const authorizationUrl = new URL(result.authorizationUrl);
 
         expect(authorizationUrl.searchParams.get("access_type")).toBeNull();
-        expect(authorizationUrl.searchParams.get("prompt")).toBe(
-          "select_account",
-        );
+        expect(authorizationUrl.searchParams.get("prompt")).toBeNull();
         expect(provider.clientMetadata.scope).toBe("openid offline_access");
       });
+
+      it.each([
+        [["openid", "offline_access", "admin"], "openid offline_access"],
+        [["offline_access"], "offline_access"],
+        [["openid"], undefined],
+      ])(
+        "discovers DCR identity and offline scopes from %j",
+        async (scopesSupported, expectedScope) => {
+          const provider = new DcrOAuthProvider({
+            serverName: TEST_SERVER_NAME,
+            callbackUrl: "http://localhost:9523/oauth/callback",
+            logger: noOpLogger,
+            tokenStore: {
+              loadTokens: async () => undefined,
+              saveTokens: async () => {},
+              loadCodeVerifier: async () => undefined,
+              saveCodeVerifier: async () => {},
+              loadClientInfo: async () => undefined,
+              saveClientInfo: async () => {},
+              deleteAll: async () => {},
+            },
+          });
+          const handler = buildHandler({
+            provider,
+            auth: recordAuthorizationUrl,
+            authMeta: {
+              issuer: "https://mcp.logrocket.com",
+              authorization_endpoint:
+                "https://mcp.logrocket.com/oauth/authorize",
+              response_types_supported: ["code"],
+              scopes_supported: scopesSupported,
+            } as AuthorizationServerMeta,
+          });
+
+          await handler.initiateOAuth(remoteServer);
+
+          expect(provider.clientMetadata.scope).toBe(expectedScope);
+        },
+      );
 
       it.each([
         ["missing metadata", undefined],
@@ -855,9 +972,7 @@ describe("OAuthConnectionHandler", () => {
         const authorizationUrl = new URL(result.authorizationUrl);
 
         expect(authorizationUrl.searchParams.get("access_type")).toBeNull();
-        expect(authorizationUrl.searchParams.get("prompt")).toBe(
-          "select_account",
-        );
+        expect(authorizationUrl.searchParams.get("prompt")).toBeNull();
       });
 
       it("clears Google defaults when a reused provider discovers a different issuer", async () => {
@@ -888,9 +1003,7 @@ describe("OAuthConnectionHandler", () => {
         const authorizationUrl = new URL(result.authorizationUrl);
 
         expect(authorizationUrl.searchParams.get("access_type")).toBeNull();
-        expect(authorizationUrl.searchParams.get("prompt")).toBe(
-          "select_account",
-        );
+        expect(authorizationUrl.searchParams.get("prompt")).toBeNull();
       });
 
       it("surfaces the auth() failure as the error message", async () => {
@@ -1080,7 +1193,7 @@ describe("settleClientIdentity", () => {
       getAuthorizationCode: () => null,
       getAuthorizationUrl: () => new URL("https://as.example/authorize"),
       getUserCode: () => null,
-      setDiscoveredScope: () => {},
+      setDiscoveredScopes: () => {},
       setExtraAuthorizationParams: () => {},
       redirectUrl: "https://mcpx.example/auth/callback",
       clientMetadata: { redirect_uris: ["https://mcpx.example/auth/callback"] },

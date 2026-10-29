@@ -1,7 +1,9 @@
 import { withAsyncPolling } from "@aigw/core/time";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import {
+  AccessDeniedError,
   InvalidGrantError,
+  InvalidRequestError,
   InvalidTokenError,
 } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import { OAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/provider.js";
@@ -53,6 +55,9 @@ export async function startMockOAuthServers(props: {
   rotate: boolean;
   accessTokenTtlMs: number;
   staticClients?: OAuthClientInformationFull[];
+  scopesSupported?: string[];
+  rejectAuthorization?: "prompt" | "always";
+  authorizationError?: "invalid_request" | "access_denied";
 }): Promise<MockOAuthServers> {
   const { rotate, accessTokenTtlMs, staticClients = [] } = props;
   const refreshes: RefreshCounts = { ok: 0, reused: 0, unknown: 0, failed: 0 };
@@ -106,6 +111,16 @@ export async function startMockOAuthServers(props: {
       },
     },
     authorize: async (_client, params, res) => {
+      if (
+        props.rejectAuthorization === "always" ||
+        (props.rejectAuthorization === "prompt" &&
+          res.req.query["prompt"] !== undefined)
+      ) {
+        if (props.authorizationError === "access_denied") {
+          throw new AccessDeniedError("unsupported prompt value requested");
+        }
+        throw new InvalidRequestError("unsupported prompt value requested");
+      }
       const code = randomBytes(16).toString("hex");
       codeChallenges.set(code, params.codeChallenge);
       const redirect = new URL(params.redirectUri);
@@ -172,6 +187,7 @@ export async function startMockOAuthServers(props: {
   app.use(
     mcpAuthRouter({
       provider,
+      scopesSupported: props.scopesSupported,
       issuerUrl: new URL(baseUrl),
       resourceServerUrl: new URL(resourceServerUrl),
       authorizationOptions: { rateLimit: false },

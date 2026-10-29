@@ -12,13 +12,17 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Logger } from "winston";
+import { z } from "zod/v4";
 import {
   SSETargetServer,
   StreamableHttpTargetServer,
 } from "../model/target-servers.js";
 import {
   ExtraAuthorizationParams,
+  SELECT_ACCOUNT_PROMPT,
+  CONSENT_PROMPT,
   McpxOAuthProviderI,
+  Prompt,
 } from "../oauth-providers/model.js";
 import { DEVICE_FLOW_COMPLETE } from "../oauth-providers/device-flow.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
@@ -41,6 +45,9 @@ const DEVICE_FLOW_TIMEOUT_MS = 15 * 60 * 1000;
 const DEVICE_FLOW_MAX_POLL_ATTEMPTS = Math.ceil(
   DEVICE_FLOW_TIMEOUT_MS / OAUTH_POLLING_INTERVAL_MS,
 );
+const promptMetadataSchema = z.object({
+  prompt_values_supported: z.array(z.string()).optional(),
+});
 
 type RemoteTargetServer = SSETargetServer | StreamableHttpTargetServer;
 type RemoteTransport = SSEClientTransport | StreamableHTTPClientTransport;
@@ -380,7 +387,10 @@ export class OAuthConnectionHandler {
     const existing = this.flows.get(targetServer.name);
     if (existing) {
       const result = await existing.catch(() => null);
-      if (result && this.oauthSessionManager.getOAuthFlow(result.state)) {
+      const activeFlow = result
+        ? this.oauthSessionManager.getOAuthFlow(result.state)
+        : undefined;
+      if (result && activeFlow) {
         this.logger.debug("Reusing existing OAuth flow", {
           name: targetServer.name,
         });
@@ -449,7 +459,7 @@ export class OAuthConnectionHandler {
 
     // Apply metadata-driven scope and authorization request defaults before the
     // SDK builds the browser authorization URL.
-    const authMeta = await this.applyDiscoveredScope(
+    const authMeta = await this.applyDiscoveredScopes(
       targetServer.url,
       authProvider,
     );
@@ -641,28 +651,35 @@ export class OAuthConnectionHandler {
   }
 
   /**
-   * Applies metadata-driven authorization settings. `offline_access` is the
-   * OpenID Connect scope used by servers that advertise it; Google instead
+   * Applies metadata-driven authorization settings. Request `openid` alongside
+   * `offline_access` when both are advertised; Google additionally
    * requires `access_type=offline` and interactive consent.
    * Discovery remains non-fatal and the flow continues without defaults.
    */
-  private async applyDiscoveredScope(
+  private async applyDiscoveredScopes(
     serverUrl: string,
     provider: McpxOAuthProviderI,
   ): Promise<AuthorizationServerMeta | undefined> {
     const { authMeta } = await this.discoverOAuthMetadata(serverUrl);
     if (authMeta?.scopes_supported?.includes("offline_access")) {
-      provider.setDiscoveredScope("offline_access");
-      this.logger.debug("Requested offline_access scope", {
+      const scopes = authMeta.scopes_supported.includes("openid")
+        ? ["openid", "offline_access"]
+        : ["offline_access"];
+      provider.setDiscoveredScopes(scopes);
+      this.logger.debug("Requested discovered OAuth scopes", {
         serverUrl,
         provider: provider.serverName,
+        scopes,
       });
     }
 
     const extraParams: ExtraAuthorizationParams = {};
+    // The SDK strips prompt_values_supported from OIDC-only discovery metadata.
+    const promptMetadata = promptMetadataSchema.safeParse(authMeta);
+    const prompts: Prompt[] = [];
     if (authMeta?.issuer === "https://accounts.google.com") {
       extraParams.access_type = "offline";
-      extraParams.prompt = "consent";
+      prompts.push(CONSENT_PROMPT);
       this.logger.debug(
         "Requested access_type=offline and prompt=consent for Google authorization",
         {
@@ -671,6 +688,22 @@ export class OAuthConnectionHandler {
         },
       );
     }
+    if (
+      promptMetadata.success &&
+      promptMetadata.data.prompt_values_supported?.includes(CONSENT_PROMPT)
+    ) {
+      extraParams.consentSupported = true;
+    }
+    // Missing or malformed metadata does not establish account-selection support.
+    if (
+      promptMetadata.success &&
+      promptMetadata.data.prompt_values_supported?.includes(
+        SELECT_ACCOUNT_PROMPT,
+      )
+    ) {
+      prompts.push(SELECT_ACCOUNT_PROMPT);
+    }
+    if (prompts.length > 0) extraParams.prompt = prompts;
     provider.setExtraAuthorizationParams(extraParams);
 
     return authMeta;
