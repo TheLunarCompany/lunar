@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { socketStore } from "@/store/socket";
 import { toolsStore } from "@/store/tools";
+import { isActive } from "@/utils";
 import { seedToolsPageMockState } from "./seed-state";
 
 describe("seedToolsPageMockState", () => {
@@ -178,5 +179,34 @@ describe("seedToolsPageMockState", () => {
 
     expect(toolGroups.length).toBeGreaterThan(0);
     expect(toolGroups.every((group) => group.description?.trim())).toBe(true);
+  });
+
+  it("keeps the team-platform to github flow active", () => {
+    seedToolsPageMockState();
+
+    const state = socketStore.getState();
+    const github = state.systemState?.targetServers.find(
+      (server) => server.name === "github",
+    );
+    const slack = state.systemState?.targetServers.find(
+      (server) => server.name === "slack",
+    );
+    const teamPlatform = state.systemState?.connectedClientClusters.find(
+      (cluster) =>
+        cluster.identityType === "consumerTag" &&
+        cluster.consumerTag === "team-platform",
+    );
+    const cursor = state.systemState?.connectedClientClusters.find(
+      (cluster) =>
+        cluster.identityType === "clientName" &&
+        cluster.clientName === "cursor",
+    );
+
+    expect(state.activeCallCount).toBe(1);
+    expect(isActive(state.systemState?.usage.lastCalledAt)).toBe(true);
+    expect(isActive(github?.usage.lastCalledAt)).toBe(true);
+    expect(isActive(teamPlatform?.usage.lastCalledAt)).toBe(true);
+    expect(isActive(slack?.usage.lastCalledAt)).toBe(false);
+    expect(isActive(cursor?.usage.lastCalledAt)).toBe(false);
   });
 });

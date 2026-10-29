@@ -28,7 +28,7 @@ const McpxNodeRenderer = ({
       <NodeCard
         variant="default"
         state={selected ? "active" : "default"}
-        className="w-[220px] cursor-pointer border-mcpx-selected shadow-none hover:border-mcpx-selected"
+        className="w-[220px] cursor-pointer border-mcpx-selected hover:border-mcpx-selected"
       >
         <div className="flex items-center gap-3">
           <NodeCardIcon className="border-mcpx-surface-tertiary bg-mcpx-selected-weak">

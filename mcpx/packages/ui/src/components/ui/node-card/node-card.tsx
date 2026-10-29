@@ -9,8 +9,8 @@ const nodeCardVariants = cva(
     variants: {
       variant: {
         default:
-          "border border-solid border-mcpx-border-subtle shadow-none hover:border-mcpx-selected",
-        zero: "border border-solid border-mcpx-border-subtle shadow-none",
+          "border border-solid border-mcpx-border-subtle hover:border-mcpx-selected",
+        zero: "border border-solid border-mcpx-border-subtle",
         warning: "border border-solid border-mcpx-warning-strong shadow-none",
         info: "border border-solid border-mcpx-info-text shadow-none",
         error: "border border-solid border-mcpx-danger-text shadow-none",
@@ -18,7 +18,7 @@ const nodeCardVariants = cva(
           "border border-solid border-mcpx-border-subtle bg-mcpx-surface-tertiary shadow-none",
       },
       state: {
-        default: "",
+        default: "shadow-none",
         active: "",
       },
     },
@@ -26,12 +26,14 @@ const nodeCardVariants = cva(
       {
         variant: "default",
         state: "active",
-        className: "border-mcpx-selected shadow-none",
+        className:
+          "border-mcpx-selected shadow-[var(--shadow-node-active-primary)]",
       },
       {
         variant: "zero",
         state: "active",
-        className: "border-mcpx-selected shadow-none",
+        className:
+          "border-mcpx-selected shadow-[var(--shadow-node-active-primary)]",
       },
       {
         variant: "warning",

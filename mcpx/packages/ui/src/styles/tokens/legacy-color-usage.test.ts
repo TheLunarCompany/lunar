@@ -15,6 +15,7 @@ const hardcodedColorPattern = /#[0-9A-Fa-f]{3,8}\b|rgba?\(|hsla?\(/g;
 const allowedHardcodedColors = new Map([
   ["components/ui/chart.tsx", new Set(["#ccc", "#fff"])],
   ["styles/tokens/exosphere.css", new Set(["#5147e4", "rgb(", "#808cff"])],
+  ["styles/tokens/core/shadows.css", new Set(["#b4108b66", "#b4108b14"])],
 ]);
 
 const listProductionSources = (directory: string): string[] =>

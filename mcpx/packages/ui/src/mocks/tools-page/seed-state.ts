@@ -1350,11 +1350,50 @@ const mockAppConfig: AppConfig = {
   },
 };
 
+const ACTIVE_MOCK_SERVER = "github";
+const ACTIVE_MOCK_AGENT = "team-platform";
+// Past the 30s active-call window, isActive() turns the route off. A timestamp
+// a year ahead keeps this one mock flow dotted and glowing for the session.
+const ACTIVE_CALL_HORIZON_MS = 365 * 24 * 60 * 60 * 1000;
+
+function withOngoingCall<T extends { lastCalledAt?: Date }>(
+  usage: T,
+  at: Date,
+): T {
+  return { ...usage, lastCalledAt: at };
+}
+
+function withOngoingToolCall(systemState: SystemState): SystemState {
+  const at = new Date(Date.now() + ACTIVE_CALL_HORIZON_MS);
+
+  return {
+    ...systemState,
+    usage: withOngoingCall(systemState.usage, at),
+    targetServers: systemState.targetServers.map((server) =>
+      server.name === ACTIVE_MOCK_SERVER
+        ? { ...server, usage: withOngoingCall(server.usage, at) }
+        : server,
+    ),
+    connectedClients: systemState.connectedClients.map((client) =>
+      client.consumerTag === ACTIVE_MOCK_AGENT
+        ? { ...client, usage: withOngoingCall(client.usage, at) }
+        : client,
+    ),
+    connectedClientClusters: systemState.connectedClientClusters.map(
+      (cluster) =>
+        cluster.identityType === "consumerTag" &&
+        cluster.consumerTag === ACTIVE_MOCK_AGENT
+          ? { ...cluster, usage: withOngoingCall(cluster.usage, at) }
+          : cluster,
+    ),
+  };
+}
+
 export function seedToolsPageMockState(): void {
   window.__MCPX_TEST_MODE__ = true;
 
   socketStore.setState({
-    activeCallCount: 0,
+    activeCallCount: 1,
     appConfig: mockAppConfig,
     connectError: false,
     connectionRejectedHubRequired: false,
@@ -1469,7 +1508,7 @@ export function seedToolsPageMockState(): void {
       lastModified: new Date(),
     },
     socket: null,
-    systemState: mockSystemState,
+    systemState: withOngoingToolCall(mockSystemState),
   });
 
   toolsStore.getState().init(socketStore.getState());
