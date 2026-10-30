@@ -9,7 +9,7 @@ import {
   redactObject,
   redactUrl,
 } from "./logger.js";
-import { runWithRequestId } from "./request-context.js";
+import { runWithLogContext, runWithRequestId } from "./request-context.js";
 
 describe("redactObject", () => {
   it("redacts top-level keys", () => {
@@ -696,5 +696,57 @@ describe("request context (ambient requestId)", () => {
     });
     const parsed = JSON.parse(output);
     expect(parsed.metadata.requestId).toBeUndefined();
+  });
+});
+
+describe("log context (ambient fields)", () => {
+  it("stamps every field of the context on log lines inside it", async () => {
+    const output = await captureOutput(
+      (logger) =>
+        runWithLogContext({ tenantId: "t-1", region: "eu" }, () =>
+          logger.info("inside"),
+        ),
+      { format: "json" },
+    );
+    const parsed = JSON.parse(output);
+    expect(parsed.metadata.tenantId).toBe("t-1");
+    expect(parsed.metadata.region).toBe("eu");
+  });
+
+  it("keeps the outer fields when contexts nest", async () => {
+    const output = await captureOutput(
+      (logger) =>
+        runWithRequestId("req-nested", () =>
+          runWithLogContext({ tenantId: "t-1" }, () => logger.info("inside")),
+        ),
+      { format: "json" },
+    );
+    const parsed = JSON.parse(output);
+    expect(parsed.metadata.requestId).toBe("req-nested");
+    expect(parsed.metadata.tenantId).toBe("t-1");
+  });
+
+  it("lets a field passed explicitly win over the ambient one", async () => {
+    const output = await captureOutput(
+      (logger) =>
+        runWithLogContext({ tenantId: "ambient" }, () =>
+          logger.info("explicit", { tenantId: "explicit-wins" }),
+        ),
+      { format: "json" },
+    );
+    const parsed = JSON.parse(output);
+    expect(parsed.metadata.tenantId).toBe("explicit-wins");
+  });
+
+  it("does not leak a field to lines outside the context", async () => {
+    const output = await captureOutput(
+      (logger) => {
+        runWithLogContext({ tenantId: "t-1" }, () => undefined);
+        logger.info("outside");
+      },
+      { format: "json" },
+    );
+    const parsed = JSON.parse(output);
+    expect(parsed.metadata.tenantId).toBeUndefined();
   });
 });

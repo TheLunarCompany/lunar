@@ -5,7 +5,7 @@ import { IncomingHttpHeaders } from "node:http";
 import { Middleware } from "../http/middleware.js";
 
 import LokiTransport from "winston-loki";
-import { currentRequestId, runWithRequestId } from "./request-context.js";
+import { currentLogContext, runWithRequestId } from "./request-context.js";
 
 export type LogLevel =
   | "error"
@@ -147,17 +147,17 @@ export function redactObject(
   return redactObjectInternal(obj, normalizedKeys, new WeakSet(), 0);
 }
 
-// Stamps the ambient request id (entered by accessLogFor) on every log line
-// emitted within that request's async chain. An explicitly passed requestId
-// wins over the ambient one.
-const injectRequestId: Format = format((info) => {
-  const requestId = currentRequestId();
-  if (
-    requestId &&
-    isPlainObject(info["metadata"]) &&
-    info["metadata"]["requestId"] === undefined
-  ) {
-    info["metadata"]["requestId"] = requestId;
+// Stamps the ambient log context (the request id entered by accessLogFor, plus
+// any fields a product adds) on every log line emitted within that request's
+// async chain. A field passed explicitly in metadata wins over the ambient one.
+const injectLogContext: Format = format((info) => {
+  const metadata = info["metadata"];
+  if (isPlainObject(metadata)) {
+    Object.entries(currentLogContext())
+      .filter(([key]) => metadata[key] === undefined)
+      .forEach(([key, value]) => {
+        metadata[key] = value;
+      });
   }
   return info;
 })();
@@ -244,7 +244,7 @@ export function buildLogger(
     timestamp(),
     splat(),
     metadata({ fillExcept: ["message", "level", "timestamp", "label"] }),
-    injectRequestId,
+    injectLogContext,
     redactSensitiveFields(effectiveRedactKeys),
     outputFormat,
   ];
