@@ -622,13 +622,13 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
   },
   {
     name: "launchdarkly-ai-configs",
-    displayName: "LaunchDarkly AI Configs",
+    displayName: "LaunchDarkly AgentControl",
     description:
-      "Connect your AI tools to LaunchDarkly AI Configs, enabling AI assistants to manage and interact with your AI model configurations.",
-    doc: "https://launchdarkly.com/docs/home/getting-started/mcp-hosted#manual-configuration",
+      "Connect your AI tools to LaunchDarkly AgentControl (formerly AI Configs), enabling AI assistants to manage and interact with your AI model configurations. The same server also manages feature flags and observability data.",
+    doc: "https://launchdarkly.com/docs/home/getting-started/mcp-hosted#configure-manually",
     config: {
       type: "streamable-http",
-      url: "https://mcp.launchdarkly.com/mcp/aiconfigs",
+      url: "https://mcp.launchdarkly.com/mcp/launchdarkly",
     },
   },
   {
