@@ -1,0 +1,52 @@
+name: InfraTeam1
+
+filter:
+  url: "*"
+
+processors:
+  removePII:
+    processor: removePII
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+  LogAPM:
+    processor: LogAPM
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: removePII
+
+    - from:
+        processor:
+          name: removePII
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+  response:
+    - from:
+        stream:
+          name: globalStream
+          at: start        
+      to:
+        processor:
+          name: LogAPM
+
+    - from:
+        processor:
+          name: LogAPM
+      to:
+        stream:
+          name: globalStream
+          at: end
