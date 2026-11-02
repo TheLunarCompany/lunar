@@ -3,6 +3,7 @@ import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import {
   OAuthClientInformationFull,
   OAuthClientInformationFullSchema,
+  OAuthClientMetadata,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { DcrOAuthProvider } from "./dcr.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
@@ -58,12 +59,16 @@ const json = (body: unknown, status = 200): Response =>
     headers: { "content-type": "application/json" },
   });
 
-function makeAuthServer(options: { supportsCimd: boolean }): {
+function makeAuthServer(options: {
+  supportsCimd: boolean;
+  resourceScopes?: string[];
+}): {
   fetchFn: typeof fetch;
   registered: () => boolean;
+  registration: () => OAuthClientMetadata | undefined;
   tokenRequest: () => URLSearchParams | undefined;
 } {
-  let registered = false;
+  let registration: OAuthClientMetadata | undefined;
   let tokenRequest: URLSearchParams | undefined;
   const fetchFn = (async (url: string | URL, init?: RequestInit) => {
     const target = url.toString();
@@ -71,14 +76,14 @@ function makeAuthServer(options: { supportsCimd: boolean }): {
       return json({
         resource: "https://mcp.chilipiper.example",
         authorization_servers: [AS_METADATA.issuer],
+        ...(options.resourceScopes
+          ? { scopes_supported: options.resourceScopes }
+          : {}),
       });
     }
     if (target.endsWith("/register")) {
-      registered = true;
-      return json(
-        { ...JSON.parse(init?.body as string), client_id: "dcr-issued-id" },
-        201,
-      );
+      registration = JSON.parse(init?.body as string);
+      return json({ ...registration, client_id: "dcr-issued-id" }, 201);
     }
     if (target.endsWith("/token")) {
       tokenRequest = new URLSearchParams(init?.body as string);
@@ -94,7 +99,8 @@ function makeAuthServer(options: { supportsCimd: boolean }): {
   }) as unknown as typeof fetch;
   return {
     fetchFn,
-    registered: () => registered,
+    registered: () => registration !== undefined,
+    registration: () => registration,
     tokenRequest: () => tokenRequest,
   };
 }
@@ -172,5 +178,22 @@ describe("OAuth flow against a CIMD-capable server", () => {
       "notion",
     )) as OAuthClientInformationFull;
     expect(stored.client_id).toBe("dcr-issued-id");
+  });
+
+  it("registers the scopes it requests at login", async () => {
+    const as = makeAuthServer({
+      supportsCimd: false,
+      resourceScopes: ["read", "write"],
+    });
+    const provider = buildProvider("attio", makeStore());
+
+    expect(
+      await auth(provider, { serverUrl: SERVER, fetchFn: as.fetchFn }),
+    ).toBe("REDIRECT");
+
+    expect(provider.getAuthorizationUrl()?.searchParams.get("scope")).toBe(
+      "read write",
+    );
+    expect(as.registration()?.scope).toBe("read write");
   });
 });

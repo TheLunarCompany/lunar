@@ -36,7 +36,7 @@
   "overrides": {
     "zod": "3.25.76",
     "@types/react": "18.2.79",
-    "qs": "6.14.2",
+    "qs": "6.15.2",
     "@flydotio/dockerfile": {
       "diff": "8.0.3"
     },
@@ -58,5 +58,8 @@
     "socket.io-adapter": {
       "ws": "8.21.0"
     }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0"
   }
 }
