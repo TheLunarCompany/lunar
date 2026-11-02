@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@mcpx/shared-model": "file:../shared-model",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {

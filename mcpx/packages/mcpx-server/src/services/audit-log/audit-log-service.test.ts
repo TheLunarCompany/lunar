@@ -9,6 +9,7 @@ import { ToolUsedPayload } from "../../model/audit-log-type.js";
 import { matchesEventTypeFilter } from "./audit-log-filter.js";
 import { systemClock } from "@aigw/core/time";
 import { noOpLogger } from "@aigw/core/logging";
+import { createLatch } from "@aigw/core/test";
 import { resetEnv } from "../../env.js";
 
 export class InMemoryAuditLogPersistence implements AuditLogPersistence {
@@ -139,6 +140,44 @@ describe("AuditLogService", () => {
       });
 
       await expect(failingService.shutdown()).rejects.toBe(persistError);
+    });
+
+    it("waits for a flush the timer already started", async () => {
+      const persistStarted = createLatch();
+      const releasePersist = createLatch();
+      const order: string[] = [];
+      const blockingPersistence: AuditLogPersistence = {
+        initialize: async () => {},
+        persist: async () => {
+          persistStarted.resolve();
+          await releasePersist.promise;
+          order.push("persisted");
+        },
+        cleanup: async () => {},
+        read: async () => [],
+      };
+      const service = new AuditLogService(
+        systemClock,
+        noOpLogger,
+        blockingPersistence,
+        10,
+      );
+      await service.initialize();
+      service.log({
+        eventType: "target_server_added",
+        payload: { name: "slack" },
+      });
+      await persistStarted.promise;
+
+      const shutdown = service.shutdown().then(() => {
+        order.push("shutdown");
+      });
+      // A shutdown that skips the in-flight flush has resolved by now.
+      await new Promise((resolve) => setImmediate(resolve));
+      releasePersist.resolve();
+      await shutdown;
+
+      expect(order).toEqual(["persisted", "shutdown"]);
     });
   });
 

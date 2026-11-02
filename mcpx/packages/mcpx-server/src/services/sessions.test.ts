@@ -1098,6 +1098,34 @@ describe("SessionsManager", () => {
     ).toEqual({ _type: "opening", generation });
   });
 
+  it("starts no liveness timers for a session restored after shutdown", async () => {
+    sessionsManager = new SessionsManager(
+      baseConfig,
+      stubBehaviorService(),
+      systemState,
+      noOpLogger,
+      clock,
+      noopSessionStore,
+    );
+    await sessionsManager.initialize();
+    await sessionsManager.shutdown();
+    const timersAfterShutdown = liveTimerCount();
+
+    const sessionId = "restored-mid-shutdown";
+    await sessionsManager.addSession(
+      sessionId,
+      createMockSession({ transportType: "streamableHttp" }),
+    );
+    const generation =
+      sessionsManager.liveness.beginNotificationStream(sessionId);
+    sessionsManager.liveness.markNotificationStreamClosed({
+      sessionId,
+      generation,
+    });
+
+    expect(liveTimerCount()).toBe(timersAfterShutdown);
+  });
+
   it("cancels a pending grace timer on shutdown", async () => {
     jest.useFakeTimers();
     try {
@@ -1515,4 +1543,10 @@ function openNotificationStream(
 
 async function waitFor(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function liveTimerCount(): number {
+  return process
+    .getActiveResourcesInfo()
+    .filter((resource) => resource === "Timeout").length;
 }

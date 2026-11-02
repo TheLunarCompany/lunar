@@ -12,6 +12,7 @@ export class AuditLogService {
   private buffer: AuditLog[] = [];
   private flushIntervalMs: number;
   private flushTimer: NodeJS.Timeout | null = null;
+  private flushChain: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly clock: Clock,
@@ -28,7 +29,14 @@ export class AuditLogService {
     this.startFlushTimer();
   }
 
-  private async flush(): Promise<void> {
+  // Flushes run one at a time, so shutdown's final flush waits for one the timer already started.
+  private flush(): Promise<void> {
+    const flushed = this.flushChain.then(() => this.persistBuffer());
+    this.flushChain = flushed.catch(() => undefined);
+    return flushed;
+  }
+
+  private async persistBuffer(): Promise<void> {
     // Check if buffer has events to flush
     if (this.buffer.length === 0) {
       return;

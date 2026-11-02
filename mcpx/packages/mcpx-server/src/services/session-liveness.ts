@@ -30,6 +30,8 @@ export class SessionLivenessManager {
   private _clock: Clock;
   private _onLivenessChanged: OnLivenessChanged;
   private _probeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  // After shutdown no timer is armed: a session restored mid-shutdown would leak its own.
+  private _lifecycle: "running" | "shut-down" = "running";
   // Manager-wide so a generation is never reused: a stale close from an earlier
   // stream can never match a newer one.
   private _nextStreamGeneration = 0;
@@ -49,6 +51,7 @@ export class SessionLivenessManager {
   }
 
   initialize(): void {
+    this._lifecycle = "running";
     this.startSessionGc({
       ttlMin: this._config.sessionTtlMin,
       sweepIntervalMin: this._config.sessionSweepIntervalMin,
@@ -56,6 +59,7 @@ export class SessionLivenessManager {
   }
 
   shutdown(): void {
+    this._lifecycle = "shut-down";
     this.stopGc();
     this.stopAllSessionLiveness();
     for (const timer of this._probeTimers.values()) {
@@ -151,6 +155,9 @@ export class SessionLivenessManager {
     generation: number;
   }): void {
     const { sessionId, generation } = props;
+    if (this._lifecycle === "shut-down") {
+      return;
+    }
     const liveness = this.getOrInitLiveness(sessionId);
     const stream = liveness?.notificationStream;
     if (
@@ -194,6 +201,12 @@ export class SessionLivenessManager {
   }
 
   onSessionAdded(sessionId: string): void {
+    if (this._lifecycle === "shut-down") {
+      this._logger.debug("Session added after shutdown, not monitoring it", {
+        sessionId,
+      });
+      return;
+    }
     const session = this._store.getSession(sessionId);
     if (!session) {
       return;
