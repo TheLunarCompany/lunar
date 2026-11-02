@@ -1,0 +1,11 @@
+permissions:
+  default:
+    _type: default-block
+    
+  consumers:
+    {}
+
+auth:
+  enabled: false
+toolExtensions:
+  services: {}
