@@ -12,6 +12,12 @@ import {
   storedTokensSchema,
 } from "./oauth-token-store.js";
 
+// The token store holds OAuth access tokens, refresh tokens, PKCE code
+// verifiers and client credentials. They must not be readable by other local
+// users, so the directory and its files are restricted to the owner.
+const TOKENS_DIR_MODE = 0o700;
+const TOKEN_FILE_MODE = 0o600;
+
 export class DiskTokenStore implements OAuthTokenStoreI {
   private readonly tokensDir: string;
   private readonly logger: Logger;
@@ -104,8 +110,22 @@ export class DiskTokenStore implements OAuthTokenStoreI {
   }
 
   private async writeFile(p: string, content: string): Promise<void> {
-    await fs.mkdir(this.tokensDir, { recursive: true });
-    await fs.writeFile(p, content, "utf8");
+    await fs.mkdir(this.tokensDir, { recursive: true, mode: TOKENS_DIR_MODE });
+    // `mode` on `mkdir` only applies to directories it creates, and is masked
+    // by the process umask, so tighten explicitly to also cover a directory
+    // left behind by an earlier version.
+    await fs.chmod(this.tokensDir, TOKENS_DIR_MODE);
+
+    // Open (and truncate) before writing so the permissions can be tightened
+    // while the file is still empty. This also repairs files created by an
+    // earlier version, and is unaffected by the umask.
+    const handle = await fs.open(p, "w", TOKEN_FILE_MODE);
+    try {
+      await handle.chmod(TOKEN_FILE_MODE);
+      await handle.writeFile(content, "utf8");
+    } finally {
+      await handle.close();
+    }
   }
 
   private tokenPath(serverName: string): string {
