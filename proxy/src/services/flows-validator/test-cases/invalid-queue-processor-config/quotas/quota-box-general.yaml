@@ -1,0 +1,10 @@
+quotas:
+  - id: LimiterMinuteBoxUser
+    filter:
+      url: box.com/*
+    strategy:
+      fixed_window:
+        max: 100
+        interval: 1
+        interval_unit: minute
+        group_by_header: x-lunar-consumer-tag
