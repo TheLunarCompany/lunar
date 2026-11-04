@@ -19,11 +19,6 @@ import { InstanceStatusRow } from "@/components/instance-status/InstanceStatusRo
 import { McpxBrandLogo } from "@/components/branding/McpxBrandLogo";
 import type { InstanceStatus } from "@/model/instance-status";
 import { useFeatureFlag } from "@/contexts/feature-flags";
-import {
-  PENDO_EVENTS,
-  trackPendoEvent,
-  type PendoEvent,
-} from "@/components/pendo";
 
 type SidebarIcon = ElementType<{ className?: string }>;
 
@@ -38,6 +33,14 @@ export type McpxSidebarItem = {
 export type McpxSidebarSection = {
   title: string;
   items: McpxSidebarItem[];
+};
+
+const navigationLocators: Partial<Record<string, string>> = {
+  dashboard: "nav-dashboard-link",
+  "mcp-servers": "nav-mcp-servers-link",
+  "saved-setups": "nav-saved-setups-link",
+  "audit-log": "nav-audit-log-link",
+  "mcp-registry": "nav-mcp-registry-link",
 };
 
 const menuItemVariants = cva(
@@ -191,14 +194,6 @@ function McpxSidebarMenuItem({
   const Icon = item.icon;
 
   const buttonClassName = menuItemVariants({ isActive });
-  const navigationEvents: Partial<Record<McpxSidebarItem["id"], PendoEvent>> = {
-    dashboard: PENDO_EVENTS.navigationDashboardClicked,
-    "mcp-servers": PENDO_EVENTS.navigationMcpServersClicked,
-    "saved-setups": PENDO_EVENTS.navigationSavedSetupsClicked,
-    "audit-log": PENDO_EVENTS.navigationAuditLogClicked,
-    "mcp-registry": PENDO_EVENTS.navigationMcpRegistryClicked,
-  };
-
   if (item.url && !item.disabled) {
     return (
       <SidebarMenuItem>
@@ -208,13 +203,7 @@ function McpxSidebarMenuItem({
           tooltip={item.label}
           className={buttonClassName}
         >
-          <Link
-            to={item.url}
-            onClick={() => {
-              const event = navigationEvents[item.id];
-              if (event) trackPendoEvent(event);
-            }}
-          >
+          <Link to={item.url} data-pendo-locator={navigationLocators[item.id]}>
             <Icon />
             <span>{item.label}</span>
           </Link>

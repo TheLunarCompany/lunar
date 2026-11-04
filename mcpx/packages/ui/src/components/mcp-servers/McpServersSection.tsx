@@ -29,7 +29,6 @@ import { MultiSelectFilterDropdown } from "@/components/ui/multi-select-filter-d
 import { SearchInput } from "@/components/ui/search-input";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { getApiErrorMessage } from "@/lib/api-errors";
-import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 import { cn } from "@/lib/utils";
 import {
   McpServerPromptCard,
@@ -293,7 +292,6 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
   );
 
   const handleServerClick = (serverName: string) => {
-    trackPendoEvent(PENDO_EVENTS.serverRowClicked);
     setExpandedServers((current) => {
       const next = new Set(current);
       if (next.has(serverName)) {
@@ -388,11 +386,7 @@ export function McpServersSection({ servers }: McpServersSectionProps) {
                 placeholder="Search tools, prompts and resources"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                onBlur={() => {
-                  if (searchQuery.trim()) {
-                    trackPendoEvent(PENDO_EVENTS.serverSearchUsed);
-                  }
-                }}
+                data-pendo-locator="mcp-servers-search-input"
                 wrapperClassName="w-[320px] max-w-full"
               />
               <AnnotationFilterDropdown
@@ -578,6 +572,7 @@ function McpServerRow({
         type="button"
         className="flex w-full cursor-pointer items-center justify-between gap-5 px-4 py-3 text-left"
         onClick={onClick}
+        data-pendo-locator="mcp-servers-server-row"
       >
         <div className="flex min-w-0 items-center gap-4">
           {domainIconUrl ? (

@@ -26,7 +26,6 @@ import { AddServerModal } from "../AddServerModal";
 import { AgentDetailsModal } from "../AgentDetailsModal";
 import { McpxDetailsModal } from "../McpxDetailsModal";
 import { useToast } from "@/components/ui/use-toast";
-import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 import { ServerContextMenu } from "./nodes/ServerContextMenu";
 import {
   useDeleteMcpServer,
@@ -155,13 +154,11 @@ const ConnectivityDiagramComponent = ({
   const { mutate: deleteServer } = useDeleteMcpServer();
 
   const handleAddAgent = useCallback(() => {
-    trackPendoEvent(PENDO_EVENTS.addAgentClicked);
     dismiss();
     setIsAddAgentModalOpen(true);
   }, [dismiss]);
 
   const handleAddServer = useCallback(() => {
-    trackPendoEvent(PENDO_EVENTS.addServerClicked);
     dismiss();
     setIsAddServerModalOpen(true);
   }, [dismiss]);
@@ -431,7 +428,12 @@ const ConnectivityDiagramComponent = ({
             <MiniMap />
             <Panel position="top-right" className="m-6! flex items-start gap-2">
               {!isEditingSpaceOnBehalf && (
-                <Button variant="node-card" size="sm" onClick={handleAddAgent}>
+                <Button
+                  variant="node-card"
+                  size="sm"
+                  onClick={handleAddAgent}
+                  data-pendo-locator="dashboard-add-agent-button"
+                >
                   <Plus data-icon="inline-start" />
                   Add Agent
                 </Button>
@@ -440,6 +442,7 @@ const ConnectivityDiagramComponent = ({
                 variant="node-card"
                 size="sm"
                 onClick={handleAddServer}
+                data-pendo-locator="dashboard-add-server-button"
                 data-testid="dashboard-add-server"
               >
                 <Plus data-icon="inline-start" />

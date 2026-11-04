@@ -230,6 +230,10 @@ describe("McpxSidebar", () => {
     const activeButton = container.querySelector(
       '[data-slot="sidebar-menu-button"][data-active="true"]',
     );
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "data-pendo-locator",
+      "nav-dashboard-link",
+    );
     expect(activeButton?.textContent).toContain("Dashboard");
     expect(activeButton).toHaveClass(
       "data-[active=true]:bg-[var(--mcpx-sidebar-active)]!",

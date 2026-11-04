@@ -27,6 +27,7 @@ const NoServers = () => {
         <Button
           variant="node-card"
           size="sm"
+          data-pendo-locator="dashboard-empty-state-add-server-button"
           onClick={() => setIsAddServerModalOpen(true)}
         >
           <Plus data-icon="inline-start" />

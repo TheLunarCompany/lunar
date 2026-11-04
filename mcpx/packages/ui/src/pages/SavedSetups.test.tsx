@@ -388,8 +388,8 @@ describe("SavedSetups", () => {
 
     it("does not save on Enter key when description has invalid characters", async () => {
       const user = userEvent.setup();
-      const mutation = { mutate: vi.fn(), isPending: false } as never;
-      vi.mocked(useSaveSetup).mockReturnValue(mutation);
+      const mutation = { mutate: vi.fn(), isPending: false };
+      vi.mocked(useSaveSetup).mockReturnValue(mutation as never);
 
       renderPage();
 
@@ -409,18 +409,31 @@ describe("SavedSetups", () => {
 
     it("saves on Enter key when description is valid", async () => {
       const user = userEvent.setup();
-      const mutation = { mutate: vi.fn(), isPending: false } as never;
-      vi.mocked(useSaveSetup).mockReturnValue(mutation);
+      const mutation = { mutate: vi.fn(), isPending: false };
+      vi.mocked(useSaveSetup).mockReturnValue(mutation as never);
 
       renderPage();
 
-      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+      const openDialog = screen.getByRole("button", {
+        name: /save current setup/i,
+      });
+      expect(openDialog).toHaveAttribute(
+        "data-pendo-locator",
+        "saved-setups-save-current-setup-button",
+      );
+      fireEvent.click(openDialog);
       await waitFor(() =>
         expect(
           screen.getByRole("textbox", { name: /description/i }),
         ).toBeInTheDocument(),
       );
 
+      expect(
+        screen.getByRole("button", { name: /^save setup$/i }),
+      ).toHaveAttribute(
+        "data-pendo-locator",
+        "saved-setups-save-setup-dialog-save-button",
+      );
       const input = screen.getByRole("textbox", { name: /description/i });
       await user.type(input, "Valid Description");
       await user.keyboard("{Enter}");

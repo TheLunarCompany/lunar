@@ -10,7 +10,6 @@ import { McpCard } from "@/components/mcp-servers/McpCard";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import type { McpServerStatus } from "@/types";
-import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
 
 export type McpRegistryCardProps = {
   server: CatalogMCPServerConfigByNameItem;
@@ -22,6 +21,7 @@ export type McpRegistryCardProps = {
     catalogItemId?: string,
   ) => void;
   status?: McpServerStatus;
+  addButtonLocator?: string;
   // Forwarded straight to McpCard's root div, which already spreads rest props.
   // See GAT-161 review: no wrapper needed, McpCard is the natural home for this.
   "data-testid"?: string;
@@ -33,6 +33,7 @@ export function McpRegistryCard({
   className,
   status,
   onAddServer,
+  addButtonLocator = "registry-card-add-server-button",
   "data-testid": dataTestId,
   "data-server-name": dataServerName,
 }: McpRegistryCardProps) {
@@ -41,7 +42,6 @@ export function McpRegistryCard({
   const urlNeedsEdit = isRemoteUrlNeedEdit(serverConfig);
 
   const handleAddServer = (): void => {
-    trackPendoEvent(PENDO_EVENTS.registryAddServerClicked);
     if (serverConfig.type === "stdio") {
       const finalEnv: Record<string, EnvValue> = convertRequirementsToValues(
         serverConfig.env ?? {},
@@ -93,6 +93,7 @@ export function McpRegistryCard({
       className="max-h-6 max-w-6 px-1.5 py-1.5 text-lg font-normal"
       variant="default"
       size="sm"
+      data-pendo-locator={addButtonLocator}
       aria-label={`Add ${server.displayName}`}
       onClick={(event) => {
         event.stopPropagation();

@@ -18,7 +18,21 @@ import { cn } from "@/lib/utils";
 import { getAgentIcon } from "@/lib/agent-icons";
 import { AgentInstructions } from "./AgentInstructions/AgentInstructions";
 import { getAgentConfigs } from "./AgentInstructions/agentConfigs";
-import { PENDO_EVENTS, trackPendoEvent } from "@/components/pendo";
+
+const agentTypeLocators: Partial<Record<string, string>> = {
+  cursor: "add-agent-cursor-type-button",
+  claudeDesktop: "add-agent-claude-desktop-type-button",
+  ClaudeCode: "add-agent-claude-code-type-button",
+  warp: "add-agent-warp-type-button",
+  vscode: "add-agent-vscode-type-button",
+  copilot: "add-agent-copilot-type-button",
+  "openai-mcp": "add-agent-openai-mcp-type-button",
+  "codex-mcp-client": "add-agent-codex-type-button",
+  n8n: "add-agent-n8n-type-button",
+  "gemini-cli": "add-agent-gemini-cli-type-button",
+  opencode: "add-agent-opencode-type-button",
+  custom: "add-agent-custom-type-button",
+};
 
 interface AddAgentModalProps {
   isOpen: boolean;
@@ -49,7 +63,6 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
     const text =
       "toml" in config ? config.toml : JSON.stringify(config, null, 2);
     await navigator.clipboard.writeText(text);
-    trackPendoEvent(PENDO_EVENTS.agentConfigCopied);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -62,7 +75,6 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
   };
 
   const handleAgentTypeChange = (agentType: string) => {
-    trackPendoEvent(PENDO_EVENTS.agentTypeSelected);
     setSelectedAgentType(agentType);
     setActiveTab(
       instructionsOnlyClients.has(agentType) ? "instructions" : "json",
@@ -103,6 +115,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
               {AGENT_TYPES.map((type) => (
                 <button
                   key={type.value}
+                  data-pendo-locator={agentTypeLocators[type.value]}
                   onClick={() => handleAgentTypeChange(type.value)}
                   aria-pressed={selectedAgentType === type.value}
                   className={cn(
@@ -137,22 +150,23 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                 </div>
                 <CustomTabs
                   value={activeTab}
-                  onValueChange={(value) => {
-                    trackPendoEvent(PENDO_EVENTS.agentConfigTabOpened);
-                    setActiveTab(value);
-                  }}
+                  onValueChange={setActiveTab}
                   className="flex min-h-0 flex-1 flex-col"
                 >
                   <CustomTabsList>
                     <CustomTabsTrigger
                       value="json"
+                      data-pendo-locator="add-agent-configuration-tab"
                       disabled={instructionsOnlyClients.has(
                         selectedConfig.value,
                       )}
                     >
                       {isToml ? "TOML Config" : "JSON Config"}
                     </CustomTabsTrigger>
-                    <CustomTabsTrigger value="instructions">
+                    <CustomTabsTrigger
+                      value="instructions"
+                      data-pendo-locator="add-agent-instructions-tab"
+                    >
                       Instructions
                     </CustomTabsTrigger>
                   </CustomTabsList>
@@ -164,6 +178,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                       <div className="absolute top-3 right-3 z-10">
                         <button
                           onClick={() => void handleCopyConfig()}
+                          data-pendo-locator="add-agent-copy-configuration-button"
                           className="flex items-center justify-center p-1 hover:opacity-70 transition-opacity"
                           title={copied ? "Copied!" : "Copy"}
                         >

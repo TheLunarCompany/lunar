@@ -27,6 +27,7 @@ const NoAgents = () => {
         <Button
           variant="node-card"
           size="sm"
+          data-pendo-locator="dashboard-empty-state-add-agent-button"
           onClick={() => setIsAddAgentModalOpen(true)}
         >
           <Plus data-icon="inline-start" />

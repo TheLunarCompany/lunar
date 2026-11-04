@@ -48,11 +48,6 @@ import { CustomAddCheckboxText } from "@/config/runtime-config";
 import type { McpServerStatus } from "@/types";
 import { getMcpServerStatusFromTargetServer } from "./helpers";
 import { getAddServerErrorMessage } from "@/lib/api-errors";
-import {
-  PENDO_EVENTS,
-  trackPendoEvent,
-  type PendoEvent,
-} from "@/components/pendo";
 import { Sort } from "@/components/Sort";
 import {
   buildInstalledCatalogServerLookup,
@@ -145,15 +140,6 @@ const TABS = {
   CUSTOM: "custom" as const,
   MIGRATE: "migrate" as const,
 } as const;
-
-function getAddServerTabEvent(tab: TabValue): PendoEvent {
-  const events: Record<TabValue, PendoEvent> = {
-    all: PENDO_EVENTS.addServerAllTabSelected,
-    custom: PENDO_EVENTS.addServerCustomTabSelected,
-    migrate: PENDO_EVENTS.addServerMigrateTabSelected,
-  };
-  return events[tab];
-}
 
 function getFailedServerDetails(
   failedServers: string[],
@@ -715,7 +701,6 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 if (!canAddCustom && newTab !== TABS.ALL) {
                   return;
                 }
-                trackPendoEvent(getAddServerTabEvent(newTab));
                 if (activeTab === TABS.MIGRATE && newTab !== TABS.MIGRATE) {
                   setHasUploadedFile(false);
                 }
@@ -724,13 +709,24 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               }}
             >
               <CustomTabsList>
-                <CustomTabsTrigger value={TABS.ALL}>All</CustomTabsTrigger>
+                <CustomTabsTrigger
+                  value={TABS.ALL}
+                  data-pendo-locator="add-server-all-tab"
+                >
+                  All
+                </CustomTabsTrigger>
                 {canAddCustom && (
                   <>
-                    <CustomTabsTrigger value={TABS.CUSTOM}>
+                    <CustomTabsTrigger
+                      value={TABS.CUSTOM}
+                      data-pendo-locator="add-server-custom-tab"
+                    >
                       Custom
                     </CustomTabsTrigger>
-                    <CustomTabsTrigger value={TABS.MIGRATE}>
+                    <CustomTabsTrigger
+                      value={TABS.MIGRATE}
+                      data-pendo-locator="add-server-migrate-tab"
+                    >
                       Migrate
                     </CustomTabsTrigger>
                   </>
@@ -779,6 +775,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                         status={getServerStatus(server.name)}
                         className="w-full border-mcpx-border-subtle shadow-[var(--mcpx-shadow-weak)]"
                         onAddServer={handleUseExample}
+                        addButtonLocator="add-server-card-add-server-button"
                         data-testid="add-server-card"
                         data-server-name={server.name}
                       />

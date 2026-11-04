@@ -1,11 +1,8 @@
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  installPendo,
-  PENDO_EVENTS,
-  preparePendo,
-  trackPendoEvent,
-} from "./pendo";
+import { installPendo, preparePendo, trackPendoEvent } from "./pendo";
+
+const TEST_EVENT = "test-event";
 
 const harness = vi.hoisted(() => ({
   email: "user@example.com",
@@ -43,7 +40,7 @@ vi.mock("@/pages/Dashboard", async () => {
   return {
     default: () => {
       useEffect(() => {
-        trackPendoEvent(PENDO_EVENTS.dashboardViewed);
+        trackPendoEvent(TEST_EVENT);
       }, []);
       return null;
     },
@@ -91,11 +88,8 @@ describe("PendoBootstrap", () => {
   it("queues events before the SDK is ready without throwing", () => {
     preparePendo();
 
-    expect(() => trackPendoEvent(PENDO_EVENTS.dashboardViewed)).not.toThrow();
-    expect(window.pendo?._q).toContainEqual([
-      "track",
-      PENDO_EVENTS.dashboardViewed,
-    ]);
+    expect(() => trackPendoEvent(TEST_EVENT)).not.toThrow();
+    expect(window.pendo?._q).toContainEqual(["track", TEST_EVENT]);
   });
 
   it("does not initialize with empty identity values", () => {
@@ -180,10 +174,7 @@ describe("PendoBootstrap", () => {
       </>,
     );
 
-    expect(window.pendo?._q).toContainEqual([
-      "track",
-      PENDO_EVENTS.dashboardViewed,
-    ]);
+    expect(window.pendo?._q).toContainEqual(["track", TEST_EVENT]);
     expect(document.getElementById("boomi-pendo-sdk")).toBeNull();
 
     harness.accountQuery.data = { accountId: "account-1" };
@@ -199,10 +190,7 @@ describe("PendoBootstrap", () => {
       "initialize",
       { visitor: { id: "user@example.com" }, account: { id: "account-1" } },
     ]);
-    expect(window.pendo?._q).toContainEqual([
-      "track",
-      PENDO_EVENTS.dashboardViewed,
-    ]);
+    expect(window.pendo?._q).toContainEqual(["track", TEST_EVENT]);
     expect(document.getElementById("boomi-pendo-sdk")).not.toBeNull();
   });
 
@@ -222,7 +210,7 @@ describe("PendoBootstrap", () => {
     harness.accountQuery.isPending = true;
     const { PendoBootstrap } = await import("./PendoBootstrap");
     const { rerender } = render(<PendoBootstrap />);
-    trackPendoEvent(PENDO_EVENTS.dashboardViewed);
+    trackPendoEvent(TEST_EVENT);
 
     harness.accountQuery.isPending = false;
     rerender(<PendoBootstrap />);

@@ -31,47 +31,6 @@ const PENDO_APP_ID = "6f621fb5-a115-4088-7d59-9bad314c05dd";
 const SCRIPT_ID = "boomi-pendo-sdk";
 const pendoTracking = { suspended: false };
 
-export const PENDO_EVENTS = {
-  dashboardViewed: "AI Gateway / Dashboard - Dashboard - Viewed",
-  navigationDashboardClicked:
-    "AI Gateway / Navigation - Dashboard Link - Clicked",
-  navigationMcpServersClicked:
-    "AI Gateway / Navigation - MCP Servers Link - Clicked",
-  navigationSavedSetupsClicked:
-    "AI Gateway / Navigation - Saved Setups Link - Clicked",
-  navigationAuditLogClicked:
-    "AI Gateway / Navigation - Audit Log Link - Clicked",
-  navigationMcpRegistryClicked:
-    "AI Gateway / Navigation - MCP Registry Link - Clicked",
-  addAgentClicked: "AI Gateway / Dashboard - Add Agent Button - Clicked",
-  addServerClicked: "AI Gateway / Dashboard - Add Server Button - Clicked",
-  agentTypeSelected: "AI Gateway / Add Agent - Agent Type - Selected",
-  agentConfigTabOpened: "AI Gateway / Add Agent - Configuration Tab - Opened",
-  agentConfigCopied: "AI Gateway / Add Agent - Configuration - Copied",
-  addServerAllTabSelected: "AI Gateway / Add Server - All Tab - Selected",
-  addServerCustomTabSelected: "AI Gateway / Add Server - Custom Tab - Selected",
-  addServerMigrateTabSelected:
-    "AI Gateway / Add Server - Migrate Tab - Selected",
-  serverRowClicked: "AI Gateway / MCP Servers - Server Row - Clicked",
-  mcpServersViewed: "AI Gateway / MCP Servers - MCP Servers Page - Viewed",
-  serverSearchUsed: "AI Gateway / MCP Servers - Search Field - Used",
-  savedSetupsViewed: "AI Gateway / Saved Setups - Saved Setups Page - Viewed",
-  setupSaveClicked:
-    "AI Gateway / Saved Setups - Save Current Setup Button - Clicked",
-  setupSaved: "AI Gateway / Saved Setups - Setup - Saved",
-  mcpRegistryViewed: "AI Gateway / MCP Registry - MCP Registry Page - Viewed",
-  registryAllTabSelected: "AI Gateway / MCP Registry - All Tab - Selected",
-  registryCustomTabSelected:
-    "AI Gateway / MCP Registry - Custom Tab - Selected",
-  registryMigrateTabSelected:
-    "AI Gateway / MCP Registry - Migrate Tab - Selected",
-  registrySearchUsed: "AI Gateway / MCP Registry - Search Field - Used",
-  registryAddServerClicked:
-    "AI Gateway / MCP Registry - Add Server Button - Clicked",
-} as const;
-
-export type PendoEvent = (typeof PENDO_EVENTS)[keyof typeof PENDO_EVENTS];
-
 export function preparePendo(): PendoAgent {
   if (window.pendo) {
     if (!document.getElementById(SCRIPT_ID)) pendoTracking.suspended = false;
@@ -166,7 +125,7 @@ export function suspendPendo(): void {
   }
 }
 
-export function trackPendoEvent(event: PendoEvent): void {
+export function trackPendoEvent(event: string): void {
   try {
     if (!isPendoEnabled() || pendoTracking.suspended) return;
     const pendo = window.pendo;

@@ -172,6 +172,11 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
           <Button
             variant="node-card"
             size="icon"
+            data-pendo-locator={
+              addButtonKind === "agent"
+                ? "dashboard-diagram-add-agent-button"
+                : "dashboard-diagram-add-server-button"
+            }
             title={addButtonKind === "agent" ? "Add Agent" : "Add Server"}
             aria-label={addButtonKind === "agent" ? "Add Agent" : "Add Server"}
             className="nodrag nopan absolute pointer-events-auto"
