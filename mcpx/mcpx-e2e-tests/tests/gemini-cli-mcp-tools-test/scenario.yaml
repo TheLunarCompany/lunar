@@ -1,0 +1,36 @@
+# Verifies Gemini CLI can register the MCPX server and list it via the MCP commands.
+name: "Gemini CLI MCP tools test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+configMount: config
+aiAgent:
+  type: gemini-cli
+  transport: http
+  scope: project
+  serverName: mcpx
+  url: http://127.0.0.1:9000/mcp
+  headers:
+    x-lunar-consumer-tag: Gemini CLI
+verboseOutput: false
+
+dependentContainers: []
+
+steps:
+  - name: List MCP servers via Gemini CLI
+    kind: agent
+    toolName: gemini-cli/mcp
+    payload:
+      args:
+        - list
+    expected:
+      mode: regex
+      value: "mcpx:\\s*http://127\\.0\\.0\\.1:9000/mcp"
+      
+  - name: List MCP tools via Gemini CLI
+    kind: agent
+    toolName: gemini-cli/mcp
+    payload:
+      args:
+        - list-tools
+    expected:
+      mode: regex
+      value: "time__convert_time[\\s\\S]*time__get_current_time|time__get_current_time[\\s\\S]*time__convert_time"
