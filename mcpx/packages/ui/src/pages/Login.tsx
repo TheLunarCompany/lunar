@@ -1,13 +1,22 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/useAuth";
+import { routes } from "@/routes";
 
 export function LoginRoute() {
   const { login, loading, error, loginRequired, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loginRequired || isAuthenticated) return;
+    if (!loginRequired) {
+      return;
+    }
+    if (isAuthenticated) {
+      void navigate(routes.root, { replace: true });
+      return;
+    }
     login();
-  }, [isAuthenticated, login, loginRequired]);
+  }, [isAuthenticated, login, loginRequired, navigate]);
 
   if (!loginRequired) {
     return (
