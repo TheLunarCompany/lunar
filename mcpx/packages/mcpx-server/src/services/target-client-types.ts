@@ -50,3 +50,15 @@ export function isConnectionFailed(
 ): client is ConnectionFailedTargetClient {
   return client._state === "connection-failed";
 }
+
+export function isConnecting(
+  client: TargetClient,
+): client is ConnectingTargetClient {
+  return client._state === "connecting";
+}
+
+export function isPendingAuth(
+  client: TargetClient,
+): client is PendingAuthTargetClient {
+  return client._state === "pending-auth";
+}

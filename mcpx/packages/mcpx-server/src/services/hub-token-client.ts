@@ -14,6 +14,7 @@ import {
   OAuthTokenStoreI,
   StoredTokens,
   storedTokensSchema,
+  TokenStoreUnavailableError,
   TokenType,
 } from "./oauth-token-store.js";
 import { HubSocketAdapter } from "./saved-setups-client.js";
@@ -131,10 +132,14 @@ export class HubTokenClient implements OAuthTokenStoreI {
     const socket = this.requireSocket();
     const envelope = wrapInEnvelope({ payload: { serverName, tokenType } });
     this.logger.debug("Loading OAuth token", { serverName, tokenType });
-    const raw = await socket.emitWithAck(
-      WEBAPP_BOUND_EVENTS.LOAD_OAUTH_TOKEN,
-      envelope,
-    );
+    const raw = await socket
+      .emitWithAck(WEBAPP_BOUND_EVENTS.LOAD_OAUTH_TOKEN, envelope)
+      .catch((error: unknown) => {
+        throw new TokenStoreUnavailableError(
+          `No answer from hub for load ${tokenType} of ${serverName}`,
+          { cause: error },
+        );
+      });
     const parsed = loadOAuthTokenAckSchema.safeParse(raw);
     if (!parsed.success)
       throw new Error(
@@ -149,7 +154,7 @@ export class HubTokenClient implements OAuthTokenStoreI {
 
   private requireSocket(): HubSocketAdapter {
     const socket = this.getSocket();
-    if (!socket) throw new Error("Hub not connected");
+    if (!socket) throw new TokenStoreUnavailableError("Hub not connected");
     return socket;
   }
 }

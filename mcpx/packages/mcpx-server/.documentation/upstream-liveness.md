@@ -45,8 +45,31 @@ Key files: `src/services/upstream-watchdog.ts` (counter, ping loop, `reportSucce
 3. **Servers without ping support are still watched.** They are registered with a no-op ping stopper so reported tool calls keep counting. This is what PR #2887 wanted: such servers must still reconnect.
 4. **`isTransportError` is broad on purpose.** Any `Error` that is not an `McpError`, so aborts and Zod failures count too. Harmless now that it only ticks a counter.
    The one exception is a 429: it is an answer (rule 1).
-5. **A 429 on connect sends an OAuth server to `pending-auth`.** When connecting an OAuth upstream gets an HTTP 429, MCPX records `pending-auth`, schedules no reconnect and logs one `warn` with the server name, status, attempt count and that it waits for a user login. A timer cannot know when the upstream's window clears, and each retry spends a per-user quota that other instances share. The login replaces the old tokens. The rule is applied where the failed client is produced, not by each caller: `connectionFailedClient` in `upstream-handler.ts` returns `pending-auth` instead of `connection-failed` for a 429 from a remote OAuth server, so `addClient`, `reloadClients` and the reconnect loop keep the plain `isConnectionFailed` then `enqueueReconnect`. That covers a 429 on `tools/list` (the call that follows `initialize`, with the token), including right after a silent re-auth or a login. The `rate-limited` verdict from `safeTryWithExistingTokens` takes the same transition. `pending-auth` also ends the reconnect loop for any other reason: a retry that comes back `needs-auth` needs a user, so no timer is kept. `safeTryWithExistingTokens` returns `connected`, `rate-limited` or `failed` so the 429 is not dropped, and keeps the stored tokens on a 429 (a 401 or `invalid_grant` still deletes them). Servers without OAuth have no login path and keep the backoff.
+5. **A 429 on connect sends an OAuth server to `pending-auth`.** When connecting an OAuth upstream gets an HTTP 429, MCPX records `pending-auth`, schedules no reconnect and logs one `warn` with the server name, status, attempt count and that it waits for a user login. A timer cannot know when the upstream's window clears, and each retry spends a per-user quota that other instances share. The login replaces the old tokens. The rule is applied where the failed client is produced, not by each caller: `connectionFailedClient` in `target-client-connector.ts` returns `pending-auth` instead of `connection-failed` for a 429 from a remote OAuth server, so `addClient`, `reloadClients` and the reconnect loop keep the plain `isConnectionFailed` then `enqueueReconnect`. That covers a 429 on `tools/list` (the call that follows `initialize`, with the token), including right after a silent re-auth or a login. `TargetClientConnector.rateLimited` only logs and returns `pending-auth`: recording it cancels the reconnect, so a reconnect whose result is discarded changes nothing. The `rate-limited` verdict from `safeTryWithExistingTokens` takes the same transition. `pending-auth` also ends the reconnect loop for any other reason: a retry that comes back `needs-auth` needs a user, so no timer is kept. `safeTryWithExistingTokens` returns `connected`, `rate-limited`, `token-store-unavailable` (see below) or `failed` so the 429 is not dropped, and keeps the stored tokens on a 429 (a 401 or `invalid_grant` still deletes them). Servers without OAuth have no login path and keep the backoff.
 6. **Shutdown sets a flag.** `shutdown` clears the queued reconnect timers, but a reconnect already in flight would re-enqueue itself afterwards. `enqueueReconnect` is a no-op once `shuttingDown` is set. Symptom when this regresses: an IT passes, then "Jest did not exit".
+
+## OAuth token store recovery
+
+A failed token read is not evidence that sign-in is needed. When the Hub is
+unavailable, the OAuth handler returns a `token-store-unavailable` verdict, and
+the server goes to `connection-failed` with its stored tokens kept. The normal
+reconnect backoff retries it; this recovery adds no schedule of its own. Results
+from a reconnect are discarded if its server was removed, replaced, or shut down
+meanwhile. The attempt runs in `TargetClientConnector`, which has no way to
+record a state, so that check covers every outcome of the attempt.
+
+A successful read that establishes missing tokens transitions to `pending-auth`,
+which ends the reconnect loop (rule 5). `pending-input` keeps its existing retry
+behavior.
+
+A failed sign-in keeps the server's state, so it never stops a retry. The flow
+clears the stored tokens only when it starts from `pending-auth`, and then the
+server is still `pending-auth`. From any other state the tokens may still work,
+so a queued reconnect still runs, and a connected server stays connected.
+
+The most common trigger is an MCPX rollout. The old and new pod take the Hub
+socket from each other for a few seconds, and every Hub call fails meanwhile,
+not only token reads. Removing that trigger is AIGW-449.
 
 ## History, so the numbers make sense
 

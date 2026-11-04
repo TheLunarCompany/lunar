@@ -21,7 +21,10 @@ import { discoverAuthorizationServerMetadata } from "@modelcontextprotocol/sdk/c
 import { PublishedClientMetadata } from "@mcpx/toolkit-core/oauth";
 import { StaticOAuthProvider } from "../oauth-providers/static.js";
 import { DcrOAuthProvider } from "../oauth-providers/dcr.js";
-import { OAuthTokenStoreI } from "./oauth-token-store.js";
+import {
+  OAuthTokenStoreI,
+  TokenStoreUnavailableError,
+} from "./oauth-token-store.js";
 
 type AuthorizationServerMeta = Awaited<
   ReturnType<typeof discoverAuthorizationServerMetadata>
@@ -574,17 +577,17 @@ describe("OAuthConnectionHandler", () => {
         expect(getOrCreateCalled).toBe(true);
       });
 
-      it("reports failed (does not throw) when the token store is unreachable", async () => {
+      it("reports an unavailable token store without creating a provider", async () => {
         // RND-483: hasPersistedOAuthTokens is a hub round-trip in enterprise.
-        // A hub disconnect must not escape this "safe" method — it should be
-        // treated like any transient error: preserve state, return undefined.
+        // An unavailable store must preserve uncertainty about stored tokens
+        // and leave provider creation to a later successful read.
         const provider = createMockProvider();
         let getOrCreateCalled = false;
         const sessionManager: OAuthSessionManagerI = {
           ...createMockSessionManager(provider),
           getExistingOAuthProvider: () => undefined,
           hasPersistedOAuthTokens: async () => {
-            throw new Error("Hub not connected");
+            throw new TokenStoreUnavailableError("Hub not connected");
           },
           getOrCreateOAuthProvider: () => {
             getOrCreateCalled = true;
@@ -598,7 +601,10 @@ describe("OAuthConnectionHandler", () => {
         );
 
         const result = await handler.safeTryWithExistingTokens(remoteServer);
-        expect(result).toEqual({ kind: "failed" });
+        expect(result).toEqual({
+          kind: "token-store-unavailable",
+          error: expect.any(TokenStoreUnavailableError),
+        });
         expect(getOrCreateCalled).toBe(false);
       });
 
@@ -798,6 +804,91 @@ describe("OAuthConnectionHandler", () => {
         });
         const verdict = await handler.resolveExistingAuth(remoteServer);
         expect(verdict.kind).toBe("needs-auth");
+      });
+
+      // Advertises OAuth without requiring real network discovery.
+      const oauthDiscovery: OAuthDiscovery = {
+        discoverOAuthProtectedResourceMetadata: async () =>
+          ({
+            resource: remoteServer.url,
+            authorization_servers: [],
+          }) as Awaited<
+            ReturnType<OAuthDiscovery["discoverOAuthProtectedResourceMetadata"]>
+          >,
+        discoverAuthorizationServerMetadata: async () => undefined,
+      };
+
+      it("reports token-store unavailability without polling or creating a provider", async () => {
+        // A Hub disconnect while the instance starts makes the persisted-token
+        // check throw. Stored tokens may exist, so this must not ask the user
+        // to sign in again.
+        let checks = 0;
+        const sessionManager: OAuthSessionManagerI = {
+          ...createMockSessionManager(createMockProvider()),
+          getExistingOAuthProvider: () => undefined,
+          hasPersistedOAuthTokens: async () => {
+            checks++;
+            throw new TokenStoreUnavailableError("Hub not connected");
+          },
+        };
+        const handler = new OAuthConnectionHandler(
+          sessionManager,
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+          oauthDiscovery,
+        );
+
+        const verdict = await handler.resolveExistingAuth(remoteServer);
+        expect(verdict.kind).toBe("token-store-unavailable");
+        expect(checks).toBe(1);
+      });
+
+      it("preserves a token-store failure from an existing provider", async () => {
+        const error = new TokenStoreUnavailableError("Hub not connected");
+        const provider = createMockProvider({
+          tokens: async () => {
+            throw error;
+          },
+        });
+        const handler = new OAuthConnectionHandler(
+          {
+            ...createMockSessionManager(provider),
+            getExistingOAuthProvider: () => provider,
+          },
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+          oauthDiscovery,
+        );
+
+        expect(await handler.resolveExistingAuth(remoteServer)).toEqual({
+          kind: "token-store-unavailable",
+          error,
+        });
+      });
+
+      it("treats an answer the token store gave as no tokens, without checking again", async () => {
+        // The store was reached but its data can't be used (e.g. an invalid
+        // stored payload). Asking to sign in replaces it; checking again would
+        // get the same answer.
+        let checks = 0;
+        const sessionManager: OAuthSessionManagerI = {
+          ...createMockSessionManager(createMockProvider()),
+          getExistingOAuthProvider: () => undefined,
+          hasPersistedOAuthTokens: async () => {
+            checks++;
+            throw new Error("Invalid tokens payload from hub");
+          },
+        };
+        const handler = new OAuthConnectionHandler(
+          sessionManager,
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+          oauthDiscovery,
+        );
+
+        const verdict = await handler.resolveExistingAuth(remoteServer);
+        expect(verdict.kind).toBe("needs-auth");
+        expect(checks).toBe(1);
       });
     });
 

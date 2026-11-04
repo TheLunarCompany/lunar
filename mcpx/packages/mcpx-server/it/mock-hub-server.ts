@@ -25,6 +25,7 @@ import {
 import { Skill, SkillWithDraft } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { v7 as uuidv7 } from "uuid";
+import { createRequestHold, RequestHold } from "./request-hold.js";
 
 // The real Hub stamps the connecting owner as the author; mirror that.
 function skillAuthorOf(socket: Socket): {
@@ -78,6 +79,7 @@ export class MockHubServer {
     new Map();
   // OAuth tokens, verifiers and client info, keyed by "<serverName>:<tokenType>".
   private oauthTokens: Map<string, unknown> = new Map();
+  private tokenLoadHolds: (() => Promise<void>)[] = [];
   private dynamicCapabilitiesResponse: DynamicCapabilitiesMatchingAck = {
     success: true,
     result: { tools: [] },
@@ -133,6 +135,13 @@ export class MockHubServer {
   /** Pre-load tokens a previous MCPX instance saved, to simulate a pod restart. */
   seedOAuthTokens(tokens: Map<string, unknown>): void {
     tokens.forEach((data, key) => this.oauthTokens.set(key, data));
+  }
+
+  /** Hold the next token load; on release it answers with the tokens stored then. */
+  holdNextTokenLoad(): RequestHold {
+    const { hold, wait } = createRequestHold();
+    this.tokenLoadHolds.push(wait);
+    return hold;
   }
 
   /** Emit catalog to all connected clients. Useful after subscribing to ensure catalog is received. */
@@ -929,11 +938,12 @@ export class MockHubServer {
 
       socket.on(
         WEBAPP_BOUND_EVENTS.LOAD_OAUTH_TOKEN,
-        (
+        async (
           envelope: { payload: { serverName: string; tokenType: string } },
           ack: (res: { success: boolean; data?: unknown }) => void,
         ) => {
           const { serverName, tokenType } = envelope.payload;
+          await this.tokenLoadHolds.shift()?.();
           ack({
             success: true,
             data: this.oauthTokens.get(`${serverName}:${tokenType}`),

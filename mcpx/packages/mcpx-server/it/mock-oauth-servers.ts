@@ -19,6 +19,7 @@ import { createServer, STATUS_CODES } from "http";
 import { AddressInfo } from "net";
 import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
+import { createRequestHold, RequestHold } from "./request-hold.js";
 import { MCPX_BASE_URL, TestHarness } from "./utils.js";
 
 export interface RefreshCounts {
@@ -42,6 +43,9 @@ export interface MockOAuthServers {
   failNextTokenRequest: () => void;
   setMcpFault: (fault: McpFault) => void;
   clearMcpFault: () => void;
+  // Holds the next authenticated MCP request with this JSON-RPC method. A fault
+  // set while it is held applies when it is released.
+  holdNextMcpRequest: (method: string) => RequestHold;
   getMcpFault: () => McpFault | undefined;
   mcpRequests: { count: number };
   stop: () => Promise<void>;
@@ -74,6 +78,7 @@ export async function startMockOAuthServers(props: {
   const failures = { pending: 0 };
   const mcpFault: { current?: McpFault } = {};
   const mcpRequests = { count: 0 };
+  const mcpHolds = new Map<string, (() => Promise<void>)[]>();
   const clients = new Map<string, OAuthClientInformationFull>(
     staticClients.map((client) => [client.client_id, client]),
   );
@@ -216,6 +221,13 @@ export async function startMockOAuthServers(props: {
       verifier: provider,
       resourceMetadataUrl: `${baseUrl}/.well-known/oauth-protected-resource/mcp`,
     }),
+    async (req, _res, next) => {
+      const method: unknown = req.body?.method;
+      if (typeof method === "string") {
+        await mcpHolds.get(method)?.shift()?.();
+      }
+      next();
+    },
     (_req, res, next) => {
       mcpRequests.count += 1;
       const fault = mcpFault.current;
@@ -257,6 +269,11 @@ export async function startMockOAuthServers(props: {
       mcpFault.current = undefined;
     },
     getMcpFault: () => mcpFault.current,
+    holdNextMcpRequest: (method) => {
+      const { hold, wait } = createRequestHold();
+      mcpHolds.set(method, [...(mcpHolds.get(method) ?? []), wait]);
+      return hold;
+    },
     mcpRequests,
     stop: async () => {
       if (!httpServer.listening) return;

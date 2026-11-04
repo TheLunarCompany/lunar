@@ -26,6 +26,7 @@ import {
 } from "../oauth-providers/model.js";
 import { DEVICE_FLOW_COMPLETE } from "../oauth-providers/device-flow.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
+import { TokenStoreUnavailableError } from "./oauth-token-store.js";
 import {
   ExtendedClientBuilderI,
   ExtendedClientI,
@@ -132,6 +133,7 @@ export interface InitiateOAuthResult {
  *  - needs-auth:  OAuth server, no/expired tokens → start a flow.
  *  - unreachable: OAuth server, valid tokens, no response → retry.
  *  - rate-limited: OAuth server, valid tokens, upstream answered 429.
+ *  - token-store-unavailable: auth state unknown until the store recovers.
  *  - not-oauth:   not an OAuth server → a flow can't help.
  */
 export type ExistingAuthVerdict =
@@ -139,11 +141,20 @@ export type ExistingAuthVerdict =
   | { kind: "needs-auth" }
   | { kind: "unreachable" }
   | { kind: "rate-limited" }
+  | { kind: "token-store-unavailable"; error: TokenStoreUnavailableError }
   | { kind: "not-oauth" };
 
+/**
+ * Outcome of connecting with stored tokens.
+ *  - connected:    stored tokens worked; use this client.
+ *  - rate-limited: upstream answered 429; tokens kept.
+ *  - token-store-unavailable: stored tokens may exist but cannot be read.
+ *  - failed:       no stored tokens, or they did not connect.
+ */
 export type ExistingTokensResult =
   | { kind: "connected"; client: ExtendedClientI }
   | { kind: "rate-limited" }
+  | { kind: "token-store-unavailable"; error: TokenStoreUnavailableError }
   | { kind: "failed" };
 
 type ProtectedResourceMeta = Awaited<
@@ -287,19 +298,22 @@ export class OAuthConnectionHandler {
       targetServer.name,
     );
     if (!authProvider) {
-      let hasPersisted: boolean;
       try {
-        hasPersisted = await this.oauthSessionManager.hasPersistedOAuthTokens(
-          targetServer.name,
-        );
+        if (
+          !(await this.oauthSessionManager.hasPersistedOAuthTokens(
+            targetServer.name,
+          ))
+        ) {
+          return { kind: "failed" };
+        }
       } catch (error) {
-        this.logger.info(
-          "Could not check persisted tokens, preserving for retry",
-          { name: targetServer.name, error: loggableError(error) },
-        );
-        return { kind: "failed" };
-      }
-      if (!hasPersisted) {
+        if (error instanceof TokenStoreUnavailableError) {
+          return { kind: "token-store-unavailable", error };
+        }
+        this.logger.warn("Could not read persisted tokens, treating as none", {
+          name: targetServer.name,
+          error: loggableError(error),
+        });
         return { kind: "failed" };
       }
       authProvider = this.oauthSessionManager.getOrCreateOAuthProvider({
@@ -314,6 +328,9 @@ export class OAuthConnectionHandler {
     try {
       existingTokens = await authProvider.tokens();
     } catch (error) {
+      if (error instanceof TokenStoreUnavailableError) {
+        return { kind: "token-store-unavailable", error };
+      }
       this.logger.warn("Failed to read tokens", {
         name: targetServer.name,
         error: loggableError(error),
@@ -350,6 +367,9 @@ export class OAuthConnectionHandler {
       );
       return { kind: "connected", client: extendedClient };
     } catch (error) {
+      if (error instanceof TokenStoreUnavailableError) {
+        return { kind: "token-store-unavailable", error };
+      }
       if (isAuthenticationError(error) || isInvalidGrantError(error)) {
         // Tokens permanently rejected (401 or invalid_grant on refresh).
         // Delete them so resolveExistingAuth routes to pending-auth (re-auth)
@@ -881,12 +901,9 @@ export class OAuthConnectionHandler {
     targetServer: RemoteTargetServer,
   ): Promise<ExistingAuthVerdict> {
     const existing = await this.safeTryWithExistingTokens(targetServer);
-    if (existing.kind === "connected") {
-      return { kind: "connected", client: existing.client };
-    }
-    if (existing.kind === "rate-limited") {
-      return { kind: "rate-limited" };
-    }
+    // Connected, rate-limited and an unavailable store are verdicts already;
+    // only a failed token attempt needs further OAuth classification.
+    if (existing.kind !== "failed") return existing;
 
     // OAuth server if we have a context or it advertises metadata. Probe is a
     // network call, so skip it when we already have context (short-circuit).
