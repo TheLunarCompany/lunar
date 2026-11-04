@@ -42,6 +42,7 @@ import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
 import {
   ExtendedClientI,
+  isRateLimitError,
   isTransportError,
   PingOutcome,
 } from "./client-extension.js";
@@ -109,6 +110,12 @@ function sameStringSet(a: Set<string>, b: Set<string>): boolean {
 type RemoteConnectedTargetClient = ConnectedTargetClient & {
   targetServer: RemoteTargetServer;
 };
+
+function isRemoteTargetServer(
+  targetServer: TargetServer,
+): targetServer is RemoteTargetServer {
+  return targetServer.type === "sse" || targetServer.type === "streamable-http";
+}
 
 function hasRemoteTargetServer(
   client: ConnectedTargetClient,
@@ -760,17 +767,18 @@ export class UpstreamHandler
   private async reuseOAuth(
     pendingAuth: PendingAuthTargetClient,
   ): Promise<ExtendedClientI> {
-    const extendedClient =
-      await this.oauthConnectionHandler.safeTryWithExistingTokens(
-        pendingAuth.targetServer,
-      );
-    if (!extendedClient) {
+    const reuse = await this.oauthConnectionHandler.safeTryWithExistingTokens(
+      pendingAuth.targetServer,
+    );
+    if (reuse.kind !== "connected") {
       this.logger.info("Could not reuse possible OAuth tokens", {
         targetServerName: pendingAuth.targetServer.name,
+        reason: reuse.kind,
       });
       // TODO: Add a more specific error message here
       return Promise.reject(new FailedToConnectToTargetServer());
     }
+    const extendedClient = reuse.client;
     this.logger.info("OAuth connection established", {
       targetServerName: pendingAuth.targetServer.name,
     });
@@ -899,11 +907,7 @@ export class UpstreamHandler
           name: targetServer.name,
           error: loggableError(e),
         });
-        return {
-          _state: "connection-failed",
-          targetServer,
-          error: makeError(e),
-        };
+        return this.connectionFailedClient(targetServer, makeError(e));
       });
   }
 
@@ -1106,7 +1110,7 @@ export class UpstreamHandler
     });
 
     // Keep retrying until connected or server is removed.
-    return !isConnected(newClient);
+    return !isConnected(newClient) && newClient._state !== "pending-auth";
   }
 
   private notifyPostChangeHooks(): void {
@@ -1204,11 +1208,7 @@ export class UpstreamHandler
       try {
         return await this.initiateRemoteUnauthedClient(targetServer);
       } catch (oauthError) {
-        return {
-          _state: "connection-failed",
-          targetServer,
-          error: makeError(oauthError),
-        };
+        return this.connectionFailedClient(targetServer, makeError(oauthError));
       }
     }
 
@@ -1263,7 +1263,7 @@ export class UpstreamHandler
         type: targetServer.type,
         error: loggableError(error),
       });
-      return { _state: "connection-failed", targetServer, error };
+      return this.connectionFailedClient(targetServer, error);
     }
   }
 
@@ -1369,9 +1369,14 @@ export class UpstreamHandler
         error: loggableError(closeError),
       });
     });
-    const reauthedClient =
+    const reauth =
       await this.oauthConnectionHandler.safeTryWithExistingTokens(targetServer);
-    if (reauthedClient) {
+    if (reauth.kind === "rate-limited") {
+      await this.transitionRateLimitedToPendingAuth(targetServer);
+      return null;
+    }
+    if (reauth.kind === "connected") {
+      const reauthedClient = reauth.client;
       const finalClient = await this.finalizeConnection(
         targetServer,
         reauthedClient,
@@ -1460,6 +1465,8 @@ export class UpstreamHandler
           targetServer,
           error: new Error("Server unreachable"),
         };
+      case "rate-limited":
+        return this.transitionRateLimitedToPendingAuth(targetServer);
       case "needs-auth":
         this.logger.info(
           `Server requires OAuth authentication, call /auth/initiate/${targetServer.name} to start`,
@@ -1502,6 +1509,42 @@ export class UpstreamHandler
         .filter(({ expired }) => expired)
         .map(({ client }) => this.transitionClientToExpired(client)),
     );
+  }
+
+  private connectionFailedClient(
+    targetServer: TargetServer,
+    error: Error,
+  ): TargetClient {
+    if (
+      isRateLimitError(error) &&
+      isRemoteTargetServer(targetServer) &&
+      this.isOAuthServer(targetServer.name)
+    ) {
+      this.logRateLimited(targetServer);
+      return { _state: "pending-auth", targetServer };
+    }
+    return { _state: "connection-failed", targetServer, error };
+  }
+
+  private async transitionRateLimitedToPendingAuth(
+    targetServer: RemoteTargetServer,
+  ): Promise<PendingAuthTargetClient> {
+    this.logRateLimited(targetServer);
+    return this.transitionToPendingAuth(targetServer);
+  }
+
+  private logRateLimited(targetServer: RemoteTargetServer): void {
+    const normalizedName = normalizeServerName(targetServer.name);
+    this.logger.warn(
+      "Upstream server rate limited the connection, waiting for user login",
+      {
+        name: targetServer.name,
+        status: 429,
+        attempts: this.reconnectAttemptsByServer.get(normalizedName) ?? 0,
+      },
+    );
+    this.cancelReconnect(targetServer.name);
+    this.reconnectAttemptsByServer.delete(normalizedName);
   }
 
   private async transitionToPendingAuth(

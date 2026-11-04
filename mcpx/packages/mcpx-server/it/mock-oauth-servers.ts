@@ -15,7 +15,7 @@ import {
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import express from "express";
-import { createServer } from "http";
+import { createServer, STATUS_CODES } from "http";
 import { AddressInfo } from "net";
 import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -28,6 +28,11 @@ export interface RefreshCounts {
   failed: number;
 }
 
+export interface McpFault {
+  status: number;
+  retryAfterSeconds?: number;
+}
+
 export interface MockOAuthServers {
   // The MCP server MCPX connects to, guarded by tokens from the authorization server.
   resourceServerUrl: string;
@@ -35,6 +40,10 @@ export interface MockOAuthServers {
   refreshes: RefreshCounts;
   // The next token request gets a load-balancer style 503, then service resumes.
   failNextTokenRequest: () => void;
+  setMcpFault: (fault: McpFault) => void;
+  clearMcpFault: () => void;
+  getMcpFault: () => McpFault | undefined;
+  mcpRequests: { count: number };
   stop: () => Promise<void>;
 }
 
@@ -58,10 +67,13 @@ export async function startMockOAuthServers(props: {
   scopesSupported?: string[];
   rejectAuthorization?: "prompt" | "always";
   authorizationError?: "invalid_request" | "access_denied";
+  port?: number;
 }): Promise<MockOAuthServers> {
   const { rotate, accessTokenTtlMs, staticClients = [] } = props;
   const refreshes: RefreshCounts = { ok: 0, reused: 0, unknown: 0, failed: 0 };
   const failures = { pending: 0 };
+  const mcpFault: { current?: McpFault } = {};
+  const mcpRequests = { count: 0 };
   const clients = new Map<string, OAuthClientInformationFull>(
     staticClients.map((client) => [client.client_id, client]),
   );
@@ -170,7 +182,9 @@ export async function startMockOAuthServers(props: {
 
   const app = express();
   const httpServer = createServer(app);
-  await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+  await new Promise<void>((resolve) =>
+    httpServer.listen(props.port ?? 0, resolve),
+  );
   const { port } = httpServer.address() as AddressInfo;
   const baseUrl = `http://localhost:${port}`;
   const resourceServerUrl = `${baseUrl}/mcp`;
@@ -202,6 +216,18 @@ export async function startMockOAuthServers(props: {
       verifier: provider,
       resourceMetadataUrl: `${baseUrl}/.well-known/oauth-protected-resource/mcp`,
     }),
+    (_req, res, next) => {
+      mcpRequests.count += 1;
+      const fault = mcpFault.current;
+      if (!fault) {
+        next();
+        return;
+      }
+      if (fault.retryAfterSeconds !== undefined) {
+        res.set("Retry-After", String(fault.retryAfterSeconds));
+      }
+      res.status(fault.status).send(STATUS_CODES[fault.status] ?? "Error");
+    },
     async (req, res) => {
       const mcp = new McpServer({ name: "mock-oauth-mcp", version: "1.0.0" });
       mcp.registerTool(
@@ -224,6 +250,14 @@ export async function startMockOAuthServers(props: {
     failNextTokenRequest: () => {
       failures.pending += 1;
     },
+    setMcpFault: (fault) => {
+      mcpFault.current = fault;
+    },
+    clearMcpFault: () => {
+      mcpFault.current = undefined;
+    },
+    getMcpFault: () => mcpFault.current,
+    mcpRequests,
     stop: async () => {
       if (!httpServer.listening) return;
       httpServer.closeAllConnections();

@@ -26,7 +26,11 @@ import {
 } from "../oauth-providers/model.js";
 import { DEVICE_FLOW_COMPLETE } from "../oauth-providers/device-flow.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
-import { ExtendedClientBuilderI, ExtendedClientI } from "./client-extension.js";
+import {
+  ExtendedClientBuilderI,
+  ExtendedClientI,
+  isRateLimitError,
+} from "./client-extension.js";
 import { buildClient } from "./target-server-connection-factory.js";
 import { RefreshCoalescer } from "./refresh-coalescing-fetch.js";
 import {
@@ -127,13 +131,20 @@ export interface InitiateOAuthResult {
  *  - connected:   stored tokens worked; use this client.
  *  - needs-auth:  OAuth server, no/expired tokens → start a flow.
  *  - unreachable: OAuth server, valid tokens, no response → retry.
+ *  - rate-limited: OAuth server, valid tokens, upstream answered 429.
  *  - not-oauth:   not an OAuth server → a flow can't help.
  */
 export type ExistingAuthVerdict =
   | { kind: "connected"; client: ExtendedClientI }
   | { kind: "needs-auth" }
   | { kind: "unreachable" }
+  | { kind: "rate-limited" }
   | { kind: "not-oauth" };
+
+export type ExistingTokensResult =
+  | { kind: "connected"; client: ExtendedClientI }
+  | { kind: "rate-limited" }
+  | { kind: "failed" };
 
 type ProtectedResourceMeta = Awaited<
   ReturnType<typeof discoverOAuthProtectedResourceMetadata>
@@ -260,7 +271,7 @@ export class OAuthConnectionHandler {
     });
   }
 
-  // Returns the connected client on success, undefined otherwise.
+  // Returns the connected client on success, or why it could not connect.
   // No-op for servers with no in-session provider and no persisted tokens, so
   // callers can use isOAuthServer afterward to tell "never authed" from
   // "tokens expired". Rehydrates the provider on restart when disk has tokens.
@@ -268,7 +279,7 @@ export class OAuthConnectionHandler {
   // for the watchdog to retry.
   async safeTryWithExistingTokens(
     targetServer: RemoteTargetServer,
-  ): Promise<ExtendedClientI | undefined> {
+  ): Promise<ExistingTokensResult> {
     const targetServerTypeStr =
       targetServer.type === "sse" ? "SSE" : "StreamableHTTP";
 
@@ -286,10 +297,10 @@ export class OAuthConnectionHandler {
           "Could not check persisted tokens, preserving for retry",
           { name: targetServer.name, error: loggableError(error) },
         );
-        return undefined;
+        return { kind: "failed" };
       }
       if (!hasPersisted) {
-        return undefined;
+        return { kind: "failed" };
       }
       authProvider = this.oauthSessionManager.getOrCreateOAuthProvider({
         serverName: targetServer.name,
@@ -307,10 +318,10 @@ export class OAuthConnectionHandler {
         name: targetServer.name,
         error: loggableError(error),
       });
-      return undefined;
+      return { kind: "failed" };
     }
     if (!existingTokens) {
-      return undefined;
+      return { kind: "failed" };
     }
     this.logger.info("Found existing tokens, attempting to use them", {
       name: targetServer.name,
@@ -337,7 +348,7 @@ export class OAuthConnectionHandler {
           url: targetServer.url,
         },
       );
-      return extendedClient;
+      return { kind: "connected", client: extendedClient };
     } catch (error) {
       if (isAuthenticationError(error) || isInvalidGrantError(error)) {
         // Tokens permanently rejected (401 or invalid_grant on refresh).
@@ -348,6 +359,12 @@ export class OAuthConnectionHandler {
           { name: targetServer.name, error: loggableError(error) },
         );
         await this.deleteOAuthTokensForServer(targetServer.name);
+      } else if (isRateLimitError(error)) {
+        this.logger.info("Server rate limited existing tokens, preserving", {
+          name: targetServer.name,
+          error: loggableError(error),
+        });
+        return { kind: "rate-limited" };
       } else {
         // Network / transport error — tokens may still be valid once the server is back.
         this.logger.info(
@@ -358,7 +375,7 @@ export class OAuthConnectionHandler {
           },
         );
       }
-      return undefined;
+      return { kind: "failed" };
     }
   }
 
@@ -863,9 +880,12 @@ export class OAuthConnectionHandler {
   async resolveExistingAuth(
     targetServer: RemoteTargetServer,
   ): Promise<ExistingAuthVerdict> {
-    const client = await this.safeTryWithExistingTokens(targetServer);
-    if (client) {
-      return { kind: "connected", client };
+    const existing = await this.safeTryWithExistingTokens(targetServer);
+    if (existing.kind === "connected") {
+      return { kind: "connected", client: existing.client };
+    }
+    if (existing.kind === "rate-limited") {
+      return { kind: "rate-limited" };
     }
 
     // OAuth server if we have a context or it advertises metadata. Probe is a

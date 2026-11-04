@@ -1,5 +1,7 @@
+import { describe, expect, it, jest } from "@jest/globals";
 import { noOpLogger } from "@aigw/core/logging";
 import { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   McpxOAuthProviderI,
   OAuthProviderType,
@@ -9,6 +11,7 @@ import { ExtendedClientBuilderI, ExtendedClientI } from "./client-extension.js";
 import { InvalidGrantError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import {
   describeClientIdentity,
+  ExistingTokensResult,
   isAuthenticationError,
   isInvalidGrantError,
   OAuthConnectionHandler,
@@ -523,7 +526,7 @@ describe("OAuthConnectionHandler", () => {
         url: "https://example.com",
       };
 
-      it("returns undefined and does NOT create a provider when no in-session provider and no persisted tokens exist", async () => {
+      it("reports failed and does NOT create a provider when no in-session provider and no persisted tokens exist", async () => {
         // RND-483 Bug 2: prior impl created a DCR provider unconditionally,
         // which made every 401 look like an OAuth handshake.
         const provider = createMockProvider();
@@ -544,7 +547,7 @@ describe("OAuthConnectionHandler", () => {
         );
 
         const result = await handler.safeTryWithExistingTokens(remoteServer);
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ kind: "failed" });
         expect(getOrCreateCalled).toBe(false);
       });
 
@@ -571,7 +574,7 @@ describe("OAuthConnectionHandler", () => {
         expect(getOrCreateCalled).toBe(true);
       });
 
-      it("returns undefined (does not throw) when the token store is unreachable", async () => {
+      it("reports failed (does not throw) when the token store is unreachable", async () => {
         // RND-483: hasPersistedOAuthTokens is a hub round-trip in enterprise.
         // A hub disconnect must not escape this "safe" method — it should be
         // treated like any transient error: preserve state, return undefined.
@@ -595,8 +598,90 @@ describe("OAuthConnectionHandler", () => {
         );
 
         const result = await handler.safeTryWithExistingTokens(remoteServer);
-        expect(result).toBeUndefined();
+        expect(result).toEqual({ kind: "failed" });
         expect(getOrCreateCalled).toBe(false);
+      });
+
+      describe("when the connect fails with an upstream error", () => {
+        function buildHandler(connectError: unknown): {
+          handler: OAuthConnectionHandler;
+          deletedTokensFor: string[];
+        } {
+          const provider = createMockProvider({
+            tokens: async () =>
+              ({ access_token: "t", token_type: "Bearer" }) as OAuthTokens,
+          });
+          const deletedTokensFor: string[] = [];
+          const sessionManager: OAuthSessionManagerI = {
+            ...createMockSessionManager(provider),
+            getExistingOAuthProvider: () => provider,
+            deleteOAuthTokensForServer: async (serverName) => {
+              deletedTokensFor.push(serverName);
+            },
+          };
+          const handler = new OAuthConnectionHandler(
+            sessionManager,
+            createMockExtendedClientBuilder(),
+            noOpLogger,
+          );
+          jest
+            .spyOn(
+              handler as unknown as { buildTransport: () => Transport },
+              "buildTransport",
+            )
+            .mockReturnValue({
+              start: async () => {
+                throw connectError;
+              },
+              send: async () => {},
+              close: async () => {},
+            });
+          return { handler, deletedTokensFor };
+        }
+
+        it("reports rate-limited for a 429 and keeps the tokens", async () => {
+          const { handler, deletedTokensFor } = buildHandler(
+            Object.assign(new Error("HTTP 429: Too Many Requests"), {
+              code: 429,
+            }),
+          );
+
+          const result = await handler.safeTryWithExistingTokens(remoteServer);
+
+          expect(result).toEqual({ kind: "rate-limited" });
+          expect(deletedTokensFor).toEqual([]);
+        });
+
+        it("deletes the tokens for a 401", async () => {
+          const { handler, deletedTokensFor } = buildHandler(
+            Object.assign(new Error("HTTP 401: Unauthorized"), { code: 401 }),
+          );
+
+          await handler.safeTryWithExistingTokens(remoteServer);
+
+          expect(deletedTokensFor).toEqual([TEST_SERVER_NAME]);
+        });
+
+        it("deletes the tokens for an invalid_grant", async () => {
+          const { handler, deletedTokensFor } = buildHandler(
+            new InvalidGrantError("dead refresh token"),
+          );
+
+          await handler.safeTryWithExistingTokens(remoteServer);
+
+          expect(deletedTokensFor).toEqual([TEST_SERVER_NAME]);
+        });
+
+        it("reports failed and keeps the tokens for any other error", async () => {
+          const { handler, deletedTokensFor } = buildHandler(
+            new Error("connect ECONNREFUSED"),
+          );
+
+          const result = await handler.safeTryWithExistingTokens(remoteServer);
+
+          expect(result).toEqual({ kind: "failed" });
+          expect(deletedTokensFor).toEqual([]);
+        });
       });
     });
 
@@ -612,6 +697,7 @@ describe("OAuthConnectionHandler", () => {
       // run for real via the session-manager / discovery mocks.
       function buildHandler(opts: {
         reuseSucceeds?: boolean;
+        reuseRateLimited?: boolean;
         hasContext?: boolean;
         tokensValid?: boolean;
         advertisesOAuth?: boolean;
@@ -649,9 +735,12 @@ describe("OAuthConnectionHandler", () => {
           discovery,
         );
         const client = { close: async () => {} } as unknown as ExtendedClientI;
+        const reuseResult: ExistingTokensResult = opts.reuseSucceeds
+          ? { kind: "connected", client }
+          : { kind: opts.reuseRateLimited ? "rate-limited" : "failed" };
         jest
           .spyOn(handler, "safeTryWithExistingTokens")
-          .mockResolvedValue(opts.reuseSucceeds ? client : undefined);
+          .mockResolvedValue(reuseResult);
         return { handler, client };
       }
 
@@ -659,6 +748,16 @@ describe("OAuthConnectionHandler", () => {
         const { handler, client } = buildHandler({ reuseSucceeds: true });
         const verdict = await handler.resolveExistingAuth(remoteServer);
         expect(verdict).toEqual({ kind: "connected", client });
+      });
+
+      it("returns rate-limited when the stored-token connect is rate limited", async () => {
+        const { handler } = buildHandler({
+          reuseRateLimited: true,
+          hasContext: true,
+          tokensValid: true,
+        });
+        const verdict = await handler.resolveExistingAuth(remoteServer);
+        expect(verdict).toEqual({ kind: "rate-limited" });
       });
 
       it("returns not-oauth when reuse fails and the server advertises no OAuth metadata", async () => {
