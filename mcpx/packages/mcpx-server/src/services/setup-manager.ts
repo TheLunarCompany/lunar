@@ -85,6 +85,8 @@ export function diffTargetServers({
 // Compare with normalized names so a casing-only difference isn't a change.
 // stableStringify ignores object-key order (the running config is zod-parsed,
 // the incoming one is raw wire JSON) but keeps array order.
+// A server added from the MCPX UI lists its keys in another order than its
+// copy the Hub sends back, so the entries are compared that way too.
 function sameTargetServer({
   current,
   incoming,
@@ -97,12 +99,19 @@ function sameTargetServer({
   incomingStaticOauth?: StaticOAuth;
 }): boolean {
   return (
-    stringifyEq(
-      { ...current, name: normalizeServerName(current.name) },
-      { ...incoming, name: normalizeServerName(incoming.name) },
-    ) &&
+    entryJson(current) === entryJson(incoming) &&
     stableStringify(resolveStaticOauthProvider(current, currentStaticOauth)) ===
       stableStringify(resolveStaticOauthProvider(incoming, incomingStaticOauth))
+  );
+}
+
+// The entry as the Hub stores it: JSON, so a key set to undefined drops out
+// (stableStringify alone would turn it into null), with sorted object keys.
+function entryJson(server: TargetServer): string {
+  return stableStringify(
+    JSON.parse(
+      JSON.stringify({ ...server, name: normalizeServerName(server.name) }),
+    ),
   );
 }
 

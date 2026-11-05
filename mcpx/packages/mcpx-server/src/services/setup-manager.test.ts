@@ -1,4 +1,5 @@
 import { noOpLogger } from "@aigw/core/logging";
+import { targetServerEntrySchema } from "@mcpx/webapp-protocol/messages";
 import {
   diffTargetServers,
   sanitizeIncomingConfig,
@@ -39,6 +40,28 @@ const notionServer: TargetServer = {
   name: "notion",
   url: "https://mcp.notion.com",
 };
+
+// Built the way buildTargetServerRequest (server/control-plane.ts) builds a
+// server added from the catalog in the MCPX UI.
+function addedFromUi(headers?: Record<string, string>): TargetServer {
+  return {
+    type: "streamable-http",
+    name: "gmail",
+    url: "https://gmailmcp.googleapis.com/mcp/v1",
+    headers,
+    catalogItemId: "catalog-item-1",
+  };
+}
+
+// The same server as the Hub sends it back in apply-setup: the wire schema
+// emits its keys in schema order, and SetupManager puts the name first.
+function resentByHub(server: TargetServer): TargetServer {
+  const { name, catalogItemId, ...initiation } = server;
+  const entry = targetServerEntrySchema.parse(
+    JSON.parse(JSON.stringify({ initiation, catalogItemId })),
+  );
+  return { name, ...entry.initiation, catalogItemId: entry.catalogItemId };
+}
 
 // Static OAuth mapping the notion host to a client-credentials provider.
 // `key` lets tests rename the provider key while keeping the config identical.
@@ -388,6 +411,38 @@ describe("diffTargetServers", () => {
 
     expect(toAdd).toEqual([movedNotion]);
     expect(toRemove).toEqual([notionServer]);
+  });
+
+  it.each<{ label: string; headers?: Record<string, string> }>([
+    { label: "no headers", headers: undefined },
+    { label: "empty headers", headers: {} },
+    { label: "a header", headers: { "X-Team": "mcp" } },
+  ])(
+    "leaves a server added from the MCPX UI alone when the Hub re-sends it ($label)",
+    ({ headers }) => {
+      const added = addedFromUi(headers);
+
+      const { toAdd, toRemove } = diffTargetServers({
+        current: [added],
+        incoming: [resentByHub(added)],
+      });
+
+      expect(toAdd).toEqual([]);
+      expect(toRemove).toEqual([]);
+    },
+  );
+
+  it("recreates a server added from the MCPX UI when the Hub sends changed headers", () => {
+    const added = addedFromUi({ "X-Team": "mcp" });
+    const changed = resentByHub(addedFromUi({ "X-Team": "llm" }));
+
+    const { toAdd, toRemove } = diffTargetServers({
+      current: [added],
+      incoming: [changed],
+    });
+
+    expect(toAdd).toEqual([changed]);
+    expect(toRemove).toEqual([added]);
   });
 
   it("matches names case-insensitively", () => {
