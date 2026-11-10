@@ -1,0 +1,75 @@
+import js from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import { defineConfig, globalIgnores } from "eslint/config";
+import * as jestPlugin from "eslint-plugin-jest";
+import {
+  backendReviewRules,
+  serviceEntrypointRules,
+} from "../../../eslint.review-rules.js";
+
+export default defineConfig([
+  {
+    files: ["**/*.{js,mjs,cjs,ts}"],
+    plugins: { js },
+    extends: ["js/recommended"],
+  },
+  tseslint.configs.recommended,
+  { linterOptions: { reportUnusedDisableDirectives: "error" } },
+  {
+    files: ["**/*.{js,mjs,cjs,ts}"],
+    languageOptions: {
+      globals: globals.browser,
+      parserOptions: { project: true, tsconfigRootDir: import.meta.dirname },
+    },
+  },
+  {
+    rules: {
+      "@typescript-eslint/explicit-function-return-type": "error",
+      // allowing only for `_` to be an unused var
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: { arguments: false } },
+      ],
+    },
+  },
+
+  /* 4. **tests override**: loosen rules only for tests */
+  {
+    files: [
+      "**/*.test.{ts,js}",
+      "**/__tests__/**/*.{ts,js}",
+      "**/it/**/*.{ts,js}",
+    ],
+    plugins: { jest: jestPlugin },
+    languageOptions: {
+      globals: { ...globals.node, ...globals.jest },
+    },
+    rules: {
+      "@typescript-eslint/explicit-function-return-type": "off", // let tests omit return types
+      "@typescript-eslint/no-misused-promises": "off", // async helpers often push void
+      "@typescript-eslint/no-explicit-any": "off", // quick stubs are fine in tests
+    },
+  },
+
+  ...backendReviewRules,
+  serviceEntrypointRules,
+
+  globalIgnores([
+    "./lunar-interceptor.ts",
+    "./eslint.config.js",
+    "./jest.config.cjs",
+    "./jest.env-setup.cjs",
+    "./loader.mjs",
+    "./dist",
+  ]),
+]);
