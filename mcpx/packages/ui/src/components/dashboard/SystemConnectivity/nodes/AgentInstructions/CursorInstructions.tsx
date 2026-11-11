@@ -1,0 +1,41 @@
+import React from "react";
+
+export const CursorInstructions: React.FC = () => {
+  return (
+    <div className="space-y-3 text-sm text-mcpx-text">
+      <div>
+        <p className="font-semibold mb-4">Connect with Cursor</p>
+        <ol className="list-decimal list-inside space-y-1">
+          <li>In Cursor, go to Settings → Cursor Settings → Tools & MCP</li>
+          <li>
+            Click on "Add Custom MCP" to open the file{" "}
+            <code className="bg-mcpx-surface-tertiary px-1 rounded">
+              ~/.cursor/mcp.json
+            </code>
+          </li>
+          <li>
+            Setup the connection to MCPX using the configuration in the json
+            config tab
+          </li>
+          <li>
+            Back in the Tools & MCP section you should now see MCPX under MCP
+            Tools
+          </li>
+        </ol>
+      </div>
+
+      <div className="bg-mcpx-selected-weak border border-mcpx-border-subtle rounded-lg p-6">
+        <p className="font-semibold mb-4">Important Note</p>
+        <p>
+          MCPX will expose the available tools which are set up in{" "}
+          <code className="bg-mcpx-surface-tertiary px-1 rounded">
+            ~/.cursor/mcp.json
+          </code>
+          , however they are not yet accessible for use. Please close and
+          restart Cursor Code Editor to ensure all tools and integrations are
+          properly loaded and available.
+        </p>
+      </div>
+    </div>
+  );
+};
