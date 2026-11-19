@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker exec lunar-proxy /usr/bin/diagnose "${1}"
