@@ -55,7 +55,7 @@ export function caseSensitiveFetch(
             status: res.statusCode ?? 0,
             headers: toWhatwgHeaders(res.headers),
             text: () => Promise.resolve(text),
-            json: async () => JSON.parse(text),
+            json: async (): Promise<unknown> => JSON.parse(text),
           });
         });
       },

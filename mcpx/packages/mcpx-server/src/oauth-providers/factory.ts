@@ -9,6 +9,7 @@ import {
 } from "./resolve-credentials.js";
 import { resolveProviderKey } from "./host-matcher.js";
 import { Logger } from "winston";
+import { loggableError } from "@aigw/core/logging";
 import { DcrOAuthProvider } from "./dcr.js";
 import { DeviceFlowOAuthProvider } from "./device-flow.js";
 import { McpxOAuthProviderI } from "./model.js";
@@ -58,10 +59,10 @@ export class OAuthProviderFactory {
    * Deletes all OAuth credential entries for a given server.
    */
   async deleteTokensForServer(serverName: string): Promise<void> {
-    await this.tokenStore.deleteAll(serverName).catch((error) => {
+    await this.tokenStore.deleteAll(serverName).catch((error: unknown) => {
       this.logger.warn("Failed to delete OAuth credentials", {
         serverName,
-        error,
+        error: loggableError(error),
       });
     });
   }

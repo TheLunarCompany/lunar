@@ -55,7 +55,7 @@ export class FileConfigStore implements ConfigStore {
       return { success: true, data: DEFAULT_CONFIG };
     }
     const rawConfig = fs.readFileSync(this.filePath, "utf8");
-    const configObj = parse(rawConfig);
+    const configObj: unknown = parse(rawConfig);
     if (!configObj) {
       return { success: true, data: DEFAULT_CONFIG };
     }

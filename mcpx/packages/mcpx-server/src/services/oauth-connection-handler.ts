@@ -184,7 +184,7 @@ async function fetchClientMetadataDocument(
   }).catch(() => undefined);
   if (!response?.ok) return undefined;
 
-  const body = await response.json().catch(() => undefined);
+  const body: unknown = await response.json().catch((): unknown => undefined);
   const parsed = clientMetadataDocumentSchema.safeParse(body);
   return parsed.success ? parsed.data : undefined;
 }

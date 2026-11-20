@@ -521,7 +521,7 @@ export class HubService {
       messageId: envelope.metadata.id,
     });
     try {
-      const ack = await this.socket
+      const ack: unknown = await this.socket
         .timeout(env.LLM_REQUEST_TIMEOUT_MS)
         .emitWithAck(
           WEBAPP_BOUND_EVENTS.DYNAMIC_CAPABILITIES_MATCHING,
@@ -592,7 +592,7 @@ export class HubService {
       this.handleConnectionDrop({ afterConnect: true });
     });
 
-    this.socket.on("apply-setup", async (envelope) => {
+    this.socket.on("apply-setup", async (envelope: unknown) => {
       try {
         const parseResult = envelopedApplySetupSafeParse(envelope);
         if (!parseResult.success) {
@@ -627,7 +627,7 @@ export class HubService {
 
     this.socket.on(
       "set-catalog",
-      async (envelope, ack?: (res: { ok: boolean }) => void) => {
+      async (envelope: unknown, ack?: (res: { ok: boolean }) => void) => {
         try {
           const parseResult = envelopedLoadCatalogSafeParse(envelope);
           if (!parseResult.success) {
@@ -663,7 +663,7 @@ export class HubService {
 
     this.socket.on(
       "set-identity",
-      (envelope, ack?: (res: { ok: boolean }) => void) => {
+      (envelope: unknown, ack?: (res: { ok: boolean }) => void) => {
         try {
           const parseResult = envelopedSetIdentitySafeParse(envelope);
           if (!parseResult.success) {
@@ -695,7 +695,7 @@ export class HubService {
 
     this.socket.on(
       "set-mcpx-behavior",
-      (envelope, ack?: (res: Ack) => void) => {
+      (envelope: unknown, ack?: (res: Ack) => void) => {
         try {
           const parseResult = envelopedSetBehaviorSafeParse(envelope);
           if (!parseResult.success) {
@@ -742,7 +742,7 @@ export class HubService {
 
     this.socket.on(
       "set-personal-skills",
-      (envelope, ack?: (res: { ok: boolean }) => void) => {
+      (envelope: unknown, ack?: (res: { ok: boolean }) => void) => {
         try {
           const parseResult = envelopedSetPersonalSkillsSafeParse(envelope);
           if (!parseResult.success) {
@@ -772,7 +772,7 @@ export class HubService {
 
     this.socket.on(
       "set-published-skills",
-      (envelope, ack?: (res: { ok: boolean }) => void) => {
+      (envelope: unknown, ack?: (res: { ok: boolean }) => void) => {
         try {
           const parseResult = envelopedSetPublishedSkillsSafeParse(envelope);
           if (!parseResult.success) {
@@ -815,7 +815,7 @@ export class HubService {
 
     this.socket.on(
       "set-profile-secrets",
-      (envelope, ack?: (res: Ack) => void) => {
+      (envelope: unknown, ack?: (res: Ack) => void) => {
         try {
           const parseResult = envelopedSetProfileSecretsSafeParse(envelope);
           if (!parseResult.success) {
@@ -860,7 +860,7 @@ export class HubService {
 
     this.socket.on(
       "set-oauth-credentials",
-      (envelope, ack?: (res: Ack) => void) => {
+      (envelope: unknown, ack?: (res: Ack) => void) => {
         try {
           const parseResult = envelopedSetOauthCredentialsSafeParse(envelope);
           if (!parseResult.success) {
@@ -903,7 +903,7 @@ export class HubService {
       },
     );
 
-    this.socket.on("initiate-oauth", async (envelope) => {
+    this.socket.on("initiate-oauth", async (envelope: unknown) => {
       try {
         const parseResult = envelopedInitiateOAuthSafeParse(envelope);
         if (!parseResult.success) {

@@ -141,9 +141,9 @@ export const updateTargetServerRequestSchema = z.union([
 ]);
 
 export const applyRawAppConfigRequestSchema = z.strictObject({
-  yaml: z.string().transform((val, ctx) => {
+  yaml: z.string().transform((val, ctx): unknown => {
     try {
-      const parsed = YAML.parse(val);
+      const parsed: unknown = YAML.parse(val);
       return parsed;
     } catch (e) {
       ctx.issues.push({

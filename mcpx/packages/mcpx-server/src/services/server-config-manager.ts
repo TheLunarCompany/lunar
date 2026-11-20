@@ -75,7 +75,7 @@ export class FileServerConfigManager implements ServerConfigManager {
         return [];
       }
 
-      const config = JSON.parse(file);
+      const config: unknown = JSON.parse(file);
       const parsed = targetServerConfigSchema.parse(config);
 
       return Object.entries(parsed.mcpServers).map(([name, config]) => ({

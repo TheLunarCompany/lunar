@@ -15,6 +15,11 @@ import { EnvVarManager } from "./env-var-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { CapabilityKind } from "./capability-registry.js";
 
+type ClassifiedEnvEntry = {
+  protectedEntry: [string, EnvRequirement];
+  literal: [string, string] | null;
+};
+
 const DEFAULT_CATALOG_BY_NAME = new Map(
   backendDefaultServers.map((server) => [
     normalizeServerName(server.name),
@@ -120,7 +125,9 @@ export class CatalogManager implements CatalogManagerI {
     // In enterprise mode, catalog starts empty (Hub controls it)
     // In personal mode, use fallback defaults
     const isEnterprise = identityService.getIdentity().mode === "enterprise";
-    this.catalogByName = isEnterprise ? new Map() : DEFAULT_CATALOG_BY_NAME;
+    this.catalogByName = isEnterprise
+      ? new Map<string, CatalogItemWire>()
+      : DEFAULT_CATALOG_BY_NAME;
     this.isStrictnessRequired = isStrictnessRequired;
     this.adminStrictnessOverride = !isStrictnessRequired; // admin strictness default match the system strictness
   }
@@ -416,7 +423,7 @@ export class CatalogManager implements CatalogManagerI {
     }
 
     const classified = Object.entries(config.env).map(
-      ([envVarName, requirement]) => {
+      ([envVarName, requirement]): ClassifiedEnvEntry => {
         if (!hasProtectableSecretLiteral(requirement)) {
           return {
             protectedEntry: [envVarName, requirement],

@@ -205,7 +205,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
         throw new Error(`Device authorization failed: ${error}`);
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
       const parsed = deviceCodeResponseSchema.safeParse(data);
       if (!parsed.success) {
         throw new Error(
@@ -307,19 +307,19 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
         body: params.toString(),
       });
 
-      const data = await response.json();
+      const data: unknown = await response.json();
       const parsed = tokenResponseSchema.safeParse(data);
       if (!parsed.success) {
         throw new Error(`Invalid token response: ${parsed.error.message}`);
       }
 
-      if (data.error) {
-        if (data.error === "authorization_pending") {
+      if (parsed.data.error) {
+        if (parsed.data.error === "authorization_pending") {
           this.logger.debug("Authorization pending", {
             serverName: this.serverName,
           });
           return;
-        } else if (data.error === "slow_down") {
+        } else if (parsed.data.error === "slow_down") {
           // RFC 8628 requires increasing polling interval by 5 seconds
           this.minPollInterval = Math.min(
             this.minPollInterval + POLLING_BUMP_INTERVAL.toMillis(),
@@ -332,7 +332,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
           return;
         } else {
           throw new Error(
-            `Token error: ${data.error} - ${data.error_description}`,
+            `Token error: ${parsed.data.error} - ${parsed.data.error_description}`,
           );
         }
       }

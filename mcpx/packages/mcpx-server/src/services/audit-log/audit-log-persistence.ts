@@ -98,8 +98,10 @@ export class FileAuditLogPersistence implements AuditLogPersistence {
     for (const { name } of eligible) {
       const content = await fs.promises
         .readFile(path.join(this.auditLogDir, name), "utf8")
-        .catch((error) => {
-          this.logger.warn(`Failed to read audit log file: ${name}`, { error });
+        .catch((error: unknown) => {
+          this.logger.warn(`Failed to read audit log file: ${name}`, {
+            error: loggableError(error),
+          });
           return "";
         });
       if (!content) continue;
