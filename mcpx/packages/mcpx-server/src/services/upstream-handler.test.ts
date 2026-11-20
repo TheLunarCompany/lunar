@@ -114,7 +114,10 @@ function stubCatalog(): CatalogManagerI {
   } as unknown as CatalogManagerI;
 }
 
-async function setup(props: { isOAuth: boolean }) {
+async function setup(props: {
+  isOAuth: boolean;
+  stateServerName?: string | null;
+}) {
   const { logger, warn } = recordingLogger();
   const createConnection = jest.fn<() => Promise<ExtendedClientI>>();
   const connectionFactory = {
@@ -132,7 +135,8 @@ async function setup(props: { isOAuth: boolean }) {
     isTokenExpiredForServer: async () => false,
     safeTryWithExistingTokens,
     resolveExistingAuth,
-    getServerNameByState: () => SERVER_NAME,
+    getServerNameByState: () =>
+      props.stateServerName === undefined ? SERVER_NAME : props.stateServerName,
     completeOAuth,
     completeOAuthFlowCleanup: () => {},
   } as unknown as OAuthConnectionHandler;
@@ -214,6 +218,25 @@ describe("UpstreamHandler rate limit handling", () => {
   }
 
   describe("for an OAuth server", () => {
+    it("returns unknown-state when there is no matching OAuth flow", async () => {
+      const h = track(await setup({ isOAuth: true, stateServerName: null }));
+
+      await expect(
+        h.handler.completeOAuthByState("unknown-state", "code"),
+      ).resolves.toBe("unknown-state");
+    });
+
+    it("returns completed after completing a known OAuth flow", async () => {
+      const h = track(await setup({ isOAuth: true }));
+      h.createConnection.mockResolvedValue(fakeExtendedClient());
+      h.completeOAuth.mockResolvedValue(fakeExtendedClient());
+      await h.handler.addClient(remoteServer);
+
+      await expect(
+        h.handler.completeOAuthByState("state", "code"),
+      ).resolves.toBe("completed");
+    });
+
     it("addClient: a 429 on the first connect records pending-auth and schedules no reconnect", async () => {
       const h = track(await setup({ isOAuth: true }));
       h.createConnection.mockResolvedValue(clientRateLimitedOnToolsList());

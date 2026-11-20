@@ -139,8 +139,40 @@ describe.each([
       expect(await result.text()).toBe(`OAuth error: ${authorizationError}`);
       expect(await readServerStateType(serverName)).toBe("pending-auth");
     }, 30_000);
+
+    it("shows an inactive-link page when the completed callback is opened again", async () => {
+      const { callback, result } = await runOAuthFlow("prompt");
+      expect(result.status).toBe(200);
+
+      // Follow /auth/callback -> /oauth/callback, just as a browser does.
+      const replay = await fetch(callback);
+      expect(replay.status).toBe(404);
+      expect(await replay.text()).toContain("no longer active");
+    }, 30_000);
   },
 );
+
+describe("GET /oauth/callback with a never-started state", () => {
+  let harness: TestHarness;
+
+  beforeAll(async () => {
+    harness = getTestHarness({ targetServers: [] });
+    await harness.initialize("StreamableHTTP");
+  });
+
+  afterAll(async () => {
+    await harness.shutdown();
+  });
+
+  it("shows an inactive-link page", async () => {
+    const response = await fetch(
+      `${MCPX_BASE_URL}/oauth/callback?code=x&state=never-started`,
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toContain("no longer active");
+  });
+});
 
 const OAUTH_MOCK_SERVER_URL = "http://localhost:9001";
 

@@ -111,6 +111,8 @@ function sameStringSet(a: Set<string>, b: Set<string>): boolean {
   return a.size === b.size && [...a].every((x) => b.has(x));
 }
 
+export type CompleteOAuthOutcome = "completed" | "unknown-state";
+
 type RemoteConnectedTargetClient = ConnectedTargetClient & {
   targetServer: RemoteTargetServer;
 };
@@ -724,21 +726,21 @@ export class UpstreamHandler
   }
 
   /**
-   * Phase 2: Complete OAuth flow for a pending-auth server with authorization code.
-   * Transitions server from pending-auth to connected (or connection-failed if
-   * capabilities fail to load). A failed sign-in keeps the server's state.
-   * Complete OAuth flow using the OAuth state parameter.
-   * This is the main entry point for OAuth callbacks - handles state lookup,
-   * connection completion, and cleanup in one call.
+   * Completes an OAuth flow for the given state. Returns "unknown-state" when
+   * no active flow exists; failures during a known flow still throw.
    */
-  async completeOAuthByState(state: string, code: string): Promise<void> {
+  async completeOAuthByState(
+    state: string,
+    code: string,
+  ): Promise<CompleteOAuthOutcome> {
     const serverName = this.oauthConnectionHandler.getServerNameByState(state);
     if (!serverName) {
-      throw new NotFoundError(`No OAuth flow found for state: ${state}`);
+      return "unknown-state";
     }
 
     try {
       await this.completeOAuthForServer(serverName, code);
+      return "completed";
     } finally {
       this.oauthConnectionHandler.completeOAuthFlowCleanup(state);
     }
