@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:3.15.2
 
 WORKDIR /
 RUN pip install --no-cache-dir tornado
