@@ -1,0 +1,58 @@
+name: basic_rate_limit_flow_b054b7bf-67e7-419f-8d95-d90145b70845
+filter:
+    url: "google.com/*"
+processors:
+    Limiterbasic_rate_limit_flow_b054b7bf-67e7-419f-8d95-d90145b70845:
+      processor: Limiter
+      parameters:
+      - key: quota_id
+        value: 25aa703b-7836-4c68-b06b-22b3f7c8370d
+    GenerateResponseTooManyRequestsbasic_rate_limit_flow_b054b7bf-67e7-419f-8d95-d90145b70845:
+      processor: GenerateResponse
+      parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: Too Many Requests
+      - key: Content-Type
+        value: text/plain
+flow:
+    request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: Limiterbasic_rate_limit_flow_b054b7bf-67e7-419f-8d95-d90145b70845
+    - from:
+        processor:
+          name: Limiterbasic_rate_limit_flow_b054b7bf-67e7-419f-8d95-d90145b70845
+          condition: above_limit
+      to:
+        processor:
+          name: GenerateResponseTooManyRequestsbasic_rate_limit_flow_b054b7bf-67e7-419f-8d95-d90145b70845
+    - from:
+        processor:
+          name: Limiterbasic_rate_limit_flow_b054b7bf-67e7-419f-8d95-d90145b70845
+          condition: below_limit
+      to:
+        stream:
+          name: globalStream
+          at: end
+    response:
+    - from:
+        processor:
+          name: GenerateResponseTooManyRequestsbasic_rate_limit_flow_b054b7bf-67e7-419f-8d95-d90145b70845
+      to:
+        stream:
+          name: globalStream
+          at: end
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        stream:
+          name: globalStream
+          at: end
