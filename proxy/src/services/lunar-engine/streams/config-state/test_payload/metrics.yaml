@@ -1,0 +1,24 @@
+general_metrics:
+  label_value:
+    - http_method    
+    - status_code
+    - host
+    - consumer_tag    
+
+  metric_value:
+    - name: api_call_count
+      description: Number of API calls
+    - name: api_call_size
+      description: Average size of API calls
+
+system_metrics:
+  - name: active_flows
+    description: Number of active flows
+  - name: flow_invocations
+    description: Number of flow invocations
+  - name: requests_through_flows
+    description: Number of requests through flows
+  - name: avg_flow_execution_time
+    description: Average flow execution time
+  - name: avg_processor_execution_time
+    description: Average processor execution time
