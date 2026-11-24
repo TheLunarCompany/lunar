@@ -51,7 +51,7 @@ function buildTargetServerRequest(
       type: "stdio",
       name: server.name,
       command: config.command,
-      args: config.args ?? [],
+      args: config.args,
       env: resolveEnvToRuntime(config.env, request.envValues ?? {}),
       catalogItemId,
     };
@@ -607,10 +607,10 @@ export function buildControlPlaneRouter(
       }
 
       // Initiate new OAuth flow
-      const result = await services.upstreamHandler.initiateOAuthForServer(
-        name,
+      const result = await services.upstreamHandler.initiateOAuthForServer({
+        targetServerName: name,
         callbackUrl,
-      );
+      });
 
       res.status(202).json({
         msg: "Successfully initiated OAuth flow for target server",

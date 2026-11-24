@@ -1,6 +1,6 @@
 export {
   DynamicCapabilitiesService,
-  InternalToolName,
+  internalToolName,
   type InternalToolNameType,
 } from "./dynamic-capabilities.js";
 export { INTERNAL_SERVICE_NAME } from "../model/internal-service.js";

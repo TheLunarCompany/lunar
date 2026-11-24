@@ -247,12 +247,13 @@ describe("A server that connects while the Hub is away", () => {
     // With a 503 on refresh, the SDK starts a sign-in although the stored
     // tokens still work. The sign-in then fails on its code exchange.
     oauthServers.failNextTokenRequest();
-    const { authorizationUrl } =
-      await upstreamHandler.initiateOAuthForServer(SERVER_NAME);
+    const { authorizationUrl } = await upstreamHandler.initiateOAuthForServer({
+      targetServerName: SERVER_NAME,
+    });
     const state = new URL(authorizationUrl).searchParams.get("state");
     if (!state) throw new Error(`No state in ${authorizationUrl}`);
     await expect(
-      upstreamHandler.completeOAuthByState(state, "not-a-code"),
+      upstreamHandler.completeOAuthByState({ state, code: "not-a-code" }),
     ).rejects.toThrow();
 
     expect(await readState(harness)).toBe("connection-failed");

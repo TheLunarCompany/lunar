@@ -20,6 +20,8 @@ export interface OAuthFlowState {
   createdAt: Date;
 }
 
+export type StartOAuthFlowProps = Omit<OAuthFlowState, "createdAt">;
+
 export interface OAuthSessionManagerI {
   getOrCreateOAuthProvider(options: {
     serverName: string;
@@ -32,7 +34,7 @@ export interface OAuthSessionManagerI {
   hasStaticOAuthForUrl(serverUrl: string): boolean; // Config: is static OAuth configured for this server's host?
   getExistingOAuthProvider(serverName: string): McpxOAuthProviderI | undefined;
   hasPersistedOAuthTokens(serverName: string): Promise<boolean>;
-  startOAuthFlow(serverName: string, serverUrl: string, state: string): void;
+  startOAuthFlow(props: StartOAuthFlowProps): void;
   getOAuthFlow(state: string): OAuthFlowState | undefined;
   completeOAuthFlow(state: string): OAuthFlowState | undefined;
   deleteOAuthTokensForServer(serverName: string): Promise<void>;
@@ -132,7 +134,7 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
     if (
       !provider ||
       (callbackUrl &&
-        callbackUrl !== provider?.getAuthorizationUrl()?.toString())
+        callbackUrl !== provider.getAuthorizationUrl()?.toString())
     ) {
       provider = this.createProvider({
         serverName,
@@ -206,7 +208,8 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
   /**
    * Starts an OAuth flow and tracks the state
    */
-  startOAuthFlow(serverName: string, serverUrl: string, state: string): void {
+  startOAuthFlow(props: StartOAuthFlowProps): void {
+    const { serverName, serverUrl, state } = props;
     const flowState: OAuthFlowState = {
       serverName,
       serverUrl,

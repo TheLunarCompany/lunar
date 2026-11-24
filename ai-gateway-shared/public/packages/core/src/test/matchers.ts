@@ -24,7 +24,11 @@ export function normalizeForComparison(obj: unknown): unknown {
   return obj;
 }
 
-export function toEqualNormalized(received: unknown, expected: unknown): void {
+export function toEqualNormalized(params: {
+  received: unknown;
+  expected: unknown;
+}): void {
+  const { received, expected } = params;
   const normalizedReceived = normalizeForComparison(received);
   const normalizedExpected = normalizeForComparison(expected);
   expect(normalizedReceived).toEqual(normalizedExpected);

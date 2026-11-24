@@ -9,7 +9,7 @@ const metadataSchema = z.object({
 export type Metadata = z.infer<typeof metadataSchema>;
 
 // Wraps a generic payload schema with an envelope containing metadata
-export function Envelope<T extends z.ZodTypeAny>(
+export function envelopeSchema<T extends z.ZodTypeAny>(
   payload: T,
 ): z.ZodObject<{ metadata: typeof metadataSchema; payload: T }, z.core.$strip> {
   return z.object({
@@ -43,7 +43,7 @@ export function wrapInEnvelope<T>(props: {
 export function safeParseEnvelopedMessage<T>(
   payloadSchema: z.ZodType<T>,
 ): (enveloped: unknown) => z.ZodSafeParseResult<EnvelopedMessage<T>> {
-  const envelopedSchema = Envelope(payloadSchema);
+  const envelopedSchema = envelopeSchema(payloadSchema);
   return (enveloped: unknown) => {
     return envelopedSchema.safeParse(enveloped);
   };

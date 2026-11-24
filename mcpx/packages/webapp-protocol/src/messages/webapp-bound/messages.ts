@@ -30,7 +30,7 @@ import {
 } from "./author-skill.js";
 
 // Raw payload schemas
-export const WebappBoundPayloads = {
+export const webappBoundPayloads = {
   setupChange: setupChangePayloadSchema,
   usageStats: usageStatsPayloadSchema,
   oauthAuthorizationRequired: oauthAuthorizationRequiredPayloadSchema,
@@ -56,7 +56,7 @@ export const WebappBoundPayloads = {
 } as const;
 
 export type WebappBoundPayload =
-  (typeof WebappBoundPayloads)[keyof typeof WebappBoundPayloads];
+  (typeof webappBoundPayloads)[keyof typeof webappBoundPayloads];
 
 export const WEBAPP_BOUND_EVENTS = {
   SETUP_CHANGE: "setup-change",

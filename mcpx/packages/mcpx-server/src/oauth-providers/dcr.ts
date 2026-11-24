@@ -273,7 +273,10 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
 
   async saveCodeVerifier(codeVerifier: string): Promise<void> {
     try {
-      await this.tokenStore.saveCodeVerifier(this.serverName, codeVerifier);
+      await this.tokenStore.saveCodeVerifier({
+        serverName: this.serverName,
+        verifier: codeVerifier,
+      });
       this.logger.debug("Code verifier saved", { serverName: this.serverName });
     } catch (error) {
       this.logger.error("Failed to save code verifier", {

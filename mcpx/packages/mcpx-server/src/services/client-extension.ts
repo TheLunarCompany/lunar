@@ -110,7 +110,7 @@ export class ExtendedClientBuilder {
     private logger: Logger,
   ) {}
 
-  // TODO MCP-59: add test for caching?
+  // TODO(MCP-59): add a test for caching
   async build(props: {
     name: string;
     originalClient: OriginalClientI;
@@ -420,10 +420,10 @@ class ExtendedTool {
     }
     switch (this.extension.description.action) {
       case "append":
-        return ExtendedTool.appendSentence(
-          this.original.description,
-          this.extension.description.text,
-        );
+        return ExtendedTool.appendSentence({
+          original: this.original.description,
+          extra: this.extension.description.text,
+        });
       case "rewrite":
         return this.extension.description.text;
     }
@@ -438,10 +438,10 @@ class ExtendedTool {
     }
     switch (description.action) {
       case "append":
-        return ExtendedTool.appendSentence(
-          originalDescription || "",
-          description.text,
-        );
+        return ExtendedTool.appendSentence({
+          original: originalDescription || "",
+          extra: description.text,
+        });
       case "rewrite":
         return description.text;
     }
@@ -496,7 +496,11 @@ class ExtendedTool {
     return { ...rawOriginalProperty, description };
   }
 
-  private static appendSentence(original: string, extra: string): string {
+  private static appendSentence(props: {
+    original: string;
+    extra: string;
+  }): string {
+    const { original, extra } = props;
     if (original.trim() === "") {
       return extra;
     }

@@ -63,7 +63,7 @@ async function logStatusSummary(
     version: env.VERSION,
     logLevel: env.LOG_LEVEL,
     mcpxPort: env.MCPX_PORT,
-    uiPort: env.UI_PORT ?? "N/A",
+    uiPort: env.UI_PORT,
     apiKey: apiKeyStatus,
     uiStatus: uiConnected ? "Connected" : "Not Connected",
   };

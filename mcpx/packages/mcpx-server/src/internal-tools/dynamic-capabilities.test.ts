@@ -2,7 +2,7 @@ import { noOpLogger } from "@aigw/core/logging";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import {
   DynamicCapabilitiesService,
-  InternalToolName,
+  internalToolName,
 } from "./dynamic-capabilities.js";
 import { INTERNAL_SERVICE_NAME } from "../model/internal-service.js";
 import { ControlPlaneConfigService } from "../services/control-plane-config-service.js";
@@ -285,7 +285,7 @@ describe("DynamicCapabilitiesService", () => {
 
         const result = await service.handleToolCall({
           consumerTag: "my-consumer",
-          toolName: InternalToolName.GET_NEW_CAPABILITIES,
+          toolName: internalToolName.GET_NEW_CAPABILITIES,
           args: {},
         });
 
@@ -310,7 +310,7 @@ describe("DynamicCapabilitiesService", () => {
 
         const result = await service.handleToolCall({
           consumerTag: "my-consumer",
-          toolName: InternalToolName.GET_NEW_CAPABILITIES,
+          toolName: internalToolName.GET_NEW_CAPABILITIES,
           args: { intent: "post to slack" },
         });
 
@@ -339,7 +339,7 @@ describe("DynamicCapabilitiesService", () => {
         // Add tools via get_new_capabilities
         await service.handleToolCall({
           consumerTag: "my-consumer",
-          toolName: InternalToolName.GET_NEW_CAPABILITIES,
+          toolName: internalToolName.GET_NEW_CAPABILITIES,
           args: { intent: "post to slack" },
         });
         expect(state.toolGroups[0]?.services).toEqual({
@@ -350,7 +350,7 @@ describe("DynamicCapabilitiesService", () => {
         // Clear tools
         const result = await service.handleToolCall({
           consumerTag: "my-consumer",
-          toolName: InternalToolName.CLEAR_TOOLS,
+          toolName: internalToolName.CLEAR_TOOLS,
           args: {},
         });
 

@@ -25,7 +25,11 @@ describe("GoogleLlmClient", () => {
   it("passes cancellation to the provider request", async () => {
     const fake = new FakeGoogleClient();
     fake.responseToReturn = { text: JSON.stringify({ answer: "42" }) };
-    const client = new GoogleLlmClient("key", "gemini-2.0-flash", fake);
+    const client = new GoogleLlmClient({
+      apiKey: "key",
+      model: "gemini-2.0-flash",
+      genAiClient: fake,
+    });
     const controller = new AbortController();
     const params = {
       systemPrompt: "test",
@@ -44,7 +48,11 @@ describe("GoogleLlmClient", () => {
   it("should pass systemPrompt to config.systemInstruction", async () => {
     const fake = new FakeGoogleClient();
     fake.responseToReturn = { text: JSON.stringify({ answer: "42" }) };
-    const client = new GoogleLlmClient("key", "gemini-2.0-flash", fake);
+    const client = new GoogleLlmClient({
+      apiKey: "key",
+      model: "gemini-2.0-flash",
+      genAiClient: fake,
+    });
 
     await client.complete({
       systemPrompt: "You are helpful",
@@ -62,7 +70,11 @@ describe("GoogleLlmClient", () => {
   it("should join messages into contents", async () => {
     const fake = new FakeGoogleClient();
     fake.responseToReturn = { text: JSON.stringify({ answer: "42" }) };
-    const client = new GoogleLlmClient("key", "gemini-2.0-flash", fake);
+    const client = new GoogleLlmClient({
+      apiKey: "key",
+      model: "gemini-2.0-flash",
+      genAiClient: fake,
+    });
 
     await client.complete({
       systemPrompt: "test",
@@ -80,7 +92,11 @@ describe("GoogleLlmClient", () => {
   it("should parse and return valid response", async () => {
     const fake = new FakeGoogleClient();
     fake.responseToReturn = { text: JSON.stringify({ answer: "42" }) };
-    const client = new GoogleLlmClient("key", "gemini-2.0-flash", fake);
+    const client = new GoogleLlmClient({
+      apiKey: "key",
+      model: "gemini-2.0-flash",
+      genAiClient: fake,
+    });
 
     const result = await client.complete({
       systemPrompt: "test",
@@ -94,7 +110,11 @@ describe("GoogleLlmClient", () => {
   it("should throw LlmParseError when response doesn't match schema", async () => {
     const fake = new FakeGoogleClient();
     fake.responseToReturn = { text: JSON.stringify({ wrong: "field" }) };
-    const client = new GoogleLlmClient("key", "gemini-2.0-flash", fake);
+    const client = new GoogleLlmClient({
+      apiKey: "key",
+      model: "gemini-2.0-flash",
+      genAiClient: fake,
+    });
 
     await expect(
       client.complete({
@@ -108,7 +128,11 @@ describe("GoogleLlmClient", () => {
   it("should throw when response is invalid JSON object", async () => {
     const fake = new FakeGoogleClient();
     fake.responseToReturn = { text: "not json" };
-    const client = new GoogleLlmClient("key", "gemini-2.0-flash", fake);
+    const client = new GoogleLlmClient({
+      apiKey: "key",
+      model: "gemini-2.0-flash",
+      genAiClient: fake,
+    });
 
     await expect(
       client.complete({

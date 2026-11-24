@@ -7,12 +7,12 @@ import {
   stdioCatalogItems,
   TestHarness,
 } from "./utils.js";
-import { McpxBoundPayloads } from "@mcpx/webapp-protocol/messages";
+import { mcpxBoundPayloads } from "@mcpx/webapp-protocol/messages";
 import { StaticOAuth } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { TargetServer } from "../src/model/target-servers.js";
 
-type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
+type ApplySetupPayload = z.infer<typeof mcpxBoundPayloads.applySetup>;
 
 function toTargetServerEntry(
   server: TargetServer,

@@ -1,5 +1,5 @@
 import { withAsyncPolling } from "@aigw/core/time";
-import { WebappBoundPayloads } from "@mcpx/webapp-protocol/messages";
+import { webappBoundPayloads } from "@mcpx/webapp-protocol/messages";
 import { AddressInfo, createServer } from "node:net";
 import { echoTargetServer, getTestHarness, TestHarness } from "./utils.js";
 
@@ -95,7 +95,7 @@ describe("Setup Change on Target Server Changes", () => {
 
     // The Hub parses the setup-change, stores it and sends it back as apply-setup.
     const { targetServers, config } =
-      WebappBoundPayloads.setupChange.parse(payload);
+      webappBoundPayloads.setupChange.parse(payload);
     const [socketId] = harness.mockHubServer.getConnectedClients();
     if (!socketId) throw new Error("MCPX is not connected to the mock Hub");
     const correlationId = "round-trip";

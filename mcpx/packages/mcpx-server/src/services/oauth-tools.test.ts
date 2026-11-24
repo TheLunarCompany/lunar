@@ -11,10 +11,10 @@ function getResponseText(response: unknown): string {
 }
 
 interface MockUpstreamHandler {
-  initiateOAuthForServer(
-    serverName: string,
-    callbackUrl?: string,
-  ): Promise<InitiateOAuthResult>;
+  initiateOAuthForServer(props: {
+    targetServerName: string;
+    callbackUrl?: string;
+  }): Promise<InitiateOAuthResult>;
 }
 
 function makeHandler(
@@ -77,8 +77,8 @@ describe("OAuthToolsService", () => {
     it("normalizes the server name before calling initiateOAuthForServer", async () => {
       let capturedName: string | undefined;
       const handler: MockUpstreamHandler = {
-        initiateOAuthForServer: async (name) => {
-          capturedName = name;
+        initiateOAuthForServer: async (props) => {
+          capturedName = props.targetServerName;
           return { authorizationUrl: "https://auth.example.com", state: "s" };
         },
       };
@@ -92,8 +92,8 @@ describe("OAuthToolsService", () => {
     it("passes injected callbackUrl to initiateOAuthForServer", async () => {
       let capturedCallbackUrl: string | undefined;
       const handler: MockUpstreamHandler = {
-        initiateOAuthForServer: async (_name, callbackUrl) => {
-          capturedCallbackUrl = callbackUrl;
+        initiateOAuthForServer: async (props) => {
+          capturedCallbackUrl = props.callbackUrl;
           return { authorizationUrl: "https://auth.example.com", state: "s" };
         },
       };

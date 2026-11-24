@@ -162,7 +162,11 @@ class StubTargetClients
   ) {}
   private initiationWaiters: Array<(initiation: OAuthInitiation) => void> = [];
 
-  async initiateOAuthForServer(serverName: string, callbackUrl?: string) {
+  async initiateOAuthForServer(props: {
+    targetServerName: string;
+    callbackUrl?: string;
+  }) {
+    const { targetServerName: serverName, callbackUrl } = props;
     this.initiationWaiters
       .splice(0)
       .forEach((resolve) => resolve({ serverName, callbackUrl }));

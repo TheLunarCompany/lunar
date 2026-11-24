@@ -12,11 +12,11 @@ const _noOpPersistence: AuditLogPersistence = {
   read: async () => [],
 };
 
-class _NoOpAuditLogService extends AuditLogService {
+class NoOpAuditLogService extends AuditLogService {
   override log(_event: AuditLogEvent): void {}
 }
 
-export const noOpAuditLogService: AuditLogService = new _NoOpAuditLogService(
+export const noOpAuditLogService: AuditLogService = new NoOpAuditLogService(
   systemClock,
   noOpLogger,
   _noOpPersistence,

@@ -23,9 +23,15 @@ export function createLlmClient(config: LlmConfig): LlmClient {
 function createProviderClient(config: LlmConfig): LlmClient {
   switch (config.provider) {
     case "openai":
-      return new OpenAiLlmClient(config.apiKey, config.model);
+      return new OpenAiLlmClient({
+        apiKey: config.apiKey,
+        model: config.model,
+      });
     case "google-gen-ai":
-      return new GoogleLlmClient(config.apiKey, config.model);
+      return new GoogleLlmClient({
+        apiKey: config.apiKey,
+        model: config.model,
+      });
   }
 }
 

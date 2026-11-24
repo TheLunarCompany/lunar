@@ -39,8 +39,8 @@ export function diffConfigForAudit({
   const nextGroups = indexToolGroupServers(next);
 
   for (const identityType of ["consumers", "clientNames"] as const) {
-    const prevEntries = prev.permissions[identityType] ?? {};
-    const nextEntries = next.permissions[identityType] ?? {};
+    const prevEntries = prev.permissions[identityType];
+    const nextEntries = next.permissions[identityType];
     const names = new Set([
       ...Object.keys(prevEntries),
       ...Object.keys(nextEntries),

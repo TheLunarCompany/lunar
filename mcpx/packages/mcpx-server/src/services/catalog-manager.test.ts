@@ -144,7 +144,12 @@ describe("CatalogManager", () => {
         const manager = createCatalogManager(
           createStubIdentityService(personalIdentity),
         );
-        expect(manager.isToolApproved("any-server", "any-tool")).toBe(true);
+        expect(
+          manager.isToolApproved({
+            serverName: "any-server",
+            toolName: "any-tool",
+          }),
+        ).toBe(true);
       });
     });
 
@@ -184,8 +189,12 @@ describe("CatalogManager", () => {
           }),
         );
         manager.setCatalog(makeCatalog(createCatalogItem("slack", ["read"])));
-        expect(manager.isToolApproved("slack", "read")).toBe(true);
-        expect(manager.isToolApproved("slack", "write")).toBe(false);
+        expect(
+          manager.isToolApproved({ serverName: "slack", toolName: "read" }),
+        ).toBe(true);
+        expect(
+          manager.isToolApproved({ serverName: "slack", toolName: "write" }),
+        ).toBe(false);
       },
     );
 
@@ -203,7 +212,9 @@ describe("CatalogManager", () => {
           createStubIdentityService(enterpriseSpaceIdentity),
         );
         manager.setCatalog(makeCatalog(createCatalogItem("slack", [])));
-        expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
+        expect(
+          manager.isToolApproved({ serverName: "slack", toolName: "any-tool" }),
+        ).toBe(true);
       });
     });
   });
@@ -232,7 +243,9 @@ describe("CatalogManager", () => {
         false,
       );
       manager.setCatalog(makeCatalog(createCatalogItem("slack", [])));
-      expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
+      expect(
+        manager.isToolApproved({ serverName: "slack", toolName: "any-tool" }),
+      ).toBe(true);
     });
   });
 
@@ -241,21 +254,30 @@ describe("CatalogManager", () => {
       const manager = createCatalogManager();
       manager.setCatalog(makeCatalog());
 
-      expect(manager.isToolApproved("unknown-server", "any-tool")).toBe(false);
+      expect(
+        manager.isToolApproved({
+          serverName: "unknown-server",
+          toolName: "any-tool",
+        }),
+      ).toBe(false);
     });
 
     it("returns true when no approvedTools configured (no restriction)", () => {
       const manager = createCatalogManager();
       manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
-      expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
+      expect(
+        manager.isToolApproved({ serverName: "slack", toolName: "any-tool" }),
+      ).toBe(true);
     });
 
     it("returns false when approvedTools is empty array", () => {
       const manager = createCatalogManager();
       manager.setCatalog(makeCatalog(createCatalogItem("slack", [])));
 
-      expect(manager.isToolApproved("slack", "any-tool")).toBe(false);
+      expect(
+        manager.isToolApproved({ serverName: "slack", toolName: "any-tool" }),
+      ).toBe(false);
     });
 
     it("returns true when tool is in approved list", () => {
@@ -266,8 +288,18 @@ describe("CatalogManager", () => {
         ),
       );
 
-      expect(manager.isToolApproved("slack", "send_message")).toBe(true);
-      expect(manager.isToolApproved("slack", "read_channel")).toBe(true);
+      expect(
+        manager.isToolApproved({
+          serverName: "slack",
+          toolName: "send_message",
+        }),
+      ).toBe(true);
+      expect(
+        manager.isToolApproved({
+          serverName: "slack",
+          toolName: "read_channel",
+        }),
+      ).toBe(true);
     });
 
     it("returns false when tool is not in approved list", () => {
@@ -276,7 +308,12 @@ describe("CatalogManager", () => {
         makeCatalog(createCatalogItem("slack", ["send_message"])),
       );
 
-      expect(manager.isToolApproved("slack", "delete_channel")).toBe(false);
+      expect(
+        manager.isToolApproved({
+          serverName: "slack",
+          toolName: "delete_channel",
+        }),
+      ).toBe(false);
     });
 
     it("is case-sensitive for tool names", () => {
@@ -285,8 +322,18 @@ describe("CatalogManager", () => {
         makeCatalog(createCatalogItem("slack", ["SendMessage"])),
       );
 
-      expect(manager.isToolApproved("slack", "SendMessage")).toBe(true);
-      expect(manager.isToolApproved("slack", "sendmessage")).toBe(false);
+      expect(
+        manager.isToolApproved({
+          serverName: "slack",
+          toolName: "SendMessage",
+        }),
+      ).toBe(true);
+      expect(
+        manager.isToolApproved({
+          serverName: "slack",
+          toolName: "sendmessage",
+        }),
+      ).toBe(false);
     });
   });
 
@@ -300,7 +347,12 @@ describe("CatalogManager", () => {
       manager.setCatalog(
         makeCatalog(createCatalogItem("slack", [], ["greet"])),
       );
-      expect(manager.isPromptApproved("slack", "any-prompt")).toBe(true);
+      expect(
+        manager.isPromptApproved({
+          serverName: "slack",
+          promptName: "any-prompt",
+        }),
+      ).toBe(true);
     });
 
     it("approves all prompts when strictness disabled", () => {
@@ -311,23 +363,36 @@ describe("CatalogManager", () => {
       manager.setCatalog(
         makeCatalog(createCatalogItem("slack", [], ["greet"])),
       );
-      expect(manager.isPromptApproved("slack", "any-prompt")).toBe(true);
+      expect(
+        manager.isPromptApproved({
+          serverName: "slack",
+          promptName: "any-prompt",
+        }),
+      ).toBe(true);
     });
 
     it("returns false for server not in catalog when strict", () => {
       const manager = createCatalogManager();
       manager.setCatalog(makeCatalog());
 
-      expect(manager.isPromptApproved("unknown-server", "any-prompt")).toBe(
-        false,
-      );
+      expect(
+        manager.isPromptApproved({
+          serverName: "unknown-server",
+          promptName: "any-prompt",
+        }),
+      ).toBe(false);
     });
 
     it("returns true when no approvedPrompts configured (no restriction)", () => {
       const manager = createCatalogManager();
       manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
-      expect(manager.isPromptApproved("slack", "any-prompt")).toBe(true);
+      expect(
+        manager.isPromptApproved({
+          serverName: "slack",
+          promptName: "any-prompt",
+        }),
+      ).toBe(true);
     });
 
     it("returns false when approvedPrompts is empty array", () => {
@@ -336,7 +401,12 @@ describe("CatalogManager", () => {
         makeCatalog(createCatalogItem("slack", undefined, [])),
       );
 
-      expect(manager.isPromptApproved("slack", "any-prompt")).toBe(false);
+      expect(
+        manager.isPromptApproved({
+          serverName: "slack",
+          promptName: "any-prompt",
+        }),
+      ).toBe(false);
     });
 
     it("respects the approved prompt allowlist", () => {
@@ -345,8 +415,15 @@ describe("CatalogManager", () => {
         makeCatalog(createCatalogItem("slack", undefined, ["greet"])),
       );
 
-      expect(manager.isPromptApproved("slack", "greet")).toBe(true);
-      expect(manager.isPromptApproved("slack", "farewell")).toBe(false);
+      expect(
+        manager.isPromptApproved({ serverName: "slack", promptName: "greet" }),
+      ).toBe(true);
+      expect(
+        manager.isPromptApproved({
+          serverName: "slack",
+          promptName: "farewell",
+        }),
+      ).toBe(false);
     });
   });
 
@@ -751,7 +828,10 @@ describe("CatalogManager", () => {
       const requirement = config.env?.["API_KEY"];
       expect(requirement).toBeDefined();
       if (!requirement) return;
-      const expectedKey = toProcessEnvKey("my-server", "API_KEY");
+      const expectedKey = toProcessEnvKey({
+        serverName: "my-server",
+        envVarName: "API_KEY",
+      });
       expect(requirement.prefilled).toEqual({ fromEnv: expectedKey }); // The original prefilled literal is gone!
       expect(envVarManager.resolveTargetServerEnv(expectedKey)).toBe(
         "super-secret-value",
@@ -877,11 +957,17 @@ describe("CatalogManager", () => {
       expect(optionalSecretReq).toBeDefined();
       if (!secretKeyReq || !publicPortReq || !optionalSecretReq) return;
       expect(secretKeyReq.prefilled).toEqual({
-        fromEnv: toProcessEnvKey("my-server", "SECRET_KEY"),
+        fromEnv: toProcessEnvKey({
+          serverName: "my-server",
+          envVarName: "SECRET_KEY",
+        }),
       });
       expect(publicPortReq.prefilled).toBe("3000");
       expect(optionalSecretReq.prefilled).toEqual({
-        fromEnv: toProcessEnvKey("my-server", "OPTIONAL_SECRET"),
+        fromEnv: toProcessEnvKey({
+          serverName: "my-server",
+          envVarName: "OPTIONAL_SECRET",
+        }),
       });
     });
 
@@ -912,56 +998,62 @@ describe("CatalogManager", () => {
 
 describe("toProcessEnvKey", () => {
   it("prefixes with MCPX and uppercases", () => {
-    expect(toProcessEnvKey("my-server", "API_KEY")).toBe(
-      "MCPX_MY_SERVER_API_KEY_PREFILLED",
-    );
+    expect(
+      toProcessEnvKey({ serverName: "my-server", envVarName: "API_KEY" }),
+    ).toBe("MCPX_MY_SERVER_API_KEY_PREFILLED");
   });
 
   it("replaces non-alphanumeric characters with underscores", () => {
-    expect(toProcessEnvKey("my.server-v2", "api-key")).toBe(
-      "MCPX_MY_SERVER_V2_API_KEY_PREFILLED",
-    );
+    expect(
+      toProcessEnvKey({ serverName: "my.server-v2", envVarName: "api-key" }),
+    ).toBe("MCPX_MY_SERVER_V2_API_KEY_PREFILLED");
   });
 
   it("handles already uppercased input", () => {
-    expect(toProcessEnvKey("SLACK", "TOKEN")).toBe(
+    expect(toProcessEnvKey({ serverName: "SLACK", envVarName: "TOKEN" })).toBe(
       "MCPX_SLACK_TOKEN_PREFILLED",
     );
   });
 
   it("replaces spaces with underscores", () => {
-    expect(toProcessEnvKey("my server", "API KEY")).toBe(
-      "MCPX_MY_SERVER_API_KEY_PREFILLED",
-    );
+    expect(
+      toProcessEnvKey({ serverName: "my server", envVarName: "API KEY" }),
+    ).toBe("MCPX_MY_SERVER_API_KEY_PREFILLED");
   });
 
   it("collapses consecutive special characters into a single underscore", () => {
-    expect(toProcessEnvKey("my--server", "API..KEY")).toBe(
-      "MCPX_MY_SERVER_API_KEY_PREFILLED",
-    );
+    expect(
+      toProcessEnvKey({ serverName: "my--server", envVarName: "API..KEY" }),
+    ).toBe("MCPX_MY_SERVER_API_KEY_PREFILLED");
   });
 
   it("handles empty server name", () => {
-    expect(toProcessEnvKey("", "API_KEY")).toBe("MCPX_API_KEY_PREFILLED");
+    expect(toProcessEnvKey({ serverName: "", envVarName: "API_KEY" })).toBe(
+      "MCPX_API_KEY_PREFILLED",
+    );
   });
 
   it("handles empty env var name", () => {
-    expect(toProcessEnvKey("slack", "")).toBe("MCPX_SLACK_PREFILLED");
+    expect(toProcessEnvKey({ serverName: "slack", envVarName: "" })).toBe(
+      "MCPX_SLACK_PREFILLED",
+    );
   });
 
   it("strips unicode and emoji characters", () => {
-    expect(toProcessEnvKey("server-🚀", "tökén")).toBe(
-      "MCPX_SERVER_T_K_N_PREFILLED",
-    );
+    expect(
+      toProcessEnvKey({ serverName: "server-🚀", envVarName: "tökén" }),
+    ).toBe("MCPX_SERVER_T_K_N_PREFILLED");
   });
 
   it("handles names with slashes and colons", () => {
-    expect(toProcessEnvKey("@org/server", "ns:key")).toBe(
-      "MCPX_ORG_SERVER_NS_KEY_PREFILLED",
-    );
+    expect(
+      toProcessEnvKey({ serverName: "@org/server", envVarName: "ns:key" }),
+    ).toBe("MCPX_ORG_SERVER_NS_KEY_PREFILLED");
   });
 
   it("handles numeric-only names", () => {
-    expect(toProcessEnvKey("123", "456")).toBe("MCPX_123_456_PREFILLED");
+    expect(toProcessEnvKey({ serverName: "123", envVarName: "456" })).toBe(
+      "MCPX_123_456_PREFILLED",
+    );
   });
 });

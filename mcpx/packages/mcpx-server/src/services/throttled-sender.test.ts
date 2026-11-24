@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
-import { ThrottledSender } from "./throttled-sender.js";
+import { ThrottledMessage, ThrottledSender } from "./throttled-sender.js";
 
 describe("ThrottledSender", () => {
   let throttledSender: ThrottledSender;
@@ -9,7 +9,8 @@ describe("ThrottledSender", () => {
     timestamp: number;
   }> = [];
 
-  const mockSender = (key: string, payload: unknown) => {
+  const mockSender = (message: ThrottledMessage) => {
+    const { key, payload } = message;
     sentMessages.push({ key, payload, timestamp: Date.now() });
   };
 

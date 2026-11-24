@@ -46,7 +46,8 @@ function forbiddenFlagsFor(command: string): string[] {
   }
 }
 
-function matchesFlag(arg: string, flag: string): boolean {
+function matchesFlag(props: { arg: string; flag: string }): boolean {
+  const { arg, flag } = props;
   if (arg === flag || arg.startsWith(`${flag}=`)) {
     return true;
   }
@@ -68,7 +69,7 @@ export function findForbiddenArg(
     return undefined;
   }
   for (const arg of args) {
-    if (flags.some((flag) => matchesFlag(arg, flag))) {
+    if (flags.some((flag) => matchesFlag({ arg, flag }))) {
       return arg;
     }
   }

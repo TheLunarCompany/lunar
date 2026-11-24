@@ -252,7 +252,7 @@ export class SessionLivenessManager {
     const interval = setInterval(async (): Promise<void> => {
       const now = this._clock.now().getTime();
       for (const [sessionId, session] of this._store.listSessions()) {
-        const liveness = session?.liveness;
+        const liveness = session.liveness;
         if (!liveness) {
           continue;
         }

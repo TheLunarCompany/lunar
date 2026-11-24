@@ -6,7 +6,7 @@ import {
   DynamicCapabilitiesMatchingAck,
   DynamicCapabilitiesMatchingPayload,
   dynamicCapabilitiesMatchingAckSchema,
-  McpxBoundPayloads,
+  mcpxBoundPayloads,
   safeParseEnvelopedMessage,
   SetPersonalSkillsPayload,
   SetPublishedSkillsPayload,
@@ -31,7 +31,7 @@ import {
   TargetServerChangeNotifier,
 } from "./upstream-handler.js";
 import { ReArmBackoff } from "./hub-backoff.js";
-import { ThrottledSender } from "./throttled-sender.js";
+import { ThrottledMessage, ThrottledSender } from "./throttled-sender.js";
 import { createToolCallBatcher, ToolCallBatcher } from "./tool-call-batcher.js";
 import { UsageStatsSender } from "./usage-stats-sender.js";
 
@@ -133,39 +133,39 @@ function isValidPhaseSequence(phases: BootPhase[]): boolean {
 }
 
 const envelopedApplySetupSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.applySetup,
+  mcpxBoundPayloads.applySetup,
 );
 
 const envelopedLoadCatalogSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setCatalog,
+  mcpxBoundPayloads.setCatalog,
 );
 
 const envelopedInitiateOAuthSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.initiateOAuth,
+  mcpxBoundPayloads.initiateOAuth,
 );
 
 const envelopedSetIdentitySafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setIdentity,
+  mcpxBoundPayloads.setIdentity,
 );
 
 const envelopedSetBehaviorSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setMcpxBehavior,
+  mcpxBoundPayloads.setMcpxBehavior,
 );
 
 const envelopedSetProfileSecretsSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setProfileSecrets,
+  mcpxBoundPayloads.setProfileSecrets,
 );
 
 const envelopedSetOauthCredentialsSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setOauthCredentials,
+  mcpxBoundPayloads.setOauthCredentials,
 );
 
 const envelopedSetPersonalSkillsSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setPersonalSkills,
+  mcpxBoundPayloads.setPersonalSkills,
 );
 
 const envelopedSetPublishedSkillsSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setPublishedSkills,
+  mcpxBoundPayloads.setPublishedSkills,
 );
 
 export interface HubServiceOptions {
@@ -272,7 +272,8 @@ export class HubService {
 
     const createSender =
       (eventName: WebappBoundEventName) =>
-      (_key: string, payload: unknown, correlationId?: string): void => {
+      (message: ThrottledMessage): void => {
+        const { payload, correlationId } = message;
         if (!this.socket || this.status.status !== "authenticated") {
           this.logger.debug("Cannot send message, not connected to Hub");
           return;
@@ -507,7 +508,11 @@ export class HubService {
     payload: WebappBoundPayloadOf<"setup-change">,
     correlationId?: string,
   ): void {
-    this.setupChangeSender.sendNow("setup-change", payload, correlationId);
+    this.setupChangeSender.sendNow({
+      key: "setup-change",
+      payload,
+      correlationId,
+    });
   }
 
   async emitDynamicCapabilitiesMatching(
@@ -921,10 +926,10 @@ export class HubService {
           correlationId,
         });
 
-        const result = await this.upstreamHandler.initiateOAuthForServer(
-          message.serverName,
-          this.oauthCallbackUrl,
-        );
+        const result = await this.upstreamHandler.initiateOAuthForServer({
+          targetServerName: message.serverName,
+          callbackUrl: this.oauthCallbackUrl,
+        });
 
         // Send oauth-authorization-required response back to Hub
         const responsePayload = {

@@ -10,14 +10,15 @@ import { TargetClient } from "./target-client-types.js";
 
 // Single site that pairs approved+enriched `tools` with raw `originalTools`
 // so the two can't get inverted.
-export function buildSystemStateToolsPayload(
-  approvedTools: Tool[],
-  rawTools: Tool[],
-  estimateTokens: (tool: Tool) => number,
-): {
+export function buildSystemStateToolsPayload(props: {
+  approvedTools: Tool[];
+  rawTools: Tool[];
+  estimateTokens: (tool: Tool) => number;
+}): {
   tools: TargetServerNewWithoutUsage["tools"];
   originalTools: Tool[];
 } {
+  const { approvedTools, rawTools, estimateTokens } = props;
   return {
     tools: approvedTools.map((tool) => ({
       ...tool,
@@ -28,14 +29,15 @@ export function buildSystemStateToolsPayload(
   };
 }
 
-export function buildSystemStatePromptsPayload(
-  approvedPrompts: Prompt[],
-  rawPrompts: Prompt[],
-  promptMessages: Record<string, PromptMessage[]> | undefined,
-): {
+export function buildSystemStatePromptsPayload(props: {
+  approvedPrompts: Prompt[];
+  rawPrompts: Prompt[];
+  promptMessages?: Record<string, PromptMessage[]>;
+}): {
   prompts: TargetServerNewWithoutUsage["prompts"];
   originalPrompts: Prompt[];
 } {
+  const { approvedPrompts, rawPrompts, promptMessages } = props;
   return {
     prompts: approvedPrompts.map((prompt) => ({
       name: prompt.name,
@@ -47,16 +49,30 @@ export function buildSystemStatePromptsPayload(
   };
 }
 
+export interface PrepareForSystemStateProps {
+  targetClient: TargetClient;
+  estimateTokens: (tool: Tool) => number;
+  approvedTools?: Tool[];
+  originalTools?: Tool[];
+  approvedPrompts?: Prompt[];
+  originalPrompts?: Prompt[];
+  promptMessages?: Record<string, PromptMessage[]>;
+  displayName?: string;
+}
+
 export function prepareForSystemState(
-  targetClient: TargetClient,
-  estimateTokens: (tool: Tool) => number,
-  approvedTools: Tool[] = [],
-  originalTools: Tool[] = [],
-  approvedPrompts: Prompt[] = [],
-  originalPrompts: Prompt[] = [],
-  promptMessages?: Record<string, PromptMessage[]>,
-  displayName?: string,
+  props: PrepareForSystemStateProps,
 ): TargetServerNewWithoutUsage {
+  const {
+    targetClient,
+    estimateTokens,
+    approvedTools = [],
+    originalTools = [],
+    approvedPrompts = [],
+    originalPrompts = [],
+    promptMessages,
+    displayName,
+  } = props;
   switch (targetClient._state) {
     case "connecting":
       return buildSystemStateEntry(
@@ -71,16 +87,16 @@ export function prepareForSystemState(
         targetClient.targetServer,
         { type: targetClient._state },
         {
-          ...buildSystemStateToolsPayload(
+          ...buildSystemStateToolsPayload({
             approvedTools,
-            originalTools,
+            rawTools: originalTools,
             estimateTokens,
-          ),
-          ...buildSystemStatePromptsPayload(
+          }),
+          ...buildSystemStatePromptsPayload({
             approvedPrompts,
-            originalPrompts,
+            rawPrompts: originalPrompts,
             promptMessages,
-          ),
+          }),
         },
         displayName,
       );

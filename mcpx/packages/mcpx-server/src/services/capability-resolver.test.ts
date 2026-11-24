@@ -84,19 +84,21 @@ function makeCatalog(state: CatalogState): CatalogManagerI {
       if (!state.isStrict) return true;
       return state.approvals.has(server);
     },
-    isToolApproved: (server: string, tool: string) => {
+    isToolApproved: (props: { serverName: string; toolName: string }) => {
+      const { serverName, toolName } = props;
       if (!state.isStrict) return true;
-      const serverApprovals = state.approvals.get(server);
+      const serverApprovals = state.approvals.get(serverName);
       if (serverApprovals === undefined) return false;
       if (serverApprovals === null) return true;
-      return serverApprovals.includes(tool);
+      return serverApprovals.includes(toolName);
     },
-    isPromptApproved: (server: string, prompt: string) => {
+    isPromptApproved: (props: { serverName: string; promptName: string }) => {
+      const { serverName, promptName } = props;
       if (!state.isStrict) return true;
-      const serverApprovals = state.approvals.get(server);
+      const serverApprovals = state.approvals.get(serverName);
       if (serverApprovals === undefined) return false;
       if (serverApprovals === null) return true;
-      return serverApprovals.includes(prompt);
+      return serverApprovals.includes(promptName);
     },
     subscribe: (cb: (change: CatalogChange) => void) => {
       listeners.add(cb);

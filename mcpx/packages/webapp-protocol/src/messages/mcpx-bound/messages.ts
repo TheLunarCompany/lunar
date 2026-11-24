@@ -14,7 +14,7 @@ import { bootCompletePayloadSchema } from "./boot-complete.js";
 import { setMcpxBehaviorPayloadSchema } from "./set-mcpx-behavior.js";
 
 // Raw payload schemas
-export const McpxBoundPayloads = {
+export const mcpxBoundPayloads = {
   applySetup: applySetupPayloadSchema,
   setCatalog: setCatalogPayloadSchema,
   setProfileSecrets: setProfileSecretsPayloadSchema,
@@ -28,7 +28,7 @@ export const McpxBoundPayloads = {
 } as const;
 
 export type McpxBoundPayload =
-  (typeof McpxBoundPayloads)[keyof typeof McpxBoundPayloads];
+  (typeof mcpxBoundPayloads)[keyof typeof mcpxBoundPayloads];
 
 export const MCPX_BOUND_EVENTS = {
   APPLY_SETUP: "apply-setup",

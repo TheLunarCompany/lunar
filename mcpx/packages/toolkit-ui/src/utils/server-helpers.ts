@@ -9,7 +9,7 @@ import {
   updateJsonWithServerType,
 } from "./mcpJson";
 import {
-  AllowedCommands,
+  allowedCommands,
   CatalogConfig,
   TargetServerRequest,
   catalogMCPServerSchema,
@@ -275,9 +275,9 @@ export const validateServerCommand = (payload: {
   if (
     !payload.type ||
     (payload.type === "stdio" &&
-      !AllowedCommands.safeParse(payload.command).success)
+      !allowedCommands.safeParse(payload.command).success)
   ) {
-    const allowed = AllowedCommands.options.join(" | ");
+    const allowed = allowedCommands.options.join(" | ");
 
     return `Command cannot be "${payload.command}". Please provide a valid command (${allowed}).`;
   }

@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import {
-  AllowedCommands,
+  allowedCommands,
   envRequirementsSchema,
   envValueSchema,
 } from "./request-schemas.js";
@@ -12,7 +12,7 @@ import {
 
 export const catalogStdioConfigSchema = z.object({
   type: z.literal("stdio"),
-  command: AllowedCommands,
+  command: allowedCommands,
   args: z.array(z.string()).default([]),
   env: envRequirementsSchema.optional(),
   icon: z.string().optional(),

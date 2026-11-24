@@ -265,7 +265,7 @@ export async function getServer(
         logger,
       });
       const consumerTag = session?.metadata.consumerTag;
-      const clientName = session?.metadata.clientInfo?.name;
+      const clientName = session?.metadata.clientInfo.name;
 
       try {
         const cached = getCachedToolCallEntry({

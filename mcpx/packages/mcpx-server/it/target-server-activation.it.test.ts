@@ -263,7 +263,7 @@ describe("Target Server Activation", () => {
         const invalidServer = {
           ...stdioTargetServers[0],
           name: "invalid-command-server",
-          command: "wget", // not in AllowedCommands (node|npx|uvx|docker)
+          command: "wget", // not in allowedCommands (node|npx|uvx|docker)
         };
 
         const res = await fetch(`${MCPX_BASE_URL}/target-server`, {

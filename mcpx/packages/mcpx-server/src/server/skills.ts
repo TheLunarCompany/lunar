@@ -32,7 +32,7 @@ export function buildSkillsRouter(
     res.status(200).json({ mine, others } satisfies SkillCatalogResponse);
   });
 
-  // TODO: remove in RND-988
+  // TODO(RND-988): remove
   // Registered before /:id so the literal path isn't captured as an id.
   router.get("/feature-enabled", authGuard, (_req, res) => {
     const enabled = env.ENABLE_SKILL_SCOPING;

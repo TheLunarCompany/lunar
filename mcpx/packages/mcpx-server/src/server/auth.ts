@@ -25,7 +25,7 @@ export function buildApiKeyGuard(
   logger: Logger,
   apiKey?: string,
 ): AuthGuard {
-  if (!config.getConfig().auth?.enabled) {
+  if (!config.getConfig().auth.enabled) {
     logger.info("API key guard is not enabled");
     return noOpAuthGuard;
   }

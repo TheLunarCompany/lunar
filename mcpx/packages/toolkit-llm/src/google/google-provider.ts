@@ -39,11 +39,12 @@ export class GoogleLlmClient implements LlmClient {
   private client: GoogleGenAiClientInterface;
   private model: string;
 
-  constructor(
-    apiKey: string,
-    model: string,
-    genAiClient?: GoogleGenAiClientInterface,
-  ) {
+  constructor(params: {
+    apiKey: string;
+    model: string;
+    genAiClient?: GoogleGenAiClientInterface;
+  }) {
+    const { apiKey, model, genAiClient } = params;
     this.client = genAiClient ?? new GoogleGenAI({ apiKey });
     this.model = model;
   }

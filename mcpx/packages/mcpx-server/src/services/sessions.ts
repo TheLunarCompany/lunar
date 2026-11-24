@@ -108,7 +108,7 @@ export class SessionsManager {
     if (!session) return {};
     return {
       consumerTag: session.metadata.consumerTag,
-      clientName: session.metadata.clientInfo?.name,
+      clientName: session.metadata.clientInfo.name,
       sessionId,
     };
   }

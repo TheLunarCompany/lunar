@@ -6,5 +6,6 @@ export function stringifyEq<T>(a: T, b: T): boolean {
     return value;
   };
 
+  // eslint-disable-next-line review/no-stringify-compare -- this is stringifyEq itself
   return JSON.stringify(a, replacer) === JSON.stringify(b, replacer);
 }

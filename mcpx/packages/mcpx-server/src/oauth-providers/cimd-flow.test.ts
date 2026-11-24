@@ -28,8 +28,8 @@ function makeStore(): OAuthTokenStoreI {
     loadTokens: async () => undefined,
     saveTokens: async () => {},
     loadCodeVerifier: async () => verifier,
-    saveCodeVerifier: async (_name, value) => {
-      verifier = value;
+    saveCodeVerifier: async (props) => {
+      verifier = props.verifier;
     },
     loadClientInfo: async () => {
       if (!client) return undefined;

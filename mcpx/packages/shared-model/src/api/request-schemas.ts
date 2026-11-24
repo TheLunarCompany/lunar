@@ -1,4 +1,3 @@
-import YAML from "yaml";
 import { z } from "zod/v4";
 import { setupDescriptionSchema } from "../validation/setup-description-config.js";
 
@@ -80,7 +79,7 @@ export const envRequirementSchema = envRequirementBaseSchema.transform(
 
 export const envRequirementsSchema = z.record(z.string(), envRequirementSchema);
 
-export const AllowedCommands = z.enum(["npx", "uvx", "docker", "node"]);
+export const allowedCommands = z.enum(["npx", "uvx", "docker", "node"]);
 
 export const secretKeysSchema = z.array(z.string());
 export type SecretKeys = z.infer<typeof secretKeysSchema>;
@@ -89,7 +88,7 @@ export const createTargetServerStdioRequestSchema = z
   .object({
     type: z.literal("stdio").default("stdio"),
     args: z.array(z.string()).default([]),
-    command: AllowedCommands,
+    command: allowedCommands,
     env: z.record(z.string(), envValueSchema).optional().default({}),
     icon: z.string().optional(),
     name: z.string(),
@@ -139,25 +138,6 @@ export const updateTargetServerRequestSchema = z.union([
   updateTargetServerSSESchema,
   updateTargetServerStreamableHttpSchema,
 ]);
-
-export const applyRawAppConfigRequestSchema = z.strictObject({
-  yaml: z.string().transform((val, ctx): unknown => {
-    try {
-      const parsed: unknown = YAML.parse(val);
-      return parsed;
-    } catch (e) {
-      ctx.issues.push({
-        code: "custom",
-        message: e instanceof Error ? e.message : "Not a valid YAML format",
-        input: val,
-      });
-
-      // this is a special constant with type `never`
-      // returning it lets you exit the transform without impacting the inferred return type
-      return z.NEVER;
-    }
-  }),
-});
 
 export const applyParsedAppConfigRequestSchema = z.record(
   z.string(),

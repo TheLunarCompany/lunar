@@ -36,10 +36,10 @@ export class DiskTokenStore implements OAuthTokenStoreI {
   }
 
   async saveTokens(serverName: string, data: StoredTokens): Promise<void> {
-    await this.writeFile(
-      this.tokenPath(serverName),
-      JSON.stringify(data, null, 2),
-    );
+    await this.writeFile({
+      filePath: this.tokenPath(serverName),
+      content: JSON.stringify(data, null, 2),
+    });
     this.logger.debug("Tokens saved", { serverName });
   }
 
@@ -47,8 +47,15 @@ export class DiskTokenStore implements OAuthTokenStoreI {
     return this.readFile(this.verifierPath(serverName));
   }
 
-  async saveCodeVerifier(serverName: string, verifier: string): Promise<void> {
-    await this.writeFile(this.verifierPath(serverName), verifier);
+  async saveCodeVerifier(props: {
+    serverName: string;
+    verifier: string;
+  }): Promise<void> {
+    const { serverName, verifier } = props;
+    await this.writeFile({
+      filePath: this.verifierPath(serverName),
+      content: verifier,
+    });
     this.logger.debug("Code verifier saved", { serverName });
   }
 
@@ -74,10 +81,10 @@ export class DiskTokenStore implements OAuthTokenStoreI {
     serverName: string,
     info: OAuthClientInformationFull,
   ): Promise<void> {
-    await this.writeFile(
-      this.clientPath(serverName),
-      JSON.stringify(info, null, 2),
-    );
+    await this.writeFile({
+      filePath: this.clientPath(serverName),
+      content: JSON.stringify(info, null, 2),
+    });
     this.logger.debug("Client info saved", { serverName });
   }
 
@@ -103,9 +110,13 @@ export class DiskTokenStore implements OAuthTokenStoreI {
     });
   }
 
-  private async writeFile(p: string, content: string): Promise<void> {
+  private async writeFile(props: {
+    filePath: string;
+    content: string;
+  }): Promise<void> {
+    const { filePath, content } = props;
     await fs.mkdir(this.tokensDir, { recursive: true });
-    await fs.writeFile(p, content, "utf8");
+    await fs.writeFile(filePath, content, "utf8");
   }
 
   private tokenPath(serverName: string): string {

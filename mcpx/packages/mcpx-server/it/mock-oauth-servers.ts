@@ -291,16 +291,16 @@ export async function logIn(props: {
 }): Promise<void> {
   const { harness, serverName, callbackUrl } = props;
   const { upstreamHandler } = harness.services;
-  const { authorizationUrl } = await upstreamHandler.initiateOAuthForServer(
-    serverName,
+  const { authorizationUrl } = await upstreamHandler.initiateOAuthForServer({
+    targetServerName: serverName,
     callbackUrl,
-  );
+  });
   const redirect = await fetch(authorizationUrl, { redirect: "manual" });
   const callback = new URL(redirect.headers.get("location") ?? "");
   const code = callback.searchParams.get("code");
   const state = callback.searchParams.get("state");
   if (!code || !state) throw new Error(`No code in ${callback}`);
-  await upstreamHandler.completeOAuthByState(state, code);
+  await upstreamHandler.completeOAuthByState({ state, code });
 }
 
 export async function readServerStateType(

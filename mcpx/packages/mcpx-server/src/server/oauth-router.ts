@@ -4,7 +4,7 @@ import { Logger } from "winston";
 import { z } from "zod/v4";
 import { UpstreamHandler } from "../services/upstream-handler.js";
 
-const OAuthCallbackQuerySchema = z.looseObject({
+const oauthCallbackQuerySchema = z.looseObject({
   code: z.string().optional(),
   state: z.string().optional(),
   error: z.string().optional(),
@@ -52,7 +52,7 @@ export function buildOAuthRouter(
         secFetchUser: req.get("Sec-Fetch-User"),
         userAgent: req.get("User-Agent"),
       };
-      const parseResult = OAuthCallbackQuerySchema.safeParse(req.query);
+      const parseResult = oauthCallbackQuerySchema.safeParse(req.query);
       if (!parseResult.success) {
         logger.error("OAuth callback failed to parse query", {
           errors: z.treeifyError(parseResult.error),
@@ -79,7 +79,10 @@ export function buildOAuthRouter(
       }
 
       try {
-        const outcome = await upstreamHandler.completeOAuthByState(state, code);
+        const outcome = await upstreamHandler.completeOAuthByState({
+          state,
+          code,
+        });
 
         if (outcome === "unknown-state") {
           logger.warn("OAuth callback for unknown state", {

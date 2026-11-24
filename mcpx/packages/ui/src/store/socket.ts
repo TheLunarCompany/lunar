@@ -4,8 +4,8 @@ import {
   appConfigSchema,
   SerializedAppConfig,
   type SystemState,
-  UI_ClientBoundMessage,
-  UI_ServerBoundMessage,
+  UiClientBoundMessage,
+  UiServerBoundMessage,
   WS_CONNECTION_ERROR,
 } from "@mcpx/shared-model";
 import { io, type Socket } from "socket.io-client";
@@ -75,7 +75,7 @@ export const socketStore = create<SocketStore>()(
         });
 
         socket.on(
-          UI_ClientBoundMessage.AppConfig,
+          UiClientBoundMessage.AppConfig,
           (payload: SerializedAppConfig) => {
             const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -112,7 +112,7 @@ export const socketStore = create<SocketStore>()(
           },
         );
 
-        socket.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
+        socket.on(UiClientBoundMessage.SystemState, (payload: SystemState) => {
           // In test mode, ignore real socket updates to prevent overwriting mocks
           if (typeof window !== "undefined" && window.__MCPX_TEST_MODE__) {
             return;
@@ -130,7 +130,7 @@ export const socketStore = create<SocketStore>()(
         });
 
         socket.on(
-          UI_ClientBoundMessage.ActiveCallCountChanged,
+          UiClientBoundMessage.ActiveCallCountChanged,
           ({ activeCallCount }: ActiveCallCountChangedPayload) => {
             set({ activeCallCount });
           },
@@ -260,9 +260,9 @@ export const socketStore = create<SocketStore>()(
         socket.off("disconnect");
         socket.off("connect_failed");
 
-        socket.off(UI_ClientBoundMessage.AppConfig);
-        socket.off(UI_ClientBoundMessage.SystemState);
-        socket.off(UI_ClientBoundMessage.ActiveCallCountChanged);
+        socket.off(UiClientBoundMessage.AppConfig);
+        socket.off(UiClientBoundMessage.SystemState);
+        socket.off(UiClientBoundMessage.ActiveCallCountChanged);
       }
 
       function disconnect() {
@@ -279,7 +279,7 @@ export const socketStore = create<SocketStore>()(
         });
       }
 
-      function safeEmit(message: UI_ServerBoundMessage, data?: unknown) {
+      function safeEmit(message: UiServerBoundMessage, data?: unknown) {
         if (!socket?.connected) {
           throw new Error("WebSocket not connected");
         }
@@ -287,11 +287,11 @@ export const socketStore = create<SocketStore>()(
       }
 
       function emitGetAppConfig() {
-        safeEmit(UI_ServerBoundMessage.GetAppConfig);
+        safeEmit(UiServerBoundMessage.GetAppConfig);
       }
 
       function emitGetSystemState() {
-        safeEmit(UI_ServerBoundMessage.GetSystemState);
+        safeEmit(UiServerBoundMessage.GetSystemState);
       }
 
       return {

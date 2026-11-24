@@ -8,7 +8,7 @@ import {
 import { normalizeServerName } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@aigw/core/logging";
 import {
-  McpxBoundPayloads,
+  mcpxBoundPayloads,
   type TargetServerEntry,
   WebappBoundPayloadOf,
 } from "@mcpx/webapp-protocol/messages";
@@ -26,7 +26,7 @@ import {
 import { ServiceToolGroup } from "../model/config/permissions.js";
 import { resolveProviderKey } from "../oauth-providers/host-matcher.js";
 
-type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
+type ApplySetupPayload = z.infer<typeof mcpxBoundPayloads.applySetup>;
 type SetupConfigPayload = ApplySetupPayload["config"];
 
 export type CurrentSetup = Omit<WebappBoundPayloadOf<"setup-change">, "source">;
@@ -472,14 +472,14 @@ export class SetupManager implements SetupManagerI {
     // Filter out ephemeral groups (e.g., dynamic-capabilities) - they shouldn't be synced to hub
     const dynamicGroupNames = new Set(
       config.toolGroups
-        ?.filter((g) => g.owner === "dynamic-capabilities")
-        .map((g) => g.name) ?? [],
+        .filter((g) => g.owner === "dynamic-capabilities")
+        .map((g) => g.name),
     );
-    const userToolGroups = config.toolGroups?.filter(
+    const userToolGroups = config.toolGroups.filter(
       (g) => g.owner === undefined || g.owner === "user",
     );
     // Only include name and services in wire format (owner is local-only at the moment)
-    const normalizedToolGroups = userToolGroups?.map((toolGroup) => ({
+    const normalizedToolGroups = userToolGroups.map((toolGroup) => ({
       name: toolGroup.name,
       services: Object.fromEntries(
         Object.entries(toolGroup.services).map(([serviceName, markedTools]) => [
@@ -490,7 +490,7 @@ export class SetupManager implements SetupManagerI {
     }));
 
     // Filter out consumer permissions that reference dynamic groups
-    const consumers = config.permissions?.consumers ?? {};
+    const consumers = config.permissions.consumers;
     const filteredConsumers = Object.fromEntries(
       Object.entries(consumers).filter(
         ([, consumerConfig]) =>

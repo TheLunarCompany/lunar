@@ -1,5 +1,6 @@
 import { Prompt, Resource, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
+import { stringifyEq } from "@aigw/core/data";
 import { safeEmit } from "./capability-notifications.js";
 import {
   CapabilityKind,
@@ -206,7 +207,12 @@ export class CapabilityResolver {
     const nextTools = this.buildActiveSet<Tool>(
       (cap) => cap.tools,
       (def, serverName, cap, origin) =>
-        origin === "internal" || this.isToolApproved(serverName, def.name, cap),
+        origin === "internal" ||
+        this.isToolApproved({
+          serverName,
+          toolName: def.name,
+          capabilities: cap,
+        }),
       prefixedProjection,
     );
     // Internal-origin prompts (skills projected as /slash) bypass approval, like
@@ -215,7 +221,10 @@ export class CapabilityResolver {
       (cap) => cap.prompts,
       (def, serverName, _cap, origin) =>
         origin === "internal" ||
-        this.catalogManager.isPromptApproved(serverName, def.name),
+        this.catalogManager.isPromptApproved({
+          serverName,
+          promptName: def.name,
+        }),
       promptProjection,
     );
     // Only internal-origin resources are served; an upstream resource would
@@ -307,17 +316,20 @@ export class CapabilityResolver {
     return { ok: false, reason: "unknown" };
   }
 
-  private isToolApproved(
-    serverName: string,
-    toolName: string,
-    capabilities: ServerCapabilities,
-  ): boolean {
-    if (this.catalogManager.isToolApproved(serverName, toolName)) return true;
+  private isToolApproved(props: {
+    serverName: string;
+    toolName: string;
+    capabilities: ServerCapabilities;
+  }): boolean {
+    const { serverName, toolName, capabilities } = props;
+    if (this.catalogManager.isToolApproved({ serverName, toolName })) {
+      return true;
+    }
     // An extended child tool is approved if its parent is approved.
     const parentName = capabilities.toolParentNames?.[toolName];
     return (
       parentName !== undefined &&
-      this.catalogManager.isToolApproved(serverName, parentName)
+      this.catalogManager.isToolApproved({ serverName, toolName: parentName })
     );
   }
 
@@ -397,7 +409,7 @@ function resourceProjection(
   def: Resource,
   serverName: string,
 ): ProjectedCapability<Resource> {
-  const advertisedUri = injectServerIntoUri(def.uri, serverName);
+  const advertisedUri = injectServerIntoUri({ uri: def.uri, serverName });
   return {
     key: advertisedUri,
     capabilityName: def.uri,
@@ -405,7 +417,11 @@ function resourceProjection(
   };
 }
 
-function injectServerIntoUri(uri: string, serverName: string): string {
+function injectServerIntoUri(props: {
+  uri: string;
+  serverName: string;
+}): string {
+  const { uri, serverName } = props;
   const sep = uri.indexOf("://");
   if (sep < 0) return `${serverName}/${uri}`;
   const scheme = uri.slice(0, sep);
@@ -455,7 +471,7 @@ function activeMapsEqual<T>(
     if (!bv) return false;
     if (av.origin !== bv.origin) return false;
     // Content-aware: catches same-name schema/description/argument changes.
-    if (JSON.stringify(av.definition) !== JSON.stringify(bv.definition)) {
+    if (!stringifyEq(av.definition, bv.definition)) {
       return false;
     }
   }

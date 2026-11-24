@@ -53,7 +53,11 @@ export class HubTokenClient implements OAuthTokenStoreI {
     return raw;
   }
 
-  async saveCodeVerifier(serverName: string, verifier: string): Promise<void> {
+  async saveCodeVerifier(props: {
+    serverName: string;
+    verifier: string;
+  }): Promise<void> {
+    const { serverName, verifier } = props;
     await this.save(serverName, "verifier", verifier);
     this.logger.debug("Code verifier saved", { serverName });
   }

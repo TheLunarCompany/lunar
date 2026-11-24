@@ -41,11 +41,12 @@ export class OpenAiLlmClient implements LlmClient {
   private client: OpenAiClientInterface;
   private model: string;
 
-  constructor(
-    apiKey: string,
-    model: string,
-    openAiClient?: OpenAiClientInterface,
-  ) {
+  constructor(params: {
+    apiKey: string;
+    model: string;
+    openAiClient?: OpenAiClientInterface;
+  }) {
+    const { apiKey, model, openAiClient } = params;
     this.client = openAiClient ?? new OpenAI({ apiKey });
     this.model = model;
   }

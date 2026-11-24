@@ -35,10 +35,10 @@ const streamableServer = {
 describe("prepareForSystemState", () => {
   describe("connecting", () => {
     it("produces connecting state with empty tools for stdio", () => {
-      const result = prepareForSystemState(
-        { _state: "connecting", targetServer: stdioServer },
-        stubEstimateTokens,
-      );
+      const result = prepareForSystemState({
+        targetClient: { _state: "connecting", targetServer: stdioServer },
+        estimateTokens: stubEstimateTokens,
+      });
 
       expect(result).toEqual({
         _type: "stdio",
@@ -52,25 +52,20 @@ describe("prepareForSystemState", () => {
     });
 
     it("includes the catalog display name when provided", () => {
-      const result = prepareForSystemState(
-        { _state: "connecting", targetServer: stdioServer },
-        stubEstimateTokens,
-        [],
-        [],
-        [],
-        [],
-        undefined,
-        "Updated label",
-      );
+      const result = prepareForSystemState({
+        targetClient: { _state: "connecting", targetServer: stdioServer },
+        estimateTokens: stubEstimateTokens,
+        displayName: "Updated label",
+      });
 
       expect(result).toMatchObject({ displayName: "Updated label" });
     });
 
     it("produces connecting state for sse", () => {
-      const result = prepareForSystemState(
-        { _state: "connecting", targetServer: sseServer },
-        stubEstimateTokens,
-      );
+      const result = prepareForSystemState({
+        targetClient: { _state: "connecting", targetServer: sseServer },
+        estimateTokens: stubEstimateTokens,
+      });
 
       expect(result._type).toBe("sse");
       expect(result.state).toEqual({ type: "connecting" });
@@ -78,10 +73,10 @@ describe("prepareForSystemState", () => {
     });
 
     it("produces connecting state for streamable-http", () => {
-      const result = prepareForSystemState(
-        { _state: "connecting", targetServer: streamableServer },
-        stubEstimateTokens,
-      );
+      const result = prepareForSystemState({
+        targetClient: { _state: "connecting", targetServer: streamableServer },
+        estimateTokens: stubEstimateTokens,
+      });
 
       expect(result._type).toBe("streamable-http");
       expect(result.state).toEqual({ type: "connecting" });
@@ -101,15 +96,15 @@ describe("prepareForSystemState", () => {
 
     it("enriches tools with parameters and token estimates", () => {
       const tools = [makeTool("read-file"), makeTool("write-file")];
-      const result = prepareForSystemState(
-        {
+      const result = prepareForSystemState({
+        targetClient: {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
         },
-        () => 100,
-        tools,
-      );
+        estimateTokens: () => 100,
+        approvedTools: tools,
+      });
 
       expect(result.state).toEqual({ type: "connected" });
       expect(result.tools).toHaveLength(2);
@@ -123,18 +118,18 @@ describe("prepareForSystemState", () => {
     it("passes each tool to estimateTokens", () => {
       const toolNames: string[] = [];
       const tools = [makeTool("first"), makeTool("second")];
-      const result = prepareForSystemState(
-        {
+      const result = prepareForSystemState({
+        targetClient: {
           _state: "connected",
           targetServer: sseServer,
           extendedClient: {} as never,
         },
-        (tool) => {
+        estimateTokens: (tool) => {
           toolNames.push(tool.name);
           return tool.name.length;
         },
-        tools,
-      );
+        approvedTools: tools,
+      });
 
       expect(toolNames.length).toBe(2);
       expect(toolNames).toContain("first");
@@ -148,16 +143,16 @@ describe("prepareForSystemState", () => {
     it("passes originalTools through verbatim", () => {
       const approved = [makeTool("a")];
       const raw = [makeTool("a"), makeTool("dropped")];
-      const result = prepareForSystemState(
-        {
+      const result = prepareForSystemState({
+        targetClient: {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
         },
-        stubEstimateTokens,
-        approved,
-        raw,
-      );
+        estimateTokens: stubEstimateTokens,
+        approvedTools: approved,
+        originalTools: raw,
+      });
 
       expect(result.originalTools).toEqual(raw);
       expect(result.tools).toHaveLength(1);
@@ -169,28 +164,28 @@ describe("prepareForSystemState", () => {
       // silently inverted the meaning when callers forgot to pass the raw
       // upstream list. Empty is the safer default.
       const approved = [makeTool("a")];
-      const result = prepareForSystemState(
-        {
+      const result = prepareForSystemState({
+        targetClient: {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
         },
-        stubEstimateTokens,
-        approved,
-      );
+        estimateTokens: stubEstimateTokens,
+        approvedTools: approved,
+      });
 
       expect(result.originalTools).toEqual([]);
     });
 
     it("produces empty tools when no approvedCapabilities provided", () => {
-      const result = prepareForSystemState(
-        {
+      const result = prepareForSystemState({
+        targetClient: {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
         },
-        stubEstimateTokens,
-      );
+        estimateTokens: stubEstimateTokens,
+      });
 
       expect(result.tools).toEqual([]);
       expect(result.originalTools).toEqual([]);
@@ -207,19 +202,17 @@ describe("prepareForSystemState", () => {
           },
         ],
       };
-      const result = prepareForSystemState(
-        {
+      const result = prepareForSystemState({
+        targetClient: {
           _state: "connected",
           targetServer: stdioServer,
           extendedClient: {} as never,
         },
-        stubEstimateTokens,
-        [],
-        [],
-        [promptA],
-        [promptA, promptB],
-        messages,
-      );
+        estimateTokens: stubEstimateTokens,
+        approvedPrompts: [promptA],
+        originalPrompts: [promptA, promptB],
+        promptMessages: messages,
+      });
 
       expect(result.prompts).toEqual([
         {
@@ -240,12 +233,11 @@ describe("prepareForSystemState", () => {
         description: "auth",
         inputSchema: { type: "object" as const, properties: {} },
       };
-      const result = prepareForSystemState(
-        { _state: "pending-auth", targetServer: sseServer },
-        stubEstimateTokens,
-        [authTool],
-        [],
-      );
+      const result = prepareForSystemState({
+        targetClient: { _state: "pending-auth", targetServer: sseServer },
+        estimateTokens: stubEstimateTokens,
+        approvedTools: [authTool],
+      });
 
       expect(result.state).toEqual({ type: "pending-auth" });
       expect(result.tools).toHaveLength(1);
@@ -254,10 +246,10 @@ describe("prepareForSystemState", () => {
     });
 
     it("yields no tools when caller passes none", () => {
-      const result = prepareForSystemState(
-        { _state: "pending-auth", targetServer: sseServer },
-        stubEstimateTokens,
-      );
+      const result = prepareForSystemState({
+        targetClient: { _state: "pending-auth", targetServer: sseServer },
+        estimateTokens: stubEstimateTokens,
+      });
 
       expect(result.state).toEqual({ type: "pending-auth" });
       expect(result.tools).toEqual([]);
@@ -272,20 +264,15 @@ describe("prepareForSystemState", () => {
         { key: "SECRET", type: "fromEnv" as const, fromEnvName: "MY_SECRET" },
       ];
 
-      const result = prepareForSystemState(
-        {
+      const result = prepareForSystemState({
+        targetClient: {
           _state: "pending-input",
           targetServer: stdioServer,
           missingEnvVars,
         },
-        stubEstimateTokens,
-        [],
-        [],
-        [],
-        [],
-        undefined,
-        "Input Server",
-      );
+        estimateTokens: stubEstimateTokens,
+        displayName: "Input Server",
+      });
 
       expect(result.state).toEqual({
         type: "pending-input",
@@ -300,14 +287,14 @@ describe("prepareForSystemState", () => {
     it("serializes the error", () => {
       const error = new Error("connection refused");
 
-      const result = prepareForSystemState(
-        {
+      const result = prepareForSystemState({
+        targetClient: {
           _state: "connection-failed",
           targetServer: streamableServer,
           error,
         },
-        stubEstimateTokens,
-      );
+        estimateTokens: stubEstimateTokens,
+      });
 
       expect(result.state).toEqual({
         type: "connection-failed",
@@ -337,7 +324,11 @@ describe("buildSystemStatePromptsPayload", () => {
     const approved = [makePrompt("summarize"), makePrompt("draft")];
     const messages = { summarize: [sampleMessage] };
 
-    const result = buildSystemStatePromptsPayload(approved, approved, messages);
+    const result = buildSystemStatePromptsPayload({
+      approvedPrompts: approved,
+      rawPrompts: approved,
+      promptMessages: messages,
+    });
 
     expect(result.prompts).toEqual([
       {
@@ -358,17 +349,19 @@ describe("buildSystemStatePromptsPayload", () => {
   it("passes raw originalPrompts through verbatim", () => {
     const approved = [makePrompt("summarize")];
     const raw = [makePrompt("summarize"), makePrompt("draft")];
-    const result = buildSystemStatePromptsPayload(approved, raw, undefined);
+    const result = buildSystemStatePromptsPayload({
+      approvedPrompts: approved,
+      rawPrompts: raw,
+    });
     expect(result.originalPrompts).toBe(raw);
   });
 
   it("returns no messages when promptMessages cache is undefined", () => {
     const approved = [makePrompt("summarize")];
-    const result = buildSystemStatePromptsPayload(
-      approved,
-      approved,
-      undefined,
-    );
+    const result = buildSystemStatePromptsPayload({
+      approvedPrompts: approved,
+      rawPrompts: approved,
+    });
     expect(result.prompts[0]?.messages).toBeUndefined();
   });
 });

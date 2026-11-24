@@ -8,7 +8,7 @@ export const WS_CONNECTION_ERROR = {
 } as const;
 
 // Messages from UI to MCPX server.
-export enum UI_ServerBoundMessage {
+export enum UiServerBoundMessage {
   GetAppConfig = "getAppConfig",
   GetSystemState = "getSystemState",
   SetDynamicCapabilities = "setDynamicCapabilities",
@@ -27,7 +27,7 @@ export type ActiveCallCountChangedPayload = {
 };
 
 // Messages from MCPX server to UI
-export enum UI_ClientBoundMessage {
+export enum UiClientBoundMessage {
   AppConfig = "appConfig",
   GetAppConfigFailed = "getAppConfigFailed",
 

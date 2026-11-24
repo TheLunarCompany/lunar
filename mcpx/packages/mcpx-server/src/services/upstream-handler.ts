@@ -13,11 +13,6 @@ import { normalizeServerName } from "@mcpx/toolkit-core/data";
 //     instead of reading env inline.
 import { makeError, stringifyEq } from "@aigw/core/data";
 import { loggableError, TelemetryLogger } from "@aigw/core/logging";
-import {
-  Prompt,
-  PromptMessage,
-  Tool,
-} from "@modelcontextprotocol/sdk/types.js";
 
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
@@ -66,6 +61,7 @@ import {
   buildSystemStatePromptsPayload,
   buildSystemStateToolsPayload,
   prepareForSystemState,
+  PrepareForSystemStateProps,
 } from "./prepare-for-system-state.js";
 import {
   TargetClient,
@@ -101,10 +97,10 @@ export interface TargetServerChangeNotifier {
 }
 
 export interface UpstreamHandlerOAuthHandler {
-  initiateOAuthForServer(
-    targetServerName: string,
-    callbackUrl?: string,
-  ): Promise<InitiateOAuthResult>;
+  initiateOAuthForServer(props: {
+    targetServerName: string;
+    callbackUrl?: string;
+  }): Promise<InitiateOAuthResult>;
 }
 
 function sameStringSet(a: Set<string>, b: Set<string>): boolean {
@@ -336,14 +332,15 @@ export class UpstreamHandler
       const next = config.toolExtensions.services;
       const prev = this.previousToolExtensions;
       this.previousToolExtensions = next;
-      this.onToolExtensionsChanged(prev, next);
+      this.onToolExtensionsChanged({ prev, next });
     });
   }
 
-  private onToolExtensionsChanged(
-    prev: ToolExtensions["services"],
-    next: ToolExtensions["services"],
-  ): void {
+  private onToolExtensionsChanged(props: {
+    prev: ToolExtensions["services"];
+    next: ToolExtensions["services"];
+  }): void {
+    const { prev, next } = props;
     const allNames = new Set([...Object.keys(prev), ...Object.keys(next)]);
     for (const name of allNames) {
       if (stringifyEq(prev[name], next[name])) continue;
@@ -406,9 +403,12 @@ export class UpstreamHandler
         .map((t) => t.definition);
       this.systemState.updateTargetServerTools({
         name: client.targetServer.name,
-        ...buildSystemStateToolsPayload(approvedTools, rawTools, (tool) =>
-          this.toolTokenEstimator.estimateTokens(tool),
-        ),
+        ...buildSystemStateToolsPayload({
+          approvedTools,
+          rawTools,
+          estimateTokens: (tool) =>
+            this.toolTokenEstimator.estimateTokens(tool),
+        }),
       });
 
       const approvedPrompts =
@@ -418,11 +418,11 @@ export class UpstreamHandler
         .map((p) => p.definition);
       this.systemState.updateTargetServerPrompts({
         name: client.targetServer.name,
-        ...buildSystemStatePromptsPayload(
+        ...buildSystemStatePromptsPayload({
           approvedPrompts,
           rawPrompts,
-          entry.promptMessages,
-        ),
+          promptMessages: entry.promptMessages,
+        }),
       });
     }
   }
@@ -517,25 +517,30 @@ export class UpstreamHandler
     serviceName: string,
     params: Parameters<ExtendedClientI["callTool"]>[0],
   ): ReturnType<ExtendedClientI["callTool"]> {
-    return this.proxyToUpstream(serviceName, "callTool", (extended) =>
-      extended.callTool(params),
-    );
+    return this.proxyToUpstream({
+      serviceName,
+      method: "callTool",
+      action: (extended) => extended.callTool(params),
+    });
   }
 
   async getPrompt(
     serviceName: string,
     params: Parameters<ExtendedClientI["getPrompt"]>[0],
   ): ReturnType<ExtendedClientI["getPrompt"]> {
-    return this.proxyToUpstream(serviceName, "getPrompt", (extended) =>
-      extended.getPrompt(params),
-    );
+    return this.proxyToUpstream({
+      serviceName,
+      method: "getPrompt",
+      action: (extended) => extended.getPrompt(params),
+    });
   }
 
-  private proxyToUpstream<T>(
-    serviceName: string,
-    method: string,
-    action: (extended: ExtendedClientI) => Promise<T>,
-  ): Promise<T> {
+  private proxyToUpstream<T>(props: {
+    serviceName: string;
+    method: string;
+    action: (extended: ExtendedClientI) => Promise<T>;
+  }): Promise<T> {
+    const { serviceName, method, action } = props;
     const client = this.requireConnectedClient(serviceName);
     return this.executeWithAuthRetry(client, method, action);
   }
@@ -685,10 +690,11 @@ export class UpstreamHandler
    * state (pending-auth for first-time auth, or connected for proactive re-auth).
    * For device flows, auto-completion registers the client when the user authorizes.
    */
-  async initiateOAuthForServer(
-    targetServerName: string,
-    callbackUrl?: string,
-  ): Promise<InitiateOAuthResult> {
+  async initiateOAuthForServer(props: {
+    targetServerName: string;
+    callbackUrl?: string;
+  }): Promise<InitiateOAuthResult> {
+    const { targetServerName, callbackUrl } = props;
     const normalizedName = normalizeServerName(targetServerName);
     const client = this._clientsByService.get(normalizedName);
     if (!client) {
@@ -729,27 +735,32 @@ export class UpstreamHandler
    * Completes an OAuth flow for the given state. Returns "unknown-state" when
    * no active flow exists; failures during a known flow still throw.
    */
-  async completeOAuthByState(
-    state: string,
-    code: string,
-  ): Promise<CompleteOAuthOutcome> {
+  async completeOAuthByState(props: {
+    state: string;
+    code: string;
+  }): Promise<CompleteOAuthOutcome> {
+    const { state, code } = props;
     const serverName = this.oauthConnectionHandler.getServerNameByState(state);
     if (!serverName) {
       return "unknown-state";
     }
 
     try {
-      await this.completeOAuthForServer(serverName, code);
+      await this.completeOAuthForServer({
+        targetServerName: serverName,
+        authorizationCode: code,
+      });
       return "completed";
     } finally {
       this.oauthConnectionHandler.completeOAuthFlowCleanup(state);
     }
   }
 
-  private async completeOAuthForServer(
-    targetServerName: string,
-    authorizationCode: string,
-  ): Promise<void> {
+  private async completeOAuthForServer(props: {
+    targetServerName: string;
+    authorizationCode: string;
+  }): Promise<void> {
+    const { targetServerName, authorizationCode } = props;
     const client = this._clientsByService.get(
       normalizeServerName(targetServerName),
     );
@@ -765,10 +776,10 @@ export class UpstreamHandler
     }
 
     try {
-      const extendedClient = await this.oauthConnectionHandler.completeOAuth(
-        targetServerName,
+      const extendedClient = await this.oauthConnectionHandler.completeOAuth({
+        serverName: targetServerName,
         authorizationCode,
-      );
+      });
 
       this.logger.info("OAuth connection established", { targetServerName });
 
@@ -908,15 +919,15 @@ export class UpstreamHandler
     const upstreamPrompts = (registryEntry?.prompts ?? [])
       .filter((p) => p.origin === "upstream")
       .map((p) => p.definition);
-    const systemStateTargetServer = this.prepareForSystemState(
-      newTargetClient,
+    const systemStateTargetServer = this.prepareForSystemState({
+      targetClient: newTargetClient,
       approvedTools,
-      upstreamTools,
+      originalTools: upstreamTools,
       approvedPrompts,
-      upstreamPrompts,
-      registryEntry?.promptMessages,
+      originalPrompts: upstreamPrompts,
+      promptMessages: registryEntry?.promptMessages,
       displayName,
-    );
+    });
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
 
     if (!isConnecting(newTargetClient)) {
@@ -1430,23 +1441,11 @@ export class UpstreamHandler
   }
 
   private prepareForSystemState(
-    targetClient: TargetClient,
-    approvedTools: Tool[] = [],
-    originalTools?: Tool[],
-    approvedPrompts: Prompt[] = [],
-    originalPrompts?: Prompt[],
-    promptMessages?: Record<string, PromptMessage[]>,
-    displayName?: string,
+    props: Omit<PrepareForSystemStateProps, "estimateTokens">,
   ): TargetServerNewWithoutUsage {
-    return prepareForSystemState(
-      targetClient,
-      (tool) => this.toolTokenEstimator.estimateTokens(tool),
-      approvedTools,
-      originalTools,
-      approvedPrompts,
-      originalPrompts,
-      promptMessages,
-      displayName,
-    );
+    return prepareForSystemState({
+      ...props,
+      estimateTokens: (tool) => this.toolTokenEstimator.estimateTokens(tool),
+    });
   }
 }

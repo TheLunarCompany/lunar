@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import { createServer, Server as HttpServer } from "http";
 import { Logger } from "winston";
 import {
-  McpxBoundPayloads,
+  mcpxBoundPayloads,
   SetIdentityPayload,
   savedSetupItemSchema,
   MCPX_BOUND_EVENTS,
@@ -39,10 +39,10 @@ function skillAuthorOf(socket: Socket): {
   };
 }
 
-export type SetCatalogPayload = z.input<typeof McpxBoundPayloads.setCatalog>;
+export type SetCatalogPayload = z.input<typeof mcpxBoundPayloads.setCatalog>;
 export type SavedSetupItem = z.infer<typeof savedSetupItemSchema>;
 export type SetMcpxBehaviorPayload = z.input<
-  typeof McpxBoundPayloads.setMcpxBehavior
+  typeof mcpxBoundPayloads.setMcpxBehavior
 >;
 
 export interface MockHubServerOptions {

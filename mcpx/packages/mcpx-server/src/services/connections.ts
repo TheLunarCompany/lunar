@@ -1,6 +1,14 @@
 import { Socket } from "socket.io";
 import { Logger } from "winston";
 
+export interface UIConnectionProps {
+  socket: Socket;
+  systemStateCallback: () => void;
+  activeCallCountCallback: () => void;
+  appConfigCallback: () => void;
+  identityCallback: () => void;
+}
+
 export class UIConnection {
   private _socket: Socket;
   private _cleanupSystemState: () => void;
@@ -8,13 +16,14 @@ export class UIConnection {
   private _cleanAppConfig: () => void;
   private _cleanupIdentity: () => void;
 
-  constructor(
-    socket: Socket,
-    systemStateCallback: () => void,
-    activeCallCountCallback: () => void,
-    appConfigCallback: () => void,
-    identityCallback: () => void,
-  ) {
+  constructor(props: UIConnectionProps) {
+    const {
+      socket,
+      systemStateCallback,
+      activeCallCountCallback,
+      appConfigCallback,
+      identityCallback,
+    } = props;
     this._socket = socket;
     this._cleanupSystemState = systemStateCallback;
     this._cleanupActiveCallCount = activeCallCountCallback;

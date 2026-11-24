@@ -12,10 +12,10 @@ export const SERVICE_DELIMITER = "__";
 export const AUTH_TOOL_NAME = "request_authentication_link";
 
 interface OAuthUpstreamHandler {
-  initiateOAuthForServer(
-    targetServerName: string,
-    callbackUrl?: string,
-  ): Promise<InitiateOAuthResult>;
+  initiateOAuthForServer(props: {
+    targetServerName: string;
+    callbackUrl?: string;
+  }): Promise<InitiateOAuthResult>;
 }
 
 function buildAuthToolDescription(serviceName: string): string {
@@ -78,7 +78,10 @@ export class OAuthToolsService implements InternalCapabilityProvider {
 
   handleAuthToolCall(serverName: string): Promise<CallToolResult> {
     return this.upstreamHandler
-      .initiateOAuthForServer(normalizeServerName(serverName), this.callbackUrl)
+      .initiateOAuthForServer({
+        targetServerName: normalizeServerName(serverName),
+        callbackUrl: this.callbackUrl,
+      })
       .then((result) => {
         const lines = [result.authorizationUrl];
         if (result.userCode) {

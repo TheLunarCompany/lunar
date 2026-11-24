@@ -27,8 +27,8 @@ function makeMemoryStore(): OAuthTokenStoreI {
     async loadCodeVerifier(serverName) {
       return verifiers.get(serverName);
     },
-    async saveCodeVerifier(serverName, verifier) {
-      verifiers.set(serverName, verifier);
+    async saveCodeVerifier(props) {
+      verifiers.set(props.serverName, props.verifier);
     },
     async loadClientInfo(serverName) {
       return clients.get(serverName);
@@ -52,7 +52,10 @@ describe("OAuthProviderFactory", () => {
         access_token: "tok",
         token_type: "bearer",
       });
-      await tokenStore.saveCodeVerifier("myserver", "verifier");
+      await tokenStore.saveCodeVerifier({
+        serverName: "myserver",
+        verifier: "verifier",
+      });
       await tokenStore.saveClientInfo("myserver", {
         client_id: "id",
         redirect_uris: [],

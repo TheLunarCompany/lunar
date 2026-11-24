@@ -1,6 +1,6 @@
 import {
-  UI_ClientBoundMessage,
-  UI_ServerBoundMessage,
+  UiClientBoundMessage,
+  UiServerBoundMessage,
   WS_CONNECTION_ERROR,
 } from "@mcpx/shared-model";
 import { UIConnection } from "../services/connections.js";
@@ -55,13 +55,13 @@ export function bindUIWebsocket(
 
     const systemStateCallback =
       services.controlPlane.subscribeToSystemStateUpdates((systemState) => {
-        socket.emit(UI_ClientBoundMessage.SystemState, systemState);
+        socket.emit(UiClientBoundMessage.SystemState, systemState);
       });
 
     const activeCallCountCallback =
       services.controlPlane.subscribeToActiveCallCountUpdates(
         (activeCallCount) => {
-          socket.emit(UI_ClientBoundMessage.ActiveCallCountChanged, {
+          socket.emit(UiClientBoundMessage.ActiveCallCountChanged, {
             activeCallCount,
           });
         },
@@ -71,7 +71,7 @@ export function bindUIWebsocket(
       (configSnapshot: ConfigSnapshot) => {
         // Convert ConfigSnapshot to SerializedAppConfig
         const yaml = stringify(configSnapshot.config);
-        socket.emit(UI_ClientBoundMessage.AppConfig, {
+        socket.emit(UiClientBoundMessage.AppConfig, {
           yaml,
           version: configSnapshot.version,
           lastModified: configSnapshot.lastModified,
@@ -80,19 +80,19 @@ export function bindUIWebsocket(
     );
 
     const identityCallback = services.identityService.subscribe((identity) => {
-      socket.emit(UI_ClientBoundMessage.IdentityChanged, {
+      socket.emit(UiClientBoundMessage.IdentityChanged, {
         identity: toClientIdentity(identity),
       });
     });
 
     services.connections.addSession(
-      new UIConnection(
+      new UIConnection({
         socket,
         systemStateCallback,
         activeCallCountCallback,
         appConfigCallback,
         identityCallback,
-      ),
+      }),
     );
     logger.debug("UI sessions updated", {
       totalSessions: services.connections.size(),
@@ -109,7 +109,7 @@ export function bindUIWebsocket(
     });
 
     // Handle events from UI
-    Object.entries(UI_ServerBoundMessage).forEach(([_, eventName]) => {
+    Object.entries(UiServerBoundMessage).forEach(([_, eventName]) => {
       socket.on(eventName, async (payload) => {
         await handleWsEvent(services, logger, socket, eventName, payload);
       });
@@ -121,7 +121,7 @@ async function handleWsEvent(
   services: Services,
   logger: Logger,
   socket: Socket,
-  eventName: UI_ServerBoundMessage,
+  eventName: UiServerBoundMessage,
   payload: unknown,
 ): Promise<void> {
   logger.debug(`Received event: ${eventName}`, {
@@ -131,19 +131,19 @@ async function handleWsEvent(
 
   try {
     switch (eventName) {
-      case UI_ServerBoundMessage.GetAppConfig: {
+      case UiServerBoundMessage.GetAppConfig: {
         logger.debug("Fetching current app config");
         const appConfig = services.controlPlane.getAppConfig();
-        socket.emit(UI_ClientBoundMessage.AppConfig, appConfig);
+        socket.emit(UiClientBoundMessage.AppConfig, appConfig);
         break;
       }
-      case UI_ServerBoundMessage.GetSystemState: {
+      case UiServerBoundMessage.GetSystemState: {
         logger.debug("Fetching current system state");
         const systemState = services.controlPlane.getSystemState();
-        socket.emit(UI_ClientBoundMessage.SystemState, systemState);
+        socket.emit(UiClientBoundMessage.SystemState, systemState);
         break;
       }
-      case UI_ServerBoundMessage.SetDynamicCapabilities: {
+      case UiServerBoundMessage.SetDynamicCapabilities: {
         // Handling is wired in a later change.
         break;
       }

@@ -281,7 +281,7 @@ export function buildLogger(
   // at or above the configured minimum level (default: error), so any logger
   // (including child loggers) sends those to telemetry.
   const mirrorLevel: LogLevel =
-    props.telemetry?.minTelemetryMirrorLevel ?? "error";
+    props.telemetry.minTelemetryMirrorLevel ?? "error";
   const mirroringLoki = buildLokiTransport(
     props.telemetry,
     loggerLabel,
@@ -381,6 +381,7 @@ export interface AccessLogRequest {
 
 export interface AccessLogResponse {
   statusCode: number;
+  // eslint-disable-next-line review/no-same-type-params -- mirrors Node's ServerResponse.setHeader, which callers pass in
   setHeader(name: string, value: string): unknown;
   on(event: "finish", listener: () => void): unknown;
 }

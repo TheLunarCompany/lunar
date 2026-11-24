@@ -169,7 +169,7 @@ describe("OAuthConnectionHandler", () => {
 
       return {
         getOrCreateOAuthProvider: () => provider,
-        startOAuthFlow: (serverName, serverUrl, state) => {
+        startOAuthFlow: ({ serverName, serverUrl, state }) => {
           flows.set(state, {
             serverName,
             serverUrl,
@@ -248,7 +248,10 @@ describe("OAuthConnectionHandler", () => {
         );
 
         await expect(
-          handler.completeOAuth(TEST_SERVER_NAME, TEST_AUTH_CODE),
+          handler.completeOAuth({
+            serverName: TEST_SERVER_NAME,
+            authorizationCode: TEST_AUTH_CODE,
+          }),
         ).rejects.toThrow(
           `No pending OAuth flow for server: ${TEST_SERVER_NAME}`,
         );

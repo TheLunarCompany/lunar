@@ -407,8 +407,8 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   const skillsRouter = buildSkillsRouter(authGuard, services, mcpxLogger);
   const oauthRouter = buildOAuthRouter(
     {
-      completeOAuthByState: (state, code) =>
-        services.upstreamHandler.completeOAuthByState(state, code),
+      completeOAuthByState: (props) =>
+        services.upstreamHandler.completeOAuthByState(props),
     },
     mcpxLogger,
   );

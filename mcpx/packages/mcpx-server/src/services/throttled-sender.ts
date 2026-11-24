@@ -1,3 +1,9 @@
+export interface ThrottledMessage {
+  key: string;
+  payload: unknown;
+  correlationId?: string;
+}
+
 export interface ThrottledSenderOptions {
   debounceMs?: number;
   maxWaitMs?: number;
@@ -22,19 +28,15 @@ export class ThrottledSender {
   private readonly maxWaitMs: number;
 
   constructor(
-    private readonly sender: (
-      key: string,
-      payload: unknown,
-      correlationId?: string,
-    ) => void,
+    private readonly sender: (message: ThrottledMessage) => void,
     options: ThrottledSenderOptions = {},
   ) {
     this.debounceMs = options.debounceMs ?? 1000;
     this.maxWaitMs = options.maxWaitMs ?? 1000;
   }
 
-  sendNow(key: string, payload: unknown, correlationId?: string): void {
-    this.sender(key, payload, correlationId);
+  sendNow(message: ThrottledMessage): void {
+    this.sender(message);
   }
 
   send(key: string, payload: unknown): void {
@@ -89,6 +91,6 @@ export class ThrottledSender {
     this.pendingMessages.delete(key);
 
     // Send the message
-    this.sender(key, pending.payload);
+    this.sender({ key, payload: pending.payload });
   }
 }

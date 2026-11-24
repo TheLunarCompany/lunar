@@ -483,11 +483,11 @@ export class OAuthConnectionHandler {
     });
 
     const state = authProvider.state();
-    this.oauthSessionManager.startOAuthFlow(
-      targetServer.name,
-      targetServer.url,
+    this.oauthSessionManager.startOAuthFlow({
+      serverName: targetServer.name,
+      serverUrl: targetServer.url,
       state,
-    );
+    });
 
     this.logger.info("Initiating OAuth flow", {
       name: targetServer.name,
@@ -585,10 +585,11 @@ export class OAuthConnectionHandler {
    * On error, the pending flow is cleaned up and the error is rethrown.
    * The caller (UpstreamHandler) is responsible for updating server state on failure.
    */
-  async completeOAuth(
-    serverName: string,
-    authorizationCode: string,
-  ): Promise<ExtendedClientI> {
+  async completeOAuth(props: {
+    serverName: string;
+    authorizationCode: string;
+  }): Promise<ExtendedClientI> {
+    const { serverName, authorizationCode } = props;
     const pending = this.pendingFlows.get(serverName);
     if (!pending) {
       throw new Error(`No pending OAuth flow for server: ${serverName}`);
@@ -825,10 +826,10 @@ export class OAuthConnectionHandler {
           { serverName },
         );
         try {
-          const extendedClient = await this.completeOAuth(
+          const extendedClient = await this.completeOAuth({
             serverName,
-            DEVICE_FLOW_COMPLETE,
-          );
+            authorizationCode: DEVICE_FLOW_COMPLETE,
+          });
           await pending.onComplete?.(extendedClient);
         } catch (error) {
           this.logger.error("Failed to auto-complete device flow", {

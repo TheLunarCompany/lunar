@@ -1,6 +1,6 @@
 export * from "./mcpx-bound/messages.js";
 export {
-  Envelope,
+  envelopeSchema,
   wrapInEnvelope,
   safeParseEnvelopedMessage,
 } from "./metadata.js";

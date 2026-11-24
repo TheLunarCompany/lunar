@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type SystemState, UI_ClientBoundMessage } from "@mcpx/shared-model";
+import { type SystemState, UiClientBoundMessage } from "@mcpx/shared-model";
 
 const socketHarness = vi.hoisted(() => {
   const handlers = new Map<string, (...args: unknown[]) => void>();
@@ -38,7 +38,7 @@ describe("socket activity", () => {
 
   it("tracks active calls immediately and clears them on disconnect", async () => {
     await socketStore.getState().connect();
-    socketHarness.handlers.get(UI_ClientBoundMessage.SystemState)?.({
+    socketHarness.handlers.get(UiClientBoundMessage.SystemState)?.({
       targetServers: [],
       connectedClients: [],
       connectedClientClusters: [],
@@ -74,12 +74,12 @@ describe("socket activity", () => {
       version: 1,
       lastModified: new Date(),
     };
-    socketHarness.handlers.get(UI_ClientBoundMessage.AppConfig)?.(appConfig);
+    socketHarness.handlers.get(UiClientBoundMessage.AppConfig)?.(appConfig);
 
     expect(socketStore.getState().serializedAppConfig).toEqual(appConfig);
     expect(socketStore.getState().isPending).toBe(true);
 
-    socketHarness.handlers.get(UI_ClientBoundMessage.SystemState)?.({
+    socketHarness.handlers.get(UiClientBoundMessage.SystemState)?.({
       targetServers: [],
       connectedClients: [],
       connectedClientClusters: [],
@@ -94,12 +94,12 @@ describe("socket activity", () => {
 
   it("starts a fresh bootstrap after reconnecting", async () => {
     await socketStore.getState().connect();
-    socketHarness.handlers.get(UI_ClientBoundMessage.AppConfig)?.({
+    socketHarness.handlers.get(UiClientBoundMessage.AppConfig)?.({
       yaml: "{}",
       version: 1,
       lastModified: new Date(),
     });
-    socketHarness.handlers.get(UI_ClientBoundMessage.SystemState)?.({
+    socketHarness.handlers.get(UiClientBoundMessage.SystemState)?.({
       targetServers: [],
       connectedClients: [],
       connectedClientClusters: [],

@@ -20,16 +20,16 @@ import { INTERNAL_SERVICE_NAME } from "../model/internal-service.js";
  * Names of internal tools that can be called.
  * Used for type-safe tool name matching.
  */
-export const InternalToolName = {
+export const internalToolName = {
   GET_NEW_CAPABILITIES: "get_new_capabilities",
   CLEAR_TOOLS: "clear_tools",
 } as const;
 
 export type InternalToolNameType =
-  (typeof InternalToolName)[keyof typeof InternalToolName];
+  (typeof internalToolName)[keyof typeof internalToolName];
 
 const GET_NEW_CAPABILITIES_TOOL: Tool = {
-  name: InternalToolName.GET_NEW_CAPABILITIES,
+  name: internalToolName.GET_NEW_CAPABILITIES,
   description:
     "IMPORTANT: Call this tool FIRST to unlock tools for your task. " +
     "Without calling this, you won't have access to any other tools." +
@@ -49,7 +49,7 @@ const GET_NEW_CAPABILITIES_TOOL: Tool = {
 };
 
 const CLEAR_TOOLS_TOOL: Tool = {
-  name: InternalToolName.CLEAR_TOOLS,
+  name: internalToolName.CLEAR_TOOLS,
   description:
     "Use this tool when you've completed a task and no longer need the specialized tools. " +
     "This reduces noise and helps you focus on new tasks. " +
@@ -175,24 +175,24 @@ export class DynamicCapabilitiesService implements InternalCapabilityProvider {
     return [
       {
         kind: "tools",
-        name: InternalToolName.GET_NEW_CAPABILITIES,
+        name: internalToolName.GET_NEW_CAPABILITIES,
         isVisible,
         enrich: (definition) => this.enrichGetCapabilitiesTool(definition),
         handle: ({ args, consumer }) =>
           this.handleToolCall({
             consumerTag: requireTag(consumer),
-            toolName: InternalToolName.GET_NEW_CAPABILITIES,
+            toolName: internalToolName.GET_NEW_CAPABILITIES,
             args,
           }),
       },
       {
         kind: "tools",
-        name: InternalToolName.CLEAR_TOOLS,
+        name: internalToolName.CLEAR_TOOLS,
         isVisible,
         handle: ({ args, consumer }) =>
           this.handleToolCall({
             consumerTag: requireTag(consumer),
-            toolName: InternalToolName.CLEAR_TOOLS,
+            toolName: internalToolName.CLEAR_TOOLS,
             args,
           }),
       },
@@ -323,9 +323,9 @@ export class DynamicCapabilitiesService implements InternalCapabilityProvider {
   }): Promise<CallToolResult> {
     const { consumerTag, toolName, args } = params;
     switch (toolName) {
-      case InternalToolName.GET_NEW_CAPABILITIES:
+      case internalToolName.GET_NEW_CAPABILITIES:
         return this.handleGetNewCapabilities(consumerTag, args);
-      case InternalToolName.CLEAR_TOOLS:
+      case internalToolName.CLEAR_TOOLS:
         return this.handleClearTools(consumerTag);
     }
   }
@@ -351,7 +351,7 @@ export class DynamicCapabilitiesService implements InternalCapabilityProvider {
       (g) => g.owner === "dynamic-capabilities",
     );
     const dynamicGroupNames = new Set(dynamicGroups.map((g) => g.name));
-    const permissionConsumers = config.permissions.consumers ?? {};
+    const permissionConsumers = config.permissions.consumers;
 
     // Delete consumer permissions that reference dynamic groups.
     for (const [consumerName, consumerConfig] of Object.entries(

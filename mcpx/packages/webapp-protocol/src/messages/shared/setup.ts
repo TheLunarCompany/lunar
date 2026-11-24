@@ -6,7 +6,7 @@ import {
   staticOAuthSchema,
   targetServerAttributesSchema,
   toolExtensionsSchema,
-  AllowedCommands,
+  allowedCommands,
 } from "@mcpx/shared-model";
 
 // Mirrored from mcpx-server/src/model/target-servers.ts
@@ -22,7 +22,7 @@ export type EnvValue = z.infer<typeof envValueSchema>;
 
 export const targetServerStdioSchema = z.object({
   type: z.literal("stdio"),
-  command: AllowedCommands,
+  command: allowedCommands,
   args: z.array(z.string()).optional().default([]),
   env: z.record(z.string(), envValueSchema).optional().default({}),
   icon: z.string().optional(),

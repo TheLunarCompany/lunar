@@ -99,10 +99,10 @@ class PermissionManagerState {
         } else {
           services.set(
             serviceName,
-            mergeServicePermissions(
-              current,
-              buildServicePermissions(type, serviceToolGroup),
-            ),
+            mergeServicePermissions({
+              existing: current,
+              current: buildServicePermissions(type, serviceToolGroup),
+            }),
           );
         }
       });
@@ -179,7 +179,11 @@ export class PermissionManager implements ConfigConsumer<Config> {
 
     const { clientName, consumerTag, serviceName, capabilityName } = props;
     const consumer = this.resolveConsumer({ clientName, consumerTag });
-    return evaluatePermission(consumer, serviceName, capabilityName);
+    return evaluatePermission({
+      consumer,
+      serviceName,
+      toolName: capabilityName,
+    });
   }
 
   // Resolution precedence: consumerTag > clientName > default.
@@ -205,11 +209,12 @@ export class PermissionManager implements ConfigConsumer<Config> {
   }
 }
 
-function evaluatePermission(
-  consumer: ConsumerLevelPermission,
-  serviceName: string,
-  toolName: string,
-): boolean {
+function evaluatePermission(props: {
+  consumer: ConsumerLevelPermission;
+  serviceName: string;
+  toolName: string;
+}): boolean {
+  const { consumer, serviceName, toolName } = props;
   const { default: consumerDefault, services } = consumer;
   const service = services.get(serviceName);
   if (!service) {
@@ -227,10 +232,11 @@ function evaluatePermission(
   }
 }
 
-function mergeServicePermissions(
-  existing: ServiceLevelPermission,
-  current: ServiceLevelPermission,
-): ServiceLevelPermission {
+function mergeServicePermissions(props: {
+  existing: ServiceLevelPermission;
+  current: ServiceLevelPermission;
+}): ServiceLevelPermission {
+  const { existing, current } = props;
   // If either is *_all, it takes precedence
   if (existing.tag === "allow_all" || current.tag === "allow_all") {
     return { tag: "allow_all" };

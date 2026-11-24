@@ -44,9 +44,9 @@ import {
 import { SERVER_STATUS } from "@/types/mcp-server";
 import { getEditTargetServer } from "./server-edit-target";
 // TODO: McpServer type uses `command?: string` which loses type information.
-// The proper fix is to preserve AllowedCommands type from the source (system state)
+// The proper fix is to preserve allowedCommands type from the source (system state)
 // so we don't need runtime validation here. For now, we validate at usage.
-import { AllowedCommands } from "@mcpx/shared-model";
+import { allowedCommands } from "@mcpx/shared-model";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { normalizeServerName } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { findMcpServerByName } from "@/mapping/system-state";
@@ -274,7 +274,7 @@ export const ServerDetailsModal = ({
   ) => {
     if (currentServer.type !== "stdio" || !currentServer.command) return;
 
-    const commandResult = AllowedCommands.safeParse(currentServer.command);
+    const commandResult = allowedCommands.safeParse(currentServer.command);
     if (!commandResult.success) return;
 
     const shouldCloseDrawer = options?.closeDrawer !== false;

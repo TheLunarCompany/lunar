@@ -20,7 +20,10 @@ export interface OAuthTokenStoreI {
   loadTokens(serverName: string): Promise<StoredTokens | undefined>;
   saveTokens(serverName: string, data: StoredTokens): Promise<void>;
   loadCodeVerifier(serverName: string): Promise<string | undefined>;
-  saveCodeVerifier(serverName: string, verifier: string): Promise<void>;
+  saveCodeVerifier(props: {
+    serverName: string;
+    verifier: string;
+  }): Promise<void>;
   loadClientInfo(
     serverName: string,
   ): Promise<OAuthClientInformationFull | undefined>;

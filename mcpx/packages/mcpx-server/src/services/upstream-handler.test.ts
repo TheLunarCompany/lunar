@@ -222,7 +222,10 @@ describe("UpstreamHandler rate limit handling", () => {
       const h = track(await setup({ isOAuth: true, stateServerName: null }));
 
       await expect(
-        h.handler.completeOAuthByState("unknown-state", "code"),
+        h.handler.completeOAuthByState({
+          state: "unknown-state",
+          code: "code",
+        }),
       ).resolves.toBe("unknown-state");
     });
 
@@ -233,7 +236,7 @@ describe("UpstreamHandler rate limit handling", () => {
       await h.handler.addClient(remoteServer);
 
       await expect(
-        h.handler.completeOAuthByState("state", "code"),
+        h.handler.completeOAuthByState({ state: "state", code: "code" }),
       ).resolves.toBe("completed");
     });
 
@@ -346,7 +349,7 @@ describe("UpstreamHandler rate limit handling", () => {
       expect(h.stateOf()).toBe("pending-auth");
       h.completeOAuth.mockResolvedValue(clientRateLimitedOnToolsList());
 
-      await h.handler.completeOAuthByState("state", "code");
+      await h.handler.completeOAuthByState({ state: "state", code: "code" });
 
       expect(h.stateOf()).toBe("pending-auth");
       expect(jest.getTimerCount()).toBe(h.baselineTimers);

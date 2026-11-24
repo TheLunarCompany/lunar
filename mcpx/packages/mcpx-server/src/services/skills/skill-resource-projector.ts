@@ -107,8 +107,8 @@ export class SkillResourceProjector implements SkillResourceProjectorI {
     });
   }
 
-  // Consumes adoption to decide what to serve (skillStore ∩ adopted). Stubbed to
-  // "all stored" until adoption (RND-826) lands; then this reads adoptedSkillIds
+  // TODO(RND-826): consumes adoption to decide what to serve (skillStore ∩ adopted). Stubbed to
+  // "all stored" until adoption lands; then this reads adoptedSkillIds
   // off the setup/config service (which owns setup data) and the projector
   // subscribes to setup changes too. Effective reads: a pending draft serves in
   // place of the saved content, so authors test drafts live.
