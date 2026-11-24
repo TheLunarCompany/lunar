@@ -1,0 +1,101 @@
+import React, { useEffect, useRef, useState } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+
+export type HierarchyKind =
+  | "server"
+  | "tool"
+  | "custom"
+  | "customCreate"
+  | "default";
+
+export interface HierarchyItem {
+  label: string;
+  kind?: HierarchyKind;
+}
+
+export interface HierarchyPaletteEntry {
+  bg: string; // Tailwind bg-*
+  text: string; // Tailwind text-*
+  icon?: string; // Tailwind text-* to color the icon
+}
+
+export type HierarchyPalette = Record<HierarchyKind, HierarchyPaletteEntry>;
+
+interface TruncatableTextProps {
+  children: string;
+  className: string;
+}
+
+const TruncatableText: React.FC<TruncatableTextProps> = ({
+  children,
+  className,
+}) => {
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const checkTruncation = () => {
+      if (spanRef.current) {
+        const { scrollWidth, clientWidth } = spanRef.current;
+        setIsTruncated(scrollWidth > clientWidth);
+      }
+    };
+
+    // Check immediately and on window resize
+    checkTruncation();
+    window.addEventListener("resize", checkTruncation);
+    return () => window.removeEventListener("resize", checkTruncation);
+  }, [children]);
+
+  const spanElement = (
+    <span ref={spanRef} className={className}>
+      {children}
+    </span>
+  );
+
+  if (isTruncated) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{spanElement}</TooltipTrigger>
+        <TooltipContent>
+          <p>{children}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return spanElement;
+};
+
+export interface HierarchyBadgeProps {
+  serverName: string;
+  toolName?: string;
+  className?: string;
+}
+
+export const HierarchyBadge: React.FC<HierarchyBadgeProps> = ({
+  serverName,
+  toolName,
+  className = "",
+}) => {
+  return (
+    <div
+      className={`flex items-center text-sm text-mcpx-text-secondary ${className}`}
+    >
+      <TruncatableText className="inline-block max-w-[250px] truncate font-medium text-mcpx-text opacity-50">
+        {serverName}
+      </TruncatableText>
+
+      {toolName && (
+        <>
+          <span className="mx-2 text-mcpx-text-tertiary">→</span>
+          <TruncatableText className="inline-block max-w-[250px] truncate font-medium text-mcpx-text">
+            {toolName}
+          </TruncatableText>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default HierarchyBadge;
