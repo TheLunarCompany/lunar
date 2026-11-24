@@ -1,0 +1,12 @@
+{
+  "src/utils/mcpJson.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 3
+    }
+  },
+  "src/utils/server-helpers.ts": {
+    "@typescript-eslint/consistent-type-assertions": {
+      "count": 2
+    }
+  }
+}
