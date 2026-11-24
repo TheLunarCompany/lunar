@@ -1,0 +1,41 @@
+# Verifies that a remote MCP server with a sse type field works correctly
+name: "Remote MCP Server with sse type field"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+env: {}
+dependentContainers: []
+configMount: config
+cleanConfigMount: false
+
+verboseOutput: false
+
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for atlassian node to render
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const deadline = Date.now() + 20000; // 20s
+          (function poll() {
+            const root = document.querySelector('main') || document.body;
+            const node =
+              Array.from(root.querySelectorAll('h3,[role="heading"],.react-flow__node,[data-id]'))
+                .find(el => /(^|\s)atlassian(\s|$)/i.test((el.textContent || '')));
+            if (node) return resolve('atlassian-tile-ready');
+            if (Date.now() > deadline) return reject('atlassian-tile-timeout');
+            setTimeout(poll, 200);
+          })();
+        })
+    expected:
+      mode: contains
+      value: "atlassian-tile-ready"
