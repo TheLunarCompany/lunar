@@ -1,0 +1,80 @@
+:root,
+.ex-theme-light {
+  --mcpx-page: var(--exo-palette-blue-10);
+  --mcpx-surface: var(--exo-color-background);
+  --mcpx-surface-subtle: var(--exo-color-background-secondary);
+  --mcpx-surface-tertiary: var(--exo-color-background-tertiary);
+  --mcpx-surface-hover: var(--exo-color-background-action-hover-weak);
+  --mcpx-surface-disabled: var(--exo-color-background-disabled);
+  --mcpx-canvas: var(--exo-color-background-secondary);
+  --mcpx-metric-icon: var(--exo-palette-blue-20);
+
+  --mcpx-text: var(--exo-color-font);
+  --mcpx-text-secondary: var(--exo-color-font-secondary);
+  --mcpx-text-tertiary: var(--exo-color-font-tertiary);
+  --mcpx-text-disabled: var(--exo-color-font-disabled);
+  --mcpx-text-inverse: var(--exo-color-font-inverse);
+
+  --mcpx-border: var(--exo-color-border);
+  --mcpx-border-subtle: var(--exo-color-border-secondary);
+  --mcpx-focus: var(--exo-color-outline-moderate);
+
+  --mcpx-selected: var(--exo-color-background-selected);
+  --mcpx-selected-hover: var(--exo-color-background-selected-hover);
+  --mcpx-selected-weak: var(--exo-color-background-selected-weak);
+  --mcpx-action: var(--exo-color-background-action);
+  --mcpx-action-hover: var(--exo-color-background-action-hover);
+
+  --mcpx-success-bg: var(--exo-color-background-success);
+  --mcpx-success-text: var(--exo-color-font-success);
+  --mcpx-warning-bg: var(--exo-color-background-warning);
+  --mcpx-warning-strong: var(--exo-color-background-warning-strong);
+  --mcpx-danger-bg: var(--exo-color-background-danger-weak);
+  --mcpx-danger-text: var(--exo-color-font-danger);
+  --mcpx-danger-action: var(--exo-color-background-danger-strong);
+  --mcpx-danger-action-hover: var(--exo-color-background-danger-strong-hover);
+  --mcpx-info-bg: var(--exo-color-background-info);
+  --mcpx-info-text: var(--exo-color-font-link);
+
+  --mcpx-inverse-surface: var(--exo-color-background-action-inverse);
+  --mcpx-inverse-hover: var(--exo-color-background-action-inverse-hover);
+  --mcpx-sidebar: var(--exo-color-background-brand);
+  --mcpx-sidebar-active: var(--exo-palette-navy-60);
+  --mcpx-sidebar-border: var(--exo-palette-navy-60);
+  --mcpx-sidebar-text: var(--exo-palette-navy-20);
+  --mcpx-sidebar-text-muted: var(--exo-palette-navy-30);
+  --mcpx-sidebar-start: var(--exo-color-background-action);
+  --mcpx-sidebar-end: var(--exo-color-background-selected);
+  --mcpx-lunar-logo-background: #5147e4;
+  --mcpx-lunar-logo-shadow:
+    0 1px 1px -0.5px rgb(10 13 18 / 13%), inset 0 -4.5px 8.5px #808cff;
+
+  --mcpx-data-gray: var(--exo-color-data-solid-gray);
+  --mcpx-data-blue: var(--exo-color-data-solid-blue);
+  --mcpx-data-coral: var(--exo-color-data-solid-coral);
+  --mcpx-data-green: var(--exo-color-data-solid-green);
+  --mcpx-data-navy: var(--exo-color-data-solid-navy);
+  --mcpx-data-periwinkle: var(--exo-color-data-solid-periwinkle);
+  --mcpx-data-purple: var(--exo-color-data-solid-purple);
+
+  --mcpx-node-agent: var(--exo-color-data-solid-purple);
+  --mcpx-node-server: var(--exo-color-data-solid-blue);
+  --mcpx-node-hub: var(--exo-color-background-selected);
+  --mcpx-route: var(--exo-color-border-secondary);
+  --mcpx-route-inactive: var(--exo-color-font-disabled);
+  --mcpx-route-active: var(--exo-color-background-selected);
+  --mcpx-route-warning: var(--exo-color-background-warning-strong);
+  --mcpx-route-danger: var(--exo-color-font-danger);
+
+  --mcpx-editor-surface: var(--exo-color-background-secondary);
+  --mcpx-editor-highlight: var(--exo-color-background-selected-weak);
+  --mcpx-editor-highlight-text: var(--exo-color-font-link);
+  --mcpx-editor-text: var(--exo-color-font-secondary);
+
+  --mcpx-tooltip: var(--exo-color-background-action-inverse);
+  --mcpx-tooltip-text: var(--exo-color-font-inverse);
+  --mcpx-scrim: var(--exo-color-scrim);
+  --mcpx-shadow-weak: var(--exo-box-shadow-weak);
+  --mcpx-shadow-moderate: var(--exo-box-shadow-moderate);
+  --mcpx-shadow-strong: var(--exo-box-shadow-strong);
+}
