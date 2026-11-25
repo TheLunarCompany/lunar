@@ -136,7 +136,7 @@ describe.each([
 
       expect(result.status).toBe(400);
       expect(callback.searchParams.get("error")).toBe(authorizationError);
-      expect(await result.text()).toBe(`OAuth error: ${authorizationError}`);
+      expect(await result.text()).toContain("did not authorize the connection");
       expect(await readServerStateType(serverName)).toBe("pending-auth");
     }, 30_000);
 
@@ -152,7 +152,7 @@ describe.each([
   },
 );
 
-describe("GET /oauth/callback with a never-started state", () => {
+describe("GET /oauth/callback opened directly", () => {
   let harness: TestHarness;
 
   beforeAll(async () => {
@@ -171,6 +171,15 @@ describe("GET /oauth/callback with a never-started state", () => {
 
     expect(response.status).toBe(404);
     expect(await response.text()).toContain("no longer active");
+  });
+
+  it("does not echo the provider error into the page", async () => {
+    const injected = "<script>alert(1)</script>";
+    const query = new URLSearchParams({ error: injected, state: "x" });
+
+    const response = await fetch(`${MCPX_BASE_URL}/oauth/callback?${query}`);
+
+    expect(await response.text()).not.toContain(injected);
   });
 });
 

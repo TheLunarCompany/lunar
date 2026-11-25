@@ -65,7 +65,15 @@ export function buildOAuthRouter(
 
       if (error) {
         logger.error("OAuth callback error from provider", { error, state });
-        res.status(400).send(`OAuth error: ${error}`);
+        res.status(400).send(
+          callbackPage({
+            title: "OAuth Authorization Failed",
+            heading: "❌ Authorization Failed",
+            type: "error",
+            message:
+              "The provider did not authorize the connection. Please try again.",
+          }),
+        );
         return;
       }
 
