@@ -142,9 +142,9 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
   },
   {
     name: "asana",
-    displayName: "Asana",
+    displayName: "Asana V1 (Deprecated)",
     description:
-      "Asana offers a Model Context Protocol (MCP) server, accessible via app integration, which allows AI assistants and other applications to access the Asana Work Graph from beyond the Asana platform.",
+      "Asana offers a Model Context Protocol (MCP) server, accessible via app integration, which allows AI assistants and other applications to access the Asana Work Graph from beyond the Asana platform. Asana has deprecated this V1 Beta server; use Asana V2 for new connections.",
     doc: "https://developers.asana.com/docs/using-asanas-mcp-server",
     config: {
       type: "sse",
@@ -152,14 +152,36 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
     },
   },
   {
-    name: "atlassian",
-    displayName: "Atlassian",
+    name: "asana-v2",
+    displayName: "Asana V2",
     description:
-      "Model Context Protocol (MCP) server for Atlassian products (Confluence and Jira)",
-    link: "https://github.com/sooperset/mcp-atlassian",
+      "Asana offers a Model Context Protocol (MCP) server, accessible via app integration, which allows AI assistants and other applications to access the Asana Work Graph from beyond the Asana platform. Requires an MCP app registered in Asana's developer console; configure its client ID and secret as static OAuth credentials.",
+    doc: "https://developers.asana.com/docs/integrating-with-asanas-mcp-server",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.asana.com/v2/mcp",
+    },
+  },
+  {
+    name: "atlassian",
+    displayName: "Atlassian V1 (Deprecated)",
+    description:
+      "Model Context Protocol (MCP) server for Atlassian products (Confluence and Jira). Uses Atlassian's deprecated SSE endpoint; use Atlassian V2 for new connections.",
+    doc: "https://support.atlassian.com/atlassian-ai-gateway/docs/how-to-upgrade-from-atlassian-rovo-mcp-v1-to-atlassian-rovo-mcp-v2/",
     config: {
       type: "sse",
       url: "https://mcp.atlassian.com/v1/sse",
+    },
+  },
+  {
+    name: "atlassian-v2",
+    displayName: "Atlassian V2",
+    description:
+      "Atlassian's hosted Rovo MCP Server (V2) for Jira, Confluence and other Atlassian Cloud products.",
+    doc: "https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.atlassian.com/v2/mcp?tools=all",
     },
   },
   {
