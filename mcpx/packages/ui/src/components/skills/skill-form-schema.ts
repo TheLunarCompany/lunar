@@ -10,27 +10,28 @@ export type SkillFormValues = {
   exposeAsPrompt: boolean;
 };
 
-export const skillFormSchema: z.ZodType<SkillFormValues> = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Name is required.")
-    .max(64, "Name must be 64 characters or fewer.")
-    .regex(
-      skillNameSlugRegex,
-      "Name must use lowercase letters, numbers, and hyphens only, and must not start or end with a hyphen or contain consecutive hyphens. Examples: pdf-processing, data-analysis, code-review.",
-    ),
-  description: z
-    .string()
-    .trim()
-    .min(
-      1,
-      "Description is required. Describe what the skill does and when to use it.",
-    )
-    .max(1024, "Description must be 1024 characters or fewer."),
-  body: z.string().trim(),
-  exposeAsPrompt: z.boolean(),
-});
+export const skillFormSchema: z.ZodType<SkillFormValues, SkillFormValues> =
+  z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, "Name is required.")
+      .max(64, "Name must be 64 characters or fewer.")
+      .regex(
+        skillNameSlugRegex,
+        "Name must use lowercase letters, numbers, and hyphens only, and must not start or end with a hyphen or contain consecutive hyphens. Examples: pdf-processing, data-analysis, code-review.",
+      ),
+    description: z
+      .string()
+      .trim()
+      .min(
+        1,
+        "Description is required. Describe what the skill does and when to use it.",
+      )
+      .max(1024, "Description must be 1024 characters or fewer."),
+    body: z.string().trim(),
+    exposeAsPrompt: z.boolean(),
+  });
 
 export function draftToFormValues(draft?: SkillInput): SkillFormValues {
   return {

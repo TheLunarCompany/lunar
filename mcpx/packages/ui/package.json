@@ -32,7 +32,7 @@
     "@auth0/auth0-react": "^2.4.0",
     "@base-ui/react": "^1.4.1",
     "@boomi/exosphere": "^7.18.0",
-    "@hookform/resolvers": "^4.1.2",
+    "@hookform/resolvers": "^5.2.2",
     "@mcpx/shared-model": "1.0.0",
     "@mcpx/toolkit-ui": "file:../toolkit-ui",
     "@monaco-editor/react": "^4.7.0",
@@ -83,7 +83,7 @@
     "shadcn": "^4.1.2",
     "socket.io-client": "^4.7.4",
     "tailwind-merge": "^3.5.0",
-    "zod": "^3.25.76",
+    "zod": "^4.2.0",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

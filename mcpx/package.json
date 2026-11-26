@@ -34,7 +34,7 @@
     "typescript-eslint": "^8.31.1"
   },
   "overrides": {
-    "zod": "3.25.76",
+    "zod": "4.6.7",
     "@types/react": "18.2.79",
     "qs": "6.15.2",
     "@flydotio/dockerfile": {

@@ -78,30 +78,28 @@ const updateChangedEntries = (
 
 // Validate tool group object using the schema
 const validateToolGroupObject = (toolGroup: ToolGroup) => {
-  try {
-    // Create schema for single tool group (toolGroupSchema is an array schema)
-    const singleToolGroupSchema = z.object({
-      name: z
-        .string()
-        .regex(
-          /^[a-zA-Z0-9_\s-]{1,64}$/,
-          "Tool group name must contain only letters, digits, spaces, underscores, and dashes (1-64 characters)",
-        ),
-      services: z.record(
-        z.string(),
-        z.union([z.array(z.string()), z.literal("*")]),
+  // Create schema for single tool group (toolGroupSchema is an array schema)
+  const singleToolGroupSchema = z.object({
+    name: z
+      .string()
+      .regex(
+        /^[a-zA-Z0-9_\s-]{1,64}$/,
+        "Tool group name must contain only letters, digits, spaces, underscores, and dashes (1-64 characters)",
       ),
-    });
-    singleToolGroupSchema.parse(toolGroup);
+    services: z.record(
+      z.string(),
+      z.union([z.array(z.string()), z.literal("*")]),
+    ),
+  });
+  const result = singleToolGroupSchema.safeParse(toolGroup);
+  if (result.success) {
     return { isValid: true };
-  } catch (error: unknown) {
-    const zodError = error as { errors?: Array<{ message?: string }> };
-    return {
-      isValid: false,
-      error:
-        zodError.errors?.[0]?.message || "Invalid tool group configuration",
-    };
   }
+  return {
+    isValid: false,
+    error:
+      result.error.issues[0]?.message || "Invalid tool group configuration",
+  };
 };
 
 // Clean up references to a deleted tool group from permissions config

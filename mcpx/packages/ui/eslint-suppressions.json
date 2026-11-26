@@ -382,7 +382,7 @@
   },
   "src/hooks/useToolCatalog.tsx": {
     "@typescript-eslint/consistent-type-assertions": {
-      "count": 13
+      "count": 12
     },
     "@typescript-eslint/no-floating-promises": {
       "count": 1
